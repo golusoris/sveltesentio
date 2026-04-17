@@ -1,0 +1,28 @@
+{
+  "name": "@sveltesentio/files",
+  "version": "0.0.1",
+  "description": "Virtual-scrolled file manager, drag-drop, multi-select library browser",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "svelte": ">=5.0.0",
+    "@sveltejs/kit": ">=2.0.0",
+    "@neodrag/svelte": ">=2.0.0",
+    "@tanstack/svelte-virtual": ">=3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": ["sveltesentio", "files", "file-manager", "drag-drop", "virtual-scroll"]
+}
