@@ -1,0 +1,29 @@
+name: Auto-assign
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const number = context.payload.issue
+              ? context.payload.issue.number
+              : context.payload.pull_request.number;
+            await github.rest.issues.addAssignees({
+              ...context.repo,
+              issue_number: number,
+              assignees: ['lusoris'],
+            });

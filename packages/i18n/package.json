@@ -1,0 +1,19 @@
+{
+  "name": "@sveltesentio/i18n",
+  "version": "0.0.1",
+  "description": "Paraglide-js v2 wrappers — locale detection, message helpers, SvelteKit middleware",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+  },
+  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "peerDependencies": {
+    "@inlang/paraglide-js": ">=2.0.0",
+    "svelte": ">=5.0.0",
+    "@sveltejs/kit": ">=2.0.0"
+  },
+  "devDependencies": { "typescript": "^6.0.3", "vitest": "^4.1.4" },
+  "keywords": ["sveltesentio", "i18n", "paraglide", "localization"]
+}

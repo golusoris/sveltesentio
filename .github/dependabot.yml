@@ -1,0 +1,61 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns: ['*']
+    labels: ['dependencies', 'ci']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: UTC
+    open-pull-requests-limit: 15
+    groups:
+      svelte-ecosystem:
+        patterns:
+          - 'svelte'
+          - '@sveltejs/*'
+          - 'vite'
+          - '@vitejs/*'
+      sveltesentio-internal:
+        patterns:
+          - '@sveltesentio/*'
+      tanstack:
+        patterns:
+          - '@tanstack/*'
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - '@playwright/*'
+          - '@testing-library/*'
+          - 'axe-core'
+          - '@axe-core/*'
+      build-tools:
+        patterns:
+          - 'turbo'
+          - 'typescript'
+          - 'eslint'
+          - '@typescript-eslint/*'
+          - 'eslint-plugin-*'
+          - 'prettier'
+          - 'prettier-plugin-*'
+          - 'husky'
+          - 'lint-staged'
+          - '@commitlint/*'
+      tailwind:
+        patterns:
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+    labels: ['dependencies']

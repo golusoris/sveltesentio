@@ -1,0 +1,15 @@
+{
+  "name": "@sveltesentio/flow",
+  "version": "0.0.1",
+  "description": "@xyflow/svelte wrappers — node editors, DAG helpers, canvas utilities",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+  },
+  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "peerDependencies": { "@xyflow/svelte": ">=1.0.0", "svelte": ">=5.0.0" },
+  "devDependencies": { "typescript": "^6.0.3", "vitest": "^4.1.4" },
+  "keywords": ["sveltesentio", "flow", "node-editor", "dag", "xyflow"]
+}

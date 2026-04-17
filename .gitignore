@@ -1,0 +1,15 @@
+node_modules/
+.turbo/
+dist/
+.svelte-kit/
+build/
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+*.local
+*.local.json
+.DS_Store
+Thumbs.db

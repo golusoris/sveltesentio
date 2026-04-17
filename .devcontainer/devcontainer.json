@@ -1,0 +1,75 @@
+{
+  "name": "sveltesentio",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": { "ppa": true, "version": "latest" },
+    "ghcr.io/devcontainers/features/github-cli:1": { "installDirectlyFromGitHubRelease": true, "version": "latest" },
+    "ghcr.io/devcontainers/features/node:1": { "nodeGypDependencies": true, "version": "22" },
+    "ghcr.io/devcontainers-contrib/features/pnpm:2": { "version": "latest" },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "EditorConfig.EditorConfig",
+        "vitest.explorer",
+        "ms-playwright.playwright",
+        "GitHub.copilot",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-typescript-next",
+        "antfu.iconify",
+        "lokalise.i18n-ally",
+        "unional.vscode-sort-package-json",
+        "christian-kohler.path-intellisense",
+        "streetsidesoftware.code-spell-checker",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "files.eol": "\n",
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "[svelte]": {
+          "editor.defaultFormatter": "svelte.svelte-vscode"
+        },
+        "svelte.enable-ts-plugin": true,
+        "tailwindCSS.experimental.classRegex": [
+          ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+          ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+        ],
+        "i18n-ally.localesPaths": ["src/lib/paraglide/messages"],
+        "i18n-ally.keystyle": "nested",
+        "eslint.useFlatConfig": true,
+        "vitest.enable": true
+      }
+    }
+  },
+  "forwardPorts": [5173, 4173, 6006],
+  "portsAttributes": {
+    "5173": { "label": "Vite dev", "onAutoForward": "notify" },
+    "4173": { "label": "Vite preview", "onAutoForward": "silent" },
+    "6006": { "label": "Histoire", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "make setup",
+  "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+  "remoteUser": "node",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached,readonly"
+  ],
+  "runArgs": ["--init"]
+}

@@ -1,0 +1,45 @@
+name: Feature Request
+description: Propose a new module or capability for sveltesentio
+labels: ['enhancement', 'triage']
+assignees: ['lusoris']
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Package (existing or new)
+      placeholder: '@sveltesentio/realtime or new @sveltesentio/payments'
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the API / behavior you'd like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you consider and why did you rule it out?
+  - type: dropdown
+    id: interface_type
+    attributes:
+      label: Interface type
+      description: Which interface type does this primarily serve?
+      options:
+        - Standard web app
+        - Media server web UI
+        - Dashboard / admin
+        - 10-foot / media center
+        - Automation / flow editor
+        - File manager / library
+        - Mobile PWA
+        - All / framework-level

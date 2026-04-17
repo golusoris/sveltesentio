@@ -1,0 +1,13 @@
+{
+  "packages/core": "0.0.1",
+  "packages/ui": "0.0.1",
+  "packages/query": "0.0.1",
+  "packages/forms": "0.0.1",
+  "packages/i18n": "0.0.1",
+  "packages/auth": "0.0.1",
+  "packages/realtime": "0.0.1",
+  "packages/flow": "0.0.1",
+  "packages/media": "0.0.1",
+  "packages/charts": "0.0.1",
+  "packages/ai": "0.0.1"
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@sveltesentio/realtime",
+  "version": "0.0.1",
+  "description": "SSE + WebSocket + ConnectRPC transport adapter for SvelteKit",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
+    "./connect": { "import": "./src/connect/index.ts", "types": "./src/connect/index.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "svelte": ">=5.0.0",
+    "@sveltejs/kit": ">=2.0.0",
+    "@connectrpc/connect": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@connectrpc/connect": { "optional": true }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": ["sveltesentio", "realtime", "sse", "websocket", "connectrpc", "grpc"]
+}
