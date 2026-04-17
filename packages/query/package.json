@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/query",
   "version": "0.0.1",
-  "description": "TanStack Query wrappers for SvelteKit — load helpers, optimistic updates, SSR hydration",
+  "description": "TanStack Query v6 wrappers — openapi-fetch client, SSR hydration, optimistic updates, pagination",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -17,11 +17,21 @@
   "peerDependencies": {
     "@tanstack/svelte-query": ">=6.0.0",
     "svelte": ">=5.0.0",
-    "@sveltejs/kit": ">=2.0.0"
+    "@sveltejs/kit": ">=2.0.0",
+    "openapi-fetch": ">=0.10.0",
+    "svelte-sonner": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "svelte-sonner": { "optional": true }
   },
   "devDependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "@tanstack/svelte-query": "^6.1.16",
+    "openapi-fetch": "latest",
+    "svelte": "^5.55.4",
+    "svelte-sonner": "^1.1.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "tanstack-query", "sveltekit", "data-fetching"]
+  "keywords": ["sveltesentio", "tanstack-query", "sveltekit", "openapi-fetch", "ssr", "mutations"]
 }
