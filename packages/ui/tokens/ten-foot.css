@@ -1,0 +1,74 @@
+/**
+ * @sveltesentio/ui — 10-foot / TV preset tokens
+ *
+ * Targets: TV UIs, media center apps (Kodi, Plex TV, Apple TV style).
+ * Default: dark always. Hue: purple (H=295). Enlarged everything.
+ * Extends media.css — TV is a superset of media server.
+ *
+ * Usage:
+ *   @import '@sveltesentio/ui/tokens/ten-foot.css';
+ *   @import 'tailwindcss';
+ */
+
+@import './media.css';
+
+/* ─── 10-foot overrides ─────────────────────────────────────────────── */
+:root {
+  /* ─── Typography — minimum 29pt body, 48pt titles ─────────────────── */
+  --text-base: 1.8125rem;  /* 29px — readable at 3m distance */
+  --text-lg:   2rem;       /* 32px */
+  --text-xl:   2.5rem;     /* 40px */
+  --text-2xl:  3rem;       /* 48px — section titles */
+  --text-3xl:  3.75rem;    /* 60px */
+  --text-4xl:  4.5rem;     /* 72px — hero titles */
+  --text-5xl:  6rem;       /* 96px */
+
+  /* ─── TV-safe margins (60px from all edges) ──────────────────────── */
+  --tv-safe-h:  60px;
+  --tv-safe-v:  60px;
+  --tv-inset:   var(--tv-safe-v) var(--tv-safe-h);
+
+  /* ─── Spacing — enlarged grid (16pt base instead of 8pt) ────────── */
+  --space-1:  8px;
+  --space-2:  16px;
+  --space-3:  24px;
+  --space-4:  32px;
+  --space-5:  40px;
+  --space-6:  48px;
+  --space-8:  64px;
+  --space-10: 80px;
+  --space-12: 96px;
+  --space-16: 128px;
+  --space-20: 160px;
+  --space-24: 192px;
+
+  /* ─── Focus — must be unmistakable at distance ────────────────────── */
+  --focus-ring-width:     4px;
+  --focus-ring-offset:    4px;
+  --focus-ring-color:     var(--color-primary);
+  --focus-scale:          scale(1.06);
+  --focus-brightness:     brightness(1.2);
+  --focus-shadow:         0 0 0 4px var(--color-primary), 0 8px 32px oklch(0% 0 0 / 0.4);
+
+  /* ─── Card grid (5–7 cards per row) ─────────────────────────────── */
+  --card-min-width: 260px;
+  --card-gap:       var(--space-4);
+  --card-radius:    var(--radius-lg);
+
+  /* ─── Background — NOT pure black, prevents eye strain ──────────── */
+  --surface:          oklch(9% 0.015 var(--hue));
+  --surface-elevated: oklch(14% 0.015 var(--hue));
+
+  /* ─── Cursor / focus movement timing ────────────────────────────── */
+  --duration-focus-move: 150ms;
+  --easing-focus-move:   cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ─── TV / 10-foot media query ──────────────────────────────────────── */
+@media (min-width: 1920px) and (hover: none) {
+  :root {
+    --text-base: 2.0625rem; /* 33px — even larger on 4K TV */
+    --tv-safe-h: 80px;
+    --tv-safe-v: 80px;
+  }
+}

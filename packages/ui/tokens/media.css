@@ -1,0 +1,76 @@
+/**
+ * @sveltesentio/ui — Media Server preset tokens
+ *
+ * Targets: Jellyfin-style web UIs, music servers (Navidrome), video dashboards.
+ * Default: dark. Hue: purple (H=295).
+ *
+ * Usage:
+ *   @import '@sveltesentio/ui/tokens/media.css';
+ *   @import 'tailwindcss';
+ */
+
+@import './base.css';
+
+:root {
+  color-scheme: dark;
+
+  /* ─── Hue anchor — purple ────────────────────────────────────────── */
+  --hue: 295;
+
+  /* ─── Primitive palette ───────────────────────────────────────────── */
+  --primitive-primary-950: oklch(10% 0.04 var(--hue));
+  --primitive-primary-900: oklch(18% 0.06 var(--hue));
+  --primitive-primary-800: oklch(28% 0.10 var(--hue));
+  --primitive-primary-700: oklch(40% 0.14 var(--hue));
+  --primitive-primary-600: oklch(52% 0.18 var(--hue));
+  --primitive-primary-500: oklch(62% 0.22 var(--hue));
+  --primitive-primary-400: oklch(72% 0.20 var(--hue));
+  --primitive-primary-300: oklch(82% 0.14 var(--hue));
+  --primitive-primary-200: oklch(90% 0.08 var(--hue));
+  --primitive-primary-100: oklch(96% 0.03 var(--hue));
+
+  /* ─── Semantic — color ───────────────────────────────────────────── */
+  --color-primary:        var(--primitive-primary-500);
+  --color-primary-hover:  oklch(from var(--color-primary) calc(l - 0.07) c h);
+  --color-primary-active: oklch(from var(--color-primary) calc(l - 0.14) c h);
+  --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.12);
+  --color-primary-text:   var(--primitive-primary-100);
+
+  /* ─── Semantic — surface ─────────────────────────────────────────── */
+  --surface:          oklch(11% 0.015 var(--hue));
+  --surface-elevated: oklch(16% 0.015 var(--hue));
+  --surface-overlay:  oklch(21% 0.015 var(--hue));
+  --surface-sunken:   oklch(8%  0.015 var(--hue));
+
+  /* ─── Semantic — text ────────────────────────────────────────────── */
+  --text-primary:   oklch(95% 0.005 var(--hue));
+  --text-secondary: oklch(72% 0.008 var(--hue));
+  --text-tertiary:  oklch(52% 0.008 var(--hue));
+  --text-disabled:  oklch(40% 0.005 var(--hue));
+  --text-inverse:   oklch(10% 0.005 var(--hue));
+
+  /* ─── Semantic — border ─────────────────────────────────────────── */
+  --border-subtle:  oklch(25% 0.01 var(--hue));
+  --border-default: oklch(32% 0.01 var(--hue));
+  --border-strong:  oklch(45% 0.01 var(--hue));
+
+  /* ─── Focus ring ──────────────────────────────────────────────────── */
+  --focus-ring-color: var(--color-primary);
+
+  /* ─── Media-specific — artwork grid ──────────────────────────────── */
+  --artwork-radius:      var(--radius-md);
+  --artwork-placeholder: oklch(20% 0.02 var(--hue));
+  --artwork-overlay:     oklch(0% 0 0 / 0.6);
+  --artwork-quick-action-bg: oklch(0% 0 0 / 0.7);
+
+  /* ─── Media-specific — playback bar ─────────────────────────────── */
+  --playbar-height:  72px;
+  --playbar-bg:      oklch(14% 0.015 var(--hue) / 0.95);
+  --playbar-blur:    blur(12px);
+
+  /* ─── Media-specific — sidebar ───────────────────────────────────── */
+  --sidebar-width:        240px;
+  --sidebar-bg:           oklch(9% 0.015 var(--hue));
+  --sidebar-item-hover:   oklch(17% 0.015 var(--hue));
+  --sidebar-item-active:  oklch(from var(--color-primary) l c h / 0.15);
+}

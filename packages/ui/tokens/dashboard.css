@@ -1,0 +1,83 @@
+/**
+ * @sveltesentio/ui — Dashboard / Admin preset tokens
+ *
+ * Targets: Grafana-style dashboards, admin panels, monitoring UIs.
+ * Default: dark. Hue: teal (H=195). Dense 8pt layout.
+ *
+ * Usage:
+ *   @import '@sveltesentio/ui/tokens/dashboard.css';
+ *   @import 'tailwindcss';
+ */
+
+@import './base.css';
+
+:root {
+  color-scheme: dark;
+
+  /* ─── Hue anchor — teal ──────────────────────────────────────────── */
+  --hue: 195;
+
+  /* ─── Primitive palette ───────────────────────────────────────────── */
+  --primitive-primary-900: oklch(18% 0.05 var(--hue));
+  --primitive-primary-800: oklch(28% 0.08 var(--hue));
+  --primitive-primary-700: oklch(38% 0.12 var(--hue));
+  --primitive-primary-600: oklch(50% 0.16 var(--hue));
+  --primitive-primary-500: oklch(60% 0.20 var(--hue));
+  --primitive-primary-400: oklch(70% 0.18 var(--hue));
+  --primitive-primary-300: oklch(80% 0.12 var(--hue));
+  --primitive-primary-200: oklch(90% 0.06 var(--hue));
+  --primitive-primary-100: oklch(96% 0.02 var(--hue));
+
+  /* ─── Semantic — color ───────────────────────────────────────────── */
+  --color-primary:        var(--primitive-primary-500);
+  --color-primary-hover:  oklch(from var(--color-primary) calc(l - 0.07) c h);
+  --color-primary-active: oklch(from var(--color-primary) calc(l - 0.14) c h);
+  --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.12);
+  --color-primary-text:   var(--primitive-primary-100);
+
+  /* ─── Semantic — surface (slightly cool for readability) ─────────── */
+  --surface:          oklch(12% 0.012 var(--hue));
+  --surface-elevated: oklch(17% 0.012 var(--hue));
+  --surface-overlay:  oklch(22% 0.012 var(--hue));
+  --surface-sunken:   oklch(9%  0.012 var(--hue));
+
+  /* ─── Semantic — text ─────────────────────────────────────────────── */
+  --text-primary:   oklch(94% 0.004 var(--hue));
+  --text-secondary: oklch(70% 0.006 var(--hue));
+  --text-tertiary:  oklch(50% 0.006 var(--hue));
+  --text-disabled:  oklch(38% 0.004 var(--hue));
+  --text-inverse:   oklch(10% 0.004 var(--hue));
+
+  /* ─── Semantic — border ─────────────────────────────────────────── */
+  --border-subtle:  oklch(22% 0.008 var(--hue));
+  --border-default: oklch(30% 0.008 var(--hue));
+  --border-strong:  oklch(42% 0.008 var(--hue));
+
+  /* ─── Focus ring ──────────────────────────────────────────────────── */
+  --focus-ring-color: var(--color-primary);
+
+  /* ─── Typography overrides — dense, data-forward ─────────────────── */
+  --text-base: 0.875rem;  /* 14px — denser than standard */
+  --text-sm:   0.75rem;   /* 12px */
+  --leading-normal: 1.4;  /* tighter for dense tables */
+
+  /* ─── Dashboard-specific — chart colors ──────────────────────────── */
+  --chart-1: oklch(60% 0.20 195); /* teal    */
+  --chart-2: oklch(65% 0.20 250); /* blue    */
+  --chart-3: oklch(62% 0.22 295); /* purple  */
+  --chart-4: oklch(70% 0.18 70);  /* amber   */
+  --chart-5: oklch(65% 0.18 145); /* green   */
+
+  /* ─── Dashboard-specific — sidebar ──────────────────────────────── */
+  --sidebar-width:        220px;
+  --sidebar-width-collapsed: 56px;
+  --sidebar-bg:           oklch(10% 0.012 var(--hue));
+  --sidebar-item-hover:   oklch(18% 0.012 var(--hue));
+  --sidebar-item-active:  oklch(from var(--color-primary) l c h / 0.15);
+
+  /* ─── Dashboard-specific — stat card ────────────────────────────── */
+  --stat-card-bg:     var(--surface-elevated);
+  --stat-card-border: var(--border-subtle);
+  --stat-trend-up:    var(--color-ok);
+  --stat-trend-down:  var(--color-critical);
+}

@@ -1,0 +1,99 @@
+/**
+ * @sveltesentio/ui — Flow Editor preset tokens
+ *
+ * Targets: node-based flow editors (@xyflow/svelte), DAG editors, n8n-style UIs.
+ * Default: dark always. Canvas-specific token set.
+ *
+ * Usage:
+ *   @import '@sveltesentio/ui/tokens/flow.css';
+ *   @import 'tailwindcss';
+ */
+
+@import './base.css';
+
+:root {
+  color-scheme: dark;
+
+  /* ─── Hue anchor — neutral dark with blue accent ─────────────────── */
+  --hue: 230;
+
+  /* ─── Semantic — color ───────────────────────────────────────────── */
+  --color-primary:        oklch(62% 0.18 var(--hue));
+  --color-primary-hover:  oklch(from var(--color-primary) calc(l + 0.06) c h);
+  --color-primary-active: oklch(from var(--color-primary) calc(l + 0.12) c h);
+  --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.15);
+  --color-primary-text:   oklch(98% 0 0);
+
+  /* ─── Semantic — surface ─────────────────────────────────────────── */
+  --surface:          oklch(14% 0.010 var(--hue));
+  --surface-elevated: oklch(19% 0.010 var(--hue));
+  --surface-overlay:  oklch(24% 0.010 var(--hue));
+  --surface-sunken:   oklch(11% 0.010 var(--hue));
+
+  /* ─── Semantic — text ─────────────────────────────────────────────── */
+  --text-primary:   oklch(92% 0.004 var(--hue));
+  --text-secondary: oklch(68% 0.006 var(--hue));
+  --text-tertiary:  oklch(50% 0.006 var(--hue));
+  --text-disabled:  oklch(36% 0.004 var(--hue));
+  --text-inverse:   oklch(10% 0.004 var(--hue));
+
+  /* ─── Semantic — border ─────────────────────────────────────────── */
+  --border-subtle:  oklch(22% 0.008 var(--hue));
+  --border-default: oklch(30% 0.008 var(--hue));
+  --border-strong:  oklch(44% 0.008 var(--hue));
+
+  /* ─── Focus ring ──────────────────────────────────────────────────── */
+  --focus-ring-color: var(--color-primary);
+
+  /* ─── Canvas ─────────────────────────────────────────────────────── */
+  --canvas-bg:          oklch(13% 0.008 var(--hue));
+  --canvas-dot-color:   oklch(28% 0.010 var(--hue));
+  --canvas-dot-size:    2px;
+  --canvas-grid-size:   16px;
+
+  /* ─── Node types — semantic colors ───────────────────────────────── */
+  --node-input-border:     oklch(62% 0.20 250); /* blue  — data source */
+  --node-input-header:     oklch(25% 0.10 250);
+  --node-transform-border: oklch(65% 0.20 295); /* purple — processing */
+  --node-transform-header: oklch(25% 0.10 295);
+  --node-output-border:    oklch(65% 0.18 145); /* green  — sink/output */
+  --node-output-header:    oklch(22% 0.10 145);
+  --node-error-border:     oklch(55% 0.22 25);  /* red    — error state */
+  --node-warning-border:   oklch(70% 0.18 70);  /* amber  — warning */
+
+  /* ─── Node base ───────────────────────────────────────────────────── */
+  --node-bg:              var(--surface-elevated);
+  --node-border:          var(--border-default);
+  --node-border-selected: oklch(72% 0.18 var(--hue));
+  --node-radius:          var(--radius-md);
+  --node-shadow:          0 4px 16px oklch(0% 0 0 / 0.3);
+  --node-shadow-selected: 0 0 0 2px oklch(72% 0.18 var(--hue)), 0 8px 24px oklch(0% 0 0 / 0.4);
+  --node-scale-selected:  scale(1.02);
+
+  /* ─── Edge / connector ────────────────────────────────────────────── */
+  --edge-color:          oklch(45% 0.010 var(--hue));
+  --edge-color-selected: oklch(72% 0.18 var(--hue));
+  --edge-width:          2px;
+  --edge-width-selected: 3px;
+
+  /* ─── Port / handle ───────────────────────────────────────────────── */
+  --port-size:        12px;
+  --port-border-width: 2px;
+  --port-bg:          var(--surface);
+  --port-border:      var(--border-strong);
+  --port-hover:       var(--color-primary);
+
+  /* ─── Inspector panel ─────────────────────────────────────────────── */
+  --inspector-width:  320px;
+  --inspector-bg:     var(--surface-elevated);
+  --inspector-border: var(--border-subtle);
+
+  /* ─── Palette / node picker ───────────────────────────────────────── */
+  --palette-width: 280px;
+  --palette-bg:    var(--surface-elevated);
+
+  /* ─── Mini-map ────────────────────────────────────────────────────── */
+  --minimap-bg:      oklch(16% 0.010 var(--hue) / 0.9);
+  --minimap-node:    oklch(40% 0.010 var(--hue));
+  --minimap-viewport:oklch(62% 0.18 var(--hue) / 0.3);
+}

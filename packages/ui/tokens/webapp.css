@@ -1,0 +1,128 @@
+/**
+ * @sveltesentio/ui — Standard Web App preset tokens
+ *
+ * Targets: SaaS apps, admin forms, CRUD interfaces. shadcn-svelte baseline.
+ * Default: system preference (respects prefers-color-scheme). Hue: blue (H=250).
+ *
+ * Usage:
+ *   @import '@sveltesentio/ui/tokens/webapp.css';
+ *   @import 'tailwindcss';
+ */
+
+@import './base.css';
+
+/* ─── Light mode (default) ───────────────────────────────────────────── */
+:root {
+  color-scheme: light dark;
+
+  /* ─── Hue anchor — blue ───────────────────────────────────────────── */
+  --hue: 250;
+
+  /* ─── Primitive palette ───────────────────────────────────────────── */
+  --primitive-primary-950: oklch(20% 0.12 var(--hue));
+  --primitive-primary-900: oklch(28% 0.16 var(--hue));
+  --primitive-primary-800: oklch(36% 0.18 var(--hue));
+  --primitive-primary-700: oklch(44% 0.20 var(--hue));
+  --primitive-primary-600: oklch(52% 0.20 var(--hue));
+  --primitive-primary-500: oklch(58% 0.20 var(--hue));
+  --primitive-primary-400: oklch(65% 0.18 var(--hue));
+  --primitive-primary-300: oklch(74% 0.14 var(--hue));
+  --primitive-primary-200: oklch(84% 0.08 var(--hue));
+  --primitive-primary-100: oklch(94% 0.03 var(--hue));
+  --primitive-primary-50:  oklch(97% 0.02 var(--hue));
+
+  /* Light mode semantic */
+  --color-primary:        var(--primitive-primary-600);
+  --color-primary-hover:  oklch(from var(--color-primary) calc(l - 0.06) c h);
+  --color-primary-active: oklch(from var(--color-primary) calc(l - 0.12) c h);
+  --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.10);
+  --color-primary-text:   oklch(98% 0 0);
+
+  --surface:          oklch(100% 0 0);
+  --surface-elevated: oklch(97% 0.004 var(--hue));
+  --surface-overlay:  oklch(94% 0.006 var(--hue));
+  --surface-sunken:   oklch(96% 0.003 var(--hue));
+
+  --text-primary:   oklch(18% 0.01 var(--hue));
+  --text-secondary: oklch(42% 0.01 var(--hue));
+  --text-tertiary:  oklch(60% 0.008 var(--hue));
+  --text-disabled:  oklch(72% 0.005 var(--hue));
+  --text-inverse:   oklch(98% 0 0);
+
+  --border-subtle:  oklch(90% 0.008 var(--hue));
+  --border-default: oklch(82% 0.010 var(--hue));
+  --border-strong:  oklch(65% 0.012 var(--hue));
+
+  --focus-ring-color: var(--color-primary);
+
+  --shadow-sm: 0 1px 2px oklch(20% 0.02 var(--hue) / 0.06);
+  --shadow-md: 0 4px 12px oklch(20% 0.02 var(--hue) / 0.09);
+  --shadow-lg: 0 8px 24px oklch(20% 0.02 var(--hue) / 0.12);
+
+  /* ─── Form-specific ───────────────────────────────────────────────── */
+  --input-bg:           oklch(100% 0 0);
+  --input-border:       var(--border-default);
+  --input-border-focus: var(--color-primary);
+  --input-text:         var(--text-primary);
+  --input-placeholder:  var(--text-tertiary);
+  --input-error-border: var(--color-critical);
+  --input-error-text:   oklch(45% 0.20 25);
+}
+
+/* ─── Dark mode (system preference) ─────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary:        oklch(65% 0.20 var(--hue));
+    --color-primary-hover:  oklch(from var(--color-primary) calc(l + 0.06) c h);
+    --color-primary-active: oklch(from var(--color-primary) calc(l + 0.12) c h);
+    --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.15);
+    --color-primary-text:   oklch(10% 0 0);
+
+    --surface:          oklch(13% 0.012 var(--hue));
+    --surface-elevated: oklch(18% 0.012 var(--hue));
+    --surface-overlay:  oklch(23% 0.012 var(--hue));
+    --surface-sunken:   oklch(10% 0.012 var(--hue));
+
+    --text-primary:   oklch(94% 0.005 var(--hue));
+    --text-secondary: oklch(70% 0.008 var(--hue));
+    --text-tertiary:  oklch(52% 0.008 var(--hue));
+    --text-disabled:  oklch(38% 0.005 var(--hue));
+    --text-inverse:   oklch(10% 0.005 var(--hue));
+
+    --border-subtle:  oklch(24% 0.010 var(--hue));
+    --border-default: oklch(32% 0.010 var(--hue));
+    --border-strong:  oklch(46% 0.010 var(--hue));
+
+    --input-bg:     var(--surface-elevated);
+    --input-border: var(--border-default);
+    --input-text:   var(--text-primary);
+  }
+}
+
+/* ─── Explicit dark class (for mode-watcher) ─────────────────────────── */
+:root.dark {
+  --color-primary:        oklch(65% 0.20 var(--hue));
+  --color-primary-hover:  oklch(from var(--color-primary) calc(l + 0.06) c h);
+  --color-primary-active: oklch(from var(--color-primary) calc(l + 0.12) c h);
+  --color-primary-subtle: oklch(from var(--color-primary) l c h / 0.15);
+  --color-primary-text:   oklch(10% 0 0);
+
+  --surface:          oklch(13% 0.012 var(--hue));
+  --surface-elevated: oklch(18% 0.012 var(--hue));
+  --surface-overlay:  oklch(23% 0.012 var(--hue));
+  --surface-sunken:   oklch(10% 0.012 var(--hue));
+
+  --text-primary:   oklch(94% 0.005 var(--hue));
+  --text-secondary: oklch(70% 0.008 var(--hue));
+  --text-tertiary:  oklch(52% 0.008 var(--hue));
+  --text-disabled:  oklch(38% 0.005 var(--hue));
+  --text-inverse:   oklch(10% 0.005 var(--hue));
+
+  --border-subtle:  oklch(24% 0.010 var(--hue));
+  --border-default: oklch(32% 0.010 var(--hue));
+  --border-strong:  oklch(46% 0.010 var(--hue));
+
+  --input-bg:     var(--surface-elevated);
+  --input-border: var(--border-default);
+  --input-text:   var(--text-primary);
+}

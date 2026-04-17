@@ -1,0 +1,103 @@
+/**
+ * @sveltesentio/ui — Base tokens
+ *
+ * Shared foundation for all interface-type presets.
+ * Never import this directly in apps — import a preset CSS instead.
+ * All presets @import this file.
+ *
+ * Color system: oklch only. No hex, no rgb, no hsl.
+ */
+
+:root {
+  /* ─── Spacing — 8pt grid ─────────────────────────────────────────── */
+  --space-0:  0px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ─── Typography scale — 1.25 modular ratio ──────────────────────── */
+  --text-2xs:  0.64rem;   /*  ~10px */
+  --text-xs:   0.75rem;   /*  12px  */
+  --text-sm:   0.8125rem; /*  13px  */
+  --text-base: 1rem;      /*  16px  */
+  --text-lg:   1.125rem;  /*  18px  */
+  --text-xl:   1.25rem;   /*  20px  */
+  --text-2xl:  1.5625rem; /*  25px  */
+  --text-3xl:  1.953rem;  /*  31px  */
+  --text-4xl:  2.441rem;  /*  39px  */
+  --text-5xl:  3.052rem;  /*  49px  */
+
+  /* ─── Line heights ────────────────────────────────────────────────── */
+  --leading-tight:  1.25;
+  --leading-snug:   1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  /* ─── Font features ───────────────────────────────────────────────── */
+  --font-numeric: 'tnum' 1, 'ss01' 1; /* tabular numbers + stylistic set */
+  --font-mono-features: 'calt' 1, 'liga' 1;
+
+  /* ─── Radius ─────────────────────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-base: 8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* ─── Motion ──────────────────────────────────────────────────────── */
+  --duration-instant: 0ms;
+  --duration-fast:    100ms;
+  --duration-base:    200ms;
+  --duration-slow:    350ms;
+  --duration-slower:  500ms;
+  --easing-standard:  cubic-bezier(0.2, 0, 0, 1);
+  --easing-emphasized:cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --easing-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ─── Elevation (shadow) ─────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px oklch(0% 0 0 / 0.08);
+  --shadow-md:  0 4px 12px oklch(0% 0 0 / 0.12);
+  --shadow-lg:  0 8px 24px oklch(0% 0 0 / 0.16);
+  --shadow-xl:  0 16px 48px oklch(0% 0 0 / 0.20);
+
+  /* ─── Z-index scale ───────────────────────────────────────────────── */
+  --z-below:   -1;
+  --z-base:     0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-tooltip:  600;
+
+  /* ─── Status colors — colorblind-safe (always pair with icon) ───── */
+  --color-critical: oklch(55% 0.22 25);
+  --color-warning:  oklch(70% 0.18 70);
+  --color-ok:       oklch(65% 0.18 145);
+  --color-info:     oklch(60% 0.15 245);
+
+  /* ─── Focus ring ──────────────────────────────────────────────────── */
+  --focus-ring-width:  2px;
+  --focus-ring-offset: 2px;
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast:   0ms;
+    --duration-base:   0ms;
+    --duration-slow:   0ms;
+    --duration-slower: 0ms;
+  }
+}

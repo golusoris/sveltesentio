@@ -4,11 +4,30 @@
   "description": "shadcn-svelte CLI wrapper, Tailwind 4 preset, design tokens per interface type",
   "type": "module",
   "private": false,
-  "sideEffects": false,
+  "sideEffects": ["tokens/*.css"],
+  "bin": {
+    "sveltesentio-ui": "./bin/add-shadcn.js"
+  },
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./presets": { "import": "./src/presets/index.ts", "types": "./src/presets/index.ts" },
-    "./tokens": { "import": "./src/tokens/index.ts", "types": "./src/tokens/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./presets": {
+      "import": "./src/presets/index.ts",
+      "types": "./src/presets/index.ts"
+    },
+    "./tokens": {
+      "import": "./src/tokens/index.ts",
+      "types": "./src/tokens/index.ts"
+    },
+    "./tokens/base.css":      "./tokens/base.css",
+    "./tokens/media.css":     "./tokens/media.css",
+    "./tokens/dashboard.css": "./tokens/dashboard.css",
+    "./tokens/webapp.css":    "./tokens/webapp.css",
+    "./tokens/pwa.css":       "./tokens/pwa.css",
+    "./tokens/ten-foot.css":  "./tokens/ten-foot.css",
+    "./tokens/flow.css":      "./tokens/flow.css"
   },
   "scripts": {
     "build": "tsc",
@@ -24,9 +43,12 @@
     "mode-watcher": ">=0.5.0"
   },
   "devDependencies": {
+    "@histoire/plugin-svelte": "latest",
     "histoire": "latest",
+    "mode-watcher": "^0.5.1",
+    "svelte": "^5.55.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "ui", "shadcn", "tailwind", "design-tokens"]
+  "keywords": ["sveltesentio", "ui", "shadcn", "tailwind", "design-tokens", "oklch", "presets"]
 }
