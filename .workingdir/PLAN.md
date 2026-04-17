@@ -111,25 +111,14 @@ Layerchart wrappers:
 - `useAutoSuggest()` — debounced suggestion as-you-type
 - `useImageAlt()` — auto-generate accessible alt text for images
 
-## Phase 13 — CLI: sveltesentio
+## Phase 13 — CLI: create-sveltesentio
 
-`npx sveltesentio` CLI:
-- `sveltesentio init <app-name>` — scaffold new SvelteKit app with chosen packages
-- `sveltesentio add <package>` — add @sveltesentio/* package to existing app
-- `sveltesentio add-shadcn <component>` — run shadcn-svelte CLI with sveltesentio preset
-- `sveltesentio bump <version>` — update sveltesentio deps + apply codemods
+`npx create-sveltesentio` scaffolder (D16):
 
-## Phase 14 — Migrate app-arca
+- `npx create-sveltesentio my-app` — interactive prompt → choose preset + packages → scaffold SvelteKit app
+- Applies chosen interface-type token preset, installs selected `@sveltesentio/*` packages
+- Sets up `components.json` for shadcn-svelte CLI, `.env.example`, devcontainer
+- Wires `ci-sveltekit.yml` + `release-sveltekit.yml` reusable workflows into new app's CI
 
-Migrate app-arca frontend from standalone to sveltesentio-powered:
-- Replace manual API client with `@sveltesentio/query` patterns
-- Replace manual form handling with `@sveltesentio/forms`
-- Upgrade `@inlang/paraglide-sveltekit` → `@sveltesentio/i18n` (paraglide-js v2)
-- Apply media server web UI preset from `@sveltesentio/ui`
-- Call reusable CI workflow `ci-sveltekit.yml`
-
-## Phase 15 — Migrate app-revenge + app-subdo
-
-- app-revenge: apply 10-foot UI preset + media package + HLS support
-- app-subdo: apply flow package + realtime (ConnectRPC + Yjs)
-- Both: call reusable `ci-sveltekit.yml` + `release-sveltekit.yml`
+> **Note**: App migrations (app-arca, app-revenge, app-subdo) happen in each app's own repo —
+> not in this repo. sveltesentio provides the packages; apps consume them on their own schedule.
