@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/core",
   "version": "0.0.1",
-  "description": "Vite plugin, env schema, error types, id/clock utils — sveltesentio core",
+  "description": "Vite plugin, env schema, error types, id/clock/log utils — sveltesentio core",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -20,7 +20,9 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "vite": "^8.0.8",
+    "zod": "^4.3.6"
   },
-  "keywords": ["sveltesentio", "sveltekit", "vite-plugin"]
+  "keywords": ["sveltesentio", "sveltekit", "vite-plugin", "env", "error-handling", "uuid"]
 }
