@@ -16,3 +16,6 @@ Thumbs.db
 
 # Local planning / scratch (not lost-proof — keep durable docs under docs/)
 .workingdir/
+
+# agent worktrees (transient)
+.claude/worktrees/
