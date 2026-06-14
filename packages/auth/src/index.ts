@@ -64,6 +64,13 @@ export {
 export type { AuthErrorState, MfaErrorCodes } from './mfa.js';
 
 export {
+	DEFAULT_MFA_CHALLENGE_COPY,
+	deriveMfaChallengeView,
+	isSubmittableCode,
+} from './mfa-view.js';
+export type { MfaChallengeCopy, MfaChallengeView } from './mfa-view.js';
+
+export {
 	authenticatePasskey,
 	passkeysSupported,
 	registerPasskey,
