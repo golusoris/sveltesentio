@@ -37,3 +37,25 @@ export {
 export { type YjsArrayStore, createYjsStore } from './createYjsStore.svelte.js';
 export { type YjsMapStore, createYjsMap } from './createYjsMap.svelte.js';
 export { type YjsTextStore, createYjsText } from './createYjsText.svelte.js';
+
+export {
+	type PresenceState,
+	type AwarenessChange,
+	type AwarenessEvent,
+	type AwarenessLike,
+	type PresenceEntry,
+	type PresenceDiff,
+	type ObservePresenceOptions,
+	setLocalPresence,
+	patchLocalPresence,
+	snapshotPresence,
+	snapshotOthers,
+	observePresence,
+	diffPresence,
+} from './awareness.js';
+
+export {
+	type PresenceStore,
+	type PresenceStoreOptions,
+	createPresenceStore,
+} from './presence-store.svelte.js';
