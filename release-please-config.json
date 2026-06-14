@@ -104,6 +104,9 @@
     },
     "packages/uploads": {
       "package-name": "@sveltesentio/uploads"
+    },
+    "packages/shell": {
+      "package-name": "@sveltesentio/shell"
     }
   }
 }
