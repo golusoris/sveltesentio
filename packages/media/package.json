@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/media",
-  "version": "0.1.0",
-  "description": "Vidstack + HLS.js + embla-carousel wrappers, artwork grid, 10-foot UI preset",
+  "version": "0.2.0",
+  "description": "Headless media player model (HLS rendition picking, media-session, play/pause/quality machine, BYO hls.js seam) + responsive-image srcset/sizes builders",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -9,25 +9,27 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./player": {
+      "import": "./src/player.ts",
+      "types": "./src/player.ts"
+    },
+    "./image": {
+      "import": "./src/image.ts",
+      "types": "./src/image.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "peerDependencies": {
-    "vidstack": ">=0.6.0",
-    "hls.js": ">=1.6.0",
-    "embla-carousel-svelte": ">=8.0.0",
-    "svelte": ">=5.0.0"
+    "hls.js": ">=1.6.0"
   },
   "peerDependenciesMeta": {
     "hls.js": {
-      "optional": true
-    },
-    "embla-carousel-svelte": {
       "optional": true
     }
   },
@@ -38,9 +40,9 @@
   "keywords": [
     "sveltesentio",
     "media",
-    "vidstack",
     "hls",
-    "carousel",
+    "srcset",
+    "media-session",
     "10-foot-ui"
   ],
   "publishConfig": {

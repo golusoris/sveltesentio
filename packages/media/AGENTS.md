@@ -1,14 +1,30 @@
 # @sveltesentio/media — AGENTS.md
 
-> Video / audio / image player surface. Phase 10 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> Video / audio / image player surface. v0.2.0 ships the headless logic core; the `vidstack` UI shell + `./carousel` are follow-throughs. Phase 10 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+
+## Status (reconciles README ↔ AGENTS — issue #67)
+
+- **Landed in v0.2.0:** `./player` headless model (`pickRendition`, `buildMediaSessionMetadata`, the `playbackReducer` play/pause/quality machine, `createHlsAttachment`) + `./image` `srcset` / `sizes` builders. Pure, framework-agnostic, unit-tested.
+- **Follow-through (not in v0.2.0):** the `<Player>` UI shell over `vidstack@next`, the `./carousel` embla re-export, and LQIP/`<Image>` component wrapper. These pull heavy runtime deps and are deferred so this package stays dependency-light.
 
 ## Scope
 
-| Sub-export | Contents | ADR |
-|---|---|---|
-| `./player` | Thin wrapper over `vidstack@next` 1.12.13 + `hls.js@^1.6` for video/audio | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md) |
-| `./image` | Responsive `<Image>` with `srcset` / `sizes` + preset-aware dimensions + LQIP | [ADR-0055](../../docs/adr/0055-media-image-keep-wrapper.md) |
-| `./carousel` | shadcn-svelte Carousel (embla) re-export + reduced-motion + target-size overrides | [ADR-0012](../../docs/adr/0012-embla-carousel-via-shadcn.md) |
+| Sub-export | Status | Contents | ADR |
+|---|---|---|---|
+| `./player` | **landed** | Headless HLS rendition picking, OS media-session metadata, play/pause/quality state machine, bring-your-own-`hls.js` attachment seam | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md) |
+| `./image` | **landed** | Pure `srcset` / `sizes` / responsive-attr builders (template-driven, query-merge fallback) | [ADR-0055](../../docs/adr/0055-media-image-keep-wrapper.md) |
+| `<Player>` UI | follow-through | Thin runes shell over `vidstack@next` 1.12.13 with a11y defaults | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md) |
+| `./carousel` | follow-through | shadcn-svelte Carousel (embla) re-export + reduced-motion + target-size overrides | [ADR-0012](../../docs/adr/0012-embla-carousel-via-shadcn.md) |
+
+## `./player` headless design (issues #67 / #68)
+
+The engine logic is factored **out** of any UI shell so a downstream already on
+raw `hls.js` (e.g. revenge) adopts it incrementally without swapping its player:
+
+- **Separate renditions.** `HlsRendition` models un-muxed audio/video; `pickRendition` honours `maxHeight` + `preferCodec` (HEVC over H.264 fallback) so quality and audio-track switching stay independent concerns.
+- **BYO `hls.js`.** `createHlsAttachment(HlsCtor, { config })` injects the constructor — this package neither bundles nor dynamically imports `hls.js`; it is an **optional** peer. Constructor config passes straight through.
+- **State machine.** `playbackReducer` is a pure reducer; invalid transitions are no-ops (never throws). Quality selection is orthogonal to the play/pause lifecycle.
+- **OS chrome hook.** `buildMediaSessionMetadata` returns a plain `MediaMetadataInit`-compatible object; the caller owns the `navigator.mediaSession` DOM boundary.
 
 **EmulatorJS does NOT live here.** It ships as a standalone `@sveltesentio/game` package — the ~40 MB cores would bloat every media consumer (D113 locked, Phase 2 backlog).
 
@@ -33,9 +49,8 @@
 
 ## Test policy
 
-- Visual regression for player UI per preset (desktop / 10-foot / handheld).
-- Keyboard-only playback control tests (Space / Arrow / M / F / C per Vidstack defaults).
-- HLS manifest fixtures committed to `test/fixtures/hls/`.
+- **v0.2.0 (landed):** pure-logic unit tests in `test/` cover every `./player` and `./image` export, including rendition tie-breaks, codec preference + fallback, the full state-machine transition table (valid + no-op), the injected-`hls.js` attach/destroy order, and `srcset` / `sizes` edge cases (query-merge, hash preservation, token templates).
+- **Follow-through (with the UI shell):** visual regression per preset (desktop / 10-foot / handheld); keyboard-only playback control tests (Space / Arrow / M / F / C per Vidstack defaults); HLS manifest fixtures under `test/fixtures/hls/`.
 
 ## Common tasks
 
