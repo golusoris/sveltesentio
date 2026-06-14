@@ -13,5 +13,6 @@
   "packages/collab": "0.1.0",
   "packages/testing": "0.1.0",
   "packages/mcp": "0.1.0",
-  "packages/api": "0.1.0"
+  "packages/api": "0.1.0",
+  "packages/uploads": "0.1.0"
 }
