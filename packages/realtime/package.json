@@ -1,17 +1,31 @@
 {
   "name": "@sveltesentio/realtime",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Native SSE client with exponential backoff + buffered emitter (ConnectRPC + Yjs WS follow-through)",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./sse": { "import": "./src/sse-client.ts", "types": "./src/sse-client.ts" },
-    "./backoff": { "import": "./src/backoff.ts", "types": "./src/backoff.ts" },
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./sse": {
+      "import": "./src/sse-client.ts",
+      "types": "./src/sse-client.ts"
+    },
+    "./backoff": {
+      "import": "./src/backoff.ts",
+      "types": "./src/backoff.ts"
+    },
     "./buffered-emitter": {
       "import": "./src/buffered-emitter.ts",
       "types": "./src/buffered-emitter.ts"
+    },
+    "./use-sse": {
+      "svelte": "./src/use-sse.svelte.ts",
+      "import": "./src/use-sse.svelte.ts",
+      "types": "./src/use-sse.svelte.ts"
     }
   },
   "scripts": {
@@ -26,7 +40,9 @@
     "svelte": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "@connectrpc/connect": { "optional": true }
+    "@connectrpc/connect": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.0.0",
@@ -34,5 +50,12 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "realtime", "sse", "websocket", "connectrpc", "grpc"]
+  "keywords": [
+    "sveltesentio",
+    "realtime",
+    "sse",
+    "websocket",
+    "connectrpc",
+    "grpc"
+  ]
 }

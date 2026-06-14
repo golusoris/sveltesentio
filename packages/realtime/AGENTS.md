@@ -13,12 +13,12 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 | `SseClient` class | Native `EventSource` wrapper + auto-reconnect; accepts an injected `eventSourceFactory` (for tests / non-browser runtimes) + `setTimeoutImpl` hooks; tracks `attempt` + emits `onStateChange` for `idle \| connecting \| open \| closed` | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
 | `computeBackoff(attempt, options?)` | Exponential backoff with symmetric jitter, capped at `maxMs`; rejects invalid jitter bounds; accepts injectable `random()` for deterministic tests | ADR-0037 |
 | `createBufferedEmitter<T>({ bufferMs, onFlush })` | Throttles `$state` updates so 10k-msg/s feeds don't thrash the render loop (per AGENTS.md invariant); `flush()` drains synchronously; `stop()` drops pending | ADR-0037 |
+| `useSSE()` rune (`./use-sse`) | Runes wrapper over `SseClient`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `connected`; optional `bufferMs` backpressure via `createBufferedEmitter`; ties connect/close to the caller's `$effect` lifecycle (SSR-safe) | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
 
 ### Follow-through (not in v0.0.1)
 
 | Hook | Transport | ADR |
 |---|---|---|
-| `useSSE()` rune | Svelte runes-native wrapper over `SseClient` for `.svelte` consumers | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
 | `useConnectStream()` | ConnectRPC server-streaming via `@connectrpc/connect-web@2.1.1` + `@bufbuild/protobuf@2.11.0` | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
 | (Yjs WS) | `y-websocket` — lives in `@sveltesentio/collab`, not here | [ADR-0039](../../docs/adr/0039-y-websocket-createYjsStore.md) |
 
