@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/query",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TanStack Query wrappers for SvelteKit — load helpers, optimistic updates, SSR hydration",
   "type": "module",
   "private": false,
@@ -9,20 +9,41 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./query-client": {
+      "import": "./src/query-client.ts",
+      "types": "./src/query-client.ts"
+    },
+    "./query": {
+      "import": "./src/query.ts",
+      "types": "./src/query.ts"
+    },
+    "./hydration": {
+      "import": "./src/hydration.ts",
+      "types": "./src/hydration.ts"
+    },
+    "./infinite": {
+      "import": "./src/infinite.ts",
+      "types": "./src/infinite.ts"
+    },
+    "./mutation": {
+      "import": "./src/mutation.ts",
+      "types": "./src/mutation.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "peerDependencies": {
+    "@sveltejs/kit": ">=2.0.0",
     "@tanstack/svelte-query": ">=6.0.0",
-    "svelte": ">=5.0.0",
-    "@sveltejs/kit": ">=2.0.0"
+    "svelte": ">=5.0.0"
   },
   "devDependencies": {
+    "@tanstack/svelte-query": "^6.1.16",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
@@ -38,5 +59,8 @@
   "files": [
     "src",
     "CHANGELOG.md"
-  ]
+  ],
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  }
 }
