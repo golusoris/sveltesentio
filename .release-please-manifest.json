@@ -5,7 +5,7 @@
   "packages/forms": "0.0.1",
   "packages/i18n": "0.0.1",
   "packages/auth": "0.0.1",
-  "packages/realtime": "0.0.1",
+  "packages/realtime": "0.0.2",
   "packages/flow": "0.0.1",
   "packages/media": "0.0.1",
   "packages/charts": "0.0.1",

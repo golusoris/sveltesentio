@@ -6,7 +6,17 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-🚧 Phase 1 stub — implementation begins in Phase 2+.
+✅ v0.0.1 — `SseClient`, `computeBackoff`, `createBufferedEmitter`, and the
+`useSSE()` rune have shipped. ConnectRPC (`useConnectStream`) is follow-through.
+
+## Sub-exports
+
+| Import | What |
+|---|---|
+| `@sveltesentio/realtime/sse` | `SseClient` — native `EventSource` wrapper + auto-reconnect |
+| `@sveltesentio/realtime/backoff` | `computeBackoff` — jittered exponential backoff |
+| `@sveltesentio/realtime/buffered-emitter` | `createBufferedEmitter` — throttled batch emitter |
+| `@sveltesentio/realtime/use-sse` | `useSSE()` — Svelte 5 runes wrapper over `SseClient` |
 
 ## Installation
 
