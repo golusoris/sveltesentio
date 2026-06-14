@@ -1,13 +1,15 @@
 {
   "name": "@sveltesentio/ai",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "LLM chat components, edge AI (Transformers.js/WebGPU), semantic search utilities",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./edge": { "import": "./src/edge/index.ts", "types": "./src/edge/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -21,11 +23,20 @@
     "@huggingface/transformers": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "@huggingface/transformers": { "optional": true }
+    "@huggingface/transformers": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "ai", "llm", "transformers", "edge-ai", "semantic-search"]
+  "keywords": [
+    "sveltesentio",
+    "ai",
+    "llm",
+    "transformers",
+    "edge-ai",
+    "semantic-search"
+  ]
 }
