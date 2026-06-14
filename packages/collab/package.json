@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/collab",
-  "version": "0.1.0",
-  "description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers",
+  "version": "0.2.0",
+  "description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers + awareness/presence helpers",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -37,6 +37,14 @@
     "./text-store": {
       "import": "./src/createYjsText.svelte.ts",
       "types": "./src/createYjsText.svelte.ts"
+    },
+    "./awareness": {
+      "import": "./src/awareness.ts",
+      "types": "./src/awareness.ts"
+    },
+    "./presence-store": {
+      "import": "./src/presence-store.svelte.ts",
+      "types": "./src/presence-store.svelte.ts"
     }
   },
   "scripts": {
@@ -48,7 +56,13 @@
   "peerDependencies": {
     "svelte": ">=5.0.0",
     "yjs": ">=13.6.0",
-    "y-websocket": ">=2.0.0"
+    "y-websocket": ">=2.0.0",
+    "y-protocols": ">=1.0.5"
+  },
+  "peerDependenciesMeta": {
+    "y-protocols": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "svelte": "^5.55.4",
@@ -60,7 +74,9 @@
     "yjs",
     "crdt",
     "collaboration",
-    "y-websocket"
+    "y-websocket",
+    "awareness",
+    "presence"
   ],
   "publishConfig": {
     "access": "public"

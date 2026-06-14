@@ -2,7 +2,7 @@
 
 > Yjs CRDT collaboration. Locked through [ADR-0009](../../docs/adr/0009-yjs-ywebsocket-framework-lock.md) + [ADR-0039](../../docs/adr/0039-y-websocket-createYjsStore.md).
 
-## Landed (v0.0.1)
+## Landed (v0.2.0)
 
 | Sub-export | Contents |
 |---|---|
@@ -14,8 +14,12 @@
 | `./store` | `createYjsStore<T>(yArray)` — `$state`-backed rune wrapper for `Y.Array<T>` |
 | `./map-store` | `createYjsMap<V>(yMap)` — `$state`-backed rune wrapper for `Y.Map<V>` |
 | `./text-store` | `createYjsText(yText)` — `$state`-backed rune wrapper for `Y.Text` |
+| `./awareness` | `setLocalPresence` / `patchLocalPresence` / `snapshotPresence` / `snapshotOthers` / `observePresence` / `diffPresence` — pure helpers over a structural `AwarenessLike` (no hard `y-protocols` import) |
+| `./presence-store` | `createPresenceStore<S>(awareness, opts?)` — `$state`-backed rune wrapper exposing reactive `others` / `count` / `local` + `setLocal` / `patchLocal` |
 
 Ships with ambient rune declarations (`src/runes-ambient.d.ts`) so plain `tsc --noEmit` can typecheck `.svelte.ts` files inside the package until the monorepo adopts `svelte-check` globally.
+
+`y-protocols` is an **optional** peer (`peerDependenciesMeta.y-protocols.optional`). The awareness helpers type against a structural `AwarenessLike` (`clientID` / `getStates` / `getLocalState` / `setLocalState` / `on` / `off`), so they need no hard import and unit-test against a fake awareness.
 
 ## Follow-through
 
@@ -23,7 +27,6 @@ Ships with ambient rune declarations (`src/runes-ambient.d.ts`) so plain `tsc --
 |---|---|
 | `y-indexeddb` compose recipe (`docs/compose/collab-persistence.md`) | Opt-in per ADR-0009; not shipped as hard dep |
 | `y-webrtc` compose recipe (`docs/compose/collab-p2p.md`) | Opt-in per ADR-0009; not shipped as hard dep |
-| Awareness helpers (`createAwareness`) | Waiting for subdo presence-UX spec |
 | Convergence tests (two `Y.Doc` + fake WebSocket pair) | Needs a shared test harness; tracked with the broader integration-test phase |
 | Auth-header binding on provider construction | Needs the session-cookie handoff pattern from `@sveltesentio/auth` — revisit when a downstream app wires it |
 
@@ -48,10 +51,13 @@ This package does **not**:
 - **Mutations route through the Y type, never the proxy.** `store.push(x)` calls `yArray.push([x])`; the exposed `items` array is `readonly`.
 - **Snapshots are shallow.** Nested Y types are exposed as-is; deep mutation still requires the caller to invoke Y operations on the inner type. Deep proxy semantics are out of scope.
 - **Transactions are explicit.** Batched edits go through `transactYjs(doc, () => …)`; the helper does not invent an implicit transaction wrapper.
+- **Presence reads via `'change'`, not `'update'`.** `observePresence` / `createPresenceStore` default to the awareness `'change'` event so listeners fire on real transitions, not every heartbeat. `'update'` is opt-in via `{ event: 'update' }`.
+- **`diffPresence` keys updates on reference identity.** Yjs replaces a client's state object on every change, so `prev.get(id) !== next.get(id)` is a correct, allocation-free staleness check — no deep compare.
+- **Presence mutations route through the awareness.** `store.setLocal(x)` calls `awareness.setLocalState(x)`; `others` is `readonly`.
 
 ## Test policy
 
-- Unit: pure helpers against an in-memory `Y.Doc`. No network; no real provider. Rune helpers (`*.svelte.ts`) are exercised indirectly via the pure helpers they compose; direct rune runtime tests land once the monorepo wires up the `vitest` + Svelte plugin harness.
+- Unit: pure helpers against an in-memory `Y.Doc`. No network; no real provider. Awareness helpers (`./awareness`) test against an in-memory `FakeAwareness` implementing `AwarenessLike` — no `y-protocols` dependency at test time. Rune helpers (`*.svelte.ts`) are exercised indirectly via the pure helpers they compose; direct rune runtime tests land once the monorepo wires up the `vitest` + Svelte plugin harness.
 - Provider tests use the `WebSocketPolyfill` option with a no-op socket to avoid real sockets.
 - Coverage ≥ 85% on pure helpers.
 
