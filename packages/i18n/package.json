@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/i18n",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Paraglide-js v2 wrappers — locale detection, Intl formatters, a11y announcer, RTL direction",
   "type": "module",
   "private": false,
@@ -21,6 +21,18 @@
     "./announcer": {
       "import": "./src/announcer.ts",
       "types": "./src/announcer.ts"
+    },
+    "./load-locale-font": {
+      "import": "./src/load-locale-font.ts",
+      "types": "./src/load-locale-font.ts"
+    },
+    "./lang-sync": {
+      "svelte": "./src/LangSync.svelte",
+      "default": "./src/LangSync.svelte"
+    },
+    "./locale-switcher": {
+      "svelte": "./src/LocaleSwitcher.svelte",
+      "default": "./src/LocaleSwitcher.svelte"
     }
   },
   "scripts": {
