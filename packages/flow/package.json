@@ -1,14 +1,23 @@
 {
   "name": "@sveltesentio/flow",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "@xyflow/svelte wrappers — node editors, DAG helpers, canvas utilities",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./dag": { "import": "./src/dag.ts", "types": "./src/dag.ts" },
-    "./layout": { "import": "./src/layout.ts", "types": "./src/layout.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./dag": {
+      "import": "./src/dag.ts",
+      "types": "./src/dag.ts"
+    },
+    "./layout": {
+      "import": "./src/layout.ts",
+      "types": "./src/layout.ts"
+    }
   },
   "scripts": {
     "build": "tsc",

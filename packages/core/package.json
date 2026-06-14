@@ -1,19 +1,43 @@
 {
   "name": "@sveltesentio/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Vite plugin, env schema, error types, id/clock utils — sveltesentio core",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./clock": { "import": "./src/clock.ts", "types": "./src/clock.ts" },
-    "./env": { "import": "./src/env.ts", "types": "./src/env.ts" },
-    "./id": { "import": "./src/id.ts", "types": "./src/id.ts" },
-    "./problem": { "import": "./src/problem.ts", "types": "./src/problem.ts" },
-    "./http": { "import": "./src/http.ts", "types": "./src/http.ts" },
-    "./csp": { "import": "./src/csp.ts", "types": "./src/csp.ts" },
-    "./vite": { "import": "./src/vite.ts", "types": "./src/vite.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./clock": {
+      "import": "./src/clock.ts",
+      "types": "./src/clock.ts"
+    },
+    "./env": {
+      "import": "./src/env.ts",
+      "types": "./src/env.ts"
+    },
+    "./id": {
+      "import": "./src/id.ts",
+      "types": "./src/id.ts"
+    },
+    "./problem": {
+      "import": "./src/problem.ts",
+      "types": "./src/problem.ts"
+    },
+    "./http": {
+      "import": "./src/http.ts",
+      "types": "./src/http.ts"
+    },
+    "./csp": {
+      "import": "./src/csp.ts",
+      "types": "./src/csp.ts"
+    },
+    "./vite": {
+      "import": "./src/vite.ts",
+      "types": "./src/vite.ts"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -31,7 +55,9 @@
     "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
-    "openapi-fetch": { "optional": true }
+    "openapi-fetch": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.0.0",
@@ -44,5 +70,9 @@
     "vitest": "^4.1.4",
     "zod": "^4.3.6"
   },
-  "keywords": ["sveltesentio", "sveltekit", "vite-plugin"]
+  "keywords": [
+    "sveltesentio",
+    "sveltekit",
+    "vite-plugin"
+  ]
 }
