@@ -1,0 +1,63 @@
+# Architecture Decision Records
+
+Sveltesentio ADRs follow **MADR-lite** (Markdown ADR, light variant): a short, stable per-decision record with Context, Decision, Alternatives considered, Consequences, and Evidence. Status transitions: `Proposed` → `Accepted` → (optional) `Superseded by ADR-NNNN`.
+
+## Index
+
+| ADR | Title | Status | D-row |
+|---|---|---|---|
+| [ADR-0001](0001-zod-v4-floor.md) | Zod v4 floor for all sveltesentio schemas | Proposed | D12 |
+| [ADR-0002](0002-lucide-svelte-default-icons.md) | `@lucide/svelte` new scope as default icon library; `@sveltesentio/ui/icons` pluggable for `@iconify/svelte` interop | Proposed | D23 |
+| [ADR-0003](0003-forms-thin-superforms-wrapper.md) | Thin `@sveltesentio/forms` wrapping Superforms v2 + Zod v4 (+ optional Formsnap); plain-state pattern documented | Proposed | D40 |
+| [ADR-0004](0004-flow-thin-xyflow-wrapper.md) | Thin `@sveltesentio/flow` wrapping `@xyflow/svelte` + elkjs-layout helper + palette | Proposed | D173 |
+| [ADR-0005](0005-tailwind-4-with-vite-plugin.md) | Tailwind 4 + `@tailwindcss/vite` | Proposed | D21 |
+| [ADR-0006](0006-oklch-only-color-tokens.md) | oklch-only color tokens, no HSL fallback | Proposed | D22 |
+| [ADR-0007](0007-svelte-sonner-toast-primitive.md) | `svelte-sonner` as toast primitive | Proposed | D26 |
+| [ADR-0008](0008-tanstack-svelte-query-v6.md) | `@tanstack/svelte-query@6` for server state | Proposed | D30 |
+| [ADR-0009](0009-yjs-y-websocket-collab.md) | Yjs + `y-websocket` as `@sveltesentio/collab` core | Proposed | D80 |
+| [ADR-0010](0010-xyflow-svelte-flow-canvas.md) | `@xyflow/svelte` (SvelteFlow) for flow canvas | Proposed | D90 |
+| [ADR-0011](0011-ui-data-wrapper-keep.md) | Keep `@sveltesentio/ui/data` wrapper (DataTable<T> + TanStack Virtual + infinite-query preset) | Proposed | D167 |
+| [ADR-0012](0012-embla-carousel-via-shadcn.md) | `embla-carousel-svelte` via shadcn-svelte CLI; `docs/compose/carousel.md` for reduced-motion + target-size | Proposed | D112 |
+| [ADR-0013](0013-layerchart-charts-with-uplot-escape-hatch.md) | LayerChart v2-next via shadcn Chart + uPlot `docs/compose` escape hatch + `@sveltesentio/ui/chart` a11y wrapper | Proposed | D120 |
+| [ADR-0014](0014-shadcn-svelte-cli-primitive-delivery.md) | shadcn-svelte CLI as default primitive delivery; bits-ui + tailwind-variants documented as escape hatch | Proposed | D20 |
+| [ADR-0015](0015-ui-cmd-thin-wrapper.md) | Keep thin `@sveltesentio/ui/cmd` wrapper (shadcn Command + registry + tinykeys) | Proposed | D169 |
+| [ADR-0016](0016-ui-toast-thin-wrapper-preset-sizing.md) | Keep thin `@sveltesentio/ui/toast` wrapper WITH preset-aware sizing | Proposed | D170 |
+| [ADR-0017](0017-paraglide-v2-i18n-default.md) | Paraglide v2 (`@inlang/paraglide-js@^2`) as framework i18n default | Proposed (audit complete) | D50 |
+| [ADR-0018](0018-i18n-thin-wrapper.md) | Keep thin `@sveltesentio/i18n` wrapper (Paraglide v2 re-export + 6 a11y action items) | Proposed (audit complete) | D172 |
+| [ADR-0019](0019-openapi-fetch-rfc9457.md) | `openapi-fetch` + RFC 9457 middleware for typed HTTP against Golusoris | Proposed | D14 |
+| [ADR-0020](0020-typescript-6-floor.md) | TypeScript 6 internal floor; `>=5.5 <7` published peerDep | Proposed | D7 |
+| [ADR-0021](0021-node-24-floor.md) | `engines.node >=24`; drop Node 22 | Proposed | D5 |
+| [ADR-0022](0022-esm-only.md) | ESM-only publish format | Proposed | D6 |
+| [ADR-0023](0023-uuid-v7-default.md) | `uuid@13` UUIDv7 as the default client-side ID | Proposed | D11 |
+| [ADR-0024](0024-tanstack-virtual-a11y-wrapper.md) | `@tanstack/svelte-virtual@^3` with ARIA-wired wrapper inside `@sveltesentio/ui/data` | Proposed | D25 |
+| [ADR-0025](0025-bits-ui-command-supersedes-cmdk-sv.md) | `bits-ui` Command primitive supersedes `cmdk-sv`; `tinykeys` bundled in `ui/cmd` | Proposed | D27 |
+| [ADR-0026](0026-markdown-runtime-build-split.md) | `marked` + `DOMPurify` for runtime markdown; `mdsvex` for authored markdown | Proposed | D28 + D168 |
+| [ADR-0027](0027-custom-focus-graph-10foot.md) | Custom focus-graph D-pad router for `ui/preset-10foot`; WICG spatial-nav polyfill deferred | Proposed | D29 + D141 |
+| [ADR-0028](0028-vite-pwa-sveltekit.md) | `@vite-pwa/sveltekit@^1.1` as the PWA layer inside `@sveltesentio/shell` | Proposed | D142 |
+| [ADR-0029](0029-tailwind4-safe-area-utilities.md) | Tailwind 4 `@utility` safe-area helpers + `viewport-fit=cover` | Proposed | D143 |
+| [ADR-0030](0030-mode-watcher-pin.md) | `mode-watcher@^1.1.0` pin (runes-native) — supersedes `mode-watcher@0.5` | Proposed | mode-watcher |
+| [ADR-0031](0031-a11y-testing-lane.md) | `@axe-core/playwright` + `vitest-axe` as the a11y testing lane inside `@sveltesentio/testing` | Proposed | D164 |
+| [ADR-0032](0032-custom-oidc-client-against-golusoris.md) | Custom thin OIDC client against Golusoris `auth/oidc/*`; no third-party auth framework | Proposed | D60 |
+| [ADR-0033](0033-simplewebauthn-passkeys.md) | `@simplewebauthn/browser@^13` for passkeys (WebAuthn); pairs with go-webauthn | Proposed | D61 |
+| [ADR-0034](0034-httponly-cookie-sessions.md) | HttpOnly + Secure + SameSite=Lax cookie sessions; no JS-readable tokens | Proposed | D62 |
+| [ADR-0035](0035-load-derived-permissions.md) | Per-route `load`-derived permissions; no global `$permissions` rune | Proposed | D63 |
+| [ADR-0036](0036-mfa-ui-structured-errors.md) | First-class MFA/TOTP UI in `@sveltesentio/auth` + structured error codes | Proposed | D64 + D10 |
+| [ADR-0037](0037-sse-native-useSSE.md) | Native `EventSource` + `useSSE()` rune; reject `sveltekit-sse` framework | Proposed | D70 + D73 |
+| [ADR-0038](0038-connectrpc-connect-web-connect-query.md) | ConnectRPC — `@connectrpc/connect-web` + `@bufbuild/protobuf` + `@connectrpc/connect-query` | Proposed | D71 + D72 |
+| [ADR-0039](0039-y-websocket-createYjsStore.md) | `y-websocket` default + custom `createYjsStore<T>` rune helper; no `y-svelte` | Proposed | D81 + D82 |
+| [ADR-0040](0040-paraglide-strategy-logical-properties.md) | Paraglide URL+cookie strategy + Tailwind 4 logical properties for RTL | Proposed | D51 + D52 + D53 |
+| [ADR-0041](0041-uploads-tus-exifr-filetype.md) | Uploads stack — `tus-js-client` + `exifr` + `file-type` inside `@sveltesentio/uploads` | Proposed | D100 + D102 |
+| [ADR-0042](0042-vidstack-next-hls.md) | Vidstack `@next` (1.12.13) + `hls.js@^1.6` for media player | Proposed | D110 + D111 |
+| [ADR-0043](0043-ai-server-proxy-only.md) | AI provider SDKs are server-proxy-only; no browser imports of Anthropic / Ollama SDKs | Proposed | D130 + D131 + D133 |
+| [ADR-0044](0044-huggingface-transformers-on-device.md) | `@huggingface/transformers@^4.1` for on-device AI; `@xenova/transformers` deprecated | Proposed | D132 |
+| [ADR-0045](0045-ai-audit-hook-zod-schema.md) | AI audit hook with shipped Zod schema; EU AI Act readiness scaffolding | Proposed | D134 |
+| [ADR-0046](0046-three-tier-theming.md) | Three-tier theming — compile-time `@theme` + runtime cookie + user-customiser | Proposed | D160 + D163 |
+| [ADR-0047](0047-per-interface-presets.md) | Per-interface presets — `ui/preset-{desktop,10foot,handheld,dashboard}` | Proposed | D161 |
+| [ADR-0048](0048-cookie-backed-dark-mode.md) | Cookie-backed dark mode + user-account override; server-injected class prevents flash | Proposed | D165 |
+| [ADR-0049](0049-system-font-default-fontsource-optin.md) | System-font default + Fontsource variable-font opt-in presets | Proposed | D166 |
+| [ADR-0050](0050-tenant-theming-minimal-skeleton.md) | Tenant theming — minimal skeleton NOW (CSS custom props + oklch, server-injected) | Proposed | D162 |
+| [ADR-0051](0051-colocated-ipc-ladder-ebpf-sockmap.md) | Colocated-IPC ladder for SvelteKit ↔ Golusoris; custom eBPF SK_MSG sockmap as top tier | Proposed | D200 |
+| [ADR-0052](0052-clock-injection-hybrid.md) | Clock injection — hybrid context-rune + `AsyncLocalStorage` module singleton | Proposed (audit complete) | D13 |
+| [ADR-0053](0053-namespace-and-npm-scope.md) | Repository namespace = `golusoris/sveltesentio`; npm scope = `@sveltesentio/*` | Accepted | D1 + D2 |
+| [ADR-0054](0054-elkjs-auto-layout.md) | `elkjs` as the auto-layout engine for `@sveltesentio/flow` | Accepted | D92 |
+| [ADR-0055](0055-media-image-keep-wrapper.md) | Keep `@sveltesentio/media/image` wrapper with preset-aware invariants | Accepted | D171 |

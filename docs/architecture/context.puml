@@ -1,0 +1,44 @@
+@startuml sveltesentio-context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title C4 L1 — Context: a typical sveltesentio-based app
+
+Person(end_user, "End user", "Web / PWA / 10-foot TV / handheld")
+Person(operator, "Operator", "Deploys + monitors the app")
+Person(developer, "Developer", "Writes app code on top of sveltesentio")
+
+System(app, "sveltesentio-based app", "SvelteKit app composed from opt-in @sveltesentio/* packages")
+
+System_Ext(golusoris_api, "Golusoris backend", "Go service exposing REST (OpenAPI 3.1 / RFC 9457) + ConnectRPC + SSE (see ADR-0019, ADR-0038, ADR-0037)")
+System_Ext(idp, "OIDC IdP (hosted by Golusoris)", "Auth — OAuth 2.1 + PKCE + passkeys (ADR-0032, ADR-0033)")
+System_Ext(collab_ws, "y-websocket server", "Yjs CRDT sync — @sveltesentio/collab (ADR-0039)")
+System_Ext(object_store, "Object storage", "S3-compatible — tus resumable + presigned uploads (ADR-0041)")
+System_Ext(ai_proxy, "AI inference proxy", "Server-proxy-only — Anthropic / OpenAI / HuggingFace / Ollama (ADR-0043). On-device fallback via WebGPU (ADR-0044)")
+System_Ext(cdn, "CDN + static host", "SvelteKit build output, fonts (Fontsource opt-in per ADR-0049), media assets")
+System_Ext(otel_collector, "OpenTelemetry collector", "Browser Web Vitals + server traces (planned @sveltesentio/observability)")
+System_Ext(runtime, "Node 24 runtime / container", "systemd / docker / kubernetes — colocated IPC candidate (ADR-0051)")
+
+Rel(end_user, app, "Uses", "HTTPS — 320 px → 2560 px, D-pad / touch / mouse / keyboard")
+Rel(operator, app, "Observes", "/healthz, /metrics (planned), release artifacts")
+Rel(developer, app, "Builds + ships", "pnpm workspace dep on @sveltesentio/*")
+
+Rel(app, golusoris_api, "Reads + mutates", "openapi-fetch + ConnectRPC + SSE (RFC 9457 errors)")
+Rel(app, idp, "Delegates auth", "OIDC + PKCE + WebAuthn")
+Rel(app, collab_ws, "Syncs CRDT docs", "WebSocket — createYjsStore")
+Rel(app, object_store, "Direct-to-browser upload", "tus + presigned S3")
+Rel(app, ai_proxy, "Streams inference", "SSE — audit hook per request (ADR-0045)")
+Rel(app, cdn, "Loads static + fonts", "HTTPS + SRI")
+Rel(app, otel_collector, "Exports telemetry", "OTLP (planned)")
+Rel(app, runtime, "Runs under", "Node 24 / systemd / container")
+
+note right of app
+  The app composes only what it imports.
+  Every external system is the consequence
+  of opting into one or more
+  @sveltesentio/* packages — there is no
+  framework-mandated external dependency.
+end note
+
+@enduml
