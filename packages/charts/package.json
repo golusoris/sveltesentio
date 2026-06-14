@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/charts",
-  "version": "0.1.0",
-  "description": "Layerchart wrappers with dashboard presets and semantic color support",
+  "version": "0.2.0",
+  "description": "Thin LayerChart wrappers with a WCAG 2.2 AA accessibility envelope (ChartFigure) and dashboard presets",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -9,19 +9,38 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./figure": {
+      "svelte": "./src/ChartFigure.svelte",
+      "default": "./src/ChartFigure.svelte"
+    },
+    "./a11y-table": {
+      "import": "./src/a11y-table.ts",
+      "types": "./src/a11y-table.ts"
+    },
+    "./preset": {
+      "import": "./src/preset.ts",
+      "types": "./src/preset.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "peerDependencies": {
-    "layerchart": ">=1.0.0",
+    "layerchart": ">=2.0.0-next.43",
     "svelte": ">=5.0.0"
   },
+  "peerDependenciesMeta": {
+    "layerchart": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "layerchart": "2.0.0-next.65",
+    "svelte": "^5.55.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
@@ -30,6 +49,7 @@
     "charts",
     "layerchart",
     "dashboard",
+    "accessibility",
     "data-visualization"
   ],
   "publishConfig": {
