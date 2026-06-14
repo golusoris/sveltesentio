@@ -1,0 +1,61 @@
+{
+  "name": "@sveltesentio/emulator",
+  "version": "0.1.0",
+  "description": "SSR-safe EmulatorJS loader (Svelte 5 <Emulator>) + platform→core map + strict-CSP additions for WASM/worker cores",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./csp": {
+      "import": "./src/csp.ts",
+      "types": "./src/csp.ts"
+    },
+    "./loader": {
+      "import": "./src/loader.ts",
+      "types": "./src/loader.ts"
+    },
+    "./cores": {
+      "import": "./src/cores.ts",
+      "types": "./src/cores.ts"
+    },
+    "./Emulator.svelte": {
+      "svelte": "./src/Emulator.svelte",
+      "types": "./src/Emulator.svelte"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "esm-env": ">=1.0.0",
+    "svelte": ">=5.0.0"
+  },
+  "devDependencies": {
+    "esm-env": "^1.2.2",
+    "svelte": "^5.55.7",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": [
+    "sveltesentio",
+    "emulatorjs",
+    "emulator",
+    "retro",
+    "wasm",
+    "csp"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ]
+}
