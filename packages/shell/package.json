@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/shell",
-  "version": "0.0.1",
-  "description": "Device-class layout primitives + PWA (@vite-pwa/sveltekit) + Tailwind 4 safe-area + D-pad focus graph",
+  "version": "0.1.0",
+  "description": "Device-class layout + input primitives — classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -10,30 +10,45 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./pwa": {
-      "import": "./src/pwa/index.ts",
-      "types": "./src/pwa/index.ts"
-    },
-    "./layout": {
-      "import": "./src/layout/index.ts",
-      "types": "./src/layout/index.ts"
+    "./device-class": {
+      "import": "./src/device-class.ts",
+      "types": "./src/device-class.ts"
     },
     "./dpad": {
-      "import": "./src/dpad/index.ts",
-      "types": "./src/dpad/index.ts"
+      "import": "./src/dpad-index.ts",
+      "types": "./src/dpad-index.ts"
+    },
+    "./safe-area": {
+      "import": "./src/safe-area.ts",
+      "types": "./src/safe-area.ts"
+    },
+    "./pwa": {
+      "import": "./src/pwa.ts",
+      "types": "./src/pwa.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "peerDependencies": {
     "svelte": ">=5.0.0",
     "@sveltejs/kit": ">=2.0.0",
     "@vite-pwa/sveltekit": ">=1.1.0",
     "vite-plugin-pwa": ">=1.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@sveltejs/kit": {
+      "optional": true
+    },
+    "@vite-pwa/sveltekit": {
+      "optional": true
+    },
+    "vite-plugin-pwa": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "svelte": "^5.55.4",
@@ -43,10 +58,12 @@
   "keywords": [
     "sveltesentio",
     "shell",
+    "device-class",
     "pwa",
     "10-foot",
     "handheld",
     "d-pad",
+    "gamepad",
     "safe-area"
   ],
   "publishConfig": {
