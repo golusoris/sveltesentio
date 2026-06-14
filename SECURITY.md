@@ -1,32 +1,58 @@
-# Security Policy
-
-## Supported versions
-
-Only the latest minor release receives security patches.
+# Security policy
 
 ## Reporting a vulnerability
 
-Report vulnerabilities via:
+Please **do not** open public GitHub issues for security vulnerabilities.
 
-1. **GitHub private advisory** — preferred: [Security Advisories](https://github.com/golusoris/sveltesentio/security/advisories/new)
-2. **Email** — lusoris@pm.me
+Prefer a [private GitHub Security Advisory](https://github.com/lusoris/sveltesentio/security/advisories/new).
+Alternative: email `lusoris@pm.me`.
 
-Do not open a public issue for security vulnerabilities.
+We aim to acknowledge within 48 hours and provide a remediation plan within 7 days.
 
-Expected response time: 48 hours for initial acknowledgement, 7 days for assessment.
+## Supported versions
 
-## Release security
+Only the latest minor release is patched. Apps should bump promptly when an
+advisory is published. Pre-1.0 releases (`0.x`) follow the same discipline —
+patch bumps fix vulnerabilities, minor bumps may include breaking changes
+with a `Migration:` footer.
 
-Every release includes:
+## Supply chain
 
-- Reproducible builds via Turborepo + pinned action SHAs
-- Keyless cosign signing via Sigstore
-- SBOM (Software Bill of Materials) via Syft
-- SLSA Level 3 provenance attestation
-- `pnpm audit` clean on every merge
+Releases are:
 
-## Dependency management
+- Built reproducibly in CI from tagged source (pinned GitHub Actions SHAs).
+- Signed with [cosign](https://docs.sigstore.dev/cosign/) (keyless, GitHub OIDC).
+- Accompanied by a [syft](https://github.com/anchore/syft) CycloneDX 1.6 SBOM.
+- Attested with [SLSA](https://slsa.dev/) L3 provenance.
+- Published with `npm publish --provenance`.
 
-- Dependabot monitors npm + GitHub Actions weekly
-- Auto-merge enabled for Dependabot minor/patch updates that pass CI
-- Major updates require manual review
+Verify a published npm tarball:
+
+```bash
+# Download the tarball + signature + attestation from the GitHub Release,
+# then verify:
+cosign verify-blob \
+  --certificate-identity-regexp '^https://github.com/lusoris/sveltesentio/' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  --signature sveltesentio-core-X.Y.Z.tgz.sig \
+  --certificate sveltesentio-core-X.Y.Z.tgz.crt \
+  sveltesentio-core-X.Y.Z.tgz
+```
+
+npm registry provenance is visible on each package page via the green
+"Built and signed on GitHub Actions" badge.
+
+## Dependencies
+
+Tracked by Dependabot (security alerts + routine bumps). Auto-merge on
+green CI for minor/patch; majors require human review. `pnpm audit` must
+be clean on every merge to `main` (enforced by `make ci`).
+
+## Compliance
+
+sveltesentio's framework-level controls map to:
+
+- [docs/compliance/owasp-asvs-l2.md](docs/compliance/owasp-asvs-l2.md) — OWASP ASVS 5.0 Level 2.
+- [docs/compliance/wcag-2.2-aa.md](docs/compliance/wcag-2.2-aa.md) — WCAG 2.2 Level AA.
+- [docs/compliance/eu-cra.md](docs/compliance/eu-cra.md) — EU Cyber Resilience Act (Reg. (EU) 2024/2847), FOSS-steward role.
+- [docs/compliance/eu-ai-act.md](docs/compliance/eu-ai-act.md) — EU AI Act (Reg. (EU) 2024/1689), deployer-side primitives.
