@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/forms",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
   "type": "module",
   "private": false,
@@ -13,6 +13,10 @@
     "./problem": {
       "import": "./src/problem-to-field-errors.ts",
       "types": "./src/problem-to-field-errors.ts"
+    },
+    "./server": {
+      "import": "./src/server.ts",
+      "types": "./src/server.ts"
     }
   },
   "scripts": {
