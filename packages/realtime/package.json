@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/realtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Native SSE client with exponential backoff + buffered emitter (ConnectRPC + Yjs WS follow-through)",
   "type": "module",
   "private": false,
@@ -26,6 +26,15 @@
       "svelte": "./src/use-sse.svelte.ts",
       "import": "./src/use-sse.svelte.ts",
       "types": "./src/use-sse.svelte.ts"
+    },
+    "./connect-stream": {
+      "import": "./src/connect-stream.ts",
+      "types": "./src/connect-stream.ts"
+    },
+    "./use-connect-stream": {
+      "svelte": "./src/use-connect-stream.svelte.ts",
+      "import": "./src/use-connect-stream.svelte.ts",
+      "types": "./src/use-connect-stream.svelte.ts"
     }
   },
   "scripts": {
@@ -36,11 +45,15 @@
   },
   "peerDependencies": {
     "@connectrpc/connect": ">=2.0.0",
+    "@connectrpc/connect-web": ">=2.0.0",
     "@sveltejs/kit": ">=2.0.0",
     "svelte": ">=5.0.0"
   },
   "peerDependenciesMeta": {
     "@connectrpc/connect": {
+      "optional": true
+    },
+    "@connectrpc/connect-web": {
       "optional": true
     }
   },

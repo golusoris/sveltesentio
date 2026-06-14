@@ -6,8 +6,10 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-✅ v0.0.1 — `SseClient`, `computeBackoff`, `createBufferedEmitter`, and the
-`useSSE()` rune have shipped. ConnectRPC (`useConnectStream`) is follow-through.
+✅ v0.2.0 — `SseClient`, `computeBackoff`, `createBufferedEmitter`, the
+`useSSE()` rune, and the ConnectRPC server-streaming half
+(`createConnectStream` + `useConnectStream()`) have shipped. Yjs WebSocket
+lives in [`@sveltesentio/collab`](../collab).
 
 ## Sub-exports
 
@@ -17,6 +19,8 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 | `@sveltesentio/realtime/backoff` | `computeBackoff` — jittered exponential backoff |
 | `@sveltesentio/realtime/buffered-emitter` | `createBufferedEmitter` — throttled batch emitter |
 | `@sveltesentio/realtime/use-sse` | `useSSE()` — Svelte 5 runes wrapper over `SseClient` |
+| `@sveltesentio/realtime/connect-stream` | `createConnectStream` — transport-agnostic server-streaming state machine |
+| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` — Svelte 5 runes wrapper over `createConnectStream` |
 
 ## Installation
 
