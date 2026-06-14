@@ -1,0 +1,29 @@
+{
+  "name": "@sveltesentio/uploads",
+  "version": "0.0.1",
+  "description": "Resumable uploads — tus-js-client + exifr (EXIF strip) + file-type (magic-byte sniffing)",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "peerDependencies": {
+    "svelte": ">=5.0.0",
+    "tus-js-client": ">=4.3.0",
+    "exifr": ">=7.1.0",
+    "file-type": ">=22.0.0"
+  },
+  "devDependencies": {
+    "svelte": "^5.55.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": ["sveltesentio", "uploads", "tus", "exifr", "file-type", "resumable"]
+}

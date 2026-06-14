@@ -14,14 +14,14 @@
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "histoire": "histoire dev",
     "histoire:build": "histoire build"
   },
   "peerDependencies": {
     "svelte": ">=5.0.0",
     "tailwindcss": ">=4.0.0",
-    "mode-watcher": ">=0.5.0"
+    "mode-watcher": ">=1.1.0 <2"
   },
   "devDependencies": {
     "histoire": "latest",

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+.turbo/
+coverage/
+CHANGELOG.md
+**/CHANGELOG.md
+.workingdir/research/
