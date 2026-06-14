@@ -1,14 +1,22 @@
 {
   "name": "@sveltesentio/media",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Vidstack + HLS.js + embla-carousel wrappers, artwork grid, 10-foot UI preset",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
   },
-  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests" },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
   "peerDependencies": {
     "vidstack": ">=0.6.0",
     "hls.js": ">=1.6.0",
@@ -16,9 +24,23 @@
     "svelte": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "hls.js": { "optional": true },
-    "embla-carousel-svelte": { "optional": true }
+    "hls.js": {
+      "optional": true
+    },
+    "embla-carousel-svelte": {
+      "optional": true
+    }
   },
-  "devDependencies": { "typescript": "^6.0.3", "vitest": "^4.1.4" },
-  "keywords": ["sveltesentio", "media", "vidstack", "hls", "carousel", "10-foot-ui"]
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": [
+    "sveltesentio",
+    "media",
+    "vidstack",
+    "hls",
+    "carousel",
+    "10-foot-ui"
+  ]
 }

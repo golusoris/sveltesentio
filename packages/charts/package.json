@@ -1,15 +1,35 @@
 {
   "name": "@sveltesentio/charts",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Layerchart wrappers with dashboard presets and semantic color support",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
   },
-  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests" },
-  "peerDependencies": { "layerchart": ">=1.0.0", "svelte": ">=5.0.0" },
-  "devDependencies": { "typescript": "^6.0.3", "vitest": "^4.1.4" },
-  "keywords": ["sveltesentio", "charts", "layerchart", "dashboard", "data-visualization"]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "peerDependencies": {
+    "layerchart": ">=1.0.0",
+    "svelte": ">=5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": [
+    "sveltesentio",
+    "charts",
+    "layerchart",
+    "dashboard",
+    "data-visualization"
+  ]
 }

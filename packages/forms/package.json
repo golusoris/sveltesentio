@@ -1,12 +1,15 @@
 {
   "name": "@sveltesentio/forms",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
     "./problem": {
       "import": "./src/problem-to-field-errors.ts",
       "types": "./src/problem-to-field-errors.ts"
@@ -27,7 +30,9 @@
     "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
-    "formsnap": { "optional": true }
+    "formsnap": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.0.0",
@@ -38,5 +43,12 @@
     "vitest": "^4.1.4",
     "zod": "^4.3.6"
   },
-  "keywords": ["sveltesentio", "forms", "superforms", "zod", "validation", "rfc9457"]
+  "keywords": [
+    "sveltesentio",
+    "forms",
+    "superforms",
+    "zod",
+    "validation",
+    "rfc9457"
+  ]
 }

@@ -1,17 +1,35 @@
 {
   "name": "@sveltesentio/auth",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "OIDC PKCE + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only)",
   "type": "module",
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./csrf": { "import": "./src/csrf.ts", "types": "./src/csrf.ts" },
-    "./cookies": { "import": "./src/cookies.ts", "types": "./src/cookies.ts" },
-    "./pkce": { "import": "./src/pkce.ts", "types": "./src/pkce.ts" },
-    "./random": { "import": "./src/random.ts", "types": "./src/random.ts" },
-    "./permissions": { "import": "./src/permissions.ts", "types": "./src/permissions.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./csrf": {
+      "import": "./src/csrf.ts",
+      "types": "./src/csrf.ts"
+    },
+    "./cookies": {
+      "import": "./src/cookies.ts",
+      "types": "./src/cookies.ts"
+    },
+    "./pkce": {
+      "import": "./src/pkce.ts",
+      "types": "./src/pkce.ts"
+    },
+    "./random": {
+      "import": "./src/random.ts",
+      "types": "./src/random.ts"
+    },
+    "./permissions": {
+      "import": "./src/permissions.ts",
+      "types": "./src/permissions.ts"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -26,7 +44,9 @@
     "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
-    "@simplewebauthn/browser": { "optional": true }
+    "@simplewebauthn/browser": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.0.0",
@@ -35,5 +55,14 @@
     "vitest": "^4.1.4",
     "zod": "^4.3.6"
   },
-  "keywords": ["sveltesentio", "auth", "oidc", "pkce", "csrf", "session", "permissions", "webauthn"]
+  "keywords": [
+    "sveltesentio",
+    "auth",
+    "oidc",
+    "pkce",
+    "csrf",
+    "session",
+    "permissions",
+    "webauthn"
+  ]
 }

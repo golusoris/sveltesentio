@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/ai",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "LLM chat components, edge AI (Transformers.js/WebGPU), semantic search utilities",
   "type": "module",
   "private": false,
