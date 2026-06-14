@@ -31,5 +31,12 @@
     "layerchart",
     "dashboard",
     "data-visualization"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

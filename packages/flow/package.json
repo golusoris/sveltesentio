@@ -41,5 +41,12 @@
     "node-editor",
     "dag",
     "xyflow"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

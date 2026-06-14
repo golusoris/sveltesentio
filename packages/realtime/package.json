@@ -57,5 +57,12 @@
     "websocket",
     "connectrpc",
     "grpc"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

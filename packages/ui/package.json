@@ -43,5 +43,12 @@
     "shadcn",
     "tailwind",
     "design-tokens"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

@@ -49,5 +49,12 @@
     "localization",
     "rtl",
     "a11y"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

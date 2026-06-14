@@ -42,5 +42,12 @@
     "hls",
     "carousel",
     "10-foot-ui"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

@@ -6,11 +6,26 @@
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./array": { "import": "./src/yjs-array.ts", "types": "./src/yjs-array.ts" },
-    "./map": { "import": "./src/yjs-map.ts", "types": "./src/yjs-map.ts" },
-    "./text": { "import": "./src/yjs-text.ts", "types": "./src/yjs-text.ts" },
-    "./provider": { "import": "./src/provider.ts", "types": "./src/provider.ts" },
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./array": {
+      "import": "./src/yjs-array.ts",
+      "types": "./src/yjs-array.ts"
+    },
+    "./map": {
+      "import": "./src/yjs-map.ts",
+      "types": "./src/yjs-map.ts"
+    },
+    "./text": {
+      "import": "./src/yjs-text.ts",
+      "types": "./src/yjs-text.ts"
+    },
+    "./provider": {
+      "import": "./src/provider.ts",
+      "types": "./src/provider.ts"
+    },
     "./store": {
       "import": "./src/createYjsStore.svelte.ts",
       "types": "./src/createYjsStore.svelte.ts"
@@ -40,5 +55,18 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "yjs", "crdt", "collaboration", "y-websocket"]
+  "keywords": [
+    "sveltesentio",
+    "yjs",
+    "crdt",
+    "collaboration",
+    "y-websocket"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ]
 }
