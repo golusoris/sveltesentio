@@ -101,6 +101,9 @@
     },
     "packages/api": {
       "package-name": "@sveltesentio/api"
+    },
+    "packages/uploads": {
+      "package-name": "@sveltesentio/uploads"
     }
   }
 }
