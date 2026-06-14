@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/auth",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
   "type": "module",
   "private": false,
@@ -49,6 +49,18 @@
     "./use-permissions": {
       "import": "./src/use-permissions.svelte.ts",
       "types": "./src/use-permissions.svelte.ts"
+    },
+    "./mfa-view": {
+      "import": "./src/mfa-view.ts",
+      "types": "./src/mfa-view.ts"
+    },
+    "./mfa-challenge": {
+      "svelte": "./src/MfaChallenge.svelte",
+      "default": "./src/MfaChallenge.svelte"
+    },
+    "./mfa-enroll": {
+      "svelte": "./src/MfaEnroll.svelte",
+      "default": "./src/MfaEnroll.svelte"
     }
   },
   "scripts": {
