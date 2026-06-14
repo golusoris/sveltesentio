@@ -1,6 +1,6 @@
 {
   "packages/core": "0.1.0",
-  "packages/ui": "0.1.0",
+  "packages/ui": "0.2.0",
   "packages/query": "0.2.0",
   "packages/forms": "0.1.0",
   "packages/i18n": "0.1.0",
@@ -15,5 +15,6 @@
   "packages/mcp": "0.1.0",
   "packages/api": "0.1.0",
   "packages/uploads": "0.1.0",
-  "packages/shell": "0.1.0"
+  "packages/shell": "0.1.0",
+  "packages/emulator": "0.1.0"
 }

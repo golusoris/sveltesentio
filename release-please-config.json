@@ -107,6 +107,9 @@
     },
     "packages/shell": {
       "package-name": "@sveltesentio/shell"
+    },
+    "packages/emulator": {
+      "package-name": "@sveltesentio/emulator"
     }
   }
 }
