@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/mcp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Model Context Protocol server exposing sveltesentio's module catalog, ADR index, compose recipes, and compliance checklists to AI coding assistants",
   "type": "module",
   "private": false,

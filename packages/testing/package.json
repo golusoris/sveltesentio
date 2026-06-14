@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/testing",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Test helpers: deterministic testClock, a11y lane harness, Superforms + TanStack Query fixtures",
   "type": "module",
   "private": false,

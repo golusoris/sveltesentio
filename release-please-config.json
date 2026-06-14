@@ -29,6 +29,9 @@
     "packages/flow": { "package-name": "@sveltesentio/flow" },
     "packages/media": { "package-name": "@sveltesentio/media" },
     "packages/charts": { "package-name": "@sveltesentio/charts" },
-    "packages/ai": { "package-name": "@sveltesentio/ai" }
+    "packages/ai": { "package-name": "@sveltesentio/ai" },
+    "packages/collab": { "package-name": "@sveltesentio/collab" },
+    "packages/testing": { "package-name": "@sveltesentio/testing" },
+    "packages/mcp": { "package-name": "@sveltesentio/mcp" }
   }
 }

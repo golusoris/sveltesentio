@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/collab",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers",
   "type": "module",
   "private": false,
