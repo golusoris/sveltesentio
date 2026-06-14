@@ -20,3 +20,15 @@ export {
 	type ElkLayoutResult,
 	createElkLayout,
 } from './layout.js';
+
+export {
+	type XYPosition,
+	type FlowNode,
+	type NodeIdFactory,
+	type NodeTypeDef,
+	type CreateNodeOptions,
+	type NodePaletteOptions,
+	NodePalette,
+	createCounterIdFactory,
+	createNodePalette,
+} from './node-palette.js';
