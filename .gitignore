@@ -13,3 +13,6 @@ test-results/
 *.local.json
 .DS_Store
 Thumbs.db
+
+# Local planning / scratch (not lost-proof — keep durable docs under docs/)
+.workingdir/
