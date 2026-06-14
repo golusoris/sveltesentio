@@ -1,0 +1,37 @@
+{
+  "name": "@sveltesentio/testing",
+  "version": "0.0.1",
+  "description": "Test helpers: deterministic testClock, a11y lane harness, Superforms + TanStack Query fixtures",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
+    "./clock": { "import": "./src/clock.ts", "types": "./src/clock.ts" },
+    "./a11y": { "import": "./src/a11y.ts", "types": "./src/a11y.ts" },
+    "./playwright-axe": {
+      "import": "./src/playwright-axe.ts",
+      "types": "./src/playwright-axe.ts"
+    },
+    "./fixtures": { "import": "./src/fixtures.ts", "types": "./src/fixtures.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "vitest": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": { "optional": true }
+  },
+  "devDependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": ["sveltesentio", "testing", "vitest", "a11y", "clock"]
+}
