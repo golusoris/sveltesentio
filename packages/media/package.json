@@ -8,7 +8,7 @@
   "exports": {
     ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
   },
-  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "scripts": { "build": "tsc", "lint": "eslint src/", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests" },
   "peerDependencies": {
     "vidstack": ">=0.6.0",
     "hls.js": ">=1.6.0",

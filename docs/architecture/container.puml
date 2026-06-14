@@ -1,0 +1,86 @@
+@startuml sveltesentio-container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title C4 L2 — Container: @sveltesentio/* module composition (typical app)
+
+Person(end_user, "End user")
+Person(operator, "Operator")
+
+System_Boundary(browser, "Browser runtime") {
+    Container(ui, "@sveltesentio/ui", "Tailwind 4 preset + oklch tokens + shadcn-svelte CLI + interface-type presets", "Primitives: data / markdown / cmd / icons / toast / chart / theme-*")
+    Container(forms_client, "@sveltesentio/forms", "Superforms v2 + Zod v4", "Client validation + field components + action bindings")
+    Container(query_client, "@sveltesentio/query", "@tanstack/svelte-query v6", "SSR hydration + optimistic + pagination + useConnectQuery")
+    Container(i18n_client, "@sveltesentio/i18n", "@inlang/paraglide-js v2", "URL+cookie+baseLocale strategy, RTL via logical properties")
+    Container(realtime_client, "@sveltesentio/realtime", "useSSE + @connectrpc/connect-web", "Native SSE hook + Connect streaming")
+    Container(collab_client, "@sveltesentio/collab", "yjs + y-websocket + y-indexeddb", "createYjsStore rune binding")
+    Container(uploads_client, "@sveltesentio/uploads", "tus-js-client + exifr + file-type", "Resumable + EXIF strip + MIME sniff")
+    Container(flow_client, "@sveltesentio/flow", "@xyflow/svelte + elkjs worker", "Node editor + DAG layout")
+    Container(media_client, "@sveltesentio/media", "vidstack + hls.js + embla-carousel", "player / image sub-exports")
+    Container(ai_client, "@sveltesentio/ai", "@huggingface/transformers (WebGPU)", "On-device inference + <AiDisclosure>")
+    Container(charts_client, "@sveltesentio/charts", "LayerChart v2-next + uPlot escape hatch", "Dashboard charts + a11y wrapper")
+    Container(shell_client, "@sveltesentio/shell", "@vite-pwa/sveltekit + D-pad focus graph", "Device-class layouts + PWA install")
+}
+
+System_Boundary(server, "SvelteKit server (Node 24)") {
+    Container(core, "@sveltesentio/core", "env schema + RFC 9457 errors + clock (ADR-0052) + CSP + vite plugin", "Cross-cutting primitives")
+    Container(auth, "@sveltesentio/auth", "Custom OIDC client + SimpleWebAuthn + HttpOnly sessions + load-derived permissions + MFA", "OIDC + passkeys")
+    Container(hooks, "hooks.server.ts", "SvelteKit hooks", "CSP nonce + session + i18n middleware + RFC 9457 error envelope")
+    Container(ai_server, "@sveltesentio/ai/server", "@anthropic-ai/sdk + ollama-js (proxy) + audit hook (ADR-0045)", "Server-proxy-only inference + EU AI Act audit log")
+    Container(forms_server, "@sveltesentio/forms (server)", "Zod + Superforms server actions", "Strict parse + RFC 9457 field-error mapping")
+    Container(ipc, "@sveltesentio/ipc-sockmap", "eBPF SK_MSG sockhash client (Linux, kernel >=5.10)", "Tier 3 colocated IPC (ADR-0051) — graceful degrade to AF_UNIX")
+}
+
+Container(testing, "@sveltesentio/testing", "testClock + a11y harness + Superforms/Query fixtures", "Orthogonal — consumed by every package's test suite")
+
+System_Ext(golusoris_http, "Golusoris httpx/ogen", "OpenAPI 3.1 + RFC 9457 + ConnectRPC + SSE")
+System_Ext(idp_ext, "OIDC IdP", "Hosted by Golusoris")
+System_Ext(yws, "y-websocket server")
+System_Ext(object_store_ext, "S3-compatible object store")
+System_Ext(ai_proxy_ext, "AI inference proxy")
+
+Rel(end_user, ui, "Renders + interacts", "keyboard / pointer / D-pad")
+Rel(operator, hooks, "Scrapes /healthz", "HTTPS")
+
+Rel(ui, forms_client, "Composes form fields")
+Rel(ui, charts_client, "Renders chart surfaces")
+Rel(ui, media_client, "Renders player/image")
+Rel(ui, flow_client, "Renders canvas")
+
+Rel(query_client, realtime_client, "Invalidates on push")
+Rel(forms_client, query_client, "Triggers refetch on success")
+Rel(shell_client, ui, "Supplies preset + safe-area + D-pad context")
+
+Rel(hooks, core, "Uses env + CSP + clock")
+Rel(hooks, auth, "Session + permissions")
+Rel(hooks, i18n_client, "Locale resolution")
+
+Rel(query_client, golusoris_http, "openapi-fetch", "HTTPS + RFC 9457")
+Rel(realtime_client, golusoris_http, "SSE + Connect streaming")
+Rel(forms_server, golusoris_http, "Proxied mutations")
+Rel(auth, idp_ext, "OIDC + PKCE + WebAuthn")
+Rel(collab_client, yws, "WebSocket CRDT sync")
+Rel(uploads_client, object_store_ext, "tus + presigned S3")
+Rel(ai_server, ai_proxy_ext, "Streamed inference + audit envelope")
+
+Rel(ipc, golusoris_http, "Colocated bypass (optional, Linux)", "AF_UNIX → Cilium socketLB → eBPF sockmap")
+
+Rel(testing, core, "Peer — tested against")
+Rel(testing, forms_client, "Peer — fixtures")
+Rel(testing, query_client, "Peer — fixtures")
+
+note right of core
+  core is the only non-optional package
+  in practice — every other @sveltesentio/*
+  package peerDeps it for clock + errors + env.
+end note
+
+note bottom of shell_client
+  shell supplies the interface-type preset
+  (desktop / 10-foot / handheld / PWA)
+  that ui + media + charts consume via
+  CSS custom properties.
+end note
+
+@enduml

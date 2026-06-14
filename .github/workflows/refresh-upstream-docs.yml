@@ -1,0 +1,80 @@
+name: refresh-upstream-docs
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Detect snapshot drift
+        id: drift
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          declare -A SNAPSHOTS=(
+            [svelte-runes]=svelte
+            [sveltekit]=@sveltejs/kit
+            [tailwind]=tailwindcss
+            [zod]=zod
+            [tanstack-query]=@tanstack/svelte-query
+            [paraglide]=@inlang/paraglide-js
+          )
+          drift_lines=""
+          for dir in "${!SNAPSHOTS[@]}"; do
+            pkg="${SNAPSHOTS[$dir]}"
+            snapshot="docs/upstream/${dir}/README.md"
+            [ -f "$snapshot" ] || continue
+            pinned=$(awk '/^pinned-version:/ {print $2; exit}' "$snapshot")
+            latest=$(curl -fsSL "https://registry.npmjs.org/${pkg}/latest" | jq -r '.version')
+            if [ "$pinned" != "$latest" ] && [ "$pinned" != "${latest%.*}.x" ] && [ "$pinned" != "${latest%%.*}.x" ]; then
+              drift_lines+="- \`${pkg}\` — snapshot pinned: \`${pinned}\` · latest on npm: \`${latest}\` · [snapshot](docs/upstream/${dir}/README.md)\n"
+            fi
+          done
+          if [ -n "$drift_lines" ]; then
+            printf "drift<<EOF\n%b\nEOF\n" "$drift_lines" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update tracking issue
+        if: steps.drift.outputs.drift != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRIFT: ${{ steps.drift.outputs.drift }}
+        run: |
+          set -euo pipefail
+          title="chore(docs): upstream snapshot drift detected"
+          body=$(cat <<EOF
+          The weekly upstream-docs drift check found snapshots whose pinned versions differ from the latest npm release.
+
+          ## Drift
+
+          ${DRIFT}
+
+          ## What to do
+
+          For each row above:
+          1. Bump the pinned dependency in the relevant \`package.json\`.
+          2. Re-curate the snapshot at \`docs/upstream/<library>/README.md\` against the canonical docs at the new version.
+          3. Update the snapshot frontmatter (\`pinned-version\`, \`last-verified\`).
+          4. Land the bump + snapshot refresh in the same PR.
+
+          The snapshots are **hand-curated** — this workflow only flags drift; it never rewrites snapshots.
+
+          See [docs/upstream/README.md](../tree/main/docs/upstream/README.md) for the full refresh strategy.
+          EOF
+          )
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label "documentation,chore"
+          fi

@@ -173,3 +173,38 @@ Rules:
 
 All `<img>` must have `loading="lazy"` and `decoding="async"` unless above the fold.
 Font subsetting required for any custom font loaded.
+
+---
+
+## §2.10 Research-first — no guessing on major decisions
+
+sveltesentio is **evidence-driven by construction**. "Major decisions" — library picks, module surface, public API shape, compliance posture, or anything that touches a package's public API or CI gates — are never locked by an agent or contributor on their own authority.
+
+|Rule|Enforcement|
+|---|---|
+|Every major decision has a `D*` row in [.workingdir/research/decisions-needed.md](../.workingdir/research/decisions-needed.md) with ≥ 2 named alternatives|PR review|
+|A `D*` row closes only when evidence cites (a) a `golusoris/app-*` file:line, (b) measurable benchmark / bundle analysis, or (c) an existing ADR|PR review|
+|"Seems good", "commonly used", or awesome-list consensus are **pointers to evidence**, not evidence itself|PR review|
+|Only the project owner (`@lusoris`) closes a row to `locked (ADR-NNNN)` — that lock creates a Nygard ADR under `docs/adr/`|CODEOWNERS + PR review|
+|Agents working on code adjacent to an open `D*` row must reference it in the PR body and avoid choices that pre-empt the decision|PR review|
+
+This rule supersedes any library recommendation from awesome-lists, AI-generated suggestions, or previous sessions that weren't closed via a `D*` row. **Observation: a library keeps being recommended** ≠ **decision: sveltesentio uses that library**.
+
+---
+
+## §2.11 Strict SvelteKit universe
+
+sveltesentio pins **best-in-class inside the SvelteKit/Svelte 5 ecosystem**, exactly as golusoris pins best-in-class inside the Go ecosystem. Never leave that universe to borrow a React/Vue/Solid component library via a bridge or wrapper.
+
+|Allowed|Disallowed|
+|---|---|
+|Svelte 5 runes-native component libraries (shadcn-svelte, bits-ui, melt-ui, layerchart, svelte-flow, vidstack)|React/Vue/Solid component libraries loaded via `svelte-adapter-react` / `preact-svelte` / similar bridges|
+|Framework-agnostic TS libraries that compose cleanly with SvelteKit SSR (TanStack Query / Table / Virtual, Zod, Yjs, openapi-fetch, ConnectRPC, elkjs, tus-js-client, etc.)|Node-only libraries pulled into browser bundles without verifying SSR/bundle safety|
+|Vite plugins + vite-plugin-pwa + vite-plugin-svelte|Webpack/Rollup-era plugins for features Vite already covers (workbox CLI, offline-plugin)|
+|Svelte 5-native headless primitives|Headless primitives built on React hooks (`@radix-ui/*`, `@headlessui/react`) — find/request a Svelte port instead|
+
+**Rationale**: the user already runs a Go meta-framework (golusoris) with the same "best-in-class, no leakage across runtimes" policy. A React component inside a SvelteKit app is the frontend equivalent of a Node-binary binding inside a Go program — possible, but it fractures the runtime, breaks tree-shaking, and drags in a second reactivity system that never reconciles cleanly.
+
+**If a capability only exists outside the Svelte ecosystem** (rare but possible: e.g. a specific WebGPU compute library): open a `D*` row per §2.10, evaluate Svelte-native alternatives including "build from scratch on top of primitives we already ship", and only then consider a bridge. Bridges are always ADR-gated.
+
+**Adjacent rule**: if a currently-used library drops Svelte 5 support or becomes unmaintained, it moves to the dead-list in `.workingdir/research/awesome-harvest.md` and a `D*` row opens for the replacement. It does **not** get silently shimmed.

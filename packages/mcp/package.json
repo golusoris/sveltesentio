@@ -1,0 +1,34 @@
+{
+  "name": "@sveltesentio/mcp",
+  "version": "0.0.1",
+  "description": "Model Context Protocol server exposing sveltesentio's module catalog, ADR index, compose recipes, and compliance checklists to AI coding assistants",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "bin": {
+    "sveltesentio-mcp": "./bin/sveltesentio-mcp.js"
+  },
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/ bin/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "node --experimental-strip-types bin/sveltesentio-mcp.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "peerDependencies": {
+    "zod": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4",
+    "zod": "^4.0.0"
+  },
+  "keywords": ["sveltesentio", "mcp", "model-context-protocol", "ai-tools"]
+}

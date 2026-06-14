@@ -1,2 +1,66 @@
-// @sveltesentio/forms — not yet implemented (see .workingdir/PLAN.md)
-export {};
+export { superValidate } from './super-validate.js';
+export type { ZodV4Schema } from './super-validate.js';
+
+export { problemToFieldErrors } from './problem-to-field-errors.js';
+export type { FieldErrors } from './problem-to-field-errors.js';
+
+export {
+	superForm,
+	message,
+	setError,
+	setMessage,
+	fail,
+	actionResult,
+	defaults,
+	defaultValues,
+	schemaShape,
+	withFiles,
+	removeFiles,
+	mergeFormUnion,
+	splitPath,
+	SuperFormError,
+	SchemaError,
+	intProxy,
+	numberProxy,
+	booleanProxy,
+	dateProxy,
+	stringProxy,
+	fieldProxy,
+	formFieldProxy,
+	arrayProxy,
+	fileProxy,
+	fileFieldProxy,
+	filesProxy,
+	filesFieldProxy,
+} from 'sveltekit-superforms';
+
+export type {
+	SuperValidated,
+	SuperValidateOptions,
+	SuperForm,
+	SuperFormEvents,
+	SuperFormEventList,
+	SuperFormSnapshot,
+	ValidationErrors,
+	TaintedFields,
+	TaintOption,
+	FormOptions,
+	FormResult,
+	FormPath,
+	FormPathLeaves,
+	FormPathLeavesWithErrors,
+	FormPathArrays,
+	FormPathType,
+	ChangeEvent,
+	FieldProxy,
+	ArrayProxy,
+	FormFieldProxy,
+	Infer,
+	InferIn,
+	Schema,
+	ValidateOptions,
+	InputConstraints,
+	InputConstraint,
+	JSONSchema,
+	ErrorStatus,
+} from 'sveltekit-superforms';
