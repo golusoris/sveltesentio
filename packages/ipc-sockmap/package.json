@@ -6,7 +6,10 @@
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -21,5 +24,19 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "ebpf", "sockmap", "ipc", "golusoris", "colocated"]
+  "keywords": [
+    "sveltesentio",
+    "ebpf",
+    "sockmap",
+    "ipc",
+    "golusoris",
+    "colocated"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ]
 }

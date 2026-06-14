@@ -50,5 +50,12 @@
     "zod",
     "validation",
     "rfc9457"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

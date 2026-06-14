@@ -6,10 +6,22 @@
   "private": false,
   "sideEffects": false,
   "exports": {
-    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
-    "./pwa": { "import": "./src/pwa/index.ts", "types": "./src/pwa/index.ts" },
-    "./layout": { "import": "./src/layout/index.ts", "types": "./src/layout/index.ts" },
-    "./dpad": { "import": "./src/dpad/index.ts", "types": "./src/dpad/index.ts" }
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./pwa": {
+      "import": "./src/pwa/index.ts",
+      "types": "./src/pwa/index.ts"
+    },
+    "./layout": {
+      "import": "./src/layout/index.ts",
+      "types": "./src/layout/index.ts"
+    },
+    "./dpad": {
+      "import": "./src/dpad/index.ts",
+      "types": "./src/dpad/index.ts"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -28,5 +40,20 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "shell", "pwa", "10-foot", "handheld", "d-pad", "safe-area"]
+  "keywords": [
+    "sveltesentio",
+    "shell",
+    "pwa",
+    "10-foot",
+    "handheld",
+    "d-pad",
+    "safe-area"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ]
 }

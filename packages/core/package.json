@@ -74,5 +74,12 @@
     "sveltesentio",
     "sveltekit",
     "vite-plugin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

@@ -64,5 +64,12 @@
     "session",
     "permissions",
     "webauthn"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

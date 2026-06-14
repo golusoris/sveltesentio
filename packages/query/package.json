@@ -31,5 +31,12 @@
     "tanstack-query",
     "sveltekit",
     "data-fetching"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }

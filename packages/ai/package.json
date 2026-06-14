@@ -38,5 +38,12 @@
     "transformers",
     "edge-ai",
     "semantic-search"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
   ]
 }
