@@ -28,6 +28,39 @@ Plain-state pattern documented in [docs/compose/forms.md](../../docs/compose/for
 |---|---|
 | `@sveltesentio/forms` | Everything above |
 | `@sveltesentio/forms/problem` | Just `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull) |
+| `@sveltesentio/forms/server` | Server-safe `superValidate` + helpers; no client `superForm`/`$app/*` |
+| `@sveltesentio/forms/action` | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })` |
+| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, `FieldErrors`, `Description`, …); optional `formsnap@^2` peer |
+
+### `formAction()`
+
+`formAction(schema, handler, { superValidate, fail })` returns a `+page.server.ts`
+action. It runs `superValidate(event.request, schema)`, then:
+
+- invalid form → `fail(400, { form })`, handler not run;
+- handler throws a `ProblemError` → `invalid-params` mapped via
+  `problemToFieldErrors` onto `form.errors`, returned as `fail(status, { form })`
+  (`status` from the `ProblemError`, default `400`);
+- otherwise → the handler's return value, unchanged.
+
+`superValidate` and `fail` are **injected seams** so the helper unit-tests with
+no Kit runtime. Wire the package `superValidate` and Kit's `fail` in an app:
+
+```ts
+import { formAction } from '@sveltesentio/forms/action';
+import { superValidate } from '@sveltesentio/forms/server';
+import { fail } from '@sveltejs/kit';
+
+export const actions = {
+  default: formAction(schema, async ({ form }) => {
+    await createUser(form.data); // throws ProblemError on conflict
+    return { form };
+  }, { superValidate, fail }),
+};
+```
+
+Non-`ProblemError` throwables propagate unchanged (a 500 is the right outcome
+for an unexpected fault).
 
 ## Invariants
 
@@ -43,13 +76,15 @@ Wired by consumer-side markup — this package does not ship components. Recipe 
 ## Test policy
 
 - Unit tests cover `superValidate` defaults, `FormData` parsing (valid + invalid), and `problemToFieldErrors` aggregation.
+- `formAction` is unit-tested with injected `superValidate`/`fail` seams (valid passthrough, invalid-form `fail`, `ProblemError → fail({ form })` with merged field errors, default status, non-`ProblemError` re-throw). It imports no `@sveltejs/kit` virtual modules, so it runs under the plain Node runner.
+- `formsnap` re-export barrel ships `.svelte` components, so it stays untested (no component runner here); it must `tsc`/lint clean and is isolated on its own subpath.
 - Integration tests in downstream apps (revenge, arca) hit real Superforms actions — do **not** mock `superValidate`. Mocking forms has a history of masking real bugs (prior incident).
 
 ## Follow-through
 
-- Formsnap re-export barrel (`/formsnap` subpath) — add when first downstream adopts Formsnap.
 - Runes-native `useForm()` rune over `superForm` (ADR-0003 calls this out; not urgent — `superForm` already returns a reactive surface).
-- `formAction()` server helper wrapping the `fail({ form })` + `ProblemError` round-trip in one call.
+- `formAction` server helper — landed (v0.2.0, `/action` subpath).
+- Formsnap re-export barrel — landed (v0.2.0, `/formsnap` subpath).
 
 ## Common tasks
 
