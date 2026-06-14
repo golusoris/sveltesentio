@@ -1,7 +1,7 @@
 {
-  "name": "@sveltesentio/query",
+  "name": "@sveltesentio/ipc-sockmap",
   "version": "0.0.1",
-  "description": "TanStack Query wrappers for SvelteKit — load helpers, optimistic updates, SSR hydration",
+  "description": "Client for the golusoris-owned eBPF SK_MSG sockhash; kernel-bypass colocated IPC for SvelteKit ↔ Golusoris. Linux + cgroup v2 + kernel >=5.10 only.",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -14,14 +14,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "peerDependencies": {
-    "@tanstack/svelte-query": ">=6.0.0",
-    "svelte": ">=5.0.0",
-    "@sveltejs/kit": ">=2.0.0"
+  "engines": {
+    "node": ">=24"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
-  "keywords": ["sveltesentio", "tanstack-query", "sveltekit", "data-fetching"]
+  "keywords": ["sveltesentio", "ebpf", "sockmap", "ipc", "golusoris", "colocated"]
 }
