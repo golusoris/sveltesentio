@@ -7,21 +7,33 @@ Apps install only what they need from `@sveltesentio/*`. Philosophy first, code 
 
 ## Packages
 
-| Package | Description |
-|---|---|
-| `@sveltesentio/core` | Core utilities — env schema, RFC 9457 parser, id/clock injection, CSP helpers, vite plugin |
-| `@sveltesentio/ui` | shadcn-svelte CLI wrapper, Tailwind 4 tokens, per-interface-type presets (desktop / 10-foot / handheld / dashboard) |
-| `@sveltesentio/query` | TanStack Query v6 wrappers — SSR hydration, optimistic updates, RFC 9457 retry |
-| `@sveltesentio/forms` | Superforms v2 + Zod v4 patterns, field components, RFC 9457 → field-error mapping |
-| `@sveltesentio/i18n` | Paraglide v2 (`paraglideVitePlugin`) — URL + cookie + baseLocale strategy, RTL via logical properties |
-| `@sveltesentio/auth` | Custom OIDC against Golusoris, `@simplewebauthn/browser` passkeys, HttpOnly cookie sessions, MFA UI |
-| `@sveltesentio/realtime` | Native SSE (`useSSE`) + ConnectRPC streaming (`useConnectStream`); Yjs lives in `collab` |
-| `@sveltesentio/flow` | `@xyflow/svelte` wrappers — node palette, elkjs layout, DAG helpers |
-| `@sveltesentio/media` | `vidstack@next` + `hls.js`, embla carousel via shadcn, captions-required by default |
-| `@sveltesentio/charts` | LayerChart v2-next via shadcn Chart + uPlot escape hatch + a11y wrapper |
-| `@sveltesentio/ai` | LLM streaming (server-proxy-only SDKs), `@huggingface/transformers` edge AI, EU AI Act audit hook |
-| `@sveltesentio/ipc-sockmap` | Tier 3 kernel-bypass IPC client (eBPF SK_MSG sockhash; Linux + kernel ≥5.10; blocked on golusoris#27) |
-| `@sveltesentio/testing` | `testClock({ now })`, a11y harness, Superforms + Query fixtures |
+Published to npm under the [`@sveltesentio`](https://www.npmjs.com/org/sveltesentio) scope:
+
+```bash
+pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/ui
+```
+
+| Package | npm | Description |
+|---|---|---|
+| `@sveltesentio/core` | 0.1.0 | env schema, RFC 9457 parser, id (UUIDv7), clock injection, CSP helpers, vite plugin |
+| `@sveltesentio/ui` | 0.2.0 | oklch tokens + interface presets + headless DataTable / command / toast wrappers |
+| `@sveltesentio/query` | 0.2.0 | TanStack Query v6 — `createQueryClient` (RFC 9457 retry), SSR hydration, infinite, optimistic |
+| `@sveltesentio/api` | 0.1.0 | typed openapi-fetch client + RFC 9457 `problemMiddleware` (+ openapi-typescript recipe) |
+| `@sveltesentio/forms` | 0.1.0 | Superforms v2 + Zod v4 adapter, RFC 9457 → field-error mapping |
+| `@sveltesentio/auth` | 0.2.0 | OIDC orchestration, `handleCsrf` hook, passkeys, PKCE/CSRF primitives, typed auth errors |
+| `@sveltesentio/i18n` | 0.1.0 | Paraglide v2 (`paraglideVitePlugin`), RTL via logical properties, a11y announcer |
+| `@sveltesentio/realtime` | 0.1.0 | native SSE (`useSSE` rune), exponential backoff, buffered emitter |
+| `@sveltesentio/collab` | 0.1.0 | Yjs CRDT helpers + `y-websocket` provider + runes stores |
+| `@sveltesentio/flow` | 0.1.0 | DAG topo-sort / cycle helpers + elkjs layout |
+| `@sveltesentio/charts` | 0.2.0 | a11y `<ChartFigure>` + screen-reader data table + dashboard preset |
+| `@sveltesentio/media` | 0.2.0 | headless HLS player model + responsive image helpers |
+| `@sveltesentio/uploads` | 0.1.0 | magic-byte `validateUpload` + `stripExif` (transport-agnostic) |
+| `@sveltesentio/shell` | 0.1.0 | device-class layout, D-pad / gamepad focus nav, safe-area helpers |
+| `@sveltesentio/ai` | 0.2.0 | server-proxy LLM, `@huggingface/transformers` edge seam, EU AI Act audit hook |
+| `@sveltesentio/emulator` | 0.1.0 | EmulatorJS CSP directives + config / loader |
+| `@sveltesentio/mcp` | 0.1.0 | MCP server exposing compliance + compose docs |
+| `@sveltesentio/testing` | 0.1.0 | `testClock({ now })`, a11y / axe harness, RFC 9457 fixtures |
+| `@sveltesentio/ipc-sockmap` | _planned_ | Tier 3 kernel-bypass IPC (eBPF SK_MSG; blocked on golusoris#27) |
 
 ## Design system
 
