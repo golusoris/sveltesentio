@@ -12,3 +12,11 @@ export type {
 	SseClientState,
 	SseEventLike,
 } from './sse-client.js';
+
+export { createConnectStream } from './connect-stream.js';
+export type {
+	ConnectStream,
+	ConnectStreamOptions,
+	ConnectStreamState,
+	StreamCall,
+} from './connect-stream.js';

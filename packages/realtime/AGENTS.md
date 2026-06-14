@@ -15,11 +15,17 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 | `createBufferedEmitter<T>({ bufferMs, onFlush })` | Throttles `$state` updates so 10k-msg/s feeds don't thrash the render loop (per AGENTS.md invariant); `flush()` drains synchronously; `stop()` drops pending | ADR-0037 |
 | `useSSE()` rune (`./use-sse`) | Runes wrapper over `SseClient`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `connected`; optional `bufferMs` backpressure via `createBufferedEmitter`; ties connect/close to the caller's `$effect` lifecycle (SSR-safe) | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
 
-### Follow-through (not in v0.0.1)
+### Landed (v0.2.0)
+
+| Export | Purpose | ADR |
+|---|---|---|
+| `createConnectStream({ call, onMessage, backoff?, setTimeoutImpl? })` | Transport-agnostic server-streaming state machine; consumes an **injected** async-iterable `call(signal)`, exposes `idle \| streaming \| closed` + `attempt`, reconnects with the shared `computeBackoff`; natural iterator completion is terminal `closed`, only thrown errors trigger backoff; holds no ConnectRPC / Svelte imports so it unit-tests against a fake stream | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
+| `useConnectStream()` rune (`./use-connect-stream`) | Runes wrapper over `createConnectStream`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `streaming`; optional `bufferMs` backpressure; ties start/stop to the caller's `$effect` (SSR-safe); transport injected via `call`, so the wrapper imports neither `@connectrpc/connect` nor `@connectrpc/connect-web` at module-eval | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
+
+### Follow-through (not yet shipped)
 
 | Hook | Transport | ADR |
 |---|---|---|
-| `useConnectStream()` | ConnectRPC server-streaming via `@connectrpc/connect-web@2.1.1` + `@bufbuild/protobuf@2.11.0` | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
 | (Yjs WS) | `y-websocket` — lives in `@sveltesentio/collab`, not here | [ADR-0039](../../docs/adr/0039-y-websocket-createYjsStore.md) |
 
 ### Rejected
@@ -38,16 +44,20 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 
 | Path | Purpose |
 |---|---|
-| `@sveltesentio/realtime` | Everything above |
+| `@sveltesentio/realtime` | Everything above (non-`.svelte`) |
 | `@sveltesentio/realtime/sse` | `SseClient` + types |
 | `@sveltesentio/realtime/backoff` | `computeBackoff` + `BackoffOptions` (zero-dep pull) |
 | `@sveltesentio/realtime/buffered-emitter` | `createBufferedEmitter` alone |
+| `@sveltesentio/realtime/use-sse` | `useSSE()` rune |
+| `@sveltesentio/realtime/connect-stream` | `createConnectStream` + types (zero optional-peer pull) |
+| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` rune |
 
 ## Test policy
 
 - `SseClient` unit tests inject a `FakeEventSource` via `eventSourceFactory` — no mocking of the native browser impl. 16 tests landed covering: connect/open transition, message normalisation, exponential reconnect, attempt-counter reset on successful open, `close()` stops reconnects, missing-global-EventSource error path.
-- ConnectRPC tests hit a Buf fixture server (follow-through).
-- Reconnect + backoff timing verified with fake timers (Vitest `vi.useFakeTimers()`).
+- `createConnectStream` unit tests inject a manually-driven fake async iterable via the `call` seam — no network / grpc. 6 tests cover: open -> message -> close (natural completion), error -> backoff -> reconnect, attempt reset after a message, `stop()` cancels active stream + pending reconnect, messages after `stop()` ignored, aborted-stream throw does not reconnect.
+- The `.svelte.ts` wrapper (`useConnectStream`) stays untested at the unit layer (runes need the Svelte plugin); its logic is delegated to the tested `createConnectStream`. The wrapper must `tsc`/`lint` clean.
+- Reconnect + backoff timing verified with fake timers (Vitest `vi.useFakeTimers()` + `advanceTimersByTimeAsync`).
 
 ## Common tasks
 
