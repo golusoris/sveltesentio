@@ -9,5 +9,8 @@
   "packages/flow": "0.1.0",
   "packages/media": "0.1.0",
   "packages/charts": "0.1.0",
-  "packages/ai": "0.1.0"
+  "packages/ai": "0.1.0",
+  "packages/collab": "0.1.0",
+  "packages/testing": "0.1.0",
+  "packages/mcp": "0.1.0"
 }
