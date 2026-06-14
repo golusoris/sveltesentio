@@ -26,6 +26,18 @@ Thin wrappers that live here (justified per the **preset theming invariant**, no
 
 Primitives **not** wrapped (use shadcn-svelte CLI directly or escape-hatch to bits-ui): Dialog, Sheet, DropdownMenu, Popover, Tooltip, Accordion, Tabs, Select, Combobox — install via `pnpm dlx shadcn-svelte add <component>` per the `/add-shadcn` skill.
 
+## Landed wrapper models (v0.2.0)
+
+Each wrapper splits **pure, unit-tested logic** (`.ts`) from a **thin component** (`.svelte`, tsc/lint-clean, untested in vitest per repo precedent — runes/components need the Svelte compiler). Primitives are **optional peers**; the pure models and default components run without them.
+
+| Sub-export | Pure (tested) | Component (thin) | Optional peer |
+|---|---|---|---|
+| `./toast` | `toastPreset(interfaceType)` → `{ position, width, style }` keyed to the interface presets; padding scales with `spacingScale`, min-target-size flows through (ADR-0016) | — (re-export `svelte-sonner` in app) | `svelte-sonner` |
+| `./data` | `computeRows` (filter→sort→paginate), `toggleSort`/`setFilter`/`setPageSize`/`setPageIndex` reducers, `computeVirtualWindow` (visible-window math), `nextFocusIndex` (roving keys) | `DataTable.svelte`, `VirtualList.svelte` — `role=grid`/`row`/`gridcell`, `aria-rowcount`/`aria-colcount`, 1-based `aria-rowindex` (ADR-0011/0024) | `@tanstack/svelte-virtual` |
+| `./cmd` | `CommandRegistry` (immutable register/unregister), `scoreCommand`/`searchCommands` (exact>prefix>substring>keyword>fuzzy ranking), `parseBinding`/`matchesShortcut`/`resolveKeymap` (`$mod`→Meta/Ctrl) | `CommandPalette.svelte` — combobox/listbox + `aria-activedescendant` (ADR-0025) | `bits-ui`, `tinykeys` |
+
+ARIA contract (ADR-0024): `aria-rowcount`/`aria-colcount` reflect the **full** filtered dataset, not the rendered page; `aria-rowindex` is 1-based and stable across scroll. The shadcn-svelte `Command` primitive is the CLI-delivered escape hatch — `CommandPalette.svelte` is a standalone default driven by the same registry.
+
 ## Invariants
 
 - **Tailwind 4 only** — v3 configs rejected at build time. `@tailwindcss/vite` plugin; no `tailwind.config.js`.
