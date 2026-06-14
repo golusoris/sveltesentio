@@ -19,9 +19,11 @@ export interface CreateClientOptions extends ClientOptions {
  * const { data } = await api.GET('/items/{id}', { params: { path: { id } }, fetch });
  * ```
  */
-export function createClient<Paths extends Record<string, Record<string, unknown>>>(
-	options: CreateClientOptions = {},
-) {
+// `Paths` must match openapi-fetch's own `extends {}` constraint: openapi-typescript
+// emits `paths` as an interface with no index signature, so a `Record<...>` bound
+// rejects real generated types (and collapses openapi-fetch's PathsWithMethod to never).
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional: mirror openapi-fetch's createClient<Paths extends {}>
+export function createClient<Paths extends {}>(options: CreateClientOptions = {}) {
 	const { problem, middlewares, ...clientOptions } = options;
 	const client = createOpenapiClient<Paths>(clientOptions);
 	if (problem !== false) client.use(problemMiddleware(problem ?? {}));
@@ -29,8 +31,7 @@ export function createClient<Paths extends Record<string, Record<string, unknown
 	return client;
 }
 
-export type ApiClient<Paths extends Record<string, Record<string, unknown>>> = ReturnType<
-	typeof createClient<Paths>
->;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- mirror openapi-fetch's Paths constraint
+export type ApiClient<Paths extends {}> = ReturnType<typeof createClient<Paths>>;
 
 export type { ClientOptions, Middleware } from 'openapi-fetch';
