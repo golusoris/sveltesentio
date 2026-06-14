@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/ai",
-  "version": "0.1.0",
-  "description": "LLM chat components, edge AI (Transformers.js/WebGPU), semantic search utilities",
+  "version": "0.2.0",
+  "description": "Server-proxy-only LLM client, on-device transformers seam, and EU AI Act audit hook for SvelteKit",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -9,18 +9,34 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./audit": {
+      "import": "./src/audit.ts",
+      "types": "./src/audit.ts"
+    },
+    "./proxy": {
+      "import": "./src/proxy.ts",
+      "types": "./src/proxy.ts"
+    },
+    "./edge": {
+      "import": "./src/edge.ts",
+      "types": "./src/edge.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
   },
   "peerDependencies": {
-    "svelte": ">=5.0.0",
+    "@huggingface/transformers": ">=4.1.0",
     "@sveltejs/kit": ">=2.0.0",
-    "@huggingface/transformers": ">=3.0.0"
+    "svelte": ">=5.0.0",
+    "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "@huggingface/transformers": {
@@ -28,8 +44,12 @@
     }
   },
   "devDependencies": {
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltesentio/core": "workspace:*",
+    "svelte": "^5.55.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "zod": "^4.3.6"
   },
   "keywords": [
     "sveltesentio",
@@ -37,7 +57,9 @@
     "llm",
     "transformers",
     "edge-ai",
-    "semantic-search"
+    "eu-ai-act",
+    "audit",
+    "rfc9457"
   ],
   "publishConfig": {
     "access": "public"
