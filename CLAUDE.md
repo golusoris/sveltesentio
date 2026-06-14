@@ -28,6 +28,7 @@ Located in `.claude/hooks/`:
 ## Tone
 
 - Terse. No preamble.
+- **Ask via `AskUserQuestion` popups for any choice with discrete options** (approach, scope, library pick) — never embed `(a)/(b)/(c)` alternatives in prose. Single-path confirmations and "what's the best option and why" recommendations stay prose.
 - API changes: write `Migration:` footer in commit body with before/after Svelte snippets.
 - New dependency: state which alternatives were considered and why this wins.
 - Never use `$:` reactive statements — use `$derived` or `$effect`.
