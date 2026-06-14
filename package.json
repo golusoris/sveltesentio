@@ -11,6 +11,7 @@
     "test": "turbo test",
     "test:e2e": "turbo test:e2e",
     "ci": "turbo lint typecheck test build",
+    "check:exports": "node scripts/check-export-targets.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
