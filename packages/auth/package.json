@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/auth",
-  "version": "0.1.0",
-  "description": "OIDC PKCE + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only)",
+  "version": "0.2.0",
+  "description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -29,6 +29,22 @@
     "./permissions": {
       "import": "./src/permissions.ts",
       "types": "./src/permissions.ts"
+    },
+    "./oidc": {
+      "import": "./src/oidc.ts",
+      "types": "./src/oidc.ts"
+    },
+    "./csrf-hook": {
+      "import": "./src/csrf-hook.ts",
+      "types": "./src/csrf-hook.ts"
+    },
+    "./mfa": {
+      "import": "./src/mfa.ts",
+      "types": "./src/mfa.ts"
+    },
+    "./passkey": {
+      "import": "./src/passkey.ts",
+      "types": "./src/passkey.ts"
     }
   },
   "scripts": {
@@ -40,6 +56,7 @@
   "peerDependencies": {
     "@simplewebauthn/browser": ">=13.0.0",
     "@sveltejs/kit": ">=2.0.0",
+    "@sveltesentio/core": "workspace:*",
     "svelte": ">=5.0.0",
     "zod": ">=4.0.0"
   },
@@ -50,6 +67,7 @@
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.0.0",
+    "@sveltesentio/core": "workspace:*",
     "svelte": "^5.55.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4",
