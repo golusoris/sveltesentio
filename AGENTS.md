@@ -173,7 +173,8 @@ Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pin
 | Package | Phase | Key dependencies | What it provides |
 | --- | --- | --- | --- |
 | `@sveltesentio/core` | 2 | vite, zod, openapi-fetch | env schema, RFC 9457 error parser, id/clock utils, CSP helpers, vite plugin |
-| `@sveltesentio/ui` | 3 | shadcn-svelte, bits-ui, tailwindcss@4, mode-watcher | Tailwind preset, oklch tokens, shadcn CLI wrapper, interface-type presets |
+| `@sveltesentio/api` | 4 | openapi-fetch, openapi-typescript (optional) | typed openapi-fetch client + RFC 9457 `problemMiddleware` + codegen recipe |
+| `@sveltesentio/ui` | 3 | shadcn-svelte, bits-ui, tailwindcss@4, mode-watcher | Tailwind preset, oklch tokens, shadcn CLI wrapper, interface-type presets, headless DataTable/command/toast |
 | `@sveltesentio/query` | 4 | @tanstack/svelte-query | load helpers, optimistic updates, SSR hydration, pagination |
 | `@sveltesentio/forms` | 5 | sveltekit-superforms, zod | form patterns, field components, action helpers, error mapping |
 | `@sveltesentio/i18n` | 6 | @inlang/paraglide-js | locale detection, message helpers, SvelteKit middleware, RTL |
@@ -183,6 +184,7 @@ Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pin
 | `@sveltesentio/flow` | 9 | @xyflow/svelte | node editor wrappers, DAG helpers, canvas utilities |
 | `@sveltesentio/uploads` | 9b | tus-js-client, exifr, file-type | resumable uploads + presigned S3 + client-side guards |
 | `@sveltesentio/media` | 10 | vidstack, hls.js, embla-carousel-svelte | player/image/game sub-exports |
+| `@sveltesentio/emulator` | 10 | (EmulatorJS — external/CDN) | EmulatorJS Svelte loader + CSP directives for wasm/worker |
 | `@sveltesentio/shell` | 10b | (TBD — see D140..D143) | device-class layouts, D-pad routing, PWA install |
 | `@sveltesentio/charts` | 11 | layerchart | dashboard chart wrappers, semantic color presets |
 | `@sveltesentio/ai` | 12 | @anthropic-ai/sdk (server), @huggingface/transformers, ollama-js (proxy) | LLM chat streaming, edge AI, semantic search, audit hook |
