@@ -15,6 +15,7 @@ Both files use the same severity legend: `security` · `correctness` · `mainten
 |---|---|---|
 | [downstream-antipatterns-v0.1.md](downstream-antipatterns-v0.1.md) | Pre-v0.1 remediation checklist for downstream apps (`golusoris/app-{arca,revenge,subdo,lurkarr}`) | Active — covers v0.1 adoption |
 | [v0.2.md](v0.2.md) | Template: framework-level breaking changes + codemods between v0.1.x and v0.2.0 | Template — populate at v0.2.0 release time |
+| [zod-v3-to-v4.md](zod-v3-to-v4.md) | Mechanical Zod v3 → v4 path (hard prerequisite for adopting `core` + `forms`, [ADR-0001](../adr/0001-zod-v4-floor.md)) | Active — required for v0.1 adoption |
 
 ## Conventions
 
