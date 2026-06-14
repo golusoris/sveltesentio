@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '22'
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3.35.2
+        uses: github/codeql-action/init@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3.36.2
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
@@ -38,6 +38,6 @@ jobs:
       - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3.35.2
+        uses: github/codeql-action/analyze@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3.36.2
         with:
           category: '/language:javascript-typescript'
