@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/auth",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
   "type": "module",
   "private": false,
@@ -45,6 +45,10 @@
     "./passkey": {
       "import": "./src/passkey.ts",
       "types": "./src/passkey.ts"
+    },
+    "./use-permissions": {
+      "import": "./src/use-permissions.svelte.ts",
+      "types": "./src/use-permissions.svelte.ts"
     }
   },
   "scripts": {
