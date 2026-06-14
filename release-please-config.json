@@ -6,32 +6,101 @@
   "include-v-in-tag": true,
   "changelog-path": "CHANGELOG.md",
   "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "revert", "section": "Reverts" },
-    { "type": "refactor", "section": "Code Refactoring" },
-    { "type": "deps", "section": "Dependencies" },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "ci", "section": "CI", "hidden": true },
-    { "type": "build", "section": "Build", "hidden": true },
-    { "type": "chore", "section": "Chores", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "revert",
+      "section": "Reverts"
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": true
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "CI",
+      "hidden": true
+    },
+    {
+      "type": "build",
+      "section": "Build",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "Chores",
+      "hidden": true
+    }
   ],
   "packages": {
-    "packages/core": { "package-name": "@sveltesentio/core" },
-    "packages/ui": { "package-name": "@sveltesentio/ui" },
-    "packages/query": { "package-name": "@sveltesentio/query" },
-    "packages/forms": { "package-name": "@sveltesentio/forms" },
-    "packages/i18n": { "package-name": "@sveltesentio/i18n" },
-    "packages/auth": { "package-name": "@sveltesentio/auth" },
-    "packages/realtime": { "package-name": "@sveltesentio/realtime" },
-    "packages/flow": { "package-name": "@sveltesentio/flow" },
-    "packages/media": { "package-name": "@sveltesentio/media" },
-    "packages/charts": { "package-name": "@sveltesentio/charts" },
-    "packages/ai": { "package-name": "@sveltesentio/ai" },
-    "packages/collab": { "package-name": "@sveltesentio/collab" },
-    "packages/testing": { "package-name": "@sveltesentio/testing" },
-    "packages/mcp": { "package-name": "@sveltesentio/mcp" }
+    "packages/core": {
+      "package-name": "@sveltesentio/core"
+    },
+    "packages/ui": {
+      "package-name": "@sveltesentio/ui"
+    },
+    "packages/query": {
+      "package-name": "@sveltesentio/query"
+    },
+    "packages/forms": {
+      "package-name": "@sveltesentio/forms"
+    },
+    "packages/i18n": {
+      "package-name": "@sveltesentio/i18n"
+    },
+    "packages/auth": {
+      "package-name": "@sveltesentio/auth"
+    },
+    "packages/realtime": {
+      "package-name": "@sveltesentio/realtime"
+    },
+    "packages/flow": {
+      "package-name": "@sveltesentio/flow"
+    },
+    "packages/media": {
+      "package-name": "@sveltesentio/media"
+    },
+    "packages/charts": {
+      "package-name": "@sveltesentio/charts"
+    },
+    "packages/ai": {
+      "package-name": "@sveltesentio/ai"
+    },
+    "packages/collab": {
+      "package-name": "@sveltesentio/collab"
+    },
+    "packages/testing": {
+      "package-name": "@sveltesentio/testing"
+    },
+    "packages/mcp": {
+      "package-name": "@sveltesentio/mcp"
+    },
+    "packages/api": {
+      "package-name": "@sveltesentio/api"
+    }
   }
 }

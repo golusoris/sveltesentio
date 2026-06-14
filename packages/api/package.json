@@ -1,0 +1,36 @@
+{
+  "name": "@sveltesentio/api",
+  "version": "0.1.0",
+  "description": "Typed openapi-fetch client wired with core's RFC 9457 problemMiddleware + an openapi-typescript codegen recipe",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./src/index.ts", "types": "./src/index.ts" },
+    "./client": { "import": "./src/client.ts", "types": "./src/client.ts" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "publishConfig": { "access": "public" },
+  "files": ["src", "CHANGELOG.md"],
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "openapi-fetch": ">=0.17.0"
+  },
+  "peerDependenciesMeta": {
+    "openapi-typescript": { "optional": true }
+  },
+  "devDependencies": {
+    "openapi-fetch": "^0.17.0",
+    "openapi-typescript": "^7.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  },
+  "keywords": ["sveltesentio", "api", "openapi", "openapi-fetch", "rfc9457", "rest"]
+}
