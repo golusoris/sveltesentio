@@ -1,9 +1,42 @@
-// Scaffolding placeholder — see ADR-0028 (PWA) + ADR-0047 (interface presets).
-//
-// Pending sub-exports:
-//   ./pwa     — registerSW wrapper + update-prompt component (via @vite-pwa/sveltekit)
-//   ./layout  — <SafeArea />, <DeviceClassRoot />, container queries for desktop / 10-foot / handheld / dashboard
-//   ./dpad    — focus graph + <FocusCell /> directive for 10-foot / handheld navigation
-//
-// Consumers should not import from this package until the API lands.
-export {};
+// @sveltesentio/shell — device-class layout + input primitives.
+// See ADR-0027 (focus graph) · ADR-0028 (PWA) · ADR-0029 (safe-area).
+
+export {
+	type DeviceClass,
+	type DeviceSignals,
+	TENFOOT_MIN_WIDTH,
+	HANDHELD_MAX_WIDTH,
+	classifyDevice,
+	readDeviceSignals,
+} from './device-class.js';
+
+export {
+	type Direction,
+	type FocusRect,
+	type FocusCandidate,
+	type FocusGraphSource,
+	computeNextFocus,
+	directionFromKey,
+	directionFromGamepadButton,
+	directionFromAxes,
+	resolveNextFocus,
+} from './dpad.js';
+
+export { type DpadNavigationOptions, dpadNavigation } from './dpad-action.js';
+
+export {
+	type SafeAreaSide,
+	type SafeAreaLogicalEdge,
+	SAFE_AREA_SIDES,
+	safeAreaInset,
+	safeAreaVarName,
+	cssVars,
+	cssVarsString,
+	safeAreaPadding,
+} from './safe-area.js';
+
+export {
+	type RegisterSWOptions,
+	type UpdateServiceWorker,
+	registerSW,
+} from './pwa.js';
