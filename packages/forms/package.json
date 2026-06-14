@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/forms",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
   "type": "module",
   "private": false,
@@ -17,6 +17,15 @@
     "./server": {
       "import": "./src/server.ts",
       "types": "./src/server.ts"
+    },
+    "./action": {
+      "import": "./src/form-action.ts",
+      "types": "./src/form-action.ts"
+    },
+    "./formsnap": {
+      "svelte": "./src/formsnap.ts",
+      "import": "./src/formsnap.ts",
+      "types": "./src/formsnap.ts"
     }
   },
   "scripts": {
