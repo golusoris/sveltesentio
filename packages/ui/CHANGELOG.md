@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.3.0...ui-v0.4.0) (2026-06-15)
+
+
+### Features
+
+* **ui:** add ./markdown (DOMPurify XSS sink) + ./icons (pluggable) — ADR-0026, ADR-0002 ([088e360](https://github.com/golusoris/sveltesentio/commit/088e3608131c79a20fcc12566549194578001cfa))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.2.0...ui-v0.3.0) (2026-06-15)
 
 

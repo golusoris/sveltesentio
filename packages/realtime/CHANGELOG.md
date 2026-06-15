@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.3.0...realtime-v0.4.0) (2026-06-15)
+
+
+### Features
+
+* **realtime:** add ./rpc — ConnectRPC client + bound useConnectStream (ADR-0038) ([279f96e](https://github.com/golusoris/sveltesentio/commit/279f96e982b1800a38263c567bb4b8d6f7991688))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.2.0...realtime-v0.3.0) (2026-06-15)
 
 
