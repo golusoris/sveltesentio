@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/media-v0.3.0...media-v0.4.0) (2026-06-15)
+
+
+### Features
+
+* land foundation packages and repair CI gate ([#41](https://github.com/golusoris/sveltesentio/issues/41)) ([7557620](https://github.com/golusoris/sveltesentio/commit/75576200e324cd4c55f48571a6532540c1f6eb16))
+* **media:** &lt;Player&gt; + &lt;Carousel&gt; + &lt;Image&gt; UI surfaces ([b4a9fa4](https://github.com/golusoris/sveltesentio/commit/b4a9fa499a9c5f2744a11acfb428c7814e7de98a))
+* **media:** headless HLS player model + responsive image srcset helpers ([262b2d0](https://github.com/golusoris/sveltesentio/commit/262b2d0af9ee73222229bbc90975c911a740003b))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/media-v0.2.0...media-v0.3.0) (2026-06-15)
 
 
