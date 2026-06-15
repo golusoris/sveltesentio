@@ -97,7 +97,7 @@ export class NodePalette {
 				type: 'https://sveltesentio.dev/problems/flow/duplicate-node-type',
 			});
 		}
-		this.#defs.set(def.type, def as NodeTypeDef);
+		this.#defs.set(def.type, def);
 		return this;
 	}
 

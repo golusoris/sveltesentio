@@ -16,7 +16,7 @@ function okFetch(item: Item): typeof globalThis.fetch {
 				status: 200,
 				headers: { 'content-type': 'application/json' },
 			}),
-		)) as typeof globalThis.fetch;
+		));
 }
 
 /** A fetch stub returning an RFC 9457 problem document. */
@@ -27,7 +27,7 @@ function problemFetch(): typeof globalThis.fetch {
 				JSON.stringify({ type: 'https://err/not-found', title: 'No such item', status: 404 }),
 				{ status: 404, headers: { 'content-type': 'application/problem+json' } },
 			),
-		)) as typeof globalThis.fetch;
+		));
 }
 
 describe('api + query SSR prefetch composition', () => {

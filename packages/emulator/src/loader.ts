@@ -176,7 +176,7 @@ export function injectEmulatorScript(
 ): InjectEmulatorScriptResult {
 	const config = buildEmulatorConfig(options);
 	const doc = deps.document;
-	const win = deps.window ?? (globalThis as EmulatorGlobals);
+	const win = (deps.window ?? globalThis) as EmulatorGlobals;
 
 	// Remove any pre-existing loader script (re-mount safety).
 	const prior = doc.getElementById(SCRIPT_ID);

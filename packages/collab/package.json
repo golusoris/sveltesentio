@@ -55,9 +55,9 @@
   },
   "peerDependencies": {
     "svelte": ">=5.0.0",
-    "yjs": ">=13.6.0",
+    "y-protocols": ">=1.0.5",
     "y-websocket": ">=2.0.0",
-    "y-protocols": ">=1.0.5"
+    "yjs": ">=13.6.0"
   },
   "peerDependenciesMeta": {
     "y-protocols": {
@@ -65,9 +65,9 @@
     }
   },
   "devDependencies": {
-    "svelte": "^5.55.4",
+    "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.8"
   },
   "keywords": [
     "sveltesentio",

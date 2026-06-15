@@ -104,7 +104,7 @@ export function sentioApiClientThrowsProblem(fetch: typeof globalThis.fetch): Pi
 		baseUrl: 'https://api.test',
 		fetch,
 	});
-	// The constraint-satisfying generic erases the typed method surface; narrow to
-	// the single method under test. `unknown` first so this is not an `any` cast.
-	return api as unknown as PingableClient;
+	// With api's `Paths extends {}` fix the client surface is assignable to the
+	// structural PingableClient view under test — no cast needed.
+	return api;
 }
