@@ -1,7 +1,7 @@
 {
   "name": "@sveltesentio/media",
   "version": "0.2.0",
-  "description": "Headless media player model (HLS rendition picking, media-session, play/pause/quality machine, BYO hls.js seam) + responsive-image srcset/sizes builders",
+  "description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> — Svelte 5",
   "type": "module",
   "private": false,
   "sideEffects": false,
@@ -14,9 +14,33 @@
       "import": "./src/player.ts",
       "types": "./src/player.ts"
     },
+    "./player/controls": {
+      "import": "./src/player-controls.ts",
+      "types": "./src/player-controls.ts"
+    },
+    "./player/component": {
+      "svelte": "./src/Player.svelte",
+      "default": "./src/Player.svelte"
+    },
     "./image": {
       "import": "./src/image.ts",
       "types": "./src/image.ts"
+    },
+    "./image/lqip": {
+      "import": "./src/lqip.ts",
+      "types": "./src/lqip.ts"
+    },
+    "./image/component": {
+      "svelte": "./src/Image.svelte",
+      "default": "./src/Image.svelte"
+    },
+    "./carousel": {
+      "import": "./src/carousel.ts",
+      "types": "./src/carousel.ts"
+    },
+    "./carousel/component": {
+      "svelte": "./src/Carousel.svelte",
+      "default": "./src/Carousel.svelte"
     }
   },
   "scripts": {
@@ -25,22 +49,46 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "esm-env": "^1.2.2"
+  },
   "peerDependencies": {
-    "hls.js": ">=1.6.0"
+    "embla-carousel-svelte": ">=8.6.0",
+    "hls.js": ">=1.6.0",
+    "svelte": ">=5.0.0",
+    "vidstack": ">=1.12.13 <2"
   },
   "peerDependenciesMeta": {
+    "embla-carousel-svelte": {
+      "optional": true
+    },
     "hls.js": {
+      "optional": true
+    },
+    "vidstack": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@sveltesentio/core": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.56.3",
     "typescript": "^6.0.3",
+    "vite": "^8.0.16",
     "vitest": "^4.1.8"
   },
   "keywords": [
     "sveltesentio",
     "media",
     "hls",
+    "player",
+    "carousel",
+    "image",
     "srcset",
     "media-session",
     "10-foot-ui"

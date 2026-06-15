@@ -35,3 +35,34 @@ export {
 	buildSizes,
 	buildResponsiveImage,
 } from './image.js';
+
+export type { PlayerAction, MediaTrack } from './player-controls.js';
+export {
+	actionForKey,
+	assertCaptionsContract,
+	formatMediaTime,
+	clampVolume,
+} from './player-controls.js';
+
+export type {
+	CarouselPreset,
+	CarouselOrientation,
+	EmblaOptionsLike,
+	CarouselOptionsInput,
+} from './carousel.js';
+export {
+	buildCarouselOptions,
+	navButtonTargetPx,
+	carouselPrefersReducedMotion,
+} from './carousel.js';
+
+export type {
+	LqipPlaceholder,
+	ImageLoadingPriority,
+	ImageLoadingAttrs,
+} from './lqip.js';
+export {
+	buildPlaceholderStyle,
+	resolveAspectRatio,
+	imageLoadingAttrs,
+} from './lqip.js';
