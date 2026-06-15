@@ -8,14 +8,15 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html'],
 			include: ['src/**/*.ts'],
-			// Barrel, the DOM/timer-bound action + lazy PWA wrapper, and ambient
-			// type stubs carry no pure logic to cover — geometry/classification
-			// they delegate to is fully tested.
+			// Top-level barrel and ambient type stubs carry no executable logic.
+			// The pending `layout/` + `pwa/` sub-barrels are empty re-export stubs
+			// (`export {}`) with nothing to cover. The DOM/timer-bound D-pad action,
+			// its sub-barrel, and the lazy PWA wrapper ARE now covered (see the
+			// dpad-action / dpad-index / pwa test files).
 			exclude: [
 				'src/index.ts',
-				'src/dpad-index.ts',
-				'src/dpad-action.ts',
-				'src/pwa.ts',
+				'src/layout/index.ts',
+				'src/pwa/index.ts',
 				'src/**/*.d.ts',
 			],
 			thresholds: {
