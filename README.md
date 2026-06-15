@@ -33,7 +33,7 @@ pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/
 | `@sveltesentio/emulator` | 0.1.0 | EmulatorJS CSP directives + config / loader |
 | `@sveltesentio/mcp` | 0.1.0 | MCP server exposing compliance + compose docs |
 | `@sveltesentio/testing` | 0.1.0 | `testClock({ now })`, a11y / axe harness, RFC 9457 fixtures |
-| `@sveltesentio/ipc-sockmap` | _planned_ | Tier 3 kernel-bypass IPC (eBPF SK_MSG; blocked on golusoris#27) |
+| `@sveltesentio/ipc-sockmap` | 0.1.0 | Colocated IPC: AF_UNIX (Tier 1) + length-prefixed framing + transport-ladder detection; eBPF SK_MSG (Tier 3) detection-only, pending golusoris#27 |
 
 ## Design system
 

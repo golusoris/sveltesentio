@@ -1,33 +1,75 @@
 # @sveltesentio/ipc-sockmap
 
-> Tier 3 client for kernel-bypass colocated IPC between SvelteKit (Node) and Golusoris (Go) via the golusoris-owned eBPF SK_MSG sockhash.
+> Colocated-IPC client for SvelteKit (Node) ↔ Golusoris (Go): AF_UNIX Tier 1, length-prefixed message framing, and the transport-ladder detection model from [ADR-0051](../../docs/adr/0051-colocated-ipc-ladder-ebpf-sockmap.md).
 
-Part of the [sveltesentio](https://github.com/lusoris/sveltesentio) composable SvelteKit framework.
+Part of the [sveltesentio](https://github.com/lusoris/sveltesentio) composable SvelteKit framework. Node + Linux, server-only.
 
 ## Status
 
-🚧 Phase 1 skeleton — implementation blocked on [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27).
+**LANDED (v0.1.0):**
 
-The package exists to reserve the public surface and document the ladder. See [ADR-0051](../../docs/adr/0051-colocated-ipc-ladder-ebpf-sockmap.md) and [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md).
+- Tier 1 — AF_UNIX client (`createIpcClient`) over `node:net`, with an injectable connect factory.
+- Length-prefixed framing codec (`encodeFrame` / `decodeFrame` / `FrameDecoder`) — handles partial reads and multiple frames per chunk.
+- Transport-ladder detection (`detectTransport`) — probes the pinned BPF map first (Tier 3), then the socket (Tier 1), else `none`.
 
-## When to use this package
+**PENDING (Tier 3 — eBPF SK_MSG kernel-bypass):** blocked on [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27), which must pin the `BPF_MAP_TYPE_SOCKHASH` at `/sys/fs/bpf/golusoris/sockhash`. Acceleration is **transparent and kernel-side**: once golusoris pins the map, the SK_MSG hook redirects the same socket buffers without TCP-stack traversal — **no client code change**. `detectTransport` already reports `'sockmap'` when the map is present, so the client surfaces the resolved tier today.
 
-You should **not** import this package until you've tried Tier 1 (AF_UNIX) and measured that loopback TCP stack traversal is your actual bottleneck. See the ladder:
+See also [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md).
 
-| Tier | Mechanism | Cost | Import |
+## The ladder
+
+| Tier | Mechanism | Cost | This package |
 |---|---|---|---|
-| 1 | AF_UNIX socket | Trivial | None — `undici` `Agent({ socketPath })` |
+| 1 | AF_UNIX socket | Trivial | `createIpcClient` (LANDED) |
 | 2 | Cilium `socketLB` | Cluster config | None — transparent |
-| 3 | Custom eBPF sockmap | CAP_BPF + kernel ≥5.10 | `@sveltesentio/ipc-sockmap` |
+| 3 | Custom eBPF SK_MSG sockhash | CAP_BPF + kernel ≥5.10 | Detection LANDED; kernel-bypass pending golusoris#27 |
 
-Tier 3 requires:
+**Start at Tier 1.** Climb only when measurement proves loopback TCP traversal is your bottleneck.
 
-- Linux host with cgroup v2 unified hierarchy
-- Kernel ≥ 5.10 (BTF / CO-RE baseline)
-- Golusoris deployed with `fx.Module("ipc.sockmap")` enabled (pins the sockhash at `/sys/fs/bpf/golusoris/sockhash`)
-- CAP_BPF on the SvelteKit Node process (or a loader sidecar)
+## Usage
 
-If any of those preconditions fail, the client **degrades gracefully to Tier 1** — no crash, just no kernel bypass.
+```ts
+// src/lib/server/golusoris-ipc.ts
+import { createIpcClient } from '@sveltesentio/ipc-sockmap';
+
+const client = await createIpcClient({
+	socketPath: '/run/golusoris/api.sock',
+	bpfMapPath: '/sys/fs/bpf/golusoris/sockhash', // Tier-3 detection (optional)
+	requestTimeoutMs: 5_000,
+});
+
+console.warn('[ipc] resolved tier:', client.tier); // 'af_unix' | 'sockmap'
+
+const response = await client.request(new TextEncoder().encode('ping'));
+// ... close when the server shuts down
+client.close();
+```
+
+The connect factory and the `fs.access`-like probe are both injectable, so the client and detection unit-test without touching the network or filesystem.
+
+### Just the framing codec
+
+```ts
+import { encodeFrame, FrameDecoder } from '@sveltesentio/ipc-sockmap/transport';
+
+const decoder = new FrameDecoder();
+for (const chunk of stream) {
+	const { frames } = decoder.push(chunk); // drains every complete frame
+	for (const payload of frames) handle(payload);
+}
+```
+
+## Exports
+
+| Subpath | Surface |
+|---|---|
+| `.` | Everything below, re-exported. |
+| `./transport` | `encodeFrame`, `decodeFrame`, `FrameDecoder`, `detectTransport`, framing constants, `IpcTier`. |
+| `./client` | `createIpcClient`, `IpcClient`, `IpcClientOptions`, `SocketLike`, `ConnectFn`. |
+
+## Errors
+
+Transport, connect, framing, and timeout failures throw RFC 9457 [`ProblemError`](../core/src/problem.ts) from `@sveltesentio/core`.
 
 ## Installation
 

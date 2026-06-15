@@ -1,71 +1,68 @@
 # @sveltesentio/ipc-sockmap — AGENTS.md
 
-> Tier 3 of the colocated-IPC ladder. See [ADR-0051](../../docs/adr/0051-colocated-ipc-ladder-ebpf-sockmap.md).
+> Colocated-IPC ladder for SvelteKit ↔ Golusoris. See [ADR-0051](../../docs/adr/0051-colocated-ipc-ladder-ebpf-sockmap.md).
 
 ## Scope
 
-Node-side client for the eBPF sockhash owned by Golusoris's `pkg/sockmap`. This package:
+Node-side, server-only (`node:net` / `node:fs`), Linux-focused. Implements the **unblocked** rungs of the ADR-0051 ladder so the package is useful today and degrades cleanly:
 
-- Opens the pinned map at `/sys/fs/bpf/golusoris/sockhash` (path configurable via `SVELTESENTIO_IPC_SOCKMAP_PATH`).
-- Registers the SvelteKit server's listen FD (prefers systemd socket activation, falls back to passing FDs explicitly).
-- Exposes observability: `redirected_bytes_total`, `active_sockets`, `redirect_errors_total` read from BPF map stats.
-- **Degrades to no-op on non-Linux, kernel < 5.10, missing CAP_BPF, or absent map.** Consumer always falls back to whatever transport it was using (Tier 1 AF_UNIX or TCP loopback).
+- **`src/transport.ts`** — pure, seam-based, dependency-free.
+  - Length-prefixed framing codec: 4-byte big-endian u32 header + payload. `encodeFrame`, `decodeFrame` (whole buffer), and a streaming `FrameDecoder` that handles partial reads and multiple frames per chunk. Guards against lengths over `MAX_FRAME_BYTES` (64 MiB).
+  - `detectTransport({ socketPath, bpfMapPath?, access? })` — probes (via an **injected** `fs.access`-like fn) which tier is available: `'sockmap'` if the pinned BPF sockhash exists (Tier 3), else `'af_unix'` if the socket exists (Tier 1), else `'none'`. Never throws.
+- **`src/client.ts`** — `createIpcClient({ socketPath, bpfMapPath?, connect?, access?, requestTimeoutMs? })`.
+  - Tier-1 AF_UNIX client over `node:net`, with an **injected** connect factory (default `node:net.createConnection`) so it unit-tests against a fake socket.
+  - Typed `request(payload) -> Promise<payload>` using the framing; FIFO request/response matching; optional per-request timeout.
+  - Exposes the resolved `tier`. Throws RFC 9457 `ProblemError` (`@sveltesentio/core`) on no-transport, connect, transport, framing, timeout, and post-close failures.
 
-This package does **not**:
+## Status
 
-- Ship the BPF program itself — that belongs in golusoris's `pkg/sockmap/`.
-- Load or attach any BPF program — same reason.
-- Manage CAP_BPF — operators grant capability; package reads runtime environment.
+- **LANDED (v0.1.0):** Tier 1 client + framing codec + ladder detection.
+- **PENDING:** Tier 3 (eBPF SK_MSG sockhash) kernel-bypass registration is golusoris-side, blocked on [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27). `detectTransport` already reports `'sockmap'` when the map is pinned; acceleration is transparent (kernel-side) — **no client code change**. Tier-3 selection here is detection-only.
 
-## Preconditions (checked at init)
+## Why detection-only for Tier 3
 
-1. `process.platform === 'linux'`.
-2. `/sys/fs/cgroup` is cgroup v2 (single hierarchy; no `cgroup.controllers` in the v1 sense).
-3. Kernel version `>= 5.10` (BTF / CO-RE baseline).
-4. The pinned map exists at the configured path (golusoris running with sockmap module).
-5. Read/write access on the pinned map FD (CAP_BPF or `sudo` setup).
+Kernel bypass requires CAP_BPF and a kernel-side SK_MSG program attached to the cgroup v2 hierarchy. That is impossible from userspace Node and belongs to golusoris's `pkg/sockmap` (golusoris#27). This package therefore *detects* the pinned map and lets the kernel do the redirect transparently over the AF_UNIX socket buffers the client already uses.
 
-Any failed precondition logs once (warn) and sets `status: 'degraded'`. No throw.
+## Seams (injectables — keep these for testability)
 
-## Golusoris contract
+| Seam | Default | Why |
+|---|---|---|
+| `connect` (`ConnectFn`) | `node:net.createConnection` | Fake socket in tests; no real network. |
+| `access` (`AccessFn`) | `node:fs/promises` `access` | Probe all three tiers without touching the filesystem. |
 
-This package assumes golusoris ships an opt-in `fx.Module("ipc.sockmap")` (tracked in [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27)) that:
+`node:net` / `node:fs/promises` are loaded via dynamic `import()` only when the corresponding default is needed, so the pure modules stay importable in any environment.
 
-1. Pins the sockhash at `/sys/fs/bpf/golusoris/sockhash` (cgroup-scoped, mode 0660, group `sockmap`).
-2. Supports systemd socket activation so a supervisor can pre-create listen FDs.
-3. Attaches `SOCK_OPS` program to the process's cgroup v2 path.
-4. Emits `sockmap_redirected_bytes_total` / `sockmap_active_sockets` counters readable via the same map stats.
-5. Honours a pre-shutdown hook that invalidates its FD in the sockhash before closing.
+## Golusoris contract (Tier 3, pending #27)
 
-If golusoris is not running the module, this package stays in `degraded` state — safe no-op.
+Golusoris's opt-in `fx.Module("ipc.sockmap")` must:
 
-## Map layout contract
+1. Pin the sockhash at `/sys/fs/bpf/golusoris/sockhash` (cgroup-scoped, mode 0660, group `sockmap`).
+2. Support systemd socket activation so a supervisor can pre-create listen FDs.
+3. Attach the `SOCK_OPS` / `SK_MSG` program to the process's cgroup v2 path.
+4. Honour a pre-shutdown hook that invalidates its FD in the sockhash before closing.
 
-Version via a `meta` entry at key 0 in a companion `BPF_MAP_TYPE_HASH` pinned next to the sockhash:
-
-```
-/sys/fs/bpf/golusoris/sockhash     # BPF_MAP_TYPE_SOCKHASH, key=sockid, value=sockFd
-/sys/fs/bpf/golusoris/meta         # BPF_MAP_TYPE_HASH, key="version", value=u32
-```
-
-Sveltesentio refuses to register if the version isn't in the compatible set (pinned in this package via a constant, bumped through ADR amendment).
+Until then the client runs Tier 1 — safe, no crash.
 
 ## Tests
 
-Integration tests require a privileged environment (Docker `--privileged` with `bpffs` mounted at `/sys/fs/bpf`, or KVM). Harness lives under `packages/ipc-sockmap/test/integration/` once implementation lands.
+`test/` (vitest, node env). Run from the package dir.
 
-Unit tests cover: precondition detection, degrade-to-no-op paths, version mismatch handling.
+- `framing.test.ts` — encode/decode round-trips, multi-frame chunks, partial reads (payload split, header split), empty payloads, over-max length rejection, `reset()`.
+- `detect-transport.test.ts` — all three tiers via injected `access`; Tier-3-over-Tier-1 precedence; map not probed when `bpfMapPath` omitted.
+- `client.test.ts` — fake socket: connect, tier resolution (`af_unix` / `sockmap`), framed request/response, FIFO ordering, split-response reassembly, error/close/timeout/malformed-frame → `ProblemError`, post-close rejection.
+
+Privileged integration tests (Docker `--privileged` + `bpffs`) for the Tier-3 kernel path land alongside golusoris#27.
 
 ## Common tasks
 
-| Task | Command |
+| Task | Command (from package dir) |
 |---|---|
 | Typecheck | `pnpm --filter @sveltesentio/ipc-sockmap typecheck` |
+| Lint | `pnpm --filter @sveltesentio/ipc-sockmap lint` |
 | Unit tests | `pnpm --filter @sveltesentio/ipc-sockmap test` |
-| Integration (privileged) | `pnpm --filter @sveltesentio/ipc-sockmap test:integration` (requires root / CAP_BPF) |
 
 ## Related
 
 - [ADR-0051](../../docs/adr/0051-colocated-ipc-ladder-ebpf-sockmap.md) — the three-tier ladder.
 - [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md) — Tier 1 + 2 recipes.
-- [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) — Golusoris-side acceptance criteria.
+- [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) — golusoris-side Tier-3 work.
