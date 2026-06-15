@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.2.0...realtime-v0.3.0) (2026-06-15)
+
+
+### Features
+
+* **realtime:** useConnectStream + createConnectStream (ConnectRPC server-streaming) ([55d5619](https://github.com/golusoris/sveltesentio/commit/55d56199e7a06e0e643fad1aa8412d5103c1f7c2))
+
 ## [0.1.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.0.2...realtime-v0.1.0) (2026-06-14)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/i18n",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Paraglide-js v2 wrappers — locale detection, Intl formatters, a11y announcer, RTL direction",
   "type": "module",
   "private": false,

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.2.0...ui-v0.3.0) (2026-06-15)
+
+
+### Features
+
+* **ui:** toast preset + headless DataTable/virtual + command registry wrappers ([42a7a3f](https://github.com/golusoris/sveltesentio/commit/42a7a3faab5c8568c6bd62d7f3676edfa9b8f06c))
+
 ## [0.1.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.0.2...ui-v0.1.0) (2026-06-14)
 
 

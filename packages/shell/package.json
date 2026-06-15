@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/shell",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Device-class layout + input primitives — classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
   "type": "module",
   "private": false,

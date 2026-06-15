@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/realtime",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Native SSE client with exponential backoff + buffered emitter (ConnectRPC + Yjs WS follow-through)",
   "type": "module",
   "private": false,

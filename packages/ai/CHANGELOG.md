@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/ai-v0.2.0...ai-v0.3.0) (2026-06-15)
+
+
+### Features
+
+* **ai:** EU AI Act audit hook (Zod schema) + server-proxy LLM + edge seam ([a29b71d](https://github.com/golusoris/sveltesentio/commit/a29b71d9cc5d08c97e8e68e07a7c0f443b0181bd))
+
 ## [0.1.0](https://github.com/golusoris/sveltesentio/compare/ai-v0.0.2...ai-v0.1.0) (2026-06-14)
 
 
