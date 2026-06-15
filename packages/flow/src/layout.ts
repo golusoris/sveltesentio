@@ -33,7 +33,7 @@ export type ElkFactory = () => Promise<ELK>;
 
 const defaultElkFactory: ElkFactory = async () => {
 	const mod = await import('elkjs/lib/elk.bundled.js');
-	const Ctor = (mod as unknown as { default: new () => ELK }).default;
+	const Ctor = mod.default;
 	return new Ctor();
 };
 

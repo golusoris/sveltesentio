@@ -39,9 +39,9 @@
   },
   "devDependencies": {
     "esm-env": "^1.2.2",
-    "svelte": "^5.55.7",
+    "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.8"
   },
   "keywords": [
     "sveltesentio",
