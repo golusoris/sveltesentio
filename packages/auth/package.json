@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/auth",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
   "type": "module",
   "private": false,

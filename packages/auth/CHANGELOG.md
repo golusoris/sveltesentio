@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.5.0...auth-v0.6.0) (2026-06-15)
+
+
+### Features
+
+* **auth:** handleSession hook — cookie→locals session resolution (ADR-0034) ([74febcc](https://github.com/golusoris/sveltesentio/commit/74febccc1dad867da53b73cf63c2ebeba2303e42))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.4.0...auth-v0.5.0) (2026-06-15)
 
 

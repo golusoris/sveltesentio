@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.3.0...charts-v0.4.0) (2026-06-15)
+
+
+### Features
+
+* **charts:** semantic chart components over LayerChart, a11y-wrapped ([7551d89](https://github.com/golusoris/sveltesentio/commit/7551d89c84aac30e293ba2c02c62ee9c7a45b320))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.2.0...charts-v0.3.0) (2026-06-15)
 
 
