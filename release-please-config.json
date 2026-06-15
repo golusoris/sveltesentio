@@ -110,6 +110,9 @@
     },
     "packages/emulator": {
       "package-name": "@sveltesentio/emulator"
+    },
+    "packages/ipc-sockmap": {
+      "package-name": "@sveltesentio/ipc-sockmap"
     }
   }
 }

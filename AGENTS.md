@@ -94,7 +94,7 @@ sveltesentio/
 │   ├── shell/                      # device-class layouts — desktop / 10-foot D-pad / handheld / PWA install + update   [NEW — pending D140..D143]
 │   ├── charts/                     # Layerchart wrappers + dashboard presets
 │   ├── ai/                         # LLM chat components (streaming), edge AI (@huggingface/transformers WebGPU), semantic search, EU AI Act audit hook (ADR-0043 + ADR-0044 + ADR-0045)
-│   ├── ipc-sockmap/                # Tier 3 kernel-bypass IPC client (eBPF SK_MSG sockhash; Linux + cgroup v2 + kernel ≥5.10)   [ADR-0051, blocked on golusoris/golusoris#27]
+│   ├── ipc-sockmap/                # Colocated-IPC client: AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG sockhash (Tier 3) detection-only (Linux + cgroup v2 + kernel ≥5.10)   [ADR-0051, Tier 3 pending golusoris/golusoris#27]
 │   ├── mcp/                        # MCP server — exposes ADR/compose/compliance docs + module-lookup tool to AI clients   [Phase 1b]
 │   └── testing/                    # testClock + a11y harness + Superforms + TanStack Query fixtures   [ADR-0031 + ADR-0052]
 │
@@ -188,7 +188,7 @@ Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pin
 | `@sveltesentio/shell` | 10b | (TBD — see D140..D143) | device-class layouts, D-pad routing, PWA install |
 | `@sveltesentio/charts` | 11 | layerchart | dashboard chart wrappers, semantic color presets |
 | `@sveltesentio/ai` | 12 | @anthropic-ai/sdk (server), @huggingface/transformers, ollama-js (proxy) | LLM chat streaming, edge AI, semantic search, audit hook |
-| `@sveltesentio/ipc-sockmap` | 12b | (Linux-only; reads pinned BPF sockhash owned by golusoris) | Tier 3 kernel-bypass client for colocated SvelteKit ↔ Golusoris IPC (ADR-0051; blocked on golusoris/golusoris#27) |
+| `@sveltesentio/ipc-sockmap` | 12b | @sveltesentio/core (Linux server-only; Tier 3 reads pinned BPF sockhash owned by golusoris) | Colocated SvelteKit ↔ Golusoris IPC — AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG (Tier 3) detection-only (ADR-0051; Tier 3 acceleration pending golusoris/golusoris#27) |
 | `@sveltesentio/testing` | ortho | vitest (optional peer), @axe-core/playwright | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures |
 | `@sveltesentio/mcp` | ortho (Phase 1b) | @modelcontextprotocol/sdk | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue |
 

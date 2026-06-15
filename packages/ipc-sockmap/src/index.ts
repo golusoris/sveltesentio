@@ -1,11 +1,30 @@
-// @sveltesentio/ipc-sockmap — not yet implemented (see ADR-0051 + docs/compose/colocated-ipc.md)
+// @sveltesentio/ipc-sockmap — colocated-IPC ladder (ADR-0051).
 //
-// Tier 3 of the colocated-IPC ladder. Owns: opening the pinned BPF_MAP_TYPE_SOCKHASH
-// that golusoris's pkg/sockmap module pins at /sys/fs/bpf/golusoris/sockhash,
-// registering the SvelteKit server's listen FD, and exposing degrade-to-Tier-1 semantics
-// when the map is unavailable (non-Linux host, kernel < 5.10, CAP_BPF missing, etc.).
-//
-// Blocked on golusoris/golusoris#27 (acceptance criteria 1-4). This stub reserves the
-// public surface; implementation lands when the golusoris side ships.
+// LANDED: Tier 1 (AF_UNIX) client + the transport-ladder detection model.
+// PENDING: Tier 3 (eBPF SK_MSG sockhash) kernel-bypass registration is
+// golusoris-side and blocked on golusoris/golusoris#27. detectTransport already
+// reports 'sockmap' when the pinned map is present; acceleration is then
+// transparent to this client — no code change required here.
 
-export {};
+export {
+	FRAME_HEADER_BYTES,
+	FrameDecoder,
+	MAX_FRAME_BYTES,
+	decodeFrame,
+	detectTransport,
+	encodeFrame,
+} from './transport.js';
+export type {
+	AccessFn,
+	DecodeResult,
+	DetectTransportOptions,
+	IpcTier,
+} from './transport.js';
+
+export { createIpcClient } from './client.js';
+export type {
+	ConnectFn,
+	IpcClient,
+	IpcClientOptions,
+	SocketLike,
+} from './client.js';
