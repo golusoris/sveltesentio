@@ -58,10 +58,10 @@
     }
   },
   "devDependencies": {
-    "@sveltejs/kit": "^2.0.0",
-    "svelte": "^5.55.4",
+    "@sveltejs/kit": "^2.65.1",
+    "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.8"
   },
   "keywords": [
     "sveltesentio",

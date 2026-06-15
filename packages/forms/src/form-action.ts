@@ -1,11 +1,7 @@
 import { ProblemError } from '@sveltesentio/core';
 import { problemToFieldErrors } from './problem-to-field-errors.js';
 import type { ZodV4Schema } from './super-validate.js';
-import type {
-	SuperValidated,
-	SuperValidateOptions,
-	ValidationErrors,
-} from 'sveltekit-superforms';
+import type { SuperValidated, SuperValidateOptions } from 'sveltekit-superforms';
 
 /** Minimal shape of a Kit `RequestEvent` consumed by a form action. */
 export interface FormActionEvent {
@@ -110,5 +106,5 @@ function applyProblem<Out extends Record<string, unknown>>(
 		errors[name] = existing ? existing.concat(reasons) : reasons;
 	}
 	form.valid = false;
-	form.errors = errors as ValidationErrors<Out>;
+	form.errors = errors;
 }
