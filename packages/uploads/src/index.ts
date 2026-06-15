@@ -11,3 +11,14 @@ export type {
 
 export { stripExif, readExif } from './exif.js';
 export type { StripExifOptions, Reencoder } from './exif.js';
+
+export { createResumableUpload } from './resumable.js';
+export type {
+	ResumableUpload,
+	ResumableUploadOptions,
+	ResumableState,
+	ResumableProgress,
+	TusUpload,
+	TusUploadOptions,
+	TusUploadConstructor,
+} from './resumable.js';
