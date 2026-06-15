@@ -38,6 +38,7 @@
     "svelte": ">=5.0.0"
   },
   "devDependencies": {
+    "@storybook/addon-svelte-csf": "5.1.2",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/testing": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
@@ -62,6 +63,7 @@
   },
   "files": [
     "src",
+    "!src/**/*.stories.svelte",
     "CHANGELOG.md"
   ]
 }
