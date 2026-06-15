@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/media-v0.2.0...media-v0.3.0) (2026-06-15)
+
+
+### Features
+
+* **media:** &lt;Player&gt; + &lt;Carousel&gt; + &lt;Image&gt; UI surfaces ([b4a9fa4](https://github.com/golusoris/sveltesentio/commit/b4a9fa499a9c5f2744a11acfb428c7814e7de98a))
+
 ## [0.2.0](https://github.com/golusoris/sveltesentio/compare/media-v0.1.0...media-v0.2.0)
 
 

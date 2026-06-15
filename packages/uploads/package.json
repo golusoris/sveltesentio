@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/uploads",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Resumable uploads — tus-js-client + exifr (EXIF strip) + file-type (magic-byte sniffing)",
   "type": "module",
   "private": false,
