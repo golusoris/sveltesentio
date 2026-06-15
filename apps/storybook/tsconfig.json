@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["svelte", "node"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [".storybook/**/*"]
+}
