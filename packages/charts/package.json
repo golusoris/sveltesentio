@@ -21,6 +21,38 @@
     "./preset": {
       "import": "./src/preset.ts",
       "types": "./src/preset.ts"
+    },
+    "./palette": {
+      "import": "./src/palette.ts",
+      "types": "./src/palette.ts"
+    },
+    "./chart-series": {
+      "import": "./src/chart-series.ts",
+      "types": "./src/chart-series.ts"
+    },
+    "./chart": {
+      "svelte": "./src/Chart.svelte",
+      "default": "./src/Chart.svelte"
+    },
+    "./line": {
+      "svelte": "./src/LineChart.svelte",
+      "default": "./src/LineChart.svelte"
+    },
+    "./area": {
+      "svelte": "./src/AreaChart.svelte",
+      "default": "./src/AreaChart.svelte"
+    },
+    "./bar": {
+      "svelte": "./src/BarChart.svelte",
+      "default": "./src/BarChart.svelte"
+    },
+    "./pie": {
+      "svelte": "./src/PieChart.svelte",
+      "default": "./src/PieChart.svelte"
+    },
+    "./scatter": {
+      "svelte": "./src/ScatterChart.svelte",
+      "default": "./src/ScatterChart.svelte"
     }
   },
   "scripts": {
