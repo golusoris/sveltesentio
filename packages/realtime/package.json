@@ -35,6 +35,11 @@
       "svelte": "./src/use-connect-stream.svelte.ts",
       "import": "./src/use-connect-stream.svelte.ts",
       "types": "./src/use-connect-stream.svelte.ts"
+    },
+    "./rpc": {
+      "svelte": "./src/rpc/index.ts",
+      "import": "./src/rpc/index.ts",
+      "types": "./src/rpc/index.ts"
     }
   },
   "scripts": {
@@ -44,21 +49,33 @@
     "test": "vitest run"
   },
   "peerDependencies": {
+    "@bufbuild/protobuf": ">=2.0.0",
     "@connectrpc/connect": ">=2.0.0",
     "@connectrpc/connect-web": ">=2.0.0",
     "@sveltejs/kit": ">=2.0.0",
+    "@sveltesentio/core": "workspace:*",
     "svelte": ">=5.0.0"
   },
   "peerDependenciesMeta": {
+    "@bufbuild/protobuf": {
+      "optional": true
+    },
     "@connectrpc/connect": {
       "optional": true
     },
     "@connectrpc/connect-web": {
       "optional": true
+    },
+    "@sveltesentio/core": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@connectrpc/connect": "^2.1.2",
+    "@connectrpc/connect-web": "^2.1.2",
     "@sveltejs/kit": "^2.65.1",
+    "@sveltesentio/core": "workspace:*",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
