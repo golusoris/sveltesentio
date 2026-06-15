@@ -38,6 +38,10 @@
       "import": "./src/csrf-hook.ts",
       "types": "./src/csrf-hook.ts"
     },
+    "./session": {
+      "import": "./src/session-hook.ts",
+      "types": "./src/session-hook.ts"
+    },
     "./mfa": {
       "import": "./src/mfa.ts",
       "types": "./src/mfa.ts"

@@ -54,6 +54,13 @@ export type {
 	HandleCsrfOptions,
 } from './csrf-hook.js';
 
+export { handleSession, resolveSessionLocals } from './session-hook.js';
+export type {
+	HandleSessionOptions,
+	SessionEvent,
+	SessionResolver,
+} from './session-hook.js';
+
 export {
 	MFA_INVALID,
 	MFA_RATE_LIMITED,
