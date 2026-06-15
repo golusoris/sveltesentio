@@ -1,6 +1,15 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+# Storybook 10.4.5 is recent; exclude its (dev-only, never-shipped) packages from
+# pnpm's minimumReleaseAge cooldown so the showcase app installs.
+minimumReleaseAgeExclude:
+  - '@storybook/addon-a11y@10.4.5'
+  - '@storybook/builder-vite@10.4.5'
+  - '@storybook/csf-plugin@10.4.5'
+  - '@storybook/svelte-vite@10.4.5'
+  - '@storybook/svelte@10.4.5'
+  - storybook@10.4.5
 onlyBuiltDependencies:
   - esbuild
   - onnxruntime-node

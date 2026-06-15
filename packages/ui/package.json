@@ -114,10 +114,10 @@
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/testing": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
+    "@storybook/addon-svelte-csf": "5.1.2",
     "@testing-library/svelte": "^5.3.1",
     "@types/jsdom": "^28.0.3",
     "axe-core": "^4.12.1",
-    "histoire": "latest",
     "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
@@ -135,6 +135,7 @@
   },
   "files": [
     "src",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "!src/**/*.stories.svelte"
   ]
 }
