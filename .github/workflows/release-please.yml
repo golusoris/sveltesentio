@@ -68,3 +68,14 @@ jobs:
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: 'packages/*/src/**'
+
+      # CycloneDX SBOM for the release (§2.5). continue-on-error: SBOM generation
+      # must never fail an already-completed publish; the artifact is best-effort.
+      - name: Generate SBOM (CycloneDX)
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        continue-on-error: true
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          artifact-name: sbom.cdx.json
