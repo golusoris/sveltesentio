@@ -59,4 +59,14 @@ describe('detectTransport', () => {
 		expect(access).not.toHaveBeenCalledWith(MAP);
 		expect(access).toHaveBeenCalledWith(SOCK);
 	});
+
+	it('uses the default node:fs/promises probe when no access fn is injected', async () => {
+		// No `access` override exercises the lazily-imported `node:fs/promises`
+		// default; the paths below cannot exist, so every tier is ruled out.
+		const tier = await detectTransport({
+			socketPath: '/nonexistent/sveltesentio-ipc-test.sock',
+			bpfMapPath: '/nonexistent/sveltesentio-ipc-test.map',
+		});
+		expect(tier).toBe('none');
+	});
 });

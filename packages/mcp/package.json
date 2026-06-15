@@ -18,7 +18,7 @@
     "build": "tsc",
     "lint": "eslint src/ bin/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --coverage --passWithNoTests",
     "start": "node --experimental-strip-types bin/sveltesentio-mcp.ts"
   },
   "dependencies": {
