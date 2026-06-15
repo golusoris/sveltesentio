@@ -21,6 +21,19 @@
     "./node-palette": {
       "import": "./src/node-palette.ts",
       "types": "./src/node-palette.ts"
+    },
+    "./canvas": {
+      "svelte": "./src/FlowCanvas.svelte",
+      "types": "./src/canvas.ts",
+      "import": "./src/canvas.ts"
+    },
+    "./canvas-model": {
+      "import": "./src/canvas-model.ts",
+      "types": "./src/canvas-model.ts"
+    },
+    "./nodes": {
+      "import": "./src/nodes.ts",
+      "types": "./src/nodes.ts"
     }
   },
   "scripts": {
@@ -29,13 +42,29 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  },
   "peerDependencies": {
     "@xyflow/svelte": ">=1.0.0",
     "elkjs": ">=0.11.0",
     "svelte": ">=5.0.0"
   },
+  "peerDependenciesMeta": {
+    "@xyflow/svelte": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "@xyflow/svelte": "^1.6.0",
+    "axe-core": "^4.12.1",
     "elkjs": "^0.11.0",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
