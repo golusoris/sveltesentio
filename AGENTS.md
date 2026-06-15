@@ -98,8 +98,9 @@ sveltesentio/
 │   ├── mcp/                        # MCP server — exposes ADR/compose/compliance docs + module-lookup tool to AI clients   [Phase 1b]
 │   └── testing/                    # testClock + a11y harness + Superforms + TanStack Query fixtures   [ADR-0031 + ADR-0052]
 │
-├── apps/                           # consuming apps (integration tests + docs site)                         [NOT YET CREATED]
-│   ├── docs/                       # docs site (Histoire + principles/ADRs rendered)
+├── apps/                           # consuming apps (integration tests + showcase)
+│   ├── storybook/                  # Storybook 10 component showcase (Svelte 5; axe via addon-a11y)           [LANDED]
+│   ├── docs/                       # docs site (principles/ADRs rendered)                                     [NOT YET CREATED]
 │   └── e2e/                        # integration-test app consuming every v0.1.0 package
 │
 ├── examples/                       # minimal per-module usage snippets                                      [NOT YET CREATED]
@@ -120,7 +121,7 @@ sveltesentio/
 │       ├── wire-module.md          # /wire-module — add a new @sveltesentio/* package
 │       ├── scaffold-route.md       # /scaffold-route — generate SvelteKit route + Superforms + TanStack Query
 │       ├── add-shadcn.md           # /add-shadcn — shadcn-svelte CLI wrapper
-│       └── add-histoire.md         # /add-histoire — add a Histoire story for a component
+│       └── add-storybook.md        # /add-storybook — add a Storybook story for a component
 │
 ├── .github/
 │   ├── CODEOWNERS                  # @lusoris global
@@ -203,7 +204,7 @@ Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, 
 | Add a new `@sveltesentio/*` package | `/wire-module` skill |
 | Scaffold a SvelteKit route (Superforms + TanStack Query) | `/scaffold-route` skill |
 | Add a shadcn-svelte component | `/add-shadcn` skill |
-| Add a Histoire story | `/add-histoire` skill |
+| Add a Storybook story | `/add-storybook` skill |
 | Bootstrap dev environment | `make setup` |
 | Run full CI locally | `make ci` |
 | Add a new root-level dep | `pnpm add -Dw <dep>` |
@@ -238,7 +239,7 @@ Every PR must pass:
 - **TypeScript** — 0 errors across workspaces (`turbo typecheck`).
 - **Vitest** — green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
 - **Playwright** — e2e green (when `apps/e2e` lands).
-- **axe-core** — clean on every Histoire story.
+- **axe-core** — clean on every Storybook story (via `@storybook/addon-a11y`).
 - **`pnpm audit`** — clean (no `>=high` advisories).
 - **`codeql.yml`** — clean.
 - **`scorecard.yml`** — score ≥ 7.

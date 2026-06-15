@@ -11,7 +11,7 @@ Located in `.claude/skills/`:
 | `wire-module` | Add a new `@sveltesentio/*` package to the monorepo |
 | `scaffold-route` | Generate a SvelteKit route with Superforms + TanStack Query |
 | `add-shadcn` | Add a shadcn-svelte component via the CLI wrapper |
-| `add-histoire` | Add a Histoire story for a component |
+| `add-storybook` | Add a Storybook story for a component |
 
 Invoke via `/<skill-name>` in Claude Code.
 
