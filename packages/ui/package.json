@@ -67,9 +67,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "histoire": "histoire dev",
-    "histoire:build": "histoire build"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "dompurify": "^3.4.8",
@@ -113,8 +111,14 @@
   },
   "devDependencies": {
     "@lucide/svelte": "^1.18.0",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
     "@types/jsdom": "^28.0.3",
+    "axe-core": "^4.12.1",
     "histoire": "latest",
+    "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"

@@ -83,7 +83,13 @@
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/core": "workspace:*",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8",
