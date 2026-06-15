@@ -64,4 +64,20 @@ describe('strictCsp + serialiseCsp', () => {
 		const header = serialiseCsp({ 'object-src': [NONE] });
 		expect(header).toBe("object-src 'none'");
 	});
+
+	it('serialises a string-valued directive (report-to) verbatim', () => {
+		const header = serialiseCsp({ 'report-to': 'csp-endpoint' });
+		expect(header).toBe('report-to csp-endpoint');
+	});
+
+	it('combines string and array directives in one header', () => {
+		const header = serialiseCsp({
+			'default-src': [SELF],
+			'report-to': 'group-1',
+			'upgrade-insecure-requests': true,
+		});
+		expect(header).toContain("default-src 'self'");
+		expect(header).toContain('report-to group-1');
+		expect(header).toContain('upgrade-insecure-requests');
+	});
 });

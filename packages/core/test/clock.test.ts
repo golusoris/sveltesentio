@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getClock, systemClock, withClock } from '../src/clock';
+import { createHydrationClock, getClock, systemClock, withClock } from '../src/clock';
 import type { Clock } from '../src/clock';
 
 function freshClock(now: Date): Clock {
@@ -81,5 +81,27 @@ describe('withClock handle', () => {
 			resolve: async () => new Response('ok'),
 		} as unknown as Parameters<typeof handle>[0]);
 		expect(getClock()).toBe(systemClock);
+	});
+});
+
+describe('createHydrationClock (server, BROWSER=false)', () => {
+	const serverNow = new Date('2026-04-17T12:00:00.000Z');
+
+	it('returns the server time on the first read', () => {
+		const clock = createHydrationClock(serverNow);
+		expect(clock.now().toISOString()).toBe(serverNow.toISOString());
+	});
+
+	it('returns the server time on subsequent reads (no monotonic drift on the server)', () => {
+		const clock = createHydrationClock(serverNow);
+		expect(clock.now().getTime()).toBe(serverNow.getTime()); // firstRead branch
+		// On the server the monotonic delta is fixed at 0, so time does not advance.
+		expect(clock.now().getTime()).toBe(serverNow.getTime());
+		expect(clock.now().getTime()).toBe(serverNow.getTime());
+	});
+
+	it('monotonic is 0 on the server', () => {
+		const clock = createHydrationClock(serverNow);
+		expect(clock.monotonic()).toBe(0);
 	});
 });

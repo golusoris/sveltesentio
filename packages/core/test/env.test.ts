@@ -46,6 +46,37 @@ describe('createEnv', () => {
 		});
 		expect(env).toEqual({});
 	});
+
+	it('throws a "public" EnvValidationError when only the public schema fails', () => {
+		try {
+			createEnv({
+				server: z.object({ A: z.string() }),
+				publicEnv: z.object({ PUBLIC_X: z.string() }),
+				runtimeEnv: { A: 'ok' }, // PUBLIC_X missing → public parse fails
+			});
+			throw new Error('expected createEnv to throw');
+		} catch (err) {
+			expect(err).toBeInstanceOf(EnvValidationError);
+			expect((err as EnvValidationError).message).toContain('Invalid public environment');
+		}
+	});
+});
+
+describe('EnvValidationError', () => {
+	it('carries the treeified error on .tree', () => {
+		const tree = { errors: ['boom'] };
+		const err = new EnvValidationError('server', tree);
+		expect(err.name).toBe('EnvValidationError');
+		expect(err.tree).toBe(tree);
+		expect(err.message).toContain('Invalid server environment');
+	});
+
+	it('falls back to "[unserialisable tree]" when the tree cannot be JSON-stringified', () => {
+		const circular: Record<string, unknown> = {};
+		circular['self'] = circular; // JSON.stringify throws on circular refs
+		const err = new EnvValidationError('public', circular);
+		expect(err.message).toContain('[unserialisable tree]');
+	});
 });
 
 describe('requireEnv', () => {
