@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/ipc-sockmap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Colocated-IPC client for SvelteKit ↔ Golusoris: AF_UNIX (Tier 1) + length-prefixed framing + transport-ladder detection. eBPF SK_MSG sockhash (Tier 3) is transparent kernel-bypass, pending golusoris#27. Node + Linux.",
   "type": "module",
   "private": false,
