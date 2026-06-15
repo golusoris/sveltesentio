@@ -184,4 +184,107 @@ describe('createIpcClient', () => {
 		await expect(pending).rejects.toBeInstanceOf(ProblemError);
 		expect(socket.destroyed).toBe(true);
 	});
+
+	it('wraps a synchronous socket.write failure in a ProblemError', async () => {
+		const socket = new FakeSocket();
+		socket.write = (): boolean => {
+			throw new Error('EPIPE');
+		};
+		const client = await createIpcClient({
+			socketPath: SOCK,
+			access: reachable([SOCK]),
+			connect: () => socket,
+		});
+		await expect(client.request(Uint8Array.from([1]))).rejects.toBeInstanceOf(ProblemError);
+	});
+
+	it('passes a ProblemError thrown by socket.write through unwrapped', async () => {
+		const original = new ProblemError({ type: 'urn:x', title: 'boom', status: 500 });
+		const socket = new FakeSocket();
+		socket.write = (): boolean => {
+			throw original;
+		};
+		const client = await createIpcClient({
+			socketPath: SOCK,
+			access: reachable([SOCK]),
+			connect: () => socket,
+		});
+		await expect(client.request(Uint8Array.from([1]))).rejects.toBe(original);
+	});
+
+	it('clears a pending timeout when the write fails', async () => {
+		vi.useFakeTimers();
+		try {
+			const socket = new FakeSocket();
+			socket.write = (): boolean => {
+				throw new Error('EPIPE');
+			};
+			const client = await createIpcClient({
+				socketPath: SOCK,
+				access: reachable([SOCK]),
+				connect: () => socket,
+				requestTimeoutMs: 1000,
+			});
+			await expect(client.request(Uint8Array.from([1]))).rejects.toBeInstanceOf(ProblemError);
+			// the timer was cleared by the write-failure path, so advancing it is a no-op
+			await vi.advanceTimersByTimeAsync(2000);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('rejects immediately once a fatal transport error has been recorded', async () => {
+		const { client, socket } = await connectedClient();
+		socket.emit('error', new Error('ECONNRESET')); // sets `fatal`
+		await expect(client.request(Uint8Array.from([1]))).rejects.toBeInstanceOf(ProblemError);
+	});
+
+	it('clears the per-request timer when a response resolves it', async () => {
+		vi.useFakeTimers();
+		try {
+			const socket = new FakeSocket();
+			const client = await createIpcClient({
+				socketPath: SOCK,
+				access: reachable([SOCK]),
+				connect: () => socket,
+				requestTimeoutMs: 1000,
+			});
+			const pending = client.request(Uint8Array.from([1]));
+			socket.emit('data', encodeFrame(Uint8Array.from([0x42])));
+			expect(Array.from(await pending)).toEqual([0x42]);
+			// the resolve cleared the timer; advancing past it must not reject
+			await vi.advanceTimersByTimeAsync(2000);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('ignores a response frame that has no matching pending request', async () => {
+		const { client, socket } = await connectedClient();
+		// No request is in flight, so the decoded frame is dropped silently.
+		expect(() => socket.emit('data', encodeFrame(Uint8Array.from([0x1])))).not.toThrow();
+		// the client is still usable afterwards
+		const pending = client.request(Uint8Array.from([2]));
+		socket.emit('data', encodeFrame(Uint8Array.from([0x3])));
+		expect(Array.from(await pending)).toEqual([0x3]);
+	});
+
+	it('is idempotent on a second close()', async () => {
+		const { client, socket } = await connectedClient();
+		client.close();
+		client.close();
+		expect(socket.ended).toBe(true);
+	});
+
+	it('falls back to the default node:net connector when none is injected', async () => {
+		// No `connect` override exercises the lazily-imported `node:net` default.
+		// The socket path cannot exist, so the real connector errors before
+		// connecting and the client rejects with a connect ProblemError.
+		await expect(
+			createIpcClient({
+				socketPath: '/nonexistent/sveltesentio-ipc-test.sock',
+				access: reachable(['/nonexistent/sveltesentio-ipc-test.sock']),
+			}),
+		).rejects.toBeInstanceOf(ProblemError);
+	});
 });
