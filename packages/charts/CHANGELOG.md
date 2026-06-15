@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.2.0...charts-v0.3.0) (2026-06-15)
+
+
+### Features
+
+* **charts:** a11y ChartFigure + screen-reader data table + dashboard preset ([d25e00d](https://github.com/golusoris/sveltesentio/commit/d25e00d8f32c07339d4d2d36d77f1df05ca78f4b))
+
 ## [0.2.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.1.0...charts-v0.2.0) (2026-06-14)
 
 
