@@ -23,3 +23,19 @@ export {
   type TooltipPreset,
   type MotionPreset,
 } from './preset.js';
+
+export {
+  chartPalette,
+  chartSeriesColor,
+  CHART_PALETTE_SIZE,
+} from './palette.js';
+
+export {
+  resolveSeriesColors,
+  toFigureSeries,
+  categoricalToFigure,
+  type CartesianSeries,
+  type LayerSeries,
+  type KeyAccessor,
+  type ValueAccessor,
+} from './chart-series.js';
