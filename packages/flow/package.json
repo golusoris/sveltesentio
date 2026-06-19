@@ -18,6 +18,10 @@
       "import": "./src/layout.ts",
       "types": "./src/layout.ts"
     },
+    "./layout-worker": {
+      "import": "./src/layout-worker.ts",
+      "types": "./src/layout-worker.ts"
+    },
     "./node-palette": {
       "import": "./src/node-palette.ts",
       "types": "./src/node-palette.ts"

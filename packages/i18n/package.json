@@ -47,18 +47,18 @@
     "svelte": ">=5.0.0"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "^2.19.0",
-    "@sveltejs/kit": "^2.65.1",
+    "@inlang/paraglide-js": "^2.20.0",
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/kit": "^2.65.2",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/testing": "workspace:*",
-    "@storybook/addon-svelte-csf": "5.1.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "keywords": [
     "sveltesentio",

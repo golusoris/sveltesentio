@@ -21,6 +21,18 @@
     "./edge": {
       "import": "./src/edge.ts",
       "types": "./src/edge.ts"
+    },
+    "./server": {
+      "import": "./src/server.ts",
+      "types": "./src/server.ts"
+    },
+    "./client": {
+      "import": "./src/client.svelte.ts",
+      "types": "./src/client.svelte.ts"
+    },
+    "./client/component": {
+      "svelte": "./src/ChatStream.svelte",
+      "default": "./src/ChatStream.svelte"
     }
   },
   "scripts": {
@@ -33,19 +45,33 @@
     "@sveltesentio/core": "workspace:*"
   },
   "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.40.0",
     "@huggingface/transformers": ">=4.1.0",
     "@sveltejs/kit": ">=2.0.0",
+    "ollama": ">=0.5.0",
     "svelte": ">=5.0.0",
     "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
     "@huggingface/transformers": {
+      "optional": true
+    },
+    "ollama": {
       "optional": true
     }
   },
   "devDependencies": {
     "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/core": "workspace:*",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8",
@@ -55,6 +81,8 @@
     "sveltesentio",
     "ai",
     "llm",
+    "anthropic",
+    "ollama",
     "transformers",
     "edge-ai",
     "eu-ai-act",

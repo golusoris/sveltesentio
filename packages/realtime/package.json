@@ -74,11 +74,11 @@
     "@bufbuild/protobuf": "^2.11.0",
     "@connectrpc/connect": "^2.1.2",
     "@connectrpc/connect-web": "^2.1.2",
-    "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/kit": "^2.65.2",
     "@sveltesentio/core": "workspace:*",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "keywords": [
     "sveltesentio",

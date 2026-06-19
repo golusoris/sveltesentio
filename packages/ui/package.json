@@ -18,6 +18,50 @@
       "import": "./src/tokens/index.ts",
       "types": "./src/tokens/index.ts"
     },
+    "./button": {
+      "import": "./src/button/index.ts",
+      "types": "./src/button/index.ts"
+    },
+    "./button/component": {
+      "svelte": "./src/button/Button.svelte",
+      "default": "./src/button/Button.svelte"
+    },
+    "./input": {
+      "import": "./src/input/index.ts",
+      "types": "./src/input/index.ts"
+    },
+    "./input/component": {
+      "svelte": "./src/input/Input.svelte",
+      "default": "./src/input/Input.svelte"
+    },
+    "./dialog": {
+      "import": "./src/dialog/index.ts",
+      "types": "./src/dialog/index.ts"
+    },
+    "./dialog/component": {
+      "svelte": "./src/dialog/Dialog.svelte",
+      "default": "./src/dialog/Dialog.svelte"
+    },
+    "./theme-toggle": {
+      "import": "./src/theme/toggle.ts",
+      "types": "./src/theme/toggle.ts"
+    },
+    "./theme-toggle/component": {
+      "svelte": "./src/theme/ThemeToggle.svelte",
+      "default": "./src/theme/ThemeToggle.svelte"
+    },
+    "./theme-customizer": {
+      "import": "./src/theme/customizer-export.ts",
+      "types": "./src/theme/customizer-export.ts"
+    },
+    "./theme-customizer/component": {
+      "svelte": "./src/theme/ThemeCustomizer.svelte",
+      "default": "./src/theme/ThemeCustomizer.svelte"
+    },
+    "./font-preset": {
+      "import": "./src/font/index.ts",
+      "types": "./src/font/index.ts"
+    },
     "./toast": {
       "import": "./src/toast/index.ts",
       "types": "./src/toast/index.ts"

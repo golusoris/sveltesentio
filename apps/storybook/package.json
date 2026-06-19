@@ -10,13 +10,13 @@
     "build": "storybook build"
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "10.4.5",
+    "@storybook/addon-a11y": "10.4.6",
     "@storybook/addon-svelte-csf": "5.1.2",
-    "@storybook/svelte-vite": "10.4.5",
+    "@storybook/svelte-vite": "10.4.6",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/ui": "workspace:*",
     "svelte": "^5.56.3",
-    "storybook": "10.4.5",
+    "storybook": "10.4.6",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
   }

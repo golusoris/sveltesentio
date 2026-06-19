@@ -22,6 +22,19 @@ export {
 } from './layout.js';
 
 export {
+  type LayoutWorkerRequest,
+  type LayoutWorkerSuccess,
+  type LayoutWorkerFailure,
+  type LayoutWorkerResponse,
+  type WorkerLayout,
+  type LayoutWorkerHandle,
+  type CreateLayoutWorkerOptions,
+  LAYOUT_WORKER_ERROR_TYPE,
+  createLayoutWorker,
+  layoutWorkerHandler,
+} from './layout-worker.js';
+
+export {
   type XYPosition,
   type FlowNode,
   type NodeIdFactory,

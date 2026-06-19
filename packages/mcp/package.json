@@ -12,6 +12,18 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./tools/compose-search": {
+      "import": "./src/tools/compose-search.ts",
+      "types": "./src/tools/compose-search.ts"
+    },
+    "./tools/principle-lookup": {
+      "import": "./src/tools/principle-lookup.ts",
+      "types": "./src/tools/principle-lookup.ts"
+    },
+    "./subscriptions": {
+      "import": "./src/subscriptions.ts",
+      "types": "./src/subscriptions.ts"
     }
   },
   "scripts": {

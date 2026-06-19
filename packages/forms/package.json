@@ -22,6 +22,11 @@
       "import": "./src/form-action.ts",
       "types": "./src/form-action.ts"
     },
+    "./use-form": {
+      "svelte": "./src/use-form.svelte.ts",
+      "import": "./src/use-form.svelte.ts",
+      "types": "./src/use-form.svelte.ts"
+    },
     "./formsnap": {
       "svelte": "./src/formsnap.ts",
       "import": "./src/formsnap.ts",

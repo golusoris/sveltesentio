@@ -39,3 +39,23 @@ export {
   type KeyAccessor,
   type ValueAccessor,
 } from './chart-series.js';
+
+export {
+  buildUPlotOptions,
+  createUPlotChart,
+  emptyAlignedData,
+  loadUPlotModule,
+  uPlotCtorFromModule,
+  type AlignedData,
+  type UPlotSeriesConfig,
+  type UPlotChartConfig,
+  type UPlotOptions,
+  type UPlotOptionsSeries,
+  type UPlotAxis,
+  type UPlotScales,
+  type UPlotInstance,
+  type UPlotConstructor,
+  type UPlotLoader,
+  type CreateUPlotChartOptions,
+  type UPlotChartHandle,
+} from './uplot.js';

@@ -37,3 +37,30 @@ export type {
 	TransformersModule,
 } from './edge.js';
 export { edgeTasks, loadEdgePipeline } from './edge.js';
+
+export type {
+	AnthropicAdapterOptions,
+	AnthropicMessageBody,
+	AnthropicMessagesLike,
+	AnthropicSdkLike,
+	AnthropicStreamEvent,
+	AuditContext,
+	CreateLLMProxyOptions,
+	LLMChatParams,
+	LLMChunk,
+	LLMClient,
+	LLMCompletion,
+	LLMProxy,
+	OllamaSdkLike,
+	ProxyClock,
+} from './server.js';
+export { anthropicAdapter, createLLMProxy, ollamaAdapter } from './server.js';
+
+export type {
+	ChatTransport,
+	ChatTransportChunk,
+	ChatTransportRequest,
+	UseLLMChat,
+	UseLLMChatOptions,
+} from './client.svelte.js';
+export { useLLMChat } from './client.svelte.js';

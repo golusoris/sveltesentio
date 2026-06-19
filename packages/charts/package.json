@@ -53,6 +53,10 @@
     "./scatter": {
       "svelte": "./src/ScatterChart.svelte",
       "default": "./src/ScatterChart.svelte"
+    },
+    "./uplot": {
+      "import": "./src/uplot.ts",
+      "types": "./src/uplot.ts"
     }
   },
   "scripts": {
@@ -63,10 +67,14 @@
   },
   "peerDependencies": {
     "layerchart": ">=2.0.0-next.43",
-    "svelte": ">=5.0.0"
+    "svelte": ">=5.0.0",
+    "uplot": ">=1.6.0"
   },
   "peerDependenciesMeta": {
     "layerchart": {
+      "optional": true
+    },
+    "uplot": {
       "optional": true
     }
   },

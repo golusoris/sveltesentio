@@ -29,6 +29,10 @@
     "./mutation": {
       "import": "./src/mutation.ts",
       "types": "./src/mutation.ts"
+    },
+    "./connect": {
+      "import": "./src/connect-query.ts",
+      "types": "./src/connect-query.ts"
     }
   },
   "scripts": {
@@ -38,11 +42,23 @@
     "test": "vitest run --coverage"
   },
   "peerDependencies": {
+    "@bufbuild/protobuf": ">=2.0.0",
+    "@connectrpc/connect": ">=2.0.0",
     "@sveltejs/kit": ">=2.0.0",
     "@tanstack/svelte-query": ">=6.0.0",
     "svelte": ">=5.0.0"
   },
+  "peerDependenciesMeta": {
+    "@bufbuild/protobuf": {
+      "optional": true
+    },
+    "@connectrpc/connect": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
+    "@connectrpc/connect": "^2.1.2",
     "@tanstack/svelte-query": "^6.1.34",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
