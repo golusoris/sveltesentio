@@ -21,10 +21,12 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
 # Force-bump vulnerable transitive dev/build deps to their patched releases so
-# `pnpm audit` is clean (§2.5). All three reach the tree only via build tooling
-# (vite→esbuild, @vite-pwa→workbox→serialize-javascript) or consumer-provided
-# peers (@sveltejs/kit→cookie); none ship in the src/-only package tarballs.
+# `pnpm audit` is clean (§2.5). All reach the tree only via build/dev tooling
+# (vite→esbuild, @vite-pwa→workbox→serialize-javascript, storybook/vite→undici)
+# or consumer-provided peers (@sveltejs/kit→cookie); none ship in the src/-only
+# package tarballs.
 overrides:
   serialize-javascript: '>=7.0.5'
   esbuild: '>=0.28.1'
   cookie: '>=0.7.0'
+  undici: '>=7.28.0 <8' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
