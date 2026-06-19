@@ -17,6 +17,9 @@ export function ensureAnnouncerRegion(options: AnnouncerOptions = {}): HTMLEleme
 	const existing = doc.getElementById(regionId);
 	if (existing) return existing;
 
+	// §2.1 direct-DOM exception: a document-level singleton live-region appended to
+	// <body>. A use: action attaches to a component element and cannot own a
+	// document-scoped announcer; doc is injected so this stays SSR-safe + unit-tested.
 	const region = doc.createElement('div');
 	region.id = regionId;
 	region.setAttribute('role', 'status');
