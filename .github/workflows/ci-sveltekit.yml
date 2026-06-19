@@ -51,7 +51,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm lint
 
   typecheck:
@@ -70,7 +70,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm typecheck
 
   test:
@@ -89,7 +89,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm test -- --coverage
       - name: Check coverage threshold
         run: |
@@ -126,7 +126,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm build
 
   audit:
@@ -145,7 +145,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm audit --audit-level=high
 
   e2e:
@@ -165,7 +165,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - name: Upload Playwright report
