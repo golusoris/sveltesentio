@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/golusoris/sveltesentio/compare/core-v0.2.0...core-v0.2.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **core:** restore eslint.config.ts + chart-a11y rule (prior commit's git add aborted) ([a978cf6](https://github.com/golusoris/sveltesentio/commit/a978cf6f4a362b1fb83eabdc426e6b04276607c3))
+
 ## [0.2.0](https://github.com/golusoris/sveltesentio/compare/core-v0.1.0...core-v0.2.0) (2026-06-19)
 
 
