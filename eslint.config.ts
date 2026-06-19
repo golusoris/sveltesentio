@@ -93,6 +93,9 @@ const config: Linter.Config[] = [
       'build/**',
       '.turbo/**',
       'coverage/**',
+      // Illustrative copy-paste snippets — intentionally reference undeclared
+      // identifiers (paths, edges, secret…) the consumer supplies; not compiled.
+      'examples/**',
     ],
   },
 ];
