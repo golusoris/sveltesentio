@@ -22,6 +22,11 @@
       "import": "./src/form-action.ts",
       "types": "./src/form-action.ts"
     },
+    "./use-form": {
+      "svelte": "./src/use-form.svelte.ts",
+      "import": "./src/use-form.svelte.ts",
+      "types": "./src/use-form.svelte.ts"
+    },
     "./formsnap": {
       "svelte": "./src/formsnap.ts",
       "import": "./src/formsnap.ts",
@@ -48,12 +53,12 @@
     }
   },
   "devDependencies": {
-    "@sveltejs/kit": "^2.65.2",
+    "@sveltejs/kit": "^2.65.1",
     "@sveltesentio/core": "workspace:*",
     "svelte": "^5.56.3",
     "sveltekit-superforms": "^2.30.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9",
+    "vitest": "^4.1.8",
     "zod": "^4.4.3"
   },
   "keywords": [
