@@ -13,7 +13,18 @@
     "./client": {
       "import": "./src/client.ts",
       "types": "./src/client.ts"
+    },
+    "./codegen": {
+      "import": "./src/codegen.ts",
+      "types": "./src/codegen.ts"
+    },
+    "./auth-middleware": {
+      "import": "./src/auth-middleware.ts",
+      "types": "./src/auth-middleware.ts"
     }
+  },
+  "bin": {
+    "sveltesentio-codegen": "./src/codegen-bin.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -32,7 +43,8 @@
     "@sveltesentio/core": "workspace:*"
   },
   "peerDependencies": {
-    "openapi-fetch": ">=0.17.0"
+    "openapi-fetch": ">=0.17.0",
+    "openapi-typescript": ">=7.0.0"
   },
   "peerDependenciesMeta": {
     "openapi-typescript": {
@@ -43,7 +55,7 @@
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.8"
   },
   "keywords": [
     "sveltesentio",
