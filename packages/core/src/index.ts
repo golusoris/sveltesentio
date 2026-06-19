@@ -39,5 +39,12 @@ export {
 	strictCsp,
 } from './csp.js';
 
-export type { SentioPluginOptions } from './vite.js';
-export { sentioPlugin } from './vite.js';
+export type {
+	BudgetViolation,
+	BundleBudget,
+	BundleLike,
+	SentioPluginOptions,
+} from './vite.js';
+export { checkBundleBudget, sentioPlugin } from './vite.js';
+
+export { noDirectTime, sentioEslint } from './eslint.js';

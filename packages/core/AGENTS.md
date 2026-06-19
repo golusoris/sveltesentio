@@ -10,7 +10,8 @@
 - **HTTP middleware** — `problemMiddleware()` for `openapi-fetch`; intercepts `application/problem+json` non-2xx responses and throws a typed `ProblemError`. `openapi-fetch` is an optional peer.
 - **ID utils** — `newId()` (UUIDv7) / `newIdV4()` (nonces) / `isId` / `idToTimestamp` / `brandId<Brand>` over `uuid@^13`. See [ADR-0023](../../docs/adr/0023-uuid-v7-default.md).
 - **CSP helpers** — `createNonce()` / `strictCsp({ nonce })` / `serialiseCsp()` / `nonceSource` / `hashSource` / `SELF` / `NONE` / `STRICT_DYNAMIC`. Strict default ships `script-src 'strict-dynamic' 'nonce-…'`, no `unsafe-*`, `upgrade-insecure-requests`, `frame-ancestors 'none'`.
-- **Vite plugin** — `sentioPlugin({ requiredEnv, verbose, virtualModule })`. Validates required env at `buildStart`, exposes a typed `$sentio` virtual module at `resolveId` / `load`. ESLint rule registration + bundle-size gate are follow-through.
+- **Vite plugin** — `sentioPlugin({ requiredEnv, verbose, virtualModule, bundleBudget, bundleBudgetWarnOnly })`. Validates required env at `buildStart`, exposes a typed `$sentio` virtual module at `resolveId` / `load`, and enforces per-chunk size budgets at `generateBundle` (§2.9). `bundleBudget` is a `{ [fileName]: maxBytes }` map; over-budget chunks throw (or warn when `bundleBudgetWarnOnly`). Budget logic is the pure, exported `checkBundleBudget(bundle, budget)`.
+- **ESLint plugin** — `@sveltesentio/core/eslint` exports a flat-config plugin (`{ meta, rules: { 'no-direct-time': … } }`) enforcing the no-direct-time invariant. See Sub-exports + Invariants.
 
 ## Sub-exports
 
@@ -23,13 +24,28 @@
 | `@sveltesentio/core/problem` | `src/problem.ts` — `ProblemError` + RFC 9457 parser | **shipped** (ADR-0019) |
 | `@sveltesentio/core/http` | `src/http.ts` — `problemMiddleware` for `openapi-fetch` | **shipped** (ADR-0019) |
 | `@sveltesentio/core/csp` | `src/csp.ts` — nonce + directive builders | **shipped** |
-| `@sveltesentio/core/vite` | `src/vite.ts` — `sentioPlugin` Vite hook | **shipped** |
+| `@sveltesentio/core/vite` | `src/vite.ts` — `sentioPlugin` Vite hook + `checkBundleBudget` | **shipped** |
+| `@sveltesentio/core/eslint` | `src/eslint.ts` — `no-direct-time` flat-config plugin | **shipped** |
 
 Add a sub-export entry to `package.json` whenever a new module lands — never rely on deep imports.
 
 ## Invariants
 
-- **No direct time reads.** `Date.now()` / `new Date()` / `performance.now()` are banned in source outside `test/`. Consumers route through the injected `Clock`. ESLint rule `@sveltesentio/no-direct-time`.
+- **No direct time reads.** `Date.now()` / argument-less `new Date()` / `performance.now()` are banned in source outside `test/`. Consumers route through the injected `Clock`. Enforced by ESLint rule `@sveltesentio/no-direct-time`, shipped from `@sveltesentio/core/eslint`. `clock.ts` itself is the sanctioned `systemClock` root and is exempt. Register in a flat config (TS config, since the plugin re-exports `.ts` source):
+
+  ```ts
+  // eslint.config.ts
+  import sentio from '@sveltesentio/core/eslint';
+  export default [
+    {
+      files: ['packages/*/src/**/*.ts'],
+      ignores: ['packages/core/src/clock.ts'],
+      plugins: { '@sveltesentio': sentio },
+      rules: { '@sveltesentio/no-direct-time': 'error' },
+    },
+  ];
+  ```
+
 - **No `any`.** Use `unknown` + narrow via Zod or a type guard.
 - **No module-level mutable state** that survives a request, except:
   - The browser-only `clientClock` singleton in `src/clock.ts` (one JS realm per tab — safe; documented in ADR-0052).
@@ -46,8 +62,8 @@ Add a sub-export entry to `package.json` whenever a new module lands — never r
 ## Known follow-through
 
 - [ ] `testClock({ now })` helper in `@sveltesentio/testing/clock` — package not yet scaffolded. Tracked in [STATE.md](../../.workingdir/STATE.md).
-- [ ] `@sveltesentio/no-direct-time` ESLint rule registration in the core Vite plugin.
-- [ ] Bundle-size gate wired into `sentioPlugin` (rollup-plugin-visualizer-compatible).
+- [x] `@sveltesentio/no-direct-time` ESLint rule — shipped as the `@sveltesentio/core/eslint` flat-config plugin (`rules: { 'no-direct-time' }`); register in `eslint.config.js`.
+- [x] Bundle-size gate wired into `sentioPlugin` (`bundleBudget` / `bundleBudgetWarnOnly`; `generateBundle` hook).
 - [ ] `$sentio` virtual module grows typed schema once downstream consumers settle the contents.
 
 ## Common tasks

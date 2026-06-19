@@ -37,6 +37,10 @@
     "./vite": {
       "import": "./src/vite.ts",
       "types": "./src/vite.ts"
+    },
+    "./eslint": {
+      "import": "./src/eslint.ts",
+      "types": "./src/eslint.ts"
     }
   },
   "scripts": {
