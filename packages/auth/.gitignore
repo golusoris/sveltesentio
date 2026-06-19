@@ -1,0 +1,5 @@
+# Playwright e2e harness build output (served by `vite preview`, never published).
+e2e/dist/
+# Playwright artifacts (also covered by the repo-root .gitignore).
+playwright-report/
+test-results/
