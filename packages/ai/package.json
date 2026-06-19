@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/ai",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Server-proxy-only LLM client, on-device transformers seam, and EU AI Act audit hook for SvelteKit",
   "type": "module",
   "private": false,

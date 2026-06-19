@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/flow",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "@xyflow/svelte wrappers — node editors, DAG helpers, canvas utilities",
   "type": "module",
   "private": false,

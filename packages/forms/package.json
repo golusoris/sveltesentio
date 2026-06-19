@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/forms",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
   "type": "module",
   "private": false,

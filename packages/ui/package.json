@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/ui",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "shadcn-svelte CLI wrapper, Tailwind 4 preset, design tokens per interface type",
   "type": "module",
   "private": false,
