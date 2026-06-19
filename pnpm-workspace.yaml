@@ -1,7 +1,3 @@
-# esbuild/sharp/onnxruntime/protobufjs ship prebuilt binaries; their build
-# scripts are not needed to lint/typecheck/test/build the src/-only packages.
-# pnpm 11.7 only reads this from pnpm-workspace.yaml (not .npmrc / env), and it
-# governs every command (install + the pnpm-script deps preflight), so CI stays green.
 strictDepBuilds: false
 packages:
   - 'packages/*'
@@ -29,4 +25,4 @@ overrides:
   serialize-javascript: '>=7.0.5'
   esbuild: '>=0.28.1'
   cookie: '>=0.7.0'
-  undici: '>=7.28.0 <8' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
+  undici: '>=7.28.0 <9' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
