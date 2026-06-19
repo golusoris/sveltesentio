@@ -27,3 +27,8 @@ overrides:
   esbuild: '>=0.28.1'
   cookie: '>=0.7.0'
   undici: '>=7.28.0 <8' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
+allowBuilds:
+  esbuild: set this to true or false
+  onnxruntime-node: set this to true or false
+  protobufjs: set this to true or false
+  sharp: set this to true or false
