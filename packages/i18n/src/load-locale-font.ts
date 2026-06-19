@@ -117,6 +117,8 @@ export function loadLocaleFont(options: LoadLocaleFontOptions): () => void {
 			continue;
 		}
 
+		// §2.1 direct-DOM exception: font preload/stylesheet <link>s must live in <head>,
+		// which a body-scoped use: action cannot target; doc is injected (SSR-safe + tested).
 		const link = doc.createElement('link');
 		link.setAttribute(marker, '');
 		link.rel = rel;

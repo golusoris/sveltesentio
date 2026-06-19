@@ -190,6 +190,8 @@ export function injectEmulatorScript(
 		setKeys.push(key);
 	}
 
+	// §2.1 direct-DOM exception: injects EmulatorJS's external loader <script> at the
+	// document level; a use: action cannot create a document-scoped script tag. doc injected.
 	const script = doc.createElement('script');
 	script.src = config.loaderUrl;
 	script.async = true;
