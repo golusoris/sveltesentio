@@ -29,9 +29,13 @@ export {
 
 export {
 	type ProviderStatus,
+	type AuthBinding,
+	type ResolvedAuth,
 	type ConnectProviderOptions,
 	type ConnectedProvider,
 	connectProvider,
+	resolveAuthParams,
+	bindProviderAuth,
 } from './provider.js';
 
 export { type YjsArrayStore, createYjsStore } from './createYjsStore.svelte.js';
