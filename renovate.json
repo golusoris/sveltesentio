@@ -4,5 +4,12 @@
     "config:recommended"
   ],
   "minimumReleaseAge": "3 days",
-  "internalChecksFilter": "strict"
+  "internalChecksFilter": "strict",
+  "packageRules": [
+    {
+      "matchPackageNames": ["undici"],
+      "allowedVersions": "<8",
+      "description": "undici 8.x removes internals jsdom 29 requires; stay on patched 7.x"
+    }
+  ]
 }
