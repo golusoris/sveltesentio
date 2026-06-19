@@ -35,7 +35,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2

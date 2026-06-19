@@ -45,7 +45,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm check:exports
 
@@ -62,7 +62,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm typecheck
 
   test:
@@ -78,7 +78,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm test
       - name: Upload coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -100,7 +100,7 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm build
 
   audit:
@@ -116,5 +116,5 @@ jobs:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+      - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm audit --audit-level=high

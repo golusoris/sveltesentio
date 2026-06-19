@@ -49,13 +49,10 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
 
-      # --config.strict-dep-builds=false: pnpm 11 aborts a fresh CI install with
-      # ERR_PNPM_IGNORED_BUILDS over esbuild/sharp/onnxruntime/protobufjs build
-      # scripts. They ship prebuilt binaries and aren't needed to pack src/, so
-      # downgrade the abort to a warning here (the repo .npmrc key isn't honored
-      # by pnpm 11.7, so it's set explicitly on the command).
+      # (ignored-build-scripts are tolerated via pnpm-workspace.yaml
+      # `strictDepBuilds: false` — esbuild/sharp/etc. aren't needed to pack src/.)
       - if: ${{ steps.release.outputs.releases_created == 'true' }}
-        run: corepack enable && pnpm install --frozen-lockfile --config.strict-dep-builds=false
+        run: corepack enable && pnpm install --frozen-lockfile
 
       # Packages ship files:["src"] with exports → ./src/*.ts, so there is no
       # build step before publish (the tsc `build` output is never shipped).
