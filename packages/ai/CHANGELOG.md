@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/ai-v0.3.0...ai-v0.4.0) (2026-06-19)
+
+
+### Features
+
+* **ai:** ./server (LLM proxy over @anthropic-ai/sdk + ollama, EU-AI-Act audit hook) + ./client (useLLMChat + &lt;ChatStream&gt;) ([f3e954d](https://github.com/golusoris/sveltesentio/commit/f3e954d57450f4124c7208c8e63990f59271a4f6))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/ai-v0.2.0...ai-v0.3.0) (2026-06-15)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.4.0...charts-v0.5.0) (2026-06-19)
+
+
+### Features
+
+* **charts:** ./uplot — createUPlotChart high-frequency escape hatch (uPlot optional peer, dynamic import) ([e9139a8](https://github.com/golusoris/sveltesentio/commit/e9139a8acc3ed0733f3c581b5aed4e5261ad7161))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.3.0...charts-v0.4.0) (2026-06-15)
 
 

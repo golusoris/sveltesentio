@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.4.0...ui-v0.5.0) (2026-06-19)
+
+
+### Features
+
+* **ui:** base components (Button/Input/Dialog) + theming (ThemeToggle/Customizer/font-preset) ([8bae1a4](https://github.com/golusoris/sveltesentio/commit/8bae1a4dc2820d524777fcde475694e9c3ef8a74))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.3.0...ui-v0.4.0) (2026-06-15)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/query",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TanStack Query wrappers for SvelteKit — load helpers, optimistic updates, SSR hydration",
   "type": "module",
   "private": false,

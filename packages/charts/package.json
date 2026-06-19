@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/charts",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Thin LayerChart wrappers with a WCAG 2.2 AA accessibility envelope (ChartFigure) and dashboard presets",
   "type": "module",
   "private": false,

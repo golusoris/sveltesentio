@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/flow-v0.3.0...flow-v0.4.0) (2026-06-19)
+
+
+### Features
+
+* **flow:** ./layout-worker — createLayoutWorker (elkjs in a Web Worker + SSR/main-thread fallback) ([4f29b12](https://github.com/golusoris/sveltesentio/commit/4f29b12246e1c20dfc33c3ea0eff5afd3b2cec7d))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/flow-v0.2.0...flow-v0.3.0) (2026-06-15)
 
 

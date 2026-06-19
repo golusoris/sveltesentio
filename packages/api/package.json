@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Typed openapi-fetch client wired with core's RFC 9457 problemMiddleware + an openapi-typescript codegen recipe",
   "type": "module",
   "private": false,

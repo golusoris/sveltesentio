@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/api-v0.2.0...api-v0.3.0) (2026-06-19)
+
+
+### Features
+
+* **api:** ./codegen (openapi-typescript wrapper) + ./auth-middleware (bearer + refresh-on-401) ([4d0cdee](https://github.com/golusoris/sveltesentio/commit/4d0cdee398144d717721e39e1f425529a2c561d4))
+
 ## [0.2.0](https://github.com/golusoris/sveltesentio/compare/api-v0.1.1...api-v0.2.0) (2026-06-15)
 
 
