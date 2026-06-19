@@ -31,7 +31,7 @@ jobs:
       # removes the cross-job fragility. The command is also now recursive
       # (`pnpm -r publish`); the old `pnpm publish` ran at the private root and
       # would have published nothing even had the gate fired.
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: ${{ steps.release.outputs.releases_created == 'true' }}
         with:
           fetch-depth: 0
