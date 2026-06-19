@@ -41,10 +41,29 @@ describe('createSveltesentioServer', () => {
 	it('registers the module_lookup tool with a described input schema', async () => {
 		client = await connectClient(repoRoot);
 		const { tools } = await client.listTools();
-		expect(tools.map((t) => t.name)).toEqual(['module_lookup']);
-		const tool = tools[0];
-		expect(tool).toBeDefined();
-		expect(tool?.description).toMatch(/AGENTS\.md/);
-		expect(tool?.inputSchema.properties).toHaveProperty('name');
+		const moduleLookup = tools.find((t) => t.name === 'module_lookup');
+		expect(moduleLookup).toBeDefined();
+		expect(moduleLookup?.description).toMatch(/AGENTS\.md/);
+		expect(moduleLookup?.inputSchema.properties).toHaveProperty('name');
+	});
+
+	it('registers exactly the three tools with described input schemas', async () => {
+		client = await connectClient(repoRoot);
+		const { tools } = await client.listTools();
+		expect(tools.map((t) => t.name).sort()).toEqual([
+			'compose_search',
+			'module_lookup',
+			'principle_lookup',
+		]);
+		for (const tool of tools) {
+			expect(typeof tool.description).toBe('string');
+			expect(tool.description?.length ?? 0).toBeGreaterThan(0);
+		}
+	});
+
+	it('advertises the resources.subscribe capability', async () => {
+		client = await connectClient(repoRoot);
+		const caps = client.getServerCapabilities();
+		expect(caps?.resources?.subscribe).toBe(true);
 	});
 });
