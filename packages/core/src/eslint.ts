@@ -1,14 +1,18 @@
 import type { Rule } from 'eslint';
 
 /**
- * Flat-config ESLint plugin enforcing the core "no direct time reads" invariant
- * (see AGENTS.md §Invariants + docs/principles.md §2.1): time must flow through
- * the injected {@link Clock} (`useClock` / `getClock` from `@sveltesentio/core`)
- * so it is deterministic and testable. Banned forms:
+ * Flat-config ESLint plugin bundling sveltesentio's two cross-package
+ * invariants:
  *
- * - `Date.now()`
- * - `new Date()` (zero-argument — `new Date(serverMs)` is explicit + allowed)
- * - `performance.now()`
+ * - `no-direct-time` — time must flow through the injected {@link Clock}
+ *   (`useClock` / `getClock` from `@sveltesentio/core`) so it is deterministic
+ *   and testable (AGENTS.md §Invariants + docs/principles.md §2.1). Banned forms:
+ *   `Date.now()`, zero-argument `new Date()`, `performance.now()`.
+ * - `chart-a11y-wrapper` — every chart visual rendered from `layerchart` /
+ *   `uplot` must go through `@sveltesentio/charts`' `<ChartFigure>` so the WCAG
+ *   2.2 SC 1.1.1 text alternative cannot be skipped (charts/AGENTS.md §Invariants,
+ *   ADR-0013). A bare `<LineChart>` / `<Chart>` / uPlot element with no
+ *   `<ChartFigure>` ancestor is an error.
  *
  * Register in a flat `eslint.config.js`:
  *
@@ -20,6 +24,11 @@ import type { Rule } from 'eslint';
  *     plugins: { '@sveltesentio': sentio },
  *     rules: { '@sveltesentio/no-direct-time': 'error' },
  *   },
+ *   {
+ *     files: ['src/**\/*.svelte'],
+ *     plugins: { '@sveltesentio': sentio },
+ *     rules: { '@sveltesentio/chart-a11y-wrapper': 'error' },
+ *   },
  * ];
  * ```
  */
@@ -29,6 +38,7 @@ import type { Rule } from 'eslint';
 type Node = Rule.Node;
 type CallExpressionNode = Extract<Node, { type: 'CallExpression' }>;
 type NewExpressionNode = Extract<Node, { type: 'NewExpression' }>;
+type ImportDeclarationNode = Extract<Node, { type: 'ImportDeclaration' }>;
 type Callee = CallExpressionNode['callee'];
 
 const CLOCK_HINT =
@@ -92,16 +102,108 @@ const noDirectTime: Rule.RuleModule = {
 	},
 };
 
+// --- chart-a11y-wrapper ------------------------------------------------------
+
+const CHART_LIBS = ['layerchart', 'uplot'] as const;
+
+/** The a11y wrappers from `@sveltesentio/charts` that satisfy the invariant. */
+const A11Y_WRAPPER_ELEMENTS = new Set(['ChartFigure']);
+
+const CHART_HINT =
+	'render it inside `<ChartFigure>` from @sveltesentio/charts so the chart ' +
+	'ships the required visually-hidden data table (WCAG 2.2 SC 1.1.1, ADR-0013)';
+
+/**
+ * Structural read of a `svelte-eslint-parser` `SvelteElement` name without
+ * depending on the parser's types: a component element exposes
+ * `name: { type: 'Identifier' | 'SvelteName', name: string }`. Anything else
+ * (HTML tags, member-expression names) is not a chart-library binding and is
+ * intentionally ignored.
+ */
+function svelteElementName(node: unknown): string | undefined {
+	if (typeof node !== 'object' || node === null) return undefined;
+	const name = (node as { name?: unknown }).name;
+	if (typeof name !== 'object' || name === null) return undefined;
+	const raw = (name as { name?: unknown }).name;
+	return typeof raw === 'string' ? raw : undefined;
+}
+
+/** Reads the source string of a (validated) `ImportDeclaration`. */
+function importSource(node: ImportDeclarationNode): string {
+	const value = node.source.value;
+	return typeof value === 'string' ? value : '';
+}
+
+/** True for `layerchart`, `layerchart/...`, `uplot`, `uplot/...`. */
+function isChartLibSource(source: string): boolean {
+	return CHART_LIBS.some(
+		(lib) => source === lib || source.startsWith(`${lib}/`),
+	);
+}
+
+const chartA11yWrapper: Rule.RuleModule = {
+	meta: {
+		type: 'problem',
+		docs: {
+			description:
+				'require chart visuals from layerchart / uplot to be wrapped in <ChartFigure>',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			bareChart: `Bare \`<{{name}}>\` from \`{{source}}\` bypasses the a11y wrapper — ${CHART_HINT}.`,
+		},
+	},
+
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		// Local binding names imported from a chart library → the source they
+		// came from, so the message can name it.
+		const chartBindings = new Map<string, string>();
+
+		return {
+			ImportDeclaration(node: ImportDeclarationNode): void {
+				const source = importSource(node);
+				if (!isChartLibSource(source)) return;
+				for (const spec of node.specifiers) {
+					chartBindings.set(spec.local.name, source);
+				}
+			},
+
+			// `SvelteElement` is the svelte-eslint-parser node for any element;
+			// not part of ESLint's core `NodeListener`, so it rides the
+			// RuleListener index signature.
+			SvelteElement(node: Rule.Node): void {
+				const name = svelteElementName(node);
+				if (name === undefined) return;
+				const source = chartBindings.get(name);
+				if (source === undefined) return;
+				// Allowed when nested under a sanctioned a11y wrapper element.
+				const ancestors = context.sourceCode.getAncestors(node);
+				const wrapped = ancestors.some((ancestor) =>
+					A11Y_WRAPPER_ELEMENTS.has(svelteElementName(ancestor) ?? ''),
+				);
+				if (wrapped) return;
+				context.report({
+					node,
+					messageId: 'bareChart',
+					data: { name, source },
+				});
+			},
+		};
+	},
+};
+
 /** The flat-config plugin object (`plugins: { '@sveltesentio': sentioEslint }`). */
 const sentioEslint = {
-	meta: { name: '@sveltesentio/core', version: '0.1.0' },
+	meta: { name: '@sveltesentio/core', version: '0.2.0' },
 	rules: {
 		'no-direct-time': noDirectTime,
+		'chart-a11y-wrapper': chartA11yWrapper,
 	},
 } satisfies {
 	meta: { name: string; version: string };
 	rules: Record<string, Rule.RuleModule>;
 };
 
-export { noDirectTime, sentioEslint };
+export { noDirectTime, chartA11yWrapper, sentioEslint };
 export default sentioEslint;

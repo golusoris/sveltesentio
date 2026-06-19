@@ -32,7 +32,8 @@
     "svelte": "^5.56.3",
     "svelte-eslint-parser": "^1.8.0",
     "turbo": "^2.9.18",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@sveltesentio/core": "workspace:*"
   },
   "lint-staged": {
     "*.{ts,svelte,js}": [
