@@ -48,12 +48,12 @@
     }
   },
   "devDependencies": {
-    "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/kit": "^2.65.2",
     "@sveltesentio/core": "workspace:*",
     "svelte": "^5.56.3",
     "sveltekit-superforms": "^2.30.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.9",
     "zod": "^4.4.3"
   },
   "keywords": [

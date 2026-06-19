@@ -64,14 +64,14 @@
     }
   },
   "devDependencies": {
-    "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/kit": "^2.65.2",
     "@types/node": "^24.13.2",
     "esm-env": "^1.2.2",
     "openapi-fetch": "^0.17.0",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
     "uuid": "^14.0.0",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.9",
     "zod": "^4.4.3"
   },
   "keywords": [
