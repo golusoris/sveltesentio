@@ -28,5 +28,17 @@ export type {
 	CreateMutationOptions,
 } from './mutation.js';
 
+export {
+	useConnectQuery,
+	createConnectQuery,
+	connectQueryOptions,
+	connectErrorToProblem,
+} from './connect-query.js';
+export type {
+	ConnectQueryOptions,
+	UnaryMethodSelector,
+	ConnectErrorMapper,
+} from './connect-query.js';
+
 // Core TanStack primitives consumers commonly need directly.
 export { QueryClient, useQueryClient } from '@tanstack/svelte-query';
