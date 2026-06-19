@@ -87,7 +87,7 @@
   },
   "devDependencies": {
     "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/kit": "^2.65.2",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@sveltesentio/core": "workspace:*",
     "@sveltesentio/testing": "workspace:*",
@@ -97,7 +97,7 @@
     "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.9",
     "zod": "^4.4.3"
   },
   "keywords": [

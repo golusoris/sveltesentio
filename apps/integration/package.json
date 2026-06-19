@@ -19,14 +19,14 @@
 		"@sveltesentio/ui": "workspace:*"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "^2.65.1",
+		"@sveltejs/kit": "^2.65.2",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tanstack/svelte-query": "^6.1.34",
 		"openapi-fetch": "^0.17.0",
 		"svelte": "^5.56.3",
 		"sveltekit-superforms": "^2.30.1",
 		"typescript": "^6.0.3",
-		"vitest": "^4.1.8",
+		"vitest": "^4.1.9",
 		"zod": "^4.4.3"
 	}
 }
