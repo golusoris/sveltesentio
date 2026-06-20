@@ -1,6 +1,6 @@
 {
   "name": "@sveltesentio/media",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> — Svelte 5",
   "type": "module",
   "private": false,
