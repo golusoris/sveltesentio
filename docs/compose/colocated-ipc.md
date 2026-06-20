@@ -6,11 +6,11 @@
 
 ## The ladder
 
-| Tier | Mechanism | Setup | Speedup vs. loopback TCP | Package |
-|---|---|---|---|---|
-| 1 | AF_UNIX socket | Trivial (config-only) | ~2-3× throughput, ~40% latency reduction | None — stdlib |
-| 2 | Cilium `socketLB` | Cluster-level | Additional ~10-30% on top of Tier 1 | None — transparent |
-| 3 | Custom eBPF SK_MSG sockmap | CAP_BPF + kernel ≥5.10 | ~2× further on high-concurrency | [`@sveltesentio/ipc-sockmap`](../../packages/ipc-sockmap/README.md) |
+| Tier | Mechanism                  | Setup                  | Speedup vs. loopback TCP                 | Package                                                             |
+| ---- | -------------------------- | ---------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| 1    | AF_UNIX socket             | Trivial (config-only)  | ~2-3× throughput, ~40% latency reduction | None — stdlib                                                       |
+| 2    | Cilium `socketLB`          | Cluster-level          | Additional ~10-30% on top of Tier 1      | None — transparent                                                  |
+| 3    | Custom eBPF SK_MSG sockmap | CAP_BPF + kernel ≥5.10 | ~2× further on high-concurrency          | [`@sveltesentio/ipc-sockmap`](../../packages/ipc-sockmap/README.md) |
 
 **Start at Tier 1.** Most deployments stop here. Only climb when measurement proves you need to.
 
@@ -110,7 +110,7 @@ On Kubernetes clusters running Cilium as CNI, `socketLB` mode (also called "sock
 # cilium values.yaml
 socketLB:
   enabled: true
-  hostNamespaceOnly: false  # also applies to pod sockets
+  hostNamespaceOnly: false # also applies to pod sockets
 
 kubeProxyReplacement: true
 ```
@@ -138,7 +138,7 @@ cilium config view | grep -E 'socketLB|kubeProxy'
 
 BPF program attaches to the cgroup v2 hierarchy containing both processes. Listen FDs from both sides are registered in a `BPF_MAP_TYPE_SOCKHASH`. Payloads between registered sockets bypass the full TCP stack — the BPF `SK_MSG` hook redirects buffers directly.
 
-**This tier requires coordinated changes in both sveltesentio and golusoris.** Golusoris-side work is tracked in [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27).
+**This tier requires coordinated changes in both sveltesentio and golusoris** — both shipped: golusoris's `pkg/sockmap` ([#27](https://github.com/golusoris/golusoris/issues/27)) owns the BPF program + pinned sockhash, and `@sveltesentio/ipc-sockmap/sockmap` is the Node-side capability-probe + socket-activation + observability client.
 
 ### Architecture
 
@@ -178,35 +178,68 @@ BPF program attaches to the cgroup v2 hierarchy containing both processes. Liste
 
 ### Sveltesentio side
 
+The Node side is a kernel-bypass _client_: golusoris owns the sockhash and all writes (Node has no `bpf()` syscall). It probes capability, performs the systemd FD handoff, and reads observability — degrading to Tier 1 when the pin is absent.
+
 ```ts
 // src/lib/server/ipc-sockmap.ts
-import { createSockmapClient } from '@sveltesentio/ipc-sockmap';
+import { createServer } from 'node:net';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import {
+  probeSockmap,
+  activationListeners,
+  readSockmapStats,
+  parsePrometheusMetrics,
+  bpftoolKeyCount,
+} from '@sveltesentio/ipc-sockmap/sockmap';
 
-const sockmap = await createSockmapClient({
-  mapPath: '/sys/fs/bpf/golusoris/sockhash',
-  listenFd: process.env.LISTEN_FDS ? 3 : undefined, // systemd socket activation passes FDs starting at 3
-});
+const exec = promisify(execFile);
 
-if (sockmap.status === 'degraded') {
-  console.warn('[ipc-sockmap]', sockmap.reason);
-  // fallback: use Tier 1 AF_UNIX dispatcher from above
+// 1. Capability probe — never throws; degrades to Tier 1 when unavailable
+//    (non-Linux, cgroup v1, kernel <5.10, or the pin is absent).
+const probe = await probeSockmap(); // defaults: process.platform, os.release(), DEFAULT_PIN_PATH
+if (!probe.available) {
+  console.warn('[ipc-sockmap] Tier 3 off:', probe.reason); // use the AF_UNIX dispatcher above
 }
+
+// 2. Adopt systemd socket-activation FDs. golusoris's SOCK_OPS program registers
+//    established sockets in the sockhash from kernel context; we just listen on
+//    the handed-off FDs (numbered from 3). PID-guarded; throws on a bad LISTEN_FDS.
+const server = createServer(/* … your framed request handler … */);
+for (const { fd, name } of activationListeners()) {
+  console.warn(`[ipc-sockmap] adopting activated listener ${name} (fd ${fd})`);
+  server.listen({ fd });
+}
+
+// 3. Observe: active sockets = sockhash key count (values are kernel-only, so we
+//    iterate keys); redirected-bytes / errors come from golusoris's Prometheus.
+const stats = await readSockmapStats({
+  pinPath: probe.available ? probe.pinPath : undefined,
+  countKeys: async (pin) => {
+    const { stdout } = await exec('bpftool', ['map', 'dump', 'pinned', pin, '--json']);
+    return bpftoolKeyCount(stdout);
+  },
+  readMetrics: async () =>
+    parsePrometheusMetrics(await fetch('http://localhost:9090/metrics').then((r) => r.text())),
+});
+console.warn('[ipc-sockmap] stats', stats);
 ```
 
-### Golusoris side (tracked in #27)
+### Golusoris side (shipped — golusoris PR #268, `pkg/sockmap`)
 
-Enable the opt-in fx module:
+Enable the opt-in fx module (`enabled = false` by default — Tier 3 is strictly opt-in):
 
 ```go
 // main.go
 fx.New(
-    golusoris.Default(),
-    sockmap.Module,  // from golusoris/pkg/sockmap
+    golusoris.Core,
+    sockmap.Module,                            // from golusoris/pkg/sockmap
+    fx.Provide(sockmap.DefaultObjectProvider), // bundled CO-RE SOCK_OPS + SK_MSG object
     // ...
 ).Run()
 ```
 
-The module handles BPF program loading, map pinning, cgroup attachment, and shutdown cleanup. See [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) for the complete contract.
+The module handles BPF object loading, sockhash pinning at `/sys/fs/bpf/golusoris/sockhash`, cgroup v2 attachment, systemd socket activation, and pre-shutdown cleanup. See [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) and `golusoris/pkg/sockmap/AGENTS.md` for the full map contract.
 
 ### Observability
 
