@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/golusoris/sveltesentio/compare/media-v0.4.0...media-v0.4.1) (2026-06-20)
+
+
+### Bug Fixes
+
+* **media:** keep server-only core out of &lt;Player&gt; client bundles ([308d2ec](https://github.com/golusoris/sveltesentio/commit/308d2ec55aedd4e008283d025a36d0b4c1847c19))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/media-v0.3.0...media-v0.4.0) (2026-06-15)
 
 

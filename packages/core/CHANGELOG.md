@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/golusoris/sveltesentio/compare/core-v0.2.1...core-v0.3.0) (2026-06-20)
+
+
+### Features
+
+* **core:** typed $sentio virtual-module config schema ([75e9f32](https://github.com/golusoris/sveltesentio/commit/75e9f32d378fe0d5457549cb793524317395a134))
+
 ## [0.2.1](https://github.com/golusoris/sveltesentio/compare/core-v0.2.0...core-v0.2.1) (2026-06-19)
 
 
