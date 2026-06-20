@@ -17,5 +17,5 @@
   "packages/uploads": "0.2.0",
   "packages/shell": "0.2.0",
   "packages/emulator": "0.1.0",
-  "packages/ipc-sockmap": "0.1.0"
+  "packages/ipc-sockmap": "0.2.0"
 }
