@@ -1,6 +1,6 @@
 # ADR-0014: shadcn-svelte CLI as default primitive delivery; bits-ui + tailwind-variants documented as escape hatch
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D20 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Adopt `pnpm dlx shadcn-svelte@latest` as the default primitive delivery path for
 ## Consequences
 
 **Positive**:
+
 - Lurkarr's pattern is the default; subdo + revenge migrate with known delta.
 - shadcn Chart (ADR-0013), Carousel (ADR-0012), Sonner (ADR-0007), Command all compose cleanly.
 - Tailwind 4 `@theme` oklch tokens bind directly into shadcn's var-based theming.
 
 **Negative / trade-offs**:
+
 - subdo + revenge carry one-pass UI migration.
 - "Copy-paste components" model means consumers own the code; upgrade story is manual.
 
 **Documentation obligations**:
+
 - `docs/compose/primitives-shadcn.md` — shadcn CLI onboarding, `components.json` conventions.
 - `docs/compose/primitives-direct.md` — escape hatch: direct bits-ui + tailwind-variants recipe (subdo/revenge evidence).
 - `@sveltesentio/ui` AGENTS.md — primitive-delivery policy.

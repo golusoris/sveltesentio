@@ -15,10 +15,13 @@ The server is **read-only**. It never mutates the working tree. Output is always
 
 ## Sub-exports
 
-| Export | Module | Status |
-|---|---|---|
-| `@sveltesentio/mcp` | `src/index.ts` — `createSveltesentioServer({ rootDir })` factory | v0.0.x stub |
-| `sveltesentio-mcp` (bin) | `bin/sveltesentio-mcp.ts` — stdio entrypoint | v0.0.x stub |
+| Export                                     | Module                                                           | Status          |
+| ------------------------------------------ | ---------------------------------------------------------------- | --------------- |
+| `@sveltesentio/mcp`                        | `src/index.ts` — `createSveltesentioServer({ rootDir })` factory | shipped (0.2.0) |
+| `sveltesentio-mcp` (bin)                   | `bin/sveltesentio-mcp.ts` — stdio entrypoint                     | shipped (0.2.0) |
+| `@sveltesentio/mcp/tools/compose-search`   | `src/tools/compose-search.ts` — `compose_search` tool            | shipped (0.2.0) |
+| `@sveltesentio/mcp/tools/principle-lookup` | `src/tools/principle-lookup.ts` — `principle_lookup` tool        | shipped (0.2.0) |
+| `@sveltesentio/mcp/subscriptions`          | `src/subscriptions.ts` — resource subscription wiring            | shipped (0.2.0) |
 
 ## Invariants
 
@@ -36,19 +39,19 @@ The server is **read-only**. It never mutates the working tree. Output is always
 
 ## Known follow-through
 
-- [ ] `compose_search({ query })` tool — full-text search across `docs/compose/`. Defer until the compose corpus stabilises post-v0.1.
-- [ ] `principle_lookup({ section })` tool — return a single section of `docs/principles.md` keyed by `§2.X`.
-- [ ] Resource subscriptions — notify subscribed clients when an ADR/recipe file changes (SDK supports it; needs a watcher).
+- [x] `compose_search({ query })` tool — full-text search across `docs/compose/`. Ships as `./tools/compose-search` in 0.2.0.
+- [x] `principle_lookup({ section })` tool — return a single section of `docs/principles.md` keyed by `§2.X`. Ships as `./tools/principle-lookup` in 0.2.0.
+- [x] Resource subscriptions — notify subscribed clients when an ADR/recipe file changes. Ships as `./subscriptions` in 0.2.0.
 - [ ] HTTP/SSE transport for remote/multi-tenant use-cases. Do not add until a concrete consumer appears (YAGNI).
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Run the server (stdio) | `pnpm --filter @sveltesentio/mcp start` |
-| Typecheck | `pnpm --filter @sveltesentio/mcp typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/mcp test` |
-| Lint | `pnpm --filter @sveltesentio/mcp lint` |
+| Task                   | Command                                     |
+| ---------------------- | ------------------------------------------- |
+| Run the server (stdio) | `pnpm --filter @sveltesentio/mcp start`     |
+| Typecheck              | `pnpm --filter @sveltesentio/mcp typecheck` |
+| Unit tests             | `pnpm --filter @sveltesentio/mcp test`      |
+| Lint                   | `pnpm --filter @sveltesentio/mcp lint`      |
 
 ## Related references
 

@@ -6,7 +6,7 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-🚧 Phase 1 stub — implementation begins in Phase 2+.
+v0.4.0 — shipped: pure DAG helpers (`./dag`), elkjs auto-layout (`./layout`) + worker (`./layout-worker`), the `<FlowCanvas>` wrapper (`./canvas`), canvas model (`./canvas-model`), node palette (`./node-palette`), and node components (`./nodes`).
 
 ## Installation
 

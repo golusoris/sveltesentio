@@ -1,6 +1,6 @@
 # ADR-0047: Per-interface presets — `ui/preset-{desktop,10foot,handheld,dashboard}`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D161 in `.workingdir/research/decisions-needed.md`
@@ -31,15 +31,18 @@ Apps import one preset (or compose a custom one from primitives). `shell`'s devi
 ## Consequences
 
 **Positive**:
+
 - Each paradigm has honest defaults; density + min-target + grid aligned without compromise.
 - Apps pick one; no runtime guessing.
 - Preset-aware wrappers (`ui/toast`, `ui/cmd`) have a stable API to target.
 
 **Negative / trade-offs**:
+
 - Four presets to maintain; each has its own axe-contrast lane.
 - Custom preset (fifth paradigm) requires consumers to author their own — by design.
 
 **Documentation obligations**:
+
 - `docs/compose/preset-choice.md` — how to pick a preset per app.
 - `@sveltesentio/ui/preset-*` AGENTS.md (one per preset) — token values + rationale.
 

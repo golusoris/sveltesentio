@@ -12,17 +12,17 @@ Part of the [sveltesentio](https://github.com/lusoris/sveltesentio) composable S
 - Length-prefixed framing codec (`encodeFrame` / `decodeFrame` / `FrameDecoder`) — handles partial reads and multiple frames per chunk.
 - Transport-ladder detection (`detectTransport`) — probes the pinned BPF map first (Tier 3), then the socket (Tier 1), else `none`.
 
-**PENDING (Tier 3 — eBPF SK_MSG kernel-bypass):** blocked on [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27), which must pin the `BPF_MAP_TYPE_SOCKHASH` at `/sys/fs/bpf/golusoris/sockhash`. Acceleration is **transparent and kernel-side**: once golusoris pins the map, the SK_MSG hook redirects the same socket buffers without TCP-stack traversal — **no client code change**. `detectTransport` already reports `'sockmap'` when the map is present, so the client surfaces the resolved tier today.
+**LANDED (v0.2.0 — Tier 3 eBPF SK_MSG observe/handoff client):** the Tier-3 client shipped (golusoris#27 / PR #268 `pkg/sockmap` closed). The `./sockmap` subpath provides `probeSockmap` + `activationListeners` + `readSockmapStats`, degrading to Tier 1 when the pinned `BPF_MAP_TYPE_SOCKHASH` at `/sys/fs/bpf/golusoris/sockhash` is absent. golusoris still owns the map writes; acceleration is **transparent and kernel-side** — the SK_MSG hook redirects the same socket buffers without TCP-stack traversal, **no client code change**. `detectTransport` reports `'sockmap'` when the map is present, so the client surfaces the resolved tier today.
 
 See also [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md).
 
 ## The ladder
 
-| Tier | Mechanism | Cost | This package |
-|---|---|---|---|
-| 1 | AF_UNIX socket | Trivial | `createIpcClient` (LANDED) |
-| 2 | Cilium `socketLB` | Cluster config | None — transparent |
-| 3 | Custom eBPF SK_MSG sockhash | CAP_BPF + kernel ≥5.10 | Detection LANDED; kernel-bypass pending golusoris#27 |
+| Tier | Mechanism                   | Cost                   | This package                                                                                    |
+| ---- | --------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------- |
+| 1    | AF_UNIX socket              | Trivial                | `createIpcClient` (LANDED)                                                                      |
+| 2    | Cilium `socketLB`           | Cluster config         | None — transparent                                                                              |
+| 3    | Custom eBPF SK_MSG sockhash | CAP_BPF + kernel ≥5.10 | Observe/handoff client LANDED (v0.2.0); kernel redirect transparent (golusoris owns map writes) |
 
 **Start at Tier 1.** Climb only when measurement proves loopback TCP traversal is your bottleneck.
 
@@ -33,9 +33,9 @@ See also [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md).
 import { createIpcClient } from '@sveltesentio/ipc-sockmap';
 
 const client = await createIpcClient({
-	socketPath: '/run/golusoris/api.sock',
-	bpfMapPath: '/sys/fs/bpf/golusoris/sockhash', // Tier-3 detection (optional)
-	requestTimeoutMs: 5_000,
+  socketPath: '/run/golusoris/api.sock',
+  bpfMapPath: '/sys/fs/bpf/golusoris/sockhash', // Tier-3 detection (optional)
+  requestTimeoutMs: 5_000,
 });
 
 console.warn('[ipc] resolved tier:', client.tier); // 'af_unix' | 'sockmap'
@@ -54,18 +54,19 @@ import { encodeFrame, FrameDecoder } from '@sveltesentio/ipc-sockmap/transport';
 
 const decoder = new FrameDecoder();
 for (const chunk of stream) {
-	const { frames } = decoder.push(chunk); // drains every complete frame
-	for (const payload of frames) handle(payload);
+  const { frames } = decoder.push(chunk); // drains every complete frame
+  for (const payload of frames) handle(payload);
 }
 ```
 
 ## Exports
 
-| Subpath | Surface |
-|---|---|
-| `.` | Everything below, re-exported. |
-| `./transport` | `encodeFrame`, `decodeFrame`, `FrameDecoder`, `detectTransport`, framing constants, `IpcTier`. |
-| `./client` | `createIpcClient`, `IpcClient`, `IpcClientOptions`, `SocketLike`, `ConnectFn`. |
+| Subpath       | Surface                                                                                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`           | Everything below, re-exported.                                                                                                                                         |
+| `./transport` | `encodeFrame`, `decodeFrame`, `FrameDecoder`, `detectTransport`, framing constants, `IpcTier`.                                                                         |
+| `./client`    | `createIpcClient`, `IpcClient`, `IpcClientOptions`, `SocketLike`, `ConnectFn`.                                                                                         |
+| `./sockmap`   | `probeSockmap`, `activationListeners`, `readSockmapStats`, `bpftoolKeyCount`, `parsePrometheusMetrics` — Tier-3 capability probe + systemd FD handoff + observability. |
 
 ## Errors
 

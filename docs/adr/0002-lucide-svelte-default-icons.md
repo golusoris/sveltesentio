@@ -1,6 +1,6 @@
 # ADR-0002: `@lucide/svelte` new scope as default icon library; `@sveltesentio/ui/icons` pluggable for `@iconify/svelte` interop
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D23 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Adopt `@lucide/svelte` (new scope) at `^0.561.0+` as the default icon set shippe
 ## Consequences
 
 **Positive**:
+
 - Matches 2/4 adopter apps day one.
 - Tree-shakable named imports — no icon-bundle bloat.
 - Pluggable adapter keeps arca's Iconify-first authoring intact.
 
 **Negative / trade-offs**:
+
 - subdo carries a rename migration (`lucide-svelte` → `@lucide/svelte`).
 - Pluggable adapter surface is API we now own.
 
 **Documentation obligations**:
+
 - `docs/compose/icons.md` — Lucide default, Iconify escape-hatch recipe, sizing tokens, a11y (`aria-hidden` vs `role="img"` + `aria-label`).
 - Wrapper spec for `@sveltesentio/ui/icons` adapter boundary.
 

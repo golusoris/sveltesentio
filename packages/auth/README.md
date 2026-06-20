@@ -6,10 +6,11 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-v0.2.0 — crypto primitives (PKCE, CSRF HMAC, `__Host-*` cookies, permissions) plus
+v0.6.0 — crypto primitives (PKCE, CSRF HMAC, `__Host-*` cookies, permissions) plus
 framework-agnostic OIDC orchestration: authorization-URL builder, PKCE code exchange,
 a `handleCsrf()` SvelteKit hook, typed MFA error narrowing, and passkey wrappers.
-MFA Svelte components and the `usePermissions()` rune remain follow-through.
+The MFA Svelte components (`<MfaChallenge>` / `<MfaEnroll>`) and the `usePermissions()`
+rune have shipped.
 
 ## Installation
 
@@ -17,7 +18,7 @@ MFA Svelte components and the `usePermissions()` rune remain follow-through.
 pnpm add @sveltesentio/auth
 ```
 
-## Orchestration surface (v0.2.0)
+## Orchestration surface (v0.6.0)
 
 ```ts
 import {

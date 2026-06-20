@@ -1,6 +1,6 @@
 # ADR-0044: `@huggingface/transformers@^4.1` for on-device AI; `@xenova/transformers` deprecated
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D132 in `.workingdir/research/decisions-needed.md`
@@ -28,15 +28,18 @@ Hold WebLLM / mlc-llm as `docs/compose/ai-in-browser-llm.md` for LLM-specific us
 ## Consequences
 
 **Positive**:
+
 - Active upstream; security patches land.
 - WebGPU acceleration where supported; WASM graceful fallback.
 - One import path for classification / embedding / ASR / translation tasks.
 
 **Negative / trade-offs**:
+
 - Model sizes non-trivial (tens to hundreds of MB); consumers must be explicit about download cost.
 - Browser support matrix for WebGPU still uneven on Firefox; WASM fallback carries a perf hit.
 
 **Documentation obligations**:
+
 - `docs/compose/ai-on-device.md` — model-loading strategy, size budgets, WebGPU detection.
 - `docs/compose/ai-in-browser-llm.md` — WebLLM opt-in for LLM-specific flows.
 - `@sveltesentio/ai/on-device` AGENTS.md — pinned version + migration from xenova.

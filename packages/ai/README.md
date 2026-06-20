@@ -6,7 +6,10 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-v0.2.0 — first functional release. Provides:
+v0.4.0 — provides `./audit`, `./proxy`, and `./edge` (below) plus the `./server`
+SDK seam (`createLLMProxy()` with Anthropic/Ollama adapters) and `./client` runes
+(`useLLMChat()` and the `ChatStream` component) that shipped after the first
+functional release:
 
 - **`@sveltesentio/ai/audit`** — Zod v4 schema for an AI audit record plus
   `createAuditLog()` ([ADR-0045](../../docs/adr/0045-ai-audit-hook-zod-schema.md),
@@ -38,17 +41,17 @@ pnpm add @huggingface/transformers
 import { createAuditLog } from '@sveltesentio/ai/audit';
 
 const audit = createAuditLog({
-	sink: (record) => myDatabase.insert(record),
-	redact: ({ prompt: _p, output: _o, ...rest }) => rest, // keep only hashes
+  sink: (record) => myDatabase.insert(record),
+  redact: ({ prompt: _p, output: _o, ...rest }) => rest, // keep only hashes
 });
 await audit.record({
-	model: 'claude-sonnet-4',
-	promptHash: 'sha256:…',
-	outputHash: 'sha256:…',
-	purpose: 'support-triage',
-	humanOverride: false,
-	riskTier: 'limited',
-	disclosureShown: true,
+  model: 'claude-sonnet-4',
+  promptHash: 'sha256:…',
+  outputHash: 'sha256:…',
+  purpose: 'support-triage',
+  humanOverride: false,
+  riskTier: 'limited',
+  disclosureShown: true,
 });
 ```
 
@@ -65,7 +68,7 @@ const reply = await llm.chat({ messages: [{ role: 'user', content: 'hi' }] });
 import { loadEdgePipeline } from '@sveltesentio/ai/edge';
 
 const classifier = await loadEdgePipeline('text-classification', {
-	model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+  model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
 });
 const result = await classifier.run('great product');
 ```

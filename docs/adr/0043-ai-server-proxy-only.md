@@ -1,6 +1,6 @@
 # ADR-0043: AI provider SDKs are server-proxy-only; no browser imports of Anthropic / Ollama SDKs
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D130 + D131 + D133 in `.workingdir/research/decisions-needed.md`
@@ -27,15 +27,18 @@ Additionally: the "streaming" channel for AI responses is SSE, already owned by 
 ## Consequences
 
 **Positive**:
+
 - Provider credentials stay server-side by construction.
 - Single streaming transport (SSE) across AI + generic server events.
 - ESLint rule prevents regression.
 
 **Negative / trade-offs**:
+
 - AI features must ship with a SvelteKit server; pure static hosting cannot embed AI features.
 - Consumer apps author their own `+server.ts` route per feature; template in `docs/compose/`.
 
 **Documentation obligations**:
+
 - `docs/compose/ai-streaming.md` — `+server.ts` + `useSSE` pattern.
 - `@sveltesentio/ai` AGENTS.md — server vs client import boundary.
 - Lint config ships the `no-restricted-imports` rule enabled by default.

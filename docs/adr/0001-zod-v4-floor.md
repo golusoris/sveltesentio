@@ -1,6 +1,6 @@
 # ADR-0001: Zod v4 floor for all sveltesentio schemas
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D12 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Pin `zod@^4` as the floor for every `@sveltesentio/*` package that ships schemas
 ## Consequences
 
 **Positive**:
+
 - One schema toolchain framework-wide; shared types between `core`, `forms`, `auth`.
 - Tree-shaking improvements from Zod v4 cascade to every consumer.
 - Matches arca + subdo today; revenge just bumps one dep.
 
 **Negative / trade-offs**:
+
 - revenge carries a one-time migration cost (breaking changes Zod v3→v4).
 - Floor moves forward with future Zod majors; each major is an ADR amendment.
 
 **Documentation obligations**:
+
 - `docs/compose/schemas.md` — idiomatic Zod v4 patterns (refinement, discriminated unions, `z.infer`).
 - Migration note in revenge upgrade checklist.
 

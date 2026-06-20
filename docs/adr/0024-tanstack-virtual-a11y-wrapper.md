@@ -1,6 +1,6 @@
 # ADR-0024: `@tanstack/svelte-virtual@^3` with ARIA-wired wrapper inside `@sveltesentio/ui/data`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D25 in `.workingdir/research/decisions-needed.md`
@@ -28,15 +28,18 @@ Pin `@tanstack/svelte-virtual@^3` inside `@sveltesentio/ui/data`. Ship a runes-n
 ## Consequences
 
 **Positive**:
+
 - Any `ui/data` consumer gets WCAG-AA row semantics for free.
 - Folds the ARIA concern at the one place virtualisation exists — no per-app re-implementation.
 - Keyboard navigation parity with native tables.
 
 **Negative / trade-offs**:
+
 - Wrapper must stay in sync with TanStack's API (`useVirtualizer` shape).
 - ARIA defaults may need overrides for non-grid uses (infinite feed, chat). Wrapper exposes `role` prop to opt out.
 
 **Documentation obligations**:
+
 - `docs/compose/virtual-lists.md` — grid vs list roles, when to override.
 - `@sveltesentio/ui/data` AGENTS.md — virtualisation recipe, ARIA contract.
 - `axe-core` lane in `@sveltesentio/testing` covers `ui/data` stories.

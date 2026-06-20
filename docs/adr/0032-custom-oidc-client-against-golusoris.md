@@ -1,6 +1,6 @@
 # ADR-0032: Custom thin OIDC client against Golusoris `auth/oidc/*`; no third-party auth framework
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D60 in `.workingdir/research/decisions-needed.md`
@@ -8,6 +8,7 @@
 ## Context
 
 Golusoris owns OIDC (authorization code + PKCE, refresh, logout) via `auth/oidc/*`. Adding a third-party auth framework (Auth.js / `openid-client` / `oidc-client-ts`) on the SvelteKit side would:
+
 - Duplicate the ceremony logic Golusoris already handles server-side.
 - Introduce a second session concept that must be kept in sync.
 - Pull in provider-specific adapters sveltesentio does not need.
@@ -35,15 +36,18 @@ Zero imports of `openid-client` / `oidc-client-ts` / Auth.js.
 ## Consequences
 
 **Positive**:
+
 - Single source of truth for OIDC (Golusoris). SvelteKit is a dumb relay.
 - Session lifetime policies (refresh window, revocation) live in one place.
 - Smaller client bundle; no `oidc-client-ts` (~30 KB+).
 
 **Negative / trade-offs**:
+
 - Sveltesentio cannot serve apps that don't use Golusoris as their auth backend — explicit scope choice.
 - Adding a new Golusoris auth feature (e.g. device-code flow) requires both Go + sveltesentio changes.
 
 **Documentation obligations**:
+
 - `docs/compose/auth-oidc.md` — SvelteKit route recipes (start / callback / refresh middleware).
 - `@sveltesentio/auth` AGENTS.md — endpoint contract with Golusoris.
 - Migration note for revenge (currently hand-rolls the callback).

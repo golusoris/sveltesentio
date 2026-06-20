@@ -6,10 +6,11 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-✅ v0.2.0 — the `<ChartFigure>` accessibility wrapper, the `buildDataTableModel`
+✅ v0.5.0 — the `<ChartFigure>` accessibility wrapper, the `buildDataTableModel`
 screen-reader fallback builder, and the `dashboardPreset` defaults have shipped.
-The five semantic chart components and the uPlot streaming escape hatch are
-follow-through (see [AGENTS.md](./AGENTS.md)).
+The `<Chart>` primitive (`./chart`), the five semantic chart components
+(`./line`, `./area`, `./bar`, `./pie`, `./scatter`), and the uPlot streaming
+escape hatch (`./uplot`) have shipped too (see [AGENTS.md](./AGENTS.md)).
 
 ## Why
 

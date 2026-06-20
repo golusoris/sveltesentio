@@ -1,6 +1,6 @@
 # ADR-0038: ConnectRPC — `@connectrpc/connect-web` + `@bufbuild/protobuf` + `@connectrpc/connect-query`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D71 + D72 in `.workingdir/research/decisions-needed.md`
@@ -28,16 +28,19 @@ Related: D72 asks whether to adopt `partysocket` as a generic WebSocket wrapper.
 ## Consequences
 
 **Positive**:
+
 - 1:1 typed RPC against Golusoris via Buf codegen.
 - TanStack Query integration via `connect-query` — no parallel query layer.
 - Server streams + bidi wrapped runes-natively in the same package as SSE + Yjs.
 
 **Negative / trade-offs**:
+
 - Buf ecosystem pin — majors require ADR amendment.
 - subdo migrates from raw-fetch to `createPromiseClient` (mechanical change, types drive it).
 - ConnectRPC on browsers requires HTTP/2 or dedicated transport config for bidi streams.
 
 **Documentation obligations**:
+
 - `docs/compose/connectrpc.md` — Buf codegen pipeline, transport configuration, streaming patterns.
 - `@sveltesentio/realtime/rpc` AGENTS.md — pinned matrix + subdo migration.
 

@@ -1,6 +1,6 @@
 # ADR-0021: `engines.node >=24`; drop Node 22
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D5 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Publish every `@sveltesentio/*` package with `"engines": { "node": ">=24" }`. CI
 ## Consequences
 
 **Positive**:
+
 - Access to Node 24 globals (`WebSocket`, `structuredClone` improvements, experimental permission model) without conditional imports.
 - One CI lane to maintain.
 - Aligns with Vite 7 / SvelteKit 2 recommended runtimes.
 
 **Negative / trade-offs**:
+
 - Downstream apps must upgrade; aggressive floor is the user's explicit choice (Round 4a closure).
 - Corporate deployment environments pinned to older Node (e.g. AWS Lambda older runtimes) cannot consume sveltesentio until they catch up.
 
 **Documentation obligations**:
+
 - `README.md` prerequisites table.
 - `AGENTS.md` §Pinned upstream — Node floor.
 - Downstream migration note: Node 22 → 24 before any `@sveltesentio/*` upgrade.

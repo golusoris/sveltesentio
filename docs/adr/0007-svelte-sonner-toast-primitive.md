@@ -1,6 +1,6 @@
 # ADR-0007: `svelte-sonner` as toast primitive
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D26 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Adopt `svelte-sonner@^1.1.0+` as the single toast primitive for `@sveltesentio/u
 ## Consequences
 
 **Positive**:
+
 - Matches 2/2 toast adopters and shadcn-svelte's own wrapper.
 - Supports the preset-aware sizing invariant (handheld/desktop/10-foot) without library swap.
 - mode-watcher + Lucide icon composition already proven in Lurkarr.
 
 **Negative / trade-offs**:
+
 - Single-upstream dependency; version pins must track sonner releases.
 - Preset sizing work lives in our wrapper, not upstream.
 
 **Documentation obligations**:
+
 - `docs/compose/toast.md` — position, richColors, closeButton defaults.
 - ADR-0016 covers the wrapper spec (preset-sized).
 

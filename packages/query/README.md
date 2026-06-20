@@ -14,7 +14,7 @@ resolver is a plain async fn, so it composes with any openapi-fetch-shaped clien
 
 ## Sub-exports
 
-`.` · `./query-client` · `./query` · `./hydration` · `./infinite` · `./mutation`
+`.` · `./query-client` · `./query` · `./hydration` · `./infinite` · `./mutation` · `./connect`
 
 ## Installation
 

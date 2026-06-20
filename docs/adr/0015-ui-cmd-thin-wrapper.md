@@ -1,6 +1,6 @@
 # ADR-0015: Keep thin `@sveltesentio/ui/cmd` wrapper (shadcn Command + registry + tinykeys)
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D169 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Keep `@sveltesentio/ui/cmd` as a **thin** wrapper (overrides initial streamlinin
 ## Consequences
 
 **Positive**:
+
 - Consistent ⌘K DX across future sveltesentio apps.
 - arca's `tinykeys` shortcut pattern folds into the wrapper rather than fighting it.
 - A11y-defaulted search + focus handling baked in.
 
 **Negative / trade-offs**:
+
 - Evidence is thin (1 adopter + 1 adjacent user); wrapper risks over-fitting to Lurkarr's static item list.
 - Registry API is ours to maintain.
 
 **Documentation obligations**:
+
 - `docs/compose/command-palette.md` — registry authoring, shortcut composer, auth-gated items (Lurkarr pattern), dynamic vs static registries.
 - `@sveltesentio/ui/cmd` AGENTS.md — pinned matrix (shadcn Command × tinykeys).
 

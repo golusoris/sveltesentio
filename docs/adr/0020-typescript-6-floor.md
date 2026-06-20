@@ -1,6 +1,6 @@
 # ADR-0020: TypeScript 6 internal floor; `>=5.5 <7` published peerDep
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D7 in `.workingdir/research/decisions-needed.md`
@@ -24,15 +24,18 @@ TypeScript 6 landed stable performance + type-narrowing improvements (const-type
 ## Consequences
 
 **Positive**:
+
 - One internal toolchain (TS 6) for contributors — simpler CI matrix.
 - Downstream apps can upgrade at their own cadence within the window.
 - `>=5.5` anchors to the shadcn-svelte floor consumers already honour.
 
 **Negative / trade-offs**:
+
 - `.d.ts` emit must stay 5.5-compatible; no use of TS 6-exclusive output syntax (`using`, const-type-parameter defaults) in public types. Internal code is unconstrained.
 - Each future TS major bumps the ceiling via an ADR amendment, not silently.
 
 **Documentation obligations**:
+
 - `AGENTS.md` — TS version policy line under §Pinned upstream.
 - CI matrix (`ci-sveltekit.yml` reusable): run `tsc --noEmit` against both TS 5.5 and TS 6 on core API surfaces.
 

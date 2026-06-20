@@ -8,22 +8,24 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 🟡 In progress. Landed: oklch semantic tokens (`./tokens`, ADR-0006), the
 per-interface presets (`./presets`, ADR-0047) with WCAG 2.2 target-size baked in,
-and the headless wrapper models `./toast`, `./data`, `./cmd`. Follow-through:
-shadcn-svelte base-component CLI delivery (button/input/dialog, ADR-0014).
+the headless wrapper models `./toast`, `./data`, `./cmd`, the shadcn-svelte
+base components `./button`, `./input`, `./dialog` (with `/component` subpaths,
+ADR-0014), plus `./theme-toggle`, `./theme-customizer`, `./font-preset`,
+`./markdown`, and `./icons`.
 
 ## Sub-exports
 
-| Import | What |
-|---|---|
-| `@sveltesentio/ui/tokens` | oklch semantic tokens (light/dark) + `themeCss()` emitter |
-| `@sveltesentio/ui/presets` | `desktop` / `10foot` / `handheld` / `dashboard` presets + `presetCss()` |
-| `@sveltesentio/ui/toast` | `toastPreset(interfaceType)` → preset-aware `svelte-sonner` `<Toaster>` sizing/position (ADR-0016) |
-| `@sveltesentio/ui/data` | headless `DataTable<T>` model (sort/filter/paginate reducers) + virtual-window math (ADR-0011/0024) |
-| `@sveltesentio/ui/data/store` | runes-native `createDataTable()` store |
-| `@sveltesentio/ui/data/table` | `DataTable.svelte` — WCAG 2.2 AA `role=grid` table component |
-| `@sveltesentio/ui/data/virtual-list` | `VirtualList.svelte` — virtualized `role=grid` list with roving focus |
-| `@sveltesentio/ui/cmd` | command registry (register/search/rank) + `tinykeys`-style keymap (ADR-0025) |
-| `@sveltesentio/ui/cmd/palette` | `CommandPalette.svelte` — accessible combobox/listbox palette |
+| Import                               | What                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/ui/tokens`            | oklch semantic tokens (light/dark) + `themeCss()` emitter                                           |
+| `@sveltesentio/ui/presets`           | `desktop` / `10foot` / `handheld` / `dashboard` presets + `presetCss()`                             |
+| `@sveltesentio/ui/toast`             | `toastPreset(interfaceType)` → preset-aware `svelte-sonner` `<Toaster>` sizing/position (ADR-0016)  |
+| `@sveltesentio/ui/data`              | headless `DataTable<T>` model (sort/filter/paginate reducers) + virtual-window math (ADR-0011/0024) |
+| `@sveltesentio/ui/data/store`        | runes-native `createDataTable()` store                                                              |
+| `@sveltesentio/ui/data/table`        | `DataTable.svelte` — WCAG 2.2 AA `role=grid` table component                                        |
+| `@sveltesentio/ui/data/virtual-list` | `VirtualList.svelte` — virtualized `role=grid` list with roving focus                               |
+| `@sveltesentio/ui/cmd`               | command registry (register/search/rank) + `tinykeys`-style keymap (ADR-0025)                        |
+| `@sveltesentio/ui/cmd/palette`       | `CommandPalette.svelte` — accessible combobox/listbox palette                                       |
 
 ### Optional peers
 

@@ -1,6 +1,6 @@
 # ADR-0023: `uuid@13` UUIDv7 as the default client-side ID
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D11 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Golusoris standardises on UUIDv7 + KSUID for trace-continuity across services. C
 ## Consequences
 
 **Positive**:
+
 - 1:1 ID format with Golusoris traces; no transform at the log sink.
 - Time-ordered IDs play nicely with optimistic inserts and cursor pagination.
 - Single import path (`@sveltesentio/core/id`) across the framework.
 
 **Negative / trade-offs**:
+
 - `uuid@13` is slightly larger than `crypto.randomUUID`; bundle-size delta measured at <2 KB gzipped and accepted.
 - v7 leaks creation timestamp; not a concern in our threat model (IDs are already server-side-visible).
 
 **Documentation obligations**:
+
 - `docs/compose/ids.md` — when to use `newId()` vs server-issued IDs vs v4 nonces.
 - `@sveltesentio/core` AGENTS.md — pinned `uuid@^13` + note on `v7()` entry.
 

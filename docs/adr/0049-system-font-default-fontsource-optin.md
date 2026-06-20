@@ -1,6 +1,6 @@
 # ADR-0049: System-font default + Fontsource variable-font opt-in presets
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D166 in `.workingdir/research/decisions-needed.md`
@@ -8,6 +8,7 @@
 ## Context
 
 Typography defaults trade off between:
+
 - **System fonts** — zero download, fast LCP, platform-consistent.
 - **Web fonts** — brand consistency, wider weight/style range, LCP penalty.
 
@@ -30,15 +31,18 @@ Presets ship with LCP guidance in `docs/performance/fonts.md` (preload `<link re
 ## Consequences
 
 **Positive**:
+
 - Default bundle adds zero font weight.
 - Opt-in presets provide the typical brand fonts with correct loading semantics.
 - Self-hosted via Fontsource — no third-party DNS.
 
 **Negative / trade-offs**:
+
 - Brand-heavy consumers must opt in; two-line import vs single default.
 - Variable fonts are a kilobyte range bigger than single-weight hosted fonts; documented in LCP guidance.
 
 **Documentation obligations**:
+
 - `docs/performance/fonts.md` — LCP budget, preload hints, font-display strategies.
 - `@sveltesentio/ui/font-preset-*` AGENTS.md (one per preset) — subset + preload recipe.
 

@@ -1,26 +1,30 @@
-# Histoire stories — component authoring + a11y + visual-regression anchor
+# Storybook stories — component authoring + a11y + visual-regression anchor
 
-Histoire is the story authoring tool for sveltesentio components. Stories
-live **next to the component** (`Button.svelte` → `Button.story.svelte`)
+Storybook 10 is the story authoring tool for sveltesentio components. Stories
+live **next to the component** (`Button.svelte` → `Button.stories.svelte`)
 and serve three roles simultaneously:
 
 1. **Design surface** — every variant rendered at once for review.
-2. **A11y anchor** — axe-core runs on every story per
+2. **A11y anchor** — `@storybook/addon-a11y` runs axe-core on every story per
    [ADR-0031](../adr/0031-a11y-testing-lane.md).
 3. **Visual-regression anchor** — Playwright / Lost-Pixel snapshots
    target story URLs (see [playwright-visual.md](playwright-visual.md)).
 
-The `add-histoire` Claude skill scaffolds the base template; this recipe
+> Histoire is unusable on Svelte 5 — its runtime imports `svelte/internal`
+> (forbidden in Svelte 5) and its peers cap at Svelte 4 / Vite 7. Storybook 10
+> (`@storybook/svelte-vite` + `@storybook/addon-svelte-csf`) replaced it.
+
+The `add-storybook` Claude skill scaffolds a story; this recipe
 codifies the conventions the skill can't enforce.
 
 ## Related
 
 - [playwright-visual.md](playwright-visual.md) — visual-regression
-  contract that anchors on Histoire story URLs.
+  contract that anchors on Storybook story URLs.
 - [a11y-audit-runbook.md](a11y-audit-runbook.md) — axe-core triage
   workflow; stories are the axe entry point for the component lane.
-- [theming.md](theming.md) — dark / light mode parity; Histoire's
-  theme switcher must visibly drive `data-theme` on `<html>`.
+- [theming.md](theming.md) — dark / light mode parity; the theme
+  toggle must visibly drive `data-theme` on `<html>`.
 - [primitives-shadcn.md](primitives-shadcn.md) — shadcn components ship
   one story per family; token-bound variants covered here.
 - [primitives-direct.md](primitives-direct.md) — bits-ui wrappers ship
@@ -29,80 +33,60 @@ codifies the conventions the skill can't enforce.
 
 ## Install
 
+Storybook is set up once in `apps/storybook/`; component packages only add
+the Svelte CSF addon to author stories:
+
 ```bash
-pnpm add -D histoire @histoire/plugin-svelte @histoire/plugin-screenshot
+pnpm --filter @sveltesentio/ui add -D @storybook/addon-svelte-csf
 ```
 
-`histoire.config.ts` at each `packages/*` that ships components:
+The Storybook app (`apps/storybook/.storybook/main.ts`) globs every package's
+stories — there is **no per-package Storybook config**:
 
 ```ts
-// packages/ui/histoire.config.ts
-import { defineConfig } from 'histoire';
-import { HstSvelte } from '@histoire/plugin-svelte';
-import { HstScreenshot } from '@histoire/plugin-screenshot';
+// apps/storybook/.storybook/main.ts
+import type { StorybookConfig } from '@storybook/svelte-vite';
 
-export default defineConfig({
-  plugins: [
-    HstSvelte({ sveltePlugin: { extensions: ['.svelte'] } }),
-    HstScreenshot({ ignoreAllFrameEvents: true }),
-  ],
-  setupFile: './histoire.setup.ts',
-  tree: {
-    groups: [
-      { id: 'top', title: '' },
-      { id: 'primitives', title: 'Primitives' },
-      { id: 'compositions', title: 'Compositions' },
-    ],
-  },
-  theme: { title: '@sveltesentio/ui', logo: { square: './logo.svg' } },
-  vite: { build: { sourcemap: true } },
-});
-```
-
-`histoire.setup.ts` imports global styles + sets up the theme bridge:
-
-```ts
-// packages/ui/histoire.setup.ts
-import './src/styles/app.css';
-import { defineSetupVue3 } from '@histoire/plugin-svelte';
-
-export const setupHistoire = () => {
-  const mq = matchMedia('(prefers-color-scheme: dark)');
-  document.documentElement.setAttribute(
-    'data-theme',
-    mq.matches ? 'dark' : 'light',
-  );
+const config: StorybookConfig = {
+  stories: ['../../../packages/*/src/**/*.stories.@(svelte|ts)'],
+  addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
+  framework: { name: '@storybook/svelte-vite', options: { docgen: false } },
+  core: { disableTelemetry: true },
 };
+
+export default config;
 ```
 
-`package.json` scripts:
+Framework is `@storybook/svelte-vite` (not `sveltekit`) — the packages are
+plain Svelte 5 libraries. The repo's own `@sveltejs/vite-plugin-svelte` is
+injected in `viteFinal` so runes components compile exactly as in the package
+builds.
+
+Stories are **excluded from the published tarball** in each package's
+`package.json`:
 
 ```json
 {
-  "scripts": {
-    "histoire:dev": "histoire dev",
-    "histoire:build": "histoire build",
-    "histoire:preview": "histoire preview"
-  }
+  "files": ["src", "CHANGELOG.md", "!src/**/*.stories.svelte"]
 }
 ```
 
 Run:
 
 ```bash
-pnpm --filter @sveltesentio/ui histoire:dev   # localhost:6006
-pnpm --filter @sveltesentio/ui histoire:build # dist-histoire/ static site
+pnpm --filter @sveltesentio/storybook storybook        # localhost:6006
+pnpm --filter @sveltesentio/storybook build-storybook  # storybook-static/
 ```
 
 ## Story file conventions
 
-One `.story.svelte` per component, colocated:
+One `.stories.svelte` per component, colocated:
 
 ```text
 packages/ui/src/
   button/
     Button.svelte
-    Button.story.svelte
+    Button.stories.svelte
     button.tv.ts
     index.ts
 ```
@@ -111,108 +95,115 @@ Minimum variants: `default`, `all sizes`, `all states` (hover / focus /
 disabled / loading / error), `dark mode parity`, `RTL parity` where text
 direction matters.
 
+Stories use Svelte CSF — a `<script module>` `defineMeta` block plus one
+`<Story>` per variant:
+
 ```svelte
-<!-- packages/ui/src/button/Button.story.svelte -->
-<script lang="ts">
-  import { Story, Variant } from 'histoire/svelte';
+<!-- packages/ui/src/button/Button.stories.svelte -->
+<script module lang="ts">
+  import { defineMeta } from '@storybook/addon-svelte-csf';
   import Button from './Button.svelte';
   import { Check, Loader2 } from 'lucide-svelte';
+
+  const { Story } = defineMeta({
+    title: 'ui/Button',
+    component: Button,
+    tags: ['autodocs'],
+    args: { variant: 'default' },
+  });
 </script>
 
-<Story title="Primitives/Button" icon="lucide:square">
-  <Variant title="Variants">
-    <div class="flex flex-wrap gap-4 p-4">
-      <Button>Default</Button>
-      <Button variant="secondary">Secondary</Button>
-      <Button variant="destructive">Destructive</Button>
-      <Button variant="outline">Outline</Button>
-      <Button variant="ghost">Ghost</Button>
-      <Button variant="link">Link</Button>
-    </div>
-  </Variant>
+<Story name="Default" args={{ variant: 'default' }} />
+<Story name="Secondary" args={{ variant: 'secondary' }} />
+<Story name="Destructive" args={{ variant: 'destructive' }} />
 
-  <Variant title="Sizes">
-    <div class="flex flex-wrap items-center gap-4 p-4">
-      <Button size="sm">Small</Button>
-      <Button size="default">Default</Button>
-      <Button size="lg">Large</Button>
-      <Button size="icon" aria-label="Confirm"><Check /></Button>
-    </div>
-  </Variant>
+<Story name="Sizes">
+  <div class="flex flex-wrap items-center gap-4 p-4">
+    <Button size="sm">Small</Button>
+    <Button size="default">Default</Button>
+    <Button size="lg">Large</Button>
+    <Button size="icon" aria-label="Confirm"><Check /></Button>
+  </div>
+</Story>
 
-  <Variant title="States">
-    <div class="flex flex-wrap gap-4 p-4">
-      <Button>Idle</Button>
-      <Button disabled>Disabled</Button>
-      <Button aria-busy="true"><Loader2 class="animate-spin" /> Loading</Button>
-    </div>
-  </Variant>
+<Story name="States">
+  <div class="flex flex-wrap gap-4 p-4">
+    <Button>Idle</Button>
+    <Button disabled>Disabled</Button>
+    <Button aria-busy="true"><Loader2 class="animate-spin" /> Loading</Button>
+  </div>
+</Story>
 
-  <Variant title="RTL">
-    <div dir="rtl" class="flex flex-wrap gap-4 p-4">
-      <Button>نشر</Button>
-      <Button variant="destructive">حذف</Button>
-    </div>
-  </Variant>
+<Story name="RTL">
+  <div dir="rtl" class="flex flex-wrap gap-4 p-4">
+    <Button>نشر</Button>
+    <Button variant="destructive">حذف</Button>
+  </div>
 </Story>
 ```
 
 Rules:
 
-- **Title path** groups stories: `Primitives/Button` / `Compositions/DataTable`.
-- **One Story root** per file — multiple Variants inside.
-- **Icon** is a lucide key for the sidebar.
-- **`size="icon"` variants always carry `aria-label`** — axe-core catches
+- **Title path** groups stories: `ui/Button` / `charts/BarChart`.
+- **One `defineMeta`** per file — multiple `<Story>` entries inside.
+- **`args` for prop-driven variants**; a `<Story>` body for children /
+  snippet props.
+- **`size="icon"` variants always carry `aria-label`** — addon-a11y catches
   missing accessible names.
+- A `<Story name="...">` whose name starts with a digit / symbol needs an
+  explicit `exportName="Pascal"` — the derived export must be a valid JS
+  identifier.
 
 ## Preset parity
 
 Components that vary per interface-type preset (desktop / handheld /
 10-foot per [ADR-0047](../adr/0047-per-interface-presets.md)) get a
-variant per preset:
+story per preset:
 
 ```svelte
-<Variant title="Preset: Desktop">
+<Story name="Preset: Desktop">
   <div data-preset="desktop" class="p-4">
     <Button>Default</Button>
     <Button size="icon" aria-label="Menu"><Menu /></Button>
   </div>
-</Variant>
+</Story>
 
-<Variant title="Preset: Handheld">
+<Story name="Preset: Handheld">
   <div data-preset="handheld" class="p-4">
     <Button>Default</Button>
     <Button size="icon" aria-label="Menu"><Menu /></Button>
   </div>
-</Variant>
+</Story>
 
-<Variant title="Preset: 10-foot">
+<Story name="Preset: 10-foot" exportName="Preset10Foot">
   <div data-preset="10foot" class="p-4">
     <Button>Default</Button>
     <Button size="icon" aria-label="Menu"><Menu /></Button>
   </div>
-</Variant>
+</Story>
 ```
 
 Touch-target rules from [safe-area.md](safe-area.md) flow through the
-preset styles; the variant proves the 44×44 CSS px floor holds without
+preset styles; the story proves the 44×44 CSS px floor holds without
 writing a separate test.
 
 ## Dark mode + RTL parity
 
-Histoire's built-in theme switcher toggles `data-theme="dark"` on the
+The Storybook toolbar theme toggle sets `data-theme="dark"` on the
 preview `<html>`. Every component must render correctly in both. No
 `@media (prefers-color-scheme: dark)` — use `[data-theme="dark"]` so
-the switcher drives it.
+the toggle drives it.
 
-For RTL, a dedicated variant with `dir="rtl"` on the wrapper
+For RTL, a dedicated story with `dir="rtl"` on the wrapper
 (see Button example above). Logical properties
 ([i18n-runtime-strategy.md](i18n-runtime-strategy.md)) do the heavy
-lifting; the variant is there so reviewers see it.
+lifting; the story is there so reviewers see it.
 
 ## A11y lane
 
-axe-core runs on every story via Vitest component tests:
+`@storybook/addon-a11y` runs axe on each story in the Storybook UI; the
+component lane mirrors that matrix with Vitest component tests so the
+contract holds in CI:
 
 ```ts
 // packages/ui/src/button/Button.axe.test.ts
@@ -242,70 +233,74 @@ a new variant in the story requires a new entry in `cases`.
 
 ## Controls (args) — when to use
 
-`args` + `<Template let:args>` is useful for components with many independent
+`args` on `<Story>` is useful for components with many independent
 props (Dialog, DataTable). For components with clear discrete variants
-(Button), **pre-rendered variants beat args**: reviewers see all
-combinations at once.
+(Button), **separate pre-rendered stories beat one args-driven story**:
+reviewers see all combinations at once in the sidebar.
 
 ```svelte
 <!-- Good for multi-axis components -->
-<Story title="Compositions/DataTable">
-  <Template let:args>
-    <DataTable {...args} data={sample} />
-  </Template>
-  <Variant title="Idle" args={{ loading: false, density: 'comfortable' }} />
-  <Variant title="Loading" args={{ loading: true }} />
-  <Variant title="Compact" args={{ density: 'compact' }} />
-</Story>
+<Story name="Idle" args={{ loading: false, density: 'comfortable' }} />
+<Story name="Loading" args={{ loading: true }} />
+<Story name="Compact" args={{ density: 'compact' }} />
 ```
+
+A component with required **snippet** props needs a `<Story>` body that
+renders it with the snippet wired. A component depending on an **optional
+peer** (vidstack, embla, `@xyflow/svelte`) must render its fallback path or
+a tiny in-story stub — never hard-require the peer.
 
 ## Performance — scale the story tree
 
-Histoire rebuilds stories in parallel; 200+ stories compile fast, but
-dev-server memory climbs past ~500. Split the Histoire config per
-package when a single package grows past that threshold. Prefer one
-Histoire per `packages/ui`, one per `packages/forms`, etc. — already
-the natural boundary.
+The single glob in `apps/storybook/.storybook/main.ts` picks up every
+package identically; adding a package is zero-config. Stories compile
+through the package's own `@sveltejs/vite-plugin-svelte`, so build cost
+scales with the number of stories, not the number of packages. Keep
+stories colocated per package — already the natural boundary.
 
 ## Documentation-in-story
 
-Use Histoire's `<docs slot>` for usage notes that belong next to the
-variants, not in a separate README:
+Tag a story `autodocs` to generate a docs page from its `args` /
+`argTypes`; put usage notes in the meta `parameters.docs.description`:
 
 ```svelte
-<Story title="Primitives/Button">
-  <div slot="docs" class="prose">
+<script module lang="ts">
+  import { defineMeta } from '@storybook/addon-svelte-csf';
+  import Button from './Button.svelte';
 
-  # Button
-
-  Use `variant="destructive"` only for irreversible actions (delete,
-  leave room, revoke access). Pair with a confirmation dialog.
-
-  - `size="icon"` requires `aria-label`.
-  - `aria-busy="true"` replaces copy with a spinner but keeps the
-    width — prevents layout shift.
-
-  </div>
-
-  <!-- variants… -->
-</Story>
+  const { Story } = defineMeta({
+    title: 'ui/Button',
+    component: Button,
+    tags: ['autodocs'],
+    parameters: {
+      docs: {
+        description: {
+          component:
+            'Use variant="destructive" only for irreversible actions. ' +
+            'size="icon" requires aria-label. aria-busy="true" swaps copy ' +
+            'for a spinner but keeps the width — prevents layout shift.',
+        },
+      },
+    },
+  });
+</script>
 ```
 
-Docs render in the Histoire sidebar pane alongside the variant preview.
+Docs render on the autodocs page alongside the story previews.
 
 ## CI
 
-Histoire build emits a static site in `dist-histoire/`. Deploy to a
+`build-storybook` emits a static site in `storybook-static/`. Deploy to a
 preview URL per PR (Vercel / Netlify / Cloudflare Pages) so reviewers
 can browse the component matrix before merge:
 
 ```yaml
-# .github/workflows/histoire.yml (excerpt)
-- run: pnpm --filter @sveltesentio/ui histoire:build
+# .github/workflows/storybook.yml (excerpt)
+- run: pnpm --filter @sveltesentio/storybook build-storybook
 - uses: cloudflare/pages-action@v1
   with:
-    projectName: sveltesentio-histoire
-    directory: packages/ui/dist-histoire
+    projectName: sveltesentio-storybook
+    directory: apps/storybook/storybook-static
 ```
 
 The same static site is the target for Lost-Pixel / Playwright visual
@@ -313,31 +308,29 @@ regression — see [playwright-visual.md](playwright-visual.md).
 
 ## Anti-patterns
 
-- **One `.story.svelte` per variant instead of per component.** Fragments
+- **One `.stories.svelte` per variant instead of per component.** Fragments
   the sidebar; reviewers can't see the whole component at once.
 - **Stories in a separate `stories/` directory.** Colocation is the rule
-  — matches where axe tests live, matches the `add-histoire` skill.
-- **No `size="icon"` variant `aria-label`.** Axe-core fails. The rule
+  — matches where axe tests live, matches the `add-storybook` skill.
+- **No `size="icon"` variant `aria-label`.** addon-a11y fails. The rule
   is universal — icon-only controls always get an accessible name.
-- **Skipping dark mode parity.** Histoire theme-switcher exists so every
+- **Skipping dark mode parity.** The theme toggle exists so every
   story is proven in both themes before the reviewer moves on.
 - **Skipping RTL parity for text-direction-sensitive components.**
   Logical properties cover most of it; the variant exists to prove it.
 - **Using `@media (prefers-color-scheme: dark)` inside the component.**
-  Breaks Histoire's theme switcher. Use `[data-theme="dark"]` selectors
-  so the switcher drives.
+  Breaks the Storybook theme toggle. Use `[data-theme="dark"]` selectors
+  so the toggle drives.
 - **Letting stories drift from axe tests.** New variant without a
   corresponding axe test entry is a lint-worthy omission — axe tests
   are the contract.
 - **Stories that hit the network / load real data.** Use fixtures.
   Snapshot stability matters for visual regression.
-- **Skipping `setupFile` theme bootstrap.** Stories render with no
-  tokens and everything looks broken. Setup file wires
-  `data-theme` before the story mounts.
-- **One Histoire root for the whole monorepo.** Memory climbs past
-  ~500 stories; split per package.
-- **Storybook instead of Histoire.** Storybook 8 Svelte support lags;
-  Histoire is Svelte-5-native. ADR-TBD; don't introduce a second tool.
+- **Shipping stories in the npm tarball.** Exclude them via
+  `"!src/**/*.stories.svelte"` in the package's `files` array.
+- **Reintroducing Histoire (or any second story tool).** Histoire imports
+  `svelte/internal` and cannot build Svelte 5 components; Storybook 10 is
+  the one adopted tool.
 
 ## References
 
@@ -347,6 +340,6 @@ regression — see [playwright-visual.md](playwright-visual.md).
 - [playwright-visual.md](playwright-visual.md) — visual-regression
   contract anchoring on story URLs.
 - [a11y-audit-runbook.md](a11y-audit-runbook.md) — axe-core triage.
-- Histoire docs: <https://histoire.dev>.
-- `@histoire/plugin-svelte`: <https://histoire.dev/guide/svelte/>.
-- `@histoire/plugin-screenshot`: <https://histoire.dev/plugins/screenshot.html>.
+- Storybook for Svelte + Vite: <https://storybook.js.org/docs/get-started/frameworks/svelte-vite>.
+- `@storybook/addon-svelte-csf`: <https://github.com/storybookjs/addon-svelte-csf>.
+- `@storybook/addon-a11y`: <https://storybook.js.org/docs/writing-tests/accessibility-testing>.

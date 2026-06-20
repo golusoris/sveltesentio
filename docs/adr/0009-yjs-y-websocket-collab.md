@@ -1,6 +1,6 @@
 # ADR-0009: Yjs + `y-websocket` as `@sveltesentio/collab` core
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D80 in `.workingdir/research/decisions-needed.md`
@@ -24,16 +24,19 @@ Adopt `yjs@^13.6` + `y-websocket@^3` as the CRDT + transport for `@sveltesentio/
 ## Consequences
 
 **Positive**:
+
 - Matches subdo's shipped stack bit-for-bit; zero migration.
 - `y-indexeddb` + `Y.UndoManager` as extension points future-proofs offline + undo without forcing them on non-needing apps.
 - Room for Loro re-audit without locking apps into today's choice.
 
 **Negative / trade-offs**:
+
 - Single-adopter evidence (subdo only).
 - Yjs bundle is non-trivial (~80KB gzipped core + provider).
 - No default `y-svelte` binding — consumers hand-roll `observe` (evidence: subdo already does).
 
 **Documentation obligations**:
+
 - `docs/compose/collab.md` — Y.Doc lifecycle, awareness, transact patterns, opt-in `y-indexeddb` + `UndoManager` recipes.
 - Loro benchmark tracker in `.workingdir/` for future re-audit.
 

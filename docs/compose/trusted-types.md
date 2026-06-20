@@ -190,7 +190,9 @@ Three invariants in this module:
 
   if (browser) initTrustedTypes();
 
-  onMount(() => { /* other client-only init */ });
+  onMount(() => {
+    /* other client-only init */
+  });
 </script>
 ```
 
@@ -268,7 +270,7 @@ Some libraries assign `innerHTML` internally:
 - **Leaflet / Mapbox** — some tile popups build HTML with innerHTML.
 - **Quill / CKEditor** — rich-text editors use innerHTML heavily;
   they usually ship TT-compatible builds.
-- **Histoire dev server** — HMR injects scripts; TT violations in dev
+- **Storybook dev server** — HMR injects scripts; TT violations in dev
   are expected and fine (enforce only in prod).
 
 For libraries without TT support, two options:
@@ -382,7 +384,11 @@ test('CSP blocks raw innerHTML', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     const el = document.createElement('div');
-    try { el.innerHTML = '<p>raw</p>'; } catch (e) { /* expected */ }
+    try {
+      el.innerHTML = '<p>raw</p>';
+    } catch (e) {
+      /* expected */
+    }
   });
   expect(violations.length).toBeGreaterThan(0);
 });

@@ -8,23 +8,28 @@ Thin wrapper over `@inlang/paraglide-js@^2.16.0` (ADR-0017). **The deprecated `@
 
 ### Landed (v0.0.1)
 
-| Export | Purpose |
-|---|---|
-| `paraglideVitePlugin` | Passthrough from `@inlang/paraglide-js` — callers pass their own `project` / `outdir` / `strategy` |
-| `getTextDirection(locale)` | BCP-47 script-subtag + language lookup → `'ltr' \| 'rtl'` |
-| `announceNavigation(msg)` | `aria-live="polite"` announcer for SPA nav — writes into a singleton region, cleared-then-set via `queueMicrotask` so SR re-announces |
-| `ensureAnnouncerRegion(opts?)` | Idempotent creation of the visually-hidden live region; configurable politeness + region id + `document` for SSR testing |
-| `restoreFocus(selector)` | Returns `true` on successful `.focus()`, `false` when selector misses |
-| `formatCurrency` / `formatNumber` / `formatDate` / `formatRelativeTime` / `formatList` | Intl passthroughs — no separate currency module ([D53 locked](../../.workingdir/research/decisions-needed.md)) |
+| Export                                                                                 | Purpose                                                                                                                               |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `paraglideVitePlugin`                                                                  | Passthrough from `@inlang/paraglide-js` — callers pass their own `project` / `outdir` / `strategy`                                    |
+| `getTextDirection(locale)`                                                             | BCP-47 script-subtag + language lookup → `'ltr' \| 'rtl'`                                                                             |
+| `announceNavigation(msg)`                                                              | `aria-live="polite"` announcer for SPA nav — writes into a singleton region, cleared-then-set via `queueMicrotask` so SR re-announces |
+| `ensureAnnouncerRegion(opts?)`                                                         | Idempotent creation of the visually-hidden live region; configurable politeness + region id + `document` for SSR testing              |
+| `restoreFocus(selector)`                                                               | Returns `true` on successful `.focus()`, `false` when selector misses                                                                 |
+| `formatCurrency` / `formatNumber` / `formatDate` / `formatRelativeTime` / `formatList` | Intl passthroughs — no separate currency module ([D53 locked](../../.workingdir/research/decisions-needed.md))                        |
+
+### Landed (later)
+
+| Export             | Purpose                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `<LangSync>`       | Auto-sets `<html lang>` + `<html dir>` via `getTextDirection(locale)` on route change (`./lang-sync`) |
+| `<LocaleSwitcher>` | Three preset variants tied to `ui/preset-{desktop,10foot,handheld}` (`./locale-switcher`)             |
+| `loadLocaleFont`   | Per-locale variable-font loader hook, pairs with `ui/font-preset-*` (`./load-locale-font`)            |
 
 ### Follow-through (not in v0.0.1)
 
-| Export | Purpose |
-|---|---|
-| `<LangSync>` hook | Auto-sets `<html lang>` + `<html dir>` via `getTextDirection(locale)` on route change |
-| `<LocaleSwitcher>` | Three preset variants tied to `ui/preset-{desktop,10foot,handheld}` |
+| Export      | Purpose                                              |
+| ----------- | ---------------------------------------------------- |
 | `typedKeys` | Passthrough of Paraglide's typed message-keys export |
-| `loadLocaleFont` | Per-locale variable-font loader hook (pairs with `ui/font-preset-*`) |
 
 ## Strategy
 
@@ -64,12 +69,15 @@ paraglideVitePlugin({
 
 ## Sub-exports
 
-| Path | Purpose |
-|---|---|
-| `@sveltesentio/i18n` | Full surface |
-| `@sveltesentio/i18n/direction` | `getTextDirection` + `TextDirection` (zero-dep pull — no Paraglide / DOM deps) |
-| `@sveltesentio/i18n/intl` | Intl formatter passthroughs alone |
-| `@sveltesentio/i18n/announcer` | Announcer + focus utilities (DOM-only) |
+| Path                                  | Purpose                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------ |
+| `@sveltesentio/i18n`                  | Full surface                                                                   |
+| `@sveltesentio/i18n/direction`        | `getTextDirection` + `TextDirection` (zero-dep pull — no Paraglide / DOM deps) |
+| `@sveltesentio/i18n/intl`             | Intl formatter passthroughs alone                                              |
+| `@sveltesentio/i18n/announcer`        | Announcer + focus utilities (DOM-only)                                         |
+| `@sveltesentio/i18n/load-locale-font` | `loadLocaleFont` per-locale variable-font loader                               |
+| `@sveltesentio/i18n/lang-sync`        | `<LangSync>` lang/dir auto-sync component                                      |
+| `@sveltesentio/i18n/locale-switcher`  | `<LocaleSwitcher>` preset-aware locale switcher                                |
 
 ## Test policy
 
@@ -81,10 +89,10 @@ paraglideVitePlugin({
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/i18n typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/i18n test` |
+| Task              | Command                                              |
+| ----------------- | ---------------------------------------------------- |
+| Typecheck         | `pnpm --filter @sveltesentio/i18n typecheck`         |
+| Unit tests        | `pnpm --filter @sveltesentio/i18n test`              |
 | Paraglide codegen | `pnpm --filter @sveltesentio/i18n paraglide:compile` |
 
 ## Related ADRs

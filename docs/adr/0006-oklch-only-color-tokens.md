@@ -1,6 +1,6 @@
 # ADR-0006: oklch-only color tokens, no HSL fallback
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D22 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Define all `@sveltesentio/ui` color tokens as `oklch(L C H)` inside `@theme` wit
 ## Consequences
 
 **Positive**:
+
 - Matches revenge + Lurkarr today; one token syntax framework-wide.
 - Uniform perceptual lightness simplifies WCAG contrast reasoning.
 - Wider P3 gamut available where the display supports it.
 
 **Negative / trade-offs**:
+
 - Pre-15.4 Safari, pre-111 Chrome, pre-113 Firefox are unsupported. Kiosk/embedded webviews shipped with older Chromium need an explicit browser-matrix check before deployment.
 - Brand-color tooling that only emits hex requires an oklch conversion step.
 
 **Documentation obligations**:
+
 - `docs/compose/theming.md` — oklch token authoring, WCAG contrast ratios per token.
 - `@sveltesentio/ui` AGENTS.md — browser floor banner.
 

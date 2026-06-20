@@ -8,24 +8,24 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 
 ### Landed (v0.0.1)
 
-| Export | Purpose | ADR |
-|---|---|---|
-| `SseClient` class | Native `EventSource` wrapper + auto-reconnect; accepts an injected `eventSourceFactory` (for tests / non-browser runtimes) + `setTimeoutImpl` hooks; tracks `attempt` + emits `onStateChange` for `idle \| connecting \| open \| closed` | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
-| `computeBackoff(attempt, options?)` | Exponential backoff with symmetric jitter, capped at `maxMs`; rejects invalid jitter bounds; accepts injectable `random()` for deterministic tests | ADR-0037 |
-| `createBufferedEmitter<T>({ bufferMs, onFlush })` | Throttles `$state` updates so 10k-msg/s feeds don't thrash the render loop (per AGENTS.md invariant); `flush()` drains synchronously; `stop()` drops pending | ADR-0037 |
-| `useSSE()` rune (`./use-sse`) | Runes wrapper over `SseClient`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `connected`; optional `bufferMs` backpressure via `createBufferedEmitter`; ties connect/close to the caller's `$effect` lifecycle (SSR-safe) | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
+| Export                                            | Purpose                                                                                                                                                                                                                                            | ADR                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `SseClient` class                                 | Native `EventSource` wrapper + auto-reconnect; accepts an injected `eventSourceFactory` (for tests / non-browser runtimes) + `setTimeoutImpl` hooks; tracks `attempt` + emits `onStateChange` for `idle \| connecting \| open \| closed`           | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
+| `computeBackoff(attempt, options?)`               | Exponential backoff with symmetric jitter, capped at `maxMs`; rejects invalid jitter bounds; accepts injectable `random()` for deterministic tests                                                                                                 | ADR-0037                                             |
+| `createBufferedEmitter<T>({ bufferMs, onFlush })` | Throttles `$state` updates so 10k-msg/s feeds don't thrash the render loop (per AGENTS.md invariant); `flush()` drains synchronously; `stop()` drops pending                                                                                       | ADR-0037                                             |
+| `useSSE()` rune (`./use-sse`)                     | Runes wrapper over `SseClient`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `connected`; optional `bufferMs` backpressure via `createBufferedEmitter`; ties connect/close to the caller's `$effect` lifecycle (SSR-safe) | [ADR-0037](../../docs/adr/0037-sse-native-useSSE.md) |
 
 ### Landed (v0.2.0)
 
-| Export | Purpose | ADR |
-|---|---|---|
+| Export                                                                | Purpose                                                                                                                                                                                                                                                                                                                                                                      | ADR                                                                     |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `createConnectStream({ call, onMessage, backoff?, setTimeoutImpl? })` | Transport-agnostic server-streaming state machine; consumes an **injected** async-iterable `call(signal)`, exposes `idle \| streaming \| closed` + `attempt`, reconnects with the shared `computeBackoff`; natural iterator completion is terminal `closed`, only thrown errors trigger backoff; holds no ConnectRPC / Svelte imports so it unit-tests against a fake stream | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
-| `useConnectStream()` rune (`./use-connect-stream`) | Runes wrapper over `createConnectStream`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `streaming`; optional `bufferMs` backpressure; ties start/stop to the caller's `$effect` (SSR-safe); transport injected via `call`, so the wrapper imports neither `@connectrpc/connect` nor `@connectrpc/connect-web` at module-eval | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
+| `useConnectStream()` rune (`./use-connect-stream`)                    | Runes wrapper over `createConnectStream`; reactive `state` / `lastMessage` / `messages` / `error` / `attempt` / `streaming`; optional `bufferMs` backpressure; ties start/stop to the caller's `$effect` (SSR-safe); transport injected via `call`, so the wrapper imports neither `@connectrpc/connect` nor `@connectrpc/connect-web` at module-eval                        | [ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md) |
 
 ### Follow-through (not yet shipped)
 
-| Hook | Transport | ADR |
-|---|---|---|
+| Hook     | Transport                                                 | ADR                                                           |
+| -------- | --------------------------------------------------------- | ------------------------------------------------------------- |
 | (Yjs WS) | `y-websocket` — lives in `@sveltesentio/collab`, not here | [ADR-0039](../../docs/adr/0039-y-websocket-createYjsStore.md) |
 
 ### Rejected
@@ -42,15 +42,16 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 
 ## Sub-exports
 
-| Path | Purpose |
-|---|---|
-| `@sveltesentio/realtime` | Everything above (non-`.svelte`) |
-| `@sveltesentio/realtime/sse` | `SseClient` + types |
-| `@sveltesentio/realtime/backoff` | `computeBackoff` + `BackoffOptions` (zero-dep pull) |
-| `@sveltesentio/realtime/buffered-emitter` | `createBufferedEmitter` alone |
-| `@sveltesentio/realtime/use-sse` | `useSSE()` rune |
-| `@sveltesentio/realtime/connect-stream` | `createConnectStream` + types (zero optional-peer pull) |
-| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` rune |
+| Path                                        | Purpose                                                                                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/realtime`                    | Everything above (non-`.svelte`)                                                                                                                                          |
+| `@sveltesentio/realtime/sse`                | `SseClient` + types                                                                                                                                                       |
+| `@sveltesentio/realtime/backoff`            | `computeBackoff` + `BackoffOptions` (zero-dep pull)                                                                                                                       |
+| `@sveltesentio/realtime/buffered-emitter`   | `createBufferedEmitter` alone                                                                                                                                             |
+| `@sveltesentio/realtime/use-sse`            | `useSSE()` rune                                                                                                                                                           |
+| `@sveltesentio/realtime/connect-stream`     | `createConnectStream` + types (zero optional-peer pull)                                                                                                                   |
+| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` rune                                                                                                                                                 |
+| `@sveltesentio/realtime/rpc`                | `createClient` + `connectErrorToProblem` — the ConnectRPC client surface (typed client factory + `ConnectError`→`ProblemError` mapping) that query's bridge composes with |
 
 ## Test policy
 
@@ -61,10 +62,10 @@ Three transports, three hooks — the unifying abstraction was rejected as leaky
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/realtime typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/realtime test` |
+| Task       | Command                                          |
+| ---------- | ------------------------------------------------ |
+| Typecheck  | `pnpm --filter @sveltesentio/realtime typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/realtime test`      |
 
 ## Related ADRs
 

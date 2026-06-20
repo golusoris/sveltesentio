@@ -1,6 +1,6 @@
 # ADR-0046: Three-tier theming — compile-time `@theme` + runtime cookie + user-customiser
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D160 + D163 in `.workingdir/research/decisions-needed.md`
@@ -34,15 +34,18 @@ Default header + settings-page surfaces: toggle lives in a header icon-button (o
 ## Consequences
 
 **Positive**:
+
 - Each tier evolves independently; palette rewrite doesn't touch the mode toggle.
 - Server-injected mode class eliminates flash-of-wrong-theme.
 - User customiser optional; frameworks without user-prefs storage skip tier 3.
 
 **Negative / trade-offs**:
+
 - Three-tier documentation overhead; consumers need to know which tier a change belongs to.
 - Tier 3 requires a consumer-provided persistence endpoint; no default.
 
 **Documentation obligations**:
+
 - `docs/compose/theming.md` — three-tier map with per-tier recipes.
 - `@sveltesentio/ui/preset` AGENTS.md — `@theme` authoring.
 - `@sveltesentio/ui/theme-customizer` AGENTS.md — consumer persistence contract.

@@ -1,6 +1,6 @@
 # ADR-0039: `y-websocket` default + custom `createYjsStore<T>` rune helper; no `y-svelte`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D81 + D82 in `.workingdir/research/decisions-needed.md`
@@ -29,15 +29,18 @@ No import of `y-svelte`.
 ## Consequences
 
 **Positive**:
+
 - Idiomatic Svelte 5 consumption: `<ul>{#each list as item}</ul>` against a runes proxy.
 - Single place to enforce correct subscribe/unsubscribe lifecycle.
 - subdo's pattern becomes a one-liner.
 
 **Negative / trade-offs**:
+
 - Helper maintains a proxy surface around Yjs types; edge cases (deep mutation, transaction scope) need explicit API.
 - Future Yjs majors may require proxy updates; pinned via ADR amendment.
 
 **Documentation obligations**:
+
 - `docs/compose/collab.md` — `createYjsStore` recipes + pitfalls (deep mutation, transactions).
 - `docs/compose/collab-persistence.md` — `y-indexeddb` opt-in.
 - `docs/compose/collab-p2p.md` — `y-webrtc` opt-in.

@@ -3,10 +3,10 @@
 Visual regression catches styling regressions that unit tests and axe
 miss: unintended border-radius changes, broken dark-mode overrides,
 layout shifts from a Tailwind utility rename. The contract anchors on
-**Histoire story URLs** (see [histoire-stories.md](histoire-stories.md))
+**Storybook story URLs** (see [histoire-stories.md](histoire-stories.md))
 so one story drives three lanes:
 
-1. **Manual review** — reviewer opens the Histoire preview URL.
+1. **Manual review** — reviewer opens the Storybook preview URL.
 2. **A11y** — axe-core runs per story in component tests.
 3. **Visual regression** — this recipe.
 
@@ -29,14 +29,14 @@ component snapshots. They are complementary, not alternatives.
 
 ```text
 Full route / page layout / flow                → Playwright
-One component across variants                  → Lost-Pixel (Histoire-anchored)
+One component across variants                  → Lost-Pixel (Storybook-anchored)
 Canvas / WebGL / media pixels                  → Playwright with mask
 Flash-free SSR theme hydration                 → Playwright (SSR required)
 PWA install prompt / offline shell             → Playwright (real SW)
 RTL / locale-specific layout                   → Playwright per locale
 ```
 
-Lost-Pixel against Histoire covers the component matrix cheaply.
+Lost-Pixel against Storybook covers the component matrix cheaply.
 Playwright handles anything that requires a real page context (SSR,
 service worker, URL params, cookies, network).
 
@@ -150,11 +150,13 @@ import { test, expect } from './_fixtures';
 
 for (const theme of ['light', 'dark'] as const) {
   test(`dashboard @${theme}`, async ({ page, prep }) => {
-    await page.context().addCookies([{
-      name: 'theme',
-      value: theme,
-      url: 'http://localhost:4173',
-    }]);
+    await page.context().addCookies([
+      {
+        name: 'theme',
+        value: theme,
+        url: 'http://localhost:4173',
+      },
+    ]);
     await prep('/dashboard');
     await expect(page).toHaveScreenshot(`dashboard-${theme}.png`);
   });
@@ -170,11 +172,13 @@ navigation so SSR renders the right theme and there's no flash.
 ```ts
 for (const locale of ['en', 'ar', 'he'] as const) {
   test(`checkout @${locale}`, async ({ page, prep }) => {
-    await page.context().addCookies([{
-      name: 'PARAGLIDE_LOCALE',
-      value: locale,
-      url: 'http://localhost:4173',
-    }]);
+    await page.context().addCookies([
+      {
+        name: 'PARAGLIDE_LOCALE',
+        value: locale,
+        url: 'http://localhost:4173',
+      },
+    ]);
     await prep('/checkout');
     await expect(page).toHaveScreenshot(`checkout-${locale}.png`);
   });
@@ -203,7 +207,7 @@ mask with CSS selectors that span layout — you'll hide real regressions.
 
 ## Lost-Pixel for story-level
 
-Lost-Pixel runs against the **Histoire build output** and snapshots
+Lost-Pixel runs against the **Storybook build output** and snapshots
 each story. Install:
 
 ```bash
@@ -216,8 +220,8 @@ pnpm add -D lost-pixel
 import { CustomProjectConfig } from 'lost-pixel';
 
 export const config: CustomProjectConfig = {
-  histoireShots: {
-    histoireUrl: './packages/ui/dist-histoire',
+  storybookShots: {
+    storybookUrl: './apps/storybook/storybook-static',
   },
   lostPixelProjectId: 'sveltesentio-ui',
   ciBuildId: process.env.GITHUB_SHA,
@@ -235,7 +239,7 @@ export const config: CustomProjectConfig = {
 Run:
 
 ```bash
-pnpm --filter @sveltesentio/ui histoire:build
+pnpm --filter @sveltesentio/storybook build-storybook
 pnpm exec lost-pixel
 ```
 
@@ -265,7 +269,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @sveltesentio/ui histoire:build
+      - run: pnpm --filter @sveltesentio/storybook build-storybook
       - run: pnpm exec lost-pixel
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -350,7 +354,7 @@ behavior) that jsdom can't provide.
 - **Lost-Pixel without threshold.** `threshold: 0` blocks every AA
   change. Start at `0.002` (0.2%) and tighten per component.
 - **Percy / Chromatic as the default.** Paid SaaS where Lost-Pixel +
-  self-hosted histoire build covers the same ground. Only reach for
+  self-hosted Storybook build covers the same ground. Only reach for
   them if the team needs the collaboration UI (cost-benefit per
   consumer, not a framework default).
 

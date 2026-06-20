@@ -1,6 +1,6 @@
 # ADR-0004: Thin `@sveltesentio/flow` wrapping `@xyflow/svelte` + elkjs-layout helper + palette
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D173 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Ship `@sveltesentio/flow` as a **thin** wrapper that provides: a11y-defaulted no
 ## Consequences
 
 **Positive**:
+
 - subdo upgrade path is an import rewrite, not a rebuild.
 - elkjs wiring + category theming shipped once; future flow apps inherit the defaults.
 - A11y defaults (focusable nodes, ARIA on edges) enforced at framework boundary.
 
 **Negative / trade-offs**:
+
 - Single-adopter evidence (subdo only) — watch for over-fitting to subdo's node model.
 - Pinned matrix of `@xyflow/svelte` × `elkjs` × `yjs` to maintain.
 
 **Documentation obligations**:
+
 - `docs/compose/flow-advanced.md` — smart-handle-routing + collision-drop recipes for apps that need them (outside the wrapper).
 - `@sveltesentio/flow` AGENTS.md — pinned matrix + a11y contract.
 

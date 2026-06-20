@@ -1,6 +1,6 @@
 # ADR-0026: `marked` + `DOMPurify` for runtime markdown; `mdsvex` for authored markdown
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D28 + D168 in `.workingdir/research/decisions-needed.md`
@@ -32,15 +32,18 @@ Fold D168 (keep wrapper) into this ADR — the DOMPurify sink is exactly the cro
 ## Consequences
 
 **Positive**:
+
 - XSS sink closed by construction; every `innerHTML` path in `ui/markdown` is DOMPurified.
 - Authored docs stay ergonomic via mdsvex.
 - arca's TODO pattern replaced with a single import.
 
 **Negative / trade-offs**:
+
 - Two deps where one might feel simpler; split reflects genuinely distinct concerns.
 - DOMPurify allowlist maintenance is now a framework responsibility — changes go via ADR amendment.
 
 **Documentation obligations**:
+
 - `docs/compose/markdown.md` — runtime vs build-time guidance, allowlist rationale, unsafe escape hatch.
 - `docs/compliance/xss-sinks.md` (new) — lists every `innerHTML` boundary and how `@sveltesentio/*` closes it.
 - Downstream migration: arca + revenge replace direct `marked.parse` calls with `<Markdown>`.

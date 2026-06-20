@@ -1,6 +1,6 @@
 # ADR-0052: Clock injection — hybrid context-rune + `AsyncLocalStorage` module singleton
 
-- **Status**: Proposed (audit complete)
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D13 in `.workingdir/research/decisions-needed.md`
@@ -38,17 +38,20 @@ All `Date.now()` / `new Date()` / `performance.now()` stays banned in package so
 ## Consequences
 
 **Positive**:
+
 - Mirrors golusoris's fx-injected ergonomics — one root wire-up, ambient reads.
 - Runes-native `useClock()` inside components; correct request scoping outside them via Node 24-stable `AsyncLocalStorage` (Stability: 2 per Node docs).
 - Hydration hazard closed: `load` serializes `serverNow`; first browser `$derived` view matches SSR output.
 - Tab-scoped module singleton on browser is safe — one JS realm per tab; no cross-request contamination class of bugs exists client-side.
 
 **Negative / trade-offs**:
+
 - Three public entry points (`setClock`, `useClock`, `getClock`) instead of one — documented decisively in the compose recipe.
 - Node-only on the server side (no browser ALS); framework commits to Node ≥24 anyway (ADR-0021), so this is aligned.
 - `withClock` must be composed with any other `Handle` via `sequence()` — not automatic; recipe shows the canonical form.
 
 **Documentation obligations**:
+
 - `docs/compose/clock-injection.md` — `setClock` / `useClock` / `getClock` recipes, `withClock` in `hooks.server.ts`, hydration idiom with `serverNow`.
 - `@sveltesentio/core` AGENTS.md — `Clock` interface, ban on direct `Date`/`performance.now` outside the Clock.
 - ESLint rule `@sveltesentio/no-direct-time` stays enabled (extends existing rule).

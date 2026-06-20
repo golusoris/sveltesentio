@@ -4,14 +4,14 @@
 
 ## Status
 
-✅ v0.1.0 — transport-agnostic `validateUpload` (magic-byte sniff via `file-type`,
+✅ v0.2.0 — transport-agnostic `validateUpload` (magic-byte sniff via `file-type`,
 never trusts `File.type`) + `detectFileType`, and `stripExif` (destructive
 canvas re-encode) + `readExif`. **No tus dependency** in the validate/strip path
 (`./validate`, `./exif` sub-exports), so a downstream with no tus server can
-validate + strip then POST via `FormData`. The `tus` resumable wrapper is
-follow-through. Locked through [ADR-0041](../../docs/adr/0041-uploads-tus-exifr-filetype.md).
+validate + strip then POST via `FormData`. The `tus` resumable wrapper
+(`createResumableUpload`) ships on the `./resumable` sub-export. Locked through [ADR-0041](../../docs/adr/0041-uploads-tus-exifr-filetype.md).
 
-## Planned surface
+## Surface
 
 ```ts
 import { validateUpload, stripExif, createResumableUpload } from '@sveltesentio/uploads';

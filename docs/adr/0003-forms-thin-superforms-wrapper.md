@@ -1,6 +1,6 @@
 # ADR-0003: Thin `@sveltesentio/forms` wrapping Superforms v2 + Zod v4 (+ optional Formsnap); plain-state pattern documented
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D40 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Ship `@sveltesentio/forms` as a **thin** wrapper that re-exports Superforms v2 p
 ## Consequences
 
 **Positive**:
+
 - Matches all four apps' actual behavior (progressive-enhancement path when wanted, plain `$state` when not).
 - Zod v4 adapter wired once, consumers don't re-learn.
 - Optional Formsnap re-export keeps the bits-ui path cheap.
 
 **Negative / trade-offs**:
+
 - Two documented paths = users must pick; docs/compose/forms.md must be clear about when each applies.
 - Thin wrapper is still a maintained surface (pin matrix: Superforms × Zod × Formsnap).
 
 **Documentation obligations**:
+
 - `docs/compose/forms.md` — plain-state load-save pattern; when to reach for Superforms.
 - `@sveltesentio/forms` AGENTS.md — pinned version matrix + adapter export map.
 

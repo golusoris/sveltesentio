@@ -13,14 +13,15 @@ lives in [`@sveltesentio/collab`](../collab).
 
 ## Sub-exports
 
-| Import | What |
-|---|---|
-| `@sveltesentio/realtime/sse` | `SseClient` — native `EventSource` wrapper + auto-reconnect |
-| `@sveltesentio/realtime/backoff` | `computeBackoff` — jittered exponential backoff |
-| `@sveltesentio/realtime/buffered-emitter` | `createBufferedEmitter` — throttled batch emitter |
-| `@sveltesentio/realtime/use-sse` | `useSSE()` — Svelte 5 runes wrapper over `SseClient` |
-| `@sveltesentio/realtime/connect-stream` | `createConnectStream` — transport-agnostic server-streaming state machine |
-| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` — Svelte 5 runes wrapper over `createConnectStream` |
+| Import                                      | What                                                                         |
+| ------------------------------------------- | ---------------------------------------------------------------------------- |
+| `@sveltesentio/realtime/sse`                | `SseClient` — native `EventSource` wrapper + auto-reconnect                  |
+| `@sveltesentio/realtime/backoff`            | `computeBackoff` — jittered exponential backoff                              |
+| `@sveltesentio/realtime/buffered-emitter`   | `createBufferedEmitter` — throttled batch emitter                            |
+| `@sveltesentio/realtime/use-sse`            | `useSSE()` — Svelte 5 runes wrapper over `SseClient`                         |
+| `@sveltesentio/realtime/connect-stream`     | `createConnectStream` — transport-agnostic server-streaming state machine    |
+| `@sveltesentio/realtime/use-connect-stream` | `useConnectStream()` — Svelte 5 runes wrapper over `createConnectStream`     |
+| `@sveltesentio/realtime/rpc`                | `createClient` + `connectErrorToProblem` — curated ConnectRPC client surface |
 
 ## Installation
 

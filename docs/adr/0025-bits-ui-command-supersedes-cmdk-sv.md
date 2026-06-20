@@ -1,6 +1,6 @@
 # ADR-0025: `bits-ui` Command primitive supersedes `cmdk-sv`; `tinykeys` bundled in `ui/cmd`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D27 in `.workingdir/research/decisions-needed.md`
@@ -25,15 +25,18 @@
 ## Consequences
 
 **Positive**:
+
 - Command primitive stays in lockstep with the rest of shadcn-svelte's upgrade cadence.
 - `tinykeys` covers global shortcut registration without pulling in a second keybinder.
 - arca's existing `tinykeys` install consolidates into the wrapper.
 
 **Negative / trade-offs**:
+
 - Consumers previously on `cmdk-sv` migrate imports.
 - bits-ui major bumps ripple into `ui/cmd`; pinned via ADR amendment.
 
 **Documentation obligations**:
+
 - `docs/compose/command-palette.md` — registry authoring, shortcut composer, auth-gated items.
 - `awesome-harvest.md:61` pruned (drop `cmdk-sv` row).
 - Migration note in downstream apps using `cmdk-sv` directly.

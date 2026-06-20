@@ -6,12 +6,12 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-v0.2.0 — headless core landed. The pure logic for HLS rendition selection,
+v0.4.1 — full surface shipped. The pure logic for HLS rendition selection,
 OS media-session metadata, a play/pause/quality state machine, a
 bring-your-own-`hls.js` attachment seam, and responsive-image `srcset` / `sizes`
-builders all ship and are unit-tested. The full `<Player>` UI shell
-(`vidstack`) and the `./carousel` re-export are tracked as follow-throughs (see
-[AGENTS.md](AGENTS.md)) and are **not** in this release.
+builders all ship and are unit-tested. On top of that, the a11y `<Player>` UI
+shell, the responsive blur-up `<Image>`, and the preset-aware `<Carousel>` all
+ship, backed by a Playwright e2e harness.
 
 ## Install
 

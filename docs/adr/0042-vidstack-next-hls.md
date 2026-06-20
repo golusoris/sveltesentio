@@ -1,6 +1,6 @@
 # ADR-0042: Vidstack `@next` (1.12.13) + `hls.js@^1.6` for media player
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D110 + D111 in `.workingdir/research/decisions-needed.md`
@@ -26,15 +26,18 @@ revenge ships Vidstack for its video UI. Critical gotcha: **npm `vidstack@latest
 ## Consequences
 
 **Positive**:
+
 - Svelte 5-native media player with accessibility defaults.
 - Adaptive HLS + DASH + MP4 via the same component.
 - revenge's migration is a one-shot version bump.
 
 **Negative / trade-offs**:
+
 - `@next` dist-tag is Vidstack's choice; must re-audit annually whether `latest` rolls over.
 - `hls.js` is a ~60 KB gzipped payload; dyn-import keeps it off Safari bundles.
 
 **Documentation obligations**:
+
 - `docs/compose/media-player.md` — HLS vs DASH vs MP4, captions, keyboard controls.
 - `@sveltesentio/media/player` AGENTS.md — **explicit warning about `@next` dist-tag**.
 - Migration note: any app on `vidstack@latest` (legacy 0.6.x) upgrades.

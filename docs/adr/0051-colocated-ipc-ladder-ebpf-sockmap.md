@@ -1,6 +1,6 @@
 # ADR-0051: Colocated-IPC ladder for SvelteKit ↔ Golusoris; custom eBPF SK_MSG sockmap as top tier
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D200 in `.workingdir/research/decisions-needed.md`
@@ -17,7 +17,7 @@ Three tiers deliver progressively more performance at progressively more ops cos
 
 ## Decision
 
-Ship all three tiers as documented deployment options. Tier 3 requires changes on both sides — tracked in [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27).
+Ship all three tiers as documented deployment options. Tier 3 required changes on both sides — now shipped: golusoris `pkg/sockmap` (PR #268) and `@sveltesentio/ipc-sockmap@0.2.0` (`./sockmap` observe/handoff client). [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) is closed; all four acceptance criteria are met.
 
 - **`docs/compose/colocated-ipc.md`** covers Tiers 1 + 2 with ready-to-paste snippets (undici `Agent({ socketPath })`, Go `net.Listen("unix", ...)`, Cilium `socketLB` flag).
 - **`@sveltesentio/ipc-sockmap` package** (new): Tier 3 Node-side client.
@@ -37,17 +37,20 @@ Ship all three tiers as documented deployment options. Tier 3 requires changes o
 ## Consequences
 
 **Positive**:
+
 - Tier 1 is one config change and wins ~2-3× throughput — most users stop here.
 - Tier 2 wins additional ~10-30% on cluster-native deployments without code changes.
 - Tier 3 provides measurable wins at high-throughput scale without changing the HTTP/RPC protocol surface.
 - Ownership boundary is clean: golusoris owns the BPF program (closer to its own FD lifecycle), sveltesentio is a map client.
 
 **Negative / trade-offs**:
+
 - Tier 3 requires CAP_BPF + cgroup v2 + ≥5.10 kernel. Non-Linux hosts (macOS, Windows) fall back to Tier 1 by construction.
 - Sveltesentio's `ipc-sockmap` loader must track golusoris's BPF object version; map layout is part of the contract.
 - Integration test requires privileged Docker / KVM.
 
 **Documentation obligations**:
+
 - `docs/compose/colocated-ipc.md` — Tier 1 + 2 recipes.
 - `@sveltesentio/ipc-sockmap` AGENTS.md — Tier 3 map contract + degradation semantics.
 - Link to golusoris#27 tracking golusoris-side work.
@@ -55,6 +58,6 @@ Ship all three tiers as documented deployment options. Tier 3 requires changes o
 ## Evidence
 
 - `.workingdir/research/decisions-needed.md` — D200 locked 2026-04-17.
-- golusoris/golusoris#27 — filed 2026-04-17 with four acceptance criteria.
+- golusoris/golusoris#27 — closed/resolved; `pkg/sockmap` shipped via golusoris PR #268 and the four acceptance criteria are met.
 - Linux selftest: `tools/testing/selftests/bpf/progs/test_sockmap_kern.c`.
 - Cilium `socketLB` documentation — reference implementation of Tier 2.

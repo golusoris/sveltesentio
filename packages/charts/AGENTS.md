@@ -10,19 +10,27 @@ Thin wrapper over **LayerChart v2-next** (via shadcn-svelte Chart) + **uPlot** e
 
 The a11y envelope + the framework-agnostic, unit-tested core. The wrapper does **not** import LayerChart — the caller renders the visual inside the `chart` snippet, so the package survives LayerChart v2-next's volatile pre-release API.
 
-| Export | Purpose | ADR |
-|---|---|---|
-| `<ChartFigure>` (`./figure`) | `<figure>` / `<figcaption>` + `role="img"` + `aria-labelledby` / `aria-describedby` + visually-hidden `<table>` SR fallback built from `{series, x, y}`; `chart` snippet is the visual escape hatch | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
-| `buildDataTableModel()` (`./a11y-table`) | Pure builder turning `{series, x, y}` into the SR data-table model; unions sparse x values in first-seen order, `—` placeholder for gaps / nullish; **unit-tested** | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
-| `dashboardPreset()` / `prefersReducedMotion()` (`./preset`) | Sensible LayerChart defaults (padding, both grids, x-bisect tooltip, cubic-out tween) with motion collapsed to 0 under reduced-motion; SSR-safe media query read; **unit-tested** | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
+| Export                                                      | Purpose                                                                                                                                                                                             | ADR                                                                          |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `<ChartFigure>` (`./figure`)                                | `<figure>` / `<figcaption>` + `role="img"` + `aria-labelledby` / `aria-describedby` + visually-hidden `<table>` SR fallback built from `{series, x, y}`; `chart` snippet is the visual escape hatch | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
+| `buildDataTableModel()` (`./a11y-table`)                    | Pure builder turning `{series, x, y}` into the SR data-table model; unions sparse x values in first-seen order, `—` placeholder for gaps / nullish; **unit-tested**                                 | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
+| `dashboardPreset()` / `prefersReducedMotion()` (`./preset`) | Sensible LayerChart defaults (padding, both grids, x-bisect tooltip, cubic-out tween) with motion collapsed to 0 under reduced-motion; SSR-safe media query read; **unit-tested**                   | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
+
+### Landed (v0.5.0)
+
+The semantic chart components, the low-level `<Chart>` re-export, the uPlot escape hatch, and the oklch palette helpers.
+
+| Export                                                                                                                                 | Purpose                                                                                                                             | ADR                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `<LineChart>` / `<AreaChart>` / `<BarChart>` / `<PieChart>` / `<ScatterChart>` (`./line` / `./area` / `./bar` / `./pie` / `./scatter`) | LayerChart-backed semantic charts with oklch palette                                                                                | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
+| `<Chart>` low-level (`./chart`)                                                                                                        | LayerChart primitive re-export for custom compositions                                                                              | —                                                                            |
+| `createUPlotChart()` (`./uplot`)                                                                                                       | Escape hatch for >5k-pt or high-Hz feeds (network graphs, observability sparklines), fed by `@sveltesentio/realtime` SSE (ADR-0037) | [docs/compose/charts-realtime.md](../../docs/compose/charts-realtime.md)     |
+| `chartPalette` / `chartSeriesColor()` (`./palette`) + series helpers (`./chart-series`)                                                | Semantic oklch palette + `{series, x, y}` mappers shared by the components and `<ChartFigure>`                                      | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
 
 ### Planned / follow-through
 
-| Export | Purpose | ADR |
-|---|---|---|
-| `<LineChart>` / `<AreaChart>` / `<BarChart>` / `<PieChart>` / `<ScatterChart>` | LayerChart-backed semantic charts with oklch palette | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
-| `<Chart>` low-level | LayerChart primitive re-export for custom compositions | — |
-| `createUPlotChart()` | Escape hatch for >5k-pt or high-Hz feeds (network graphs, observability sparklines), fed by `@sveltesentio/realtime` SSE (ADR-0037) | [docs/compose/charts-realtime.md](../../docs/compose/charts-realtime.md) (TBD) |
+| Export                                         | Purpose                                                            | ADR                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `@sveltesentio/chart-a11y-wrapper` ESLint rule | Flags bare LayerChart / uPlot render that bypasses `<ChartFigure>` | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md) |
 
 ## Why LayerChart v2-next (primary)
@@ -65,10 +73,10 @@ Every chart rendered through this package **must** go through `<ChartFigure>`. B
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/charts typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/charts test` |
+| Task       | Command                                        |
+| ---------- | ---------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/charts typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/charts test`      |
 
 ## Related ADRs
 

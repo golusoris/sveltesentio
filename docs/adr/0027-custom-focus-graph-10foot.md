@@ -1,6 +1,6 @@
 # ADR-0027: Custom focus-graph D-pad router for `ui/preset-10foot`; WICG spatial-nav polyfill deferred
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D29 + D141 in `.workingdir/research/decisions-needed.md`
@@ -31,15 +31,18 @@ Defer the WICG CSS Spatial Navigation polyfill — revisit in v0.3 if the spec a
 ## Consequences
 
 **Positive**:
+
 - Single focus-graph engine across dashboard / 10-foot / handheld presets.
 - No dead polyfill dependency.
 - embla carousel navigation integrates naturally via `slideFocus`.
 
 **Negative / trade-offs**:
+
 - Custom focus-graph is ours to maintain; test matrix must cover D-pad + screen-reader at once.
 - If CSS Spatial Nav ships, we may want to deprecate the custom graph. Re-audit quarterly.
 
 **Documentation obligations**:
+
 - `docs/compose/10-foot-navigation.md` — focus registration contract, D-pad keymap, embla integration.
 - `@sveltesentio/ui/preset-10foot` AGENTS.md — focus-graph API + test harness.
 - Playwright scenarios covering arrow-key navigation in a grid + carousel.

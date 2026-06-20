@@ -1,6 +1,6 @@
 # ADR-0034: HttpOnly + Secure + SameSite=Lax cookie sessions; no JS-readable tokens
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D62 in `.workingdir/research/decisions-needed.md`
@@ -25,15 +25,18 @@ revenge currently stores refresh tokens in `localStorage` — dispositive XSS an
 ## Consequences
 
 **Positive**:
+
 - XSS cannot exfiltrate session tokens.
 - No JS-side token handling — smaller attack surface + no refresh-race bugs.
 - ESLint rule prevents regression.
 
 **Negative / trade-offs**:
+
 - Cross-origin SPAs talking to Golusoris need cookie-friendly deployment (same eTLD+1 or CORS with credentials).
 - No cookie-less embed scenarios (iframes without `SameSite=None; Secure`) — future ADR if needed.
 
 **Documentation obligations**:
+
 - `docs/compliance/xss-sinks.md` — session cookie as the token sink.
 - Downstream migration (critical): revenge moves refresh token out of localStorage.
 - `@sveltesentio/auth` AGENTS.md — cookie contract with Golusoris.

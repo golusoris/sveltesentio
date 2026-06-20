@@ -6,7 +6,7 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-🚧 Phase 1 stub — implementation begins in Phase 2+.
+v0.3.0 — shipped: `paraglideVitePlugin` passthrough, `getTextDirection`/RTL, Intl formatters, the a11y announcer, `loadLocaleFont`, and the `<LangSync>` / `<LocaleSwitcher>` components.
 
 ## Installation
 

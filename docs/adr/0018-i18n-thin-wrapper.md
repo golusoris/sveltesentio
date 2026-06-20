@@ -1,6 +1,6 @@
 # ADR-0018: Keep thin `@sveltesentio/i18n` wrapper (Paraglide v2 re-export + a11y action items)
 
-- **Status**: Proposed (audit complete)
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D172 in `.workingdir/research/decisions-needed.md`

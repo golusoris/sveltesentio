@@ -6,18 +6,18 @@
 
 Located in `.claude/skills/`:
 
-| Skill | When to use |
-|---|---|
-| `wire-module` | Add a new `@sveltesentio/*` package to the monorepo |
+| Skill            | When to use                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| `wire-module`    | Add a new `@sveltesentio/*` package to the monorepo         |
 | `scaffold-route` | Generate a SvelteKit route with Superforms + TanStack Query |
-| `add-shadcn` | Add a shadcn-svelte component via the CLI wrapper |
-| `add-storybook` | Add a Storybook story for a component |
+| `add-shadcn`     | Add a shadcn-svelte component via the CLI wrapper           |
+| `add-storybook`  | Add a Storybook story for a component                       |
 
 Invoke via `/<skill-name>` in Claude Code.
 
 ## Hooks active
 
-Located in `.claude/hooks/`:
+Configured in `.claude/settings.json`:
 
 - Touching `**/+server.ts` → auto-loads SvelteKit server docs + openapi-fetch patterns
 - Touching `**/+page.svelte` → auto-loads Svelte 5 runes docs + shadcn-svelte patterns
@@ -65,7 +65,7 @@ Every merged commit: **0 eslint · 0 type errors · 0 audit vulns · axe-clean**
 
 ## Project state
 
-- Pre-alpha (v0.0.x). Phase 1 (foundation) in progress.
+- v0.1.0 milestone cut — all 19 `@sveltesentio/*` packages published to npm. Trunk-based (main-only).
 - See [.workingdir/PLAN.md](.workingdir/PLAN.md) for the full roadmap.
 - See [.workingdir/STATE.md](.workingdir/STATE.md) for current status + decision log.
 

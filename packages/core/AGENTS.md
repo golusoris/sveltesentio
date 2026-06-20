@@ -15,17 +15,18 @@
 
 ## Sub-exports
 
-| Export | Module | Status |
-|---|---|---|
-| `@sveltesentio/core` | `src/index.ts` — re-exports every sub-export | v0.0.x |
-| `@sveltesentio/core/clock` | `src/clock.ts` — clock injection | **shipped** (ADR-0052) |
-| `@sveltesentio/core/env` | `src/env.ts` — `createEnv` / `requireEnv` / `EnvValidationError` | **shipped** (ADR-0001) |
-| `@sveltesentio/core/id` | `src/id.ts` — `newId` / `newIdV4` / `brandId` / `idToTimestamp` | **shipped** (ADR-0023) |
-| `@sveltesentio/core/problem` | `src/problem.ts` — `ProblemError` + RFC 9457 parser | **shipped** (ADR-0019) |
-| `@sveltesentio/core/http` | `src/http.ts` — `problemMiddleware` for `openapi-fetch` | **shipped** (ADR-0019) |
-| `@sveltesentio/core/csp` | `src/csp.ts` — nonce + directive builders | **shipped** |
-| `@sveltesentio/core/vite` | `src/vite.ts` — `sentioPlugin` Vite hook + `checkBundleBudget` | **shipped** |
-| `@sveltesentio/core/eslint` | `src/eslint.ts` — `no-direct-time` flat-config plugin | **shipped** |
+| Export                       | Module                                                                                                                                                                   | Status                 |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| `@sveltesentio/core`         | `src/index.ts` — re-exports every sub-export                                                                                                                             | v0.0.x                 |
+| `@sveltesentio/core/clock`   | `src/clock.ts` — clock injection                                                                                                                                         | **shipped** (ADR-0052) |
+| `@sveltesentio/core/env`     | `src/env.ts` — `createEnv` / `requireEnv` / `EnvValidationError`                                                                                                         | **shipped** (ADR-0001) |
+| `@sveltesentio/core/id`      | `src/id.ts` — `newId` / `newIdV4` / `brandId` / `idToTimestamp`                                                                                                          | **shipped** (ADR-0023) |
+| `@sveltesentio/core/problem` | `src/problem.ts` — `ProblemError` + RFC 9457 parser                                                                                                                      | **shipped** (ADR-0019) |
+| `@sveltesentio/core/http`    | `src/http.ts` — `problemMiddleware` for `openapi-fetch`                                                                                                                  | **shipped** (ADR-0019) |
+| `@sveltesentio/core/csp`     | `src/csp.ts` — nonce + directive builders                                                                                                                                | **shipped**            |
+| `@sveltesentio/core/vite`    | `src/vite.ts` — `sentioPlugin` Vite hook + `checkBundleBudget`                                                                                                           | **shipped**            |
+| `@sveltesentio/core/eslint`  | `src/eslint.ts` — `no-direct-time` flat-config plugin                                                                                                                    | **shipped**            |
+| `@sveltesentio/core/sentio`  | `sentio.d.ts` — ambient types for the `$sentio` virtual module (`defineSentioConfig` / `sentioConfigSchema` live in `src/sentio-config.ts`, re-exported from the barrel) | **shipped** (0.3.0)    |
 
 Add a sub-export entry to `package.json` whenever a new module lands — never rely on deep imports.
 
@@ -64,15 +65,15 @@ Add a sub-export entry to `package.json` whenever a new module lands — never r
 - [ ] `testClock({ now })` helper in `@sveltesentio/testing/clock` — package not yet scaffolded. Tracked in [STATE.md](../../.workingdir/STATE.md).
 - [x] `@sveltesentio/no-direct-time` ESLint rule — shipped as the `@sveltesentio/core/eslint` flat-config plugin (`rules: { 'no-direct-time' }`); register in `eslint.config.js`.
 - [x] Bundle-size gate wired into `sentioPlugin` (`bundleBudget` / `bundleBudgetWarnOnly`; `generateBundle` hook).
-- [ ] `$sentio` virtual module grows typed schema once downstream consumers settle the contents.
+- [x] `$sentio` virtual module typed schema shipped in 0.3.0 — `defineSentioConfig` / `sentioConfigSchema` + the `./sentio` ambient-types subpath (`sentio.d.ts`).
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/core typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/core test` |
-| Lint | `pnpm --filter @sveltesentio/core lint` |
+| Task       | Command                                      |
+| ---------- | -------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/core typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/core test`      |
+| Lint       | `pnpm --filter @sveltesentio/core lint`      |
 
 ## Related ADRs
 

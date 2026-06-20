@@ -1,6 +1,6 @@
 # ADR-0019: `openapi-fetch` + RFC 9457 middleware for typed HTTP against Golusoris
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D14 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Lock `openapi-fetch@^0.17` + `openapi-typescript` (dev) inside `@sveltesentio/co
 ## Consequences
 
 **Positive**:
+
 - 1:1 fidelity with Golusoris `ogenkit` error contract (RFC 9457).
 - Zero code generation of runtime — only types emitted from `openapi-typescript`.
 - subdo's existing pin aligns without migration.
 
 **Negative / trade-offs**:
+
 - Middleware becomes a thin new surface we own.
 - openapi-fetch relies on OpenAPI 3.1 input — spec generation is Golusoris's job.
 
 **Documentation obligations**:
+
 - `docs/compose/http-client.md` — middleware authoring, `ProblemError` narrowing, retries.
 - `@sveltesentio/core` AGENTS.md — pinned matrix (`openapi-fetch` × Zod v4 schema).
 

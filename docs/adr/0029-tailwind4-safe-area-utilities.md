@@ -1,6 +1,6 @@
 # ADR-0029: Tailwind 4 `@utility` safe-area helpers + `viewport-fit=cover`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D143 in `.workingdir/research/decisions-needed.md`
@@ -29,15 +29,18 @@ Plus: `@sveltesentio/shell` injects `<meta name="viewport" content="viewport-fit
 ## Consequences
 
 **Positive**:
+
 - One import (`@sveltesentio/ui/preset`) unlocks safe-area-aware layouts across iOS PWA, Android edge-to-edge, TV.
 - Logical-property variants cooperate with ADR-0040 RTL posture.
 - No runtime cost (CSS-only).
 
 **Negative / trade-offs**:
+
 - Consumers must load the preset CSS once (standard Tailwind preset pattern).
 - Tailwind 4 `@utility` syntax is new; locked via ADR-0005.
 
 **Documentation obligations**:
+
 - `docs/compose/safe-area.md` — when to use which variant; meta tag requirement.
 - `@sveltesentio/ui/preset` AGENTS.md — utility list + Tailwind 4 gotchas.
 

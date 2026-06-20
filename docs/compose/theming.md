@@ -13,12 +13,12 @@ dark mode).
 
 ## Why oklch
 
-| Criterion | oklch | HSL | hex |
-|---|---|---|---|
-| Perceptual uniformity | ✅ same L value ≈ same visual lightness | ❌ same L, different visual | ❌ |
-| Gamut (P3 displays) | ✅ native | ❌ sRGB only | ❌ sRGB only |
-| Contrast reasoning | ✅ swap `L`, chroma + hue stable | ❌ shifts visually | ❌ |
-| Browser support | 99%+ of evergreen | 100% | 100% |
+| Criterion             | oklch                                   | HSL                         | hex          |
+| --------------------- | --------------------------------------- | --------------------------- | ------------ |
+| Perceptual uniformity | ✅ same L value ≈ same visual lightness | ❌ same L, different visual | ❌           |
+| Gamut (P3 displays)   | ✅ native                               | ❌ sRGB only                | ❌ sRGB only |
+| Contrast reasoning    | ✅ swap `L`, chroma + hue stable        | ❌ shifts visually          | ❌           |
+| Browser support       | 99%+ of evergreen                       | 100%                        | 100%         |
 
 Browser floor: **Safari ≥ 15.4, Chrome ≥ 111, Firefox ≥ 113**. Pre-floor
 kiosk / embedded webviews must check their Chromium version before
@@ -35,14 +35,14 @@ properties under `@theme`. Channels in order: `L C H` (`0..1`, `0..0.4+`,
 @theme {
   --color-bg: oklch(0.98 0.002 250);
   --color-fg: oklch(0.18 0.015 250);
-  --color-accent: oklch(0.70 0.15 250);
+  --color-accent: oklch(0.7 0.15 250);
   --color-accent-fg: oklch(0.99 0 0);
   --color-muted: oklch(0.94 0.005 250);
   --color-muted-fg: oklch(0.48 0.01 250);
   --color-border: oklch(0.88 0.008 250);
-  --color-ring: oklch(0.70 0.15 250 / 0.5);
+  --color-ring: oklch(0.7 0.15 250 / 0.5);
   --color-success: oklch(0.72 0.16 155);
-  --color-warning: oklch(0.80 0.16 85);
+  --color-warning: oklch(0.8 0.16 85);
   --color-danger: oklch(0.66 0.22 28);
 }
 ```
@@ -61,15 +61,16 @@ properties under `@theme`. Channels in order: `L C H` (`0..1`, `0..0.4+`,
 
 Every shipped token pair is WCAG 2.2 AA:
 
-| Pair | Ratio target |
-|---|---|
-| `fg` on `bg` | ≥ 7:1 (AAA) |
-| `accent-fg` on `accent` | ≥ 4.5:1 |
-| `muted-fg` on `muted` | ≥ 4.5:1 |
+| Pair                                   | Ratio target                         |
+| -------------------------------------- | ------------------------------------ |
+| `fg` on `bg`                           | ≥ 7:1 (AAA)                          |
+| `accent-fg` on `accent`                | ≥ 4.5:1                              |
+| `muted-fg` on `muted`                  | ≥ 4.5:1                              |
 | `success`, `warning`, `danger` on `bg` | ≥ 3:1 (non-text UI) + never sole cue |
 
-A CI axe-core check on every Histoire story enforces this. If you author a
-new token, run `pnpm run check:contrast` before pushing.
+A CI axe-core check on every Storybook story (via `addon-a11y`) enforces
+this. If you author a new token, run `pnpm run check:contrast` before
+pushing.
 
 ## Dark mode
 
@@ -84,8 +85,8 @@ Cookie-backed, SSR-injected, flash-free. One root `data-theme` attribute on
   --color-accent: oklch(0.78 0.14 250);
   --color-accent-fg: oklch(0.12 0.01 250);
   --color-muted: oklch(0.24 0.01 250);
-  --color-muted-fg: oklch(0.70 0.008 250);
-  --color-border: oklch(0.30 0.012 250);
+  --color-muted-fg: oklch(0.7 0.008 250);
+  --color-border: oklch(0.3 0.012 250);
   /* …etc */
 }
 ```
@@ -111,12 +112,12 @@ tenant. Each tier is a separate CSS layer so specificity is predictable.
 ```css
 /* app/src/tokens/brand.css — app-level override */
 @theme {
-  --color-accent: oklch(0.70 0.19 28); /* brand red */
+  --color-accent: oklch(0.7 0.19 28); /* brand red */
 }
 
 /* tenant-resolved at runtime via @sveltesentio/ui/tenant */
 :root[data-tenant='acme'] {
-  --color-accent: oklch(0.70 0.14 200); /* acme cyan */
+  --color-accent: oklch(0.7 0.14 200); /* acme cyan */
 }
 ```
 
@@ -157,7 +158,7 @@ brand, one palette, across every interface. See
 /* 10-foot adds bolder ring + higher min contrast */
 :root[data-preset='10foot'] {
   --ring-width: 3px; /* default 2px */
-  --color-ring: oklch(0.70 0.15 250 / 0.75); /* higher opacity */
+  --color-ring: oklch(0.7 0.15 250 / 0.75); /* higher opacity */
 }
 ```
 

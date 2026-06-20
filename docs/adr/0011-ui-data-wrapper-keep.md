@@ -1,6 +1,6 @@
 # ADR-0011: Keep `@sveltesentio/ui/data` wrapper (DataTable<T> + TanStack Virtual + infinite-query preset)
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D167 in `.workingdir/research/decisions-needed.md`
@@ -12,6 +12,7 @@ Data-table needs split two ways. Lurkarr ships a generic `DataTable<T>` with col
 ## Decision
 
 Keep `@sveltesentio/ui/data` as a wrapper that ships:
+
 - Generic `DataTable<T>` with column defs, search, sort, pagination (modeled on Lurkarr).
 - `@tanstack/svelte-virtual` integration for virtualized rows.
 - Infinite-query preset matching revenge's offset-based pattern.
@@ -26,15 +27,18 @@ Keep `@sveltesentio/ui/data` as a wrapper that ships:
 ## Consequences
 
 **Positive**:
+
 - Lurkarr's 3× reuse migrates upstream on next pass.
 - revenge's infinite-query preset ships once.
 - `@tanstack/svelte-virtual` already in arca's stack (locked D25 elsewhere).
 
 **Negative / trade-offs**:
+
 - API must stay unopinionated or arca's hand-rolling pattern repeats.
 - Two-concern wrapper (table + virtual + infinite) = pin matrix to maintain.
 
 **Documentation obligations**:
+
 - `docs/compose/data-tables.md` — when to use the wrapper vs hand-roll.
 - `@sveltesentio/ui/data` AGENTS.md — column-def shape, virtualization opt-in, infinite-query preset.
 

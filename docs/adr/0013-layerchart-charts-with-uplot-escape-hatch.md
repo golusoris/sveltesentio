@@ -1,6 +1,6 @@
 # ADR-0013: LayerChart v2-next via shadcn Chart + uPlot `docs/compose` escape hatch + `@sveltesentio/ui/chart` a11y wrapper
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D120 in `.workingdir/research/decisions-needed.md`
@@ -12,6 +12,7 @@ arca (`StatsChart`) and Lurkarr (`chart-container.svelte:1-81` at `^2.0.0-next.4
 ## Decision
 
 Adopt **LayerChart v2-next** as the chart default, installed via `pnpm dlx shadcn-svelte@latest add chart` (installs `layerchart@next`). Ship `@sveltesentio/ui/chart` as a thin a11y wrapper that injects:
+
 1. `role="img"` + `aria-labelledby` on the chart root.
 2. Required `title` prop → `<title>` in SVG; optional `description` → `<desc>`.
 3. Off-screen `<table>` sibling with the dataset (SR fallback).
@@ -32,6 +33,7 @@ Keep **uPlot** as a `docs/compose/charts-realtime.md` escape hatch for observabi
 ## Consequences
 
 **Positive**:
+
 - First-class citizen of locked stack (shadcn wraps it, runes-native peer, oklch `@theme` binding, SVG SSR-safe).
 - Covers all 5 sveltesentio paradigms (admin, observability ≤5k, embedded, mobile, exploration incl. treemap/sankey/force/geo).
 - arca + Lurkarr adopt the shadcn Chart wrapper on next pass with minimal rework.
@@ -39,11 +41,13 @@ Keep **uPlot** as a `docs/compose/charts-realtime.md` escape hatch for observabi
 - `@sveltesentio/ui/chart` a11y layer makes the library choice itself a11y-neutral.
 
 **Negative / trade-offs**:
+
 - LayerChart v2-next is pre-release (hyperactive cadence: `next.53 … next.57` in 8 days); pin carefully.
 - SVG ≤~5k-point ceiling → uPlot docs/compose is **required**, not optional, for high-frequency dashboards.
 - a11y wrapper layer is ours to maintain, not upstream.
 
 **Documentation obligations**:
+
 - `docs/compose/charts.md` — LayerChart + shadcn Chart patterns, oklch token binding.
 - `docs/compose/charts-realtime.md` — uPlot canvas escape hatch for >5k pts / ≥30 Hz.
 - `docs/compose/charts-exotic.md` — svelte-echarts recipe for candlestick/gauge/3D (held, not locked).

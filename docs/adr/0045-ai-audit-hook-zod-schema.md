@@ -1,6 +1,6 @@
 # ADR-0045: AI audit hook with shipped Zod schema; EU AI Act readiness scaffolding
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D134 in `.workingdir/research/decisions-needed.md`
@@ -36,15 +36,18 @@ The EU AI Act (provisions phased through 2026+) requires logging + transparency 
 ## Consequences
 
 **Positive**:
+
 - Consumers can drop in a compliant audit pipeline without touching call sites.
 - Event shape is Zod-typed — schema evolution is tractable.
 - Correlation IDs tie AI events to traces (ADR-0023).
 
 **Negative / trade-offs**:
+
 - Consumers must write the sink; framework is explicitly unopinionated.
 - Schema evolution ripples into downstream sinks; bumps via ADR amendment with migration notes.
 
 **Documentation obligations**:
+
 - `docs/compliance/ai-audit-log.md` — event shape, EU AI Act Art. 12 mapping, example sinks (OTEL, ClickHouse, PostgreSQL).
 - `@sveltesentio/ai` AGENTS.md — audit contract.
 

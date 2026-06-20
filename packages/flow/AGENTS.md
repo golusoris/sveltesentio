@@ -4,21 +4,28 @@
 
 ## Landed (v0.0.1)
 
-| Sub-export | Contents |
-|---|---|
-| `.` | Barrel re-export of everything below |
-| `./dag` | `topologicalSort`, `findCycles`, `hasCycle`, `reachableFrom`, `buildAdjacency`, `CycleError`. Types: `DagNodeLike` (`{id}`) and `DagEdgeLike` (`{source, target}`) — structural, match `@xyflow/svelte` Node/Edge shapes without a hard dep |
+| Sub-export | Contents                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`        | Barrel re-export of everything below                                                                                                                                                                                                                                                                                                                                                            |
+| `./dag`    | `topologicalSort`, `findCycles`, `hasCycle`, `reachableFrom`, `buildAdjacency`, `CycleError`. Types: `DagNodeLike` (`{id}`) and `DagEdgeLike` (`{source, target}`) — structural, match `@xyflow/svelte` Node/Edge shapes without a hard dep                                                                                                                                                     |
 | `./layout` | `createElkLayout({algorithm?, direction?, nodeSpacing?, layerSpacing?, layoutOptions?}, factory?)` returns `async (nodes, edges) => {nodes, edges, width, height}` — dynamic imports `elkjs/lib/elk.bundled.js` so the main bundle stays unaffected until first call. `ElkFactory` injection for tests. Types: `SizedNode`, `PositionedNode`, `ElkLayoutResult`, `ElkDirection`, `ElkAlgorithm` |
+
+## Landed (v0.4.0)
+
+| Sub-export        | Contents                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./canvas`        | `<FlowCanvas>` pre-themed `<SvelteFlowProvider>` wrapper (`FlowCanvas.svelte`) plus its pure `canvas-model` re-export for unit-testing layout/keyboard wiring |
+| `./nodes`         | Node palette components `<ProcessNode>`, `<DecisionNode>`, `<DataNode>` with ARIA, plus `exampleNodeTypes`                                                    |
+| `./node-palette`  | `NodePalette`, `createNodePalette()`, `createCounterIdFactory()` and the node/type-def models                                                                 |
+| `./layout-worker` | `createLayoutWorker()` web-worker layout handle + `layoutWorkerHandler()`, with an SSR/no-worker fallback contract                                            |
+
+Flow compose recipes (`docs/compose/flow-basics.md`, `docs/compose/flow-advanced.md`) also landed.
 
 ## Follow-through
 
-| Task | Why deferred |
-|---|---|
-| `<FlowCanvas>` pre-themed `<SvelteFlowProvider>` wrapper | Needs `.svelte` component files — waiting for `svelte-check` wiring monorepo-wide |
-| Node palette (`<ProcessNode>`, `<DecisionNode>`, `<DataNode>`) with ARIA | Same — `.svelte` files + preset-aware sizing tied to #32 ui finishing |
-| Worker execution for elkjs (`createLayoutWorker()`) | Needs a shared web-worker harness + SSR/no-worker fallback contract; revisit after first downstream app hits the main-thread jank threshold |
+| Task                                              | Why deferred                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Bundle-size measurement per interface-type preset | Blocked on #32 preset registry + rollup-plugin-visualizer wiring (ADR-0054 acceptance criterion) |
-| Flow compose recipes (`docs/compose/flow-basics.md`, `docs/compose/flow-advanced.md`) | Pending the `<FlowCanvas>` landing above |
 
 ## Scope
 
@@ -32,7 +39,7 @@ This package does **not**:
 
 - Depend on `dagre` — unmaintained since 2020 (ADR-0054).
 - Ship a React/Vue Flow bridge — strict SvelteKit universe rule.
-- Own the graph editor UX itself — the `@xyflow/svelte` canvas + node components live in consumer apps for v0.0.1.
+- Own the app-specific graph editor UX — it ships a pre-themed `<FlowCanvas>` wrapper plus example node components (`./canvas`, `./nodes`), but the domain editor layer lives in consumer apps.
 
 ## Invariants
 
@@ -40,7 +47,7 @@ This package does **not**:
 - **Dynamic elkjs import.** The bundled JS (~1.5 MB min / ~400 KB gzip) is loaded on first `createElkLayout()` call, not at module import time. Pages that never layout pay zero.
 - **Deterministic topological sort.** Tie-breaks by id-string sort (stable across runs, stable across machines).
 - **Cycle handling is explicit.** `topologicalSort` throws `CycleError` with the first discovered cycle path; callers decide whether to surface it or fall back to `findCycles()` for error-surfacing.
-- **Accessibility (planned for `<FlowCanvas>` landing)**:
+- **Accessibility**:
   - Nodes keyboard-reachable via Tab (`tabindex="0"` default).
   - Arrow keys move focus between connected nodes (via DAG adjacency).
   - Screen-reader label: each node has `aria-label={type}: {name}` + `aria-describedby` linking to the node's description.
@@ -61,15 +68,15 @@ All rejected in [ADR-0004](../../docs/adr/0004-flow-thin-xyflow-wrapper.md) + [A
 
 - DAG helpers: unit-tested against pathological graphs (disconnected, cyclic, self-loop, dangling endpoints). Coverage ≥ 85%.
 - elkjs layout: unit-tested with an injected `ElkFactory` double (no real `elkjs` at test time to keep tests deterministic + fast).
-- Canvas rendering + visual regression: deferred to the `<FlowCanvas>` landing.
+- Node components: rendered via `@testing-library/svelte` with `axe-core` a11y assertions (`NodeBody`). Canvas keyboard/layout wiring unit-tested through `canvas-model`.
 - Coverage ≥ 85% on pure helpers.
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/flow typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/flow test` |
+| Task       | Command                                      |
+| ---------- | -------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/flow typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/flow test`      |
 
 ## Related ADRs
 

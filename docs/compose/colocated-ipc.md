@@ -305,4 +305,4 @@ The deltas between tiers are workload-dependent. Don't assume; measure.
 - `github.com/cilium/ebpf` — Go userspace library
 - `bpf2go` — Go codegen for BPF objects
 - [ADR-0051](../adr/0051-colocated-ipc-ladder-ebpf-sockmap.md) — decision record
-- [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) — Golusoris-side feature work
+- [golusoris/golusoris#27](https://github.com/golusoris/golusoris/issues/27) — shipped Golusoris-side `pkg/sockmap` (golusoris PR #268)

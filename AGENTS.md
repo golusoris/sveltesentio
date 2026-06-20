@@ -56,7 +56,8 @@ sveltesentio/
 ├── prettier.config.js              # Prettier + prettier-plugin-svelte
 ├── commitlint.config.js            # Conventional Commits 1.0 enforcement
 ├── release-please-config.json      # release-please per-package versioning
-├── .release-please-manifest.json   # version manifest (all packages start 0.0.1)
+├── .release-please-manifest.json   # per-package published version manifest
+├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
 │
 ├── packages/                       # @sveltesentio/* publishable modules
 │   ├── core/                       # env schema, errors (RFC 9457 parser), id, clock, CSP helpers, openapi-fetch presets, vite plugin
@@ -79,31 +80,31 @@ sveltesentio/
 │   │   ├── theme-customizer/       # user-customiser opt-in (ADR-0046)
 │   │   ├── font-preset-{inter,geist,mono}/ # Fontsource variable-font opt-in (ADR-0049)
 │   │   └── toast/                  # svelte-sonner wrapper with interface-type theming (ADR-0016)
-│   ├── query/                      # TanStack Query v5 SvelteKit integration — SSR hydration, optimistic, pagination
+│   ├── query/                      # TanStack Query v6 SvelteKit integration — SSR hydration, optimistic, pagination
 │   ├── forms/                      # Superforms v2 + Zod v4 patterns, field components, error mapping
 │   ├── i18n/                       # Paraglide-js v2 locale middleware, RTL, message helpers, money/number formatting
 │   ├── auth/                       # OIDC + PKCE client, passkeys (@simplewebauthn/browser), session, permission runes, TOTP MFA UI
 │   ├── realtime/                   # sveltekit-sse + @connectrpc/connect-web + WebSocket transport adapter
 │   ├── collab/                     # Yjs CRDT + Svelte binding + y-websocket provider
 │   ├── flow/                       # @xyflow/svelte wrappers — DAG helpers + elkjs layout (canvas + palette deferred)
-│   ├── uploads/                    # tus-js-client + presigned S3 direct-to-browser + EXIF/MIME/size guards   [NEW — pending D100..D102]
+│   ├── uploads/                    # tus-js-client + presigned S3 direct-to-browser + EXIF/MIME/size guards
 │   ├── media/
 │   │   ├── player/                 # Vidstack + HLS.js — trickplay, skip-intro, syncplay, subtitle rendering
 │   │   ├── image/                  # artwork grid, lightbox, embla-carousel, EXIF strip
 │   │   └── game/                   # EmulatorJS wrapper + WebRTC netplay (simple-peer)
-│   ├── shell/                      # device-class layouts — desktop / 10-foot D-pad / handheld / PWA install + update   [NEW — pending D140..D143]
+│   ├── shell/                      # device-class layouts — desktop / 10-foot D-pad / handheld / PWA install + update
 │   ├── charts/                     # Layerchart wrappers + dashboard presets
 │   ├── ai/                         # LLM chat components (streaming), edge AI (@huggingface/transformers WebGPU), semantic search, EU AI Act audit hook (ADR-0043 + ADR-0044 + ADR-0045)
-│   ├── ipc-sockmap/                # Colocated-IPC client: AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG sockhash (Tier 3) detection-only (Linux + cgroup v2 + kernel ≥5.10)   [ADR-0051, Tier 3 pending golusoris/golusoris#27]
-│   ├── mcp/                        # MCP server — exposes ADR/compose/compliance docs + module-lookup tool to AI clients   [Phase 1b]
+│   ├── ipc-sockmap/                # Colocated-IPC client: AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG sockmap (Tier 3) observe/handoff via `./sockmap` (probeSockmap + activationListeners + readSockmapStats); golusoris owns map writes (Linux + cgroup v2 + kernel ≥5.10)   [ADR-0051]
+│   ├── mcp/                        # MCP server — exposes ADR/compose/compliance docs + module-lookup tool to AI clients
 │   └── testing/                    # testClock + a11y harness + Superforms + TanStack Query fixtures   [ADR-0031 + ADR-0052]
 │
 ├── apps/                           # consuming apps (integration tests + showcase)
 │   ├── storybook/                  # Storybook 10 component showcase (Svelte 5; axe via addon-a11y)           [LANDED]
-│   ├── docs/                       # docs site (principles/ADRs rendered)                                     [NOT YET CREATED]
-│   └── e2e/                        # integration-test app consuming every v0.1.0 package
+│   ├── docs/                       # docs site (principles/ADRs rendered via mdsvex)                          [LANDED]
+│   └── integration/                # integration-test app consuming every published package
 │
-├── examples/                       # minimal per-module usage snippets                                      [NOT YET CREATED]
+├── examples/                       # 19 per-package canonical usage snippets + README
 │
 ├── docs/
 │   ├── principles.md               # §2 full coding + security + compliance contract
@@ -113,7 +114,7 @@ sveltesentio/
 │   ├── migrations/                 # per-version API migration guides + codemods (v0.1 downstream antipatterns live here)
 │   ├── compliance/                 # OWASP ASVS L2 / WCAG 2.2 AA / EU CRA / EU AI Act checklists
 │   ├── compose/                    # composition recipes for upstream libs we deliberately don't wrap
-│   └── upstream/                   # pinned upstream doc snapshots (offline-ready for AI agents)          [Phase 1b — 6 snapshots landed]
+│   └── upstream/                   # pinned upstream doc snapshots (offline-ready for AI agents; 6 snapshots, refreshed by refresh-upstream-docs.yml)
 │
 ├── .claude/
 │   ├── settings.json               # hooks (PreToolUse, PostToolUse prettier, PreCommit `make ci`)
@@ -127,12 +128,11 @@ sveltesentio/
 │   ├── CODEOWNERS                  # @lusoris global
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
-│   ├── dependabot.yml              # weekly deps
 │   └── workflows/
 │       ├── ci.yml                  # PR-title + lint + typecheck + test + build + audit
 │       ├── ci-sveltekit.yml        # REUSABLE — downstream apps call this
-│       ├── release-please.yml      # release-please orchestrator
-│       ├── release-sveltekit.yml   # REUSABLE — npm publish + cosign + syft SBOM + SLSA provenance
+│       ├── release-please.yml      # release-please orchestrator + npm publish + cosign + syft SBOM + SLSA provenance
+│       ├── refresh-upstream-docs.yml  # refreshes pinned docs/upstream snapshots
 │       ├── scorecard.yml           # OpenSSF Scorecard
 │       ├── codeql.yml              # CodeQL JS/TS
 │       └── auto-assign.yml         # assign @lusoris on issues/PRs
@@ -171,63 +171,63 @@ Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pin
 
 ## Package purpose table
 
-| Package | Phase | Key dependencies | What it provides |
-| --- | --- | --- | --- |
-| `@sveltesentio/core` | 2 | vite, zod, openapi-fetch | env schema, RFC 9457 error parser, id/clock utils, CSP helpers, vite plugin |
-| `@sveltesentio/api` | 4 | openapi-fetch, openapi-typescript (optional) | typed openapi-fetch client + RFC 9457 `problemMiddleware` + codegen recipe |
-| `@sveltesentio/ui` | 3 | shadcn-svelte, bits-ui, tailwindcss@4, mode-watcher | Tailwind preset, oklch tokens, shadcn CLI wrapper, interface-type presets, headless DataTable/command/toast |
-| `@sveltesentio/query` | 4 | @tanstack/svelte-query | load helpers, optimistic updates, SSR hydration, pagination |
-| `@sveltesentio/forms` | 5 | sveltekit-superforms, zod | form patterns, field components, action helpers, error mapping |
-| `@sveltesentio/i18n` | 6 | @inlang/paraglide-js | locale detection, message helpers, SvelteKit middleware, RTL |
-| `@sveltesentio/auth` | 7 | openid-client, @simplewebauthn/browser | OIDC/session client, passkeys, permission runes, TOTP MFA |
-| `@sveltesentio/realtime` | 8 | sveltekit-sse, @connectrpc/connect-web | SSE + ConnectRPC + WebSocket transport adapter |
-| `@sveltesentio/collab` | 8b | yjs, y-websocket, y-indexeddb | CRDT + Svelte binding + sync provider |
-| `@sveltesentio/flow` | 9 | @xyflow/svelte | node editor wrappers, DAG helpers, canvas utilities |
-| `@sveltesentio/uploads` | 9b | tus-js-client, exifr, file-type | resumable uploads + presigned S3 + client-side guards |
-| `@sveltesentio/media` | 10 | vidstack, hls.js, embla-carousel-svelte | player/image/game sub-exports |
-| `@sveltesentio/emulator` | 10 | (EmulatorJS — external/CDN) | EmulatorJS Svelte loader + CSP directives for wasm/worker |
-| `@sveltesentio/shell` | 10b | (TBD — see D140..D143) | device-class layouts, D-pad routing, PWA install |
-| `@sveltesentio/charts` | 11 | layerchart | dashboard chart wrappers, semantic color presets |
-| `@sveltesentio/ai` | 12 | @anthropic-ai/sdk (server), @huggingface/transformers, ollama-js (proxy) | LLM chat streaming, edge AI, semantic search, audit hook |
-| `@sveltesentio/ipc-sockmap` | 12b | @sveltesentio/core (Linux server-only; Tier 3 reads pinned BPF sockhash owned by golusoris) | Colocated SvelteKit ↔ Golusoris IPC — AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG (Tier 3) detection-only (ADR-0051; Tier 3 acceleration pending golusoris/golusoris#27) |
-| `@sveltesentio/testing` | ortho | vitest (optional peer), @axe-core/playwright | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures |
-| `@sveltesentio/mcp` | ortho (Phase 1b) | @modelcontextprotocol/sdk | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue |
+| Package                     | Phase | Key dependencies                                                                           | What it provides                                                                                                                                                                                                                                  |
+| --------------------------- | ----- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/core`        | 2     | vite, zod, openapi-fetch                                                                   | env schema, RFC 9457 error parser, id/clock utils, CSP helpers, vite plugin                                                                                                                                                                       |
+| `@sveltesentio/api`         | 4     | openapi-fetch, openapi-typescript (optional)                                               | typed openapi-fetch client + RFC 9457 `problemMiddleware` + codegen recipe                                                                                                                                                                        |
+| `@sveltesentio/ui`          | 3     | shadcn-svelte, bits-ui, tailwindcss@4, mode-watcher                                        | Tailwind preset, oklch tokens, shadcn CLI wrapper, interface-type presets, headless DataTable/command/toast                                                                                                                                       |
+| `@sveltesentio/query`       | 4     | @tanstack/svelte-query                                                                     | load helpers, optimistic updates, SSR hydration, pagination                                                                                                                                                                                       |
+| `@sveltesentio/forms`       | 5     | sveltekit-superforms, zod                                                                  | form patterns, field components, action helpers, error mapping                                                                                                                                                                                    |
+| `@sveltesentio/i18n`        | 6     | @inlang/paraglide-js                                                                       | locale detection, message helpers, SvelteKit middleware, RTL                                                                                                                                                                                      |
+| `@sveltesentio/auth`        | 7     | openid-client, @simplewebauthn/browser                                                     | OIDC/session client, passkeys, permission runes, TOTP MFA                                                                                                                                                                                         |
+| `@sveltesentio/realtime`    | 8     | sveltekit-sse, @connectrpc/connect-web                                                     | SSE + ConnectRPC + WebSocket transport adapter                                                                                                                                                                                                    |
+| `@sveltesentio/collab`      | 8b    | yjs, y-websocket, y-indexeddb                                                              | CRDT + Svelte binding + sync provider                                                                                                                                                                                                             |
+| `@sveltesentio/flow`        | 9     | @xyflow/svelte                                                                             | node editor wrappers, DAG helpers, canvas utilities                                                                                                                                                                                               |
+| `@sveltesentio/uploads`     | 9b    | tus-js-client, exifr, file-type                                                            | resumable uploads + presigned S3 + client-side guards                                                                                                                                                                                             |
+| `@sveltesentio/media`       | 10    | vidstack, hls.js, embla-carousel-svelte                                                    | player/image/game sub-exports                                                                                                                                                                                                                     |
+| `@sveltesentio/emulator`    | 10    | (EmulatorJS — external/CDN)                                                                | EmulatorJS Svelte loader + CSP directives for wasm/worker                                                                                                                                                                                         |
+| `@sveltesentio/shell`       | 10b   | (TBD — see D140..D143)                                                                     | device-class layouts, D-pad routing, PWA install                                                                                                                                                                                                  |
+| `@sveltesentio/charts`      | 11    | layerchart                                                                                 | dashboard chart wrappers, semantic color presets                                                                                                                                                                                                  |
+| `@sveltesentio/ai`          | 12    | @anthropic-ai/sdk (server), @huggingface/transformers, ollama-js (proxy)                   | LLM chat streaming, edge AI, semantic search, audit hook                                                                                                                                                                                          |
+| `@sveltesentio/ipc-sockmap` | 12b   | @sveltesentio/core (Linux server-only; Tier 3 reads pinned BPF sockmap owned by golusoris) | Colocated SvelteKit ↔ Golusoris IPC — AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG (Tier 3) observe/handoff via `./sockmap` (probeSockmap + activationListeners + readSockmapStats); golusoris owns map writes (ADR-0051) |
+| `@sveltesentio/testing`     | ortho | vitest (optional peer), @axe-core/playwright                                               | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures                                                                                                                                                    |
+| `@sveltesentio/mcp`         | ortho | @modelcontextprotocol/sdk                                                                  | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue                                                                                                                           |
 
-**This list is the v0.1.0 shortlist hypothesis — see [.workingdir/V0.1.0.md](.workingdir/V0.1.0.md). It may shrink after the awesome-lists harvest obsoletes some wrappers, or expand if the deep-read surfaces a capability not yet named.**
+**All 19 packages above are built and published to npm as of the v0.1.0 milestone — see [.workingdir/V0.1.0.md](.workingdir/V0.1.0.md). The Phase column records the original build order, not pending work.**
 
 Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`. See [.workingdir/research/module-backlog.md](.workingdir/research/module-backlog.md) for the full golusoris cross-reference.
 
 ## Common tasks
 
-| Task | Command / Skill |
-| --- | --- |
-| Add a new `@sveltesentio/*` package | `/wire-module` skill |
-| Scaffold a SvelteKit route (Superforms + TanStack Query) | `/scaffold-route` skill |
-| Add a shadcn-svelte component | `/add-shadcn` skill |
-| Add a Storybook story | `/add-storybook` skill |
-| Bootstrap dev environment | `make setup` |
-| Run full CI locally | `make ci` |
-| Add a new root-level dep | `pnpm add -Dw <dep>` |
-| Add a workspace-package dep | `pnpm --filter @sveltesentio/<pkg> add <dep>` |
-| Create release PR | (automated by release-please — open a branch + Conventional-Commit PR; `release-please.yml` runs on merge) |
+| Task                                                     | Command / Skill                                                                                            |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Add a new `@sveltesentio/*` package                      | `/wire-module` skill                                                                                       |
+| Scaffold a SvelteKit route (Superforms + TanStack Query) | `/scaffold-route` skill                                                                                    |
+| Add a shadcn-svelte component                            | `/add-shadcn` skill                                                                                        |
+| Add a Storybook story                                    | `/add-storybook` skill                                                                                     |
+| Bootstrap dev environment                                | `make setup`                                                                                               |
+| Run full CI locally                                      | `make ci`                                                                                                  |
+| Add a new root-level dep                                 | `pnpm add -Dw <dep>`                                                                                       |
+| Add a workspace-package dep                              | `pnpm --filter @sveltesentio/<pkg> add <dep>`                                                              |
+| Create release PR                                        | (automated by release-please — open a branch + Conventional-Commit PR; `release-please.yml` runs on merge) |
 
 ## Pinned upstream docs
 
-Version-pinned snapshots live in `docs/upstream/` (NOT YET CREATED). Until that directory exists, check the library repo directly for the exact version in `pnpm-lock.yaml`. Public docs may be ahead of or behind the pinned version.
+Version-pinned snapshots live in `docs/upstream/` (maintained by `refresh-upstream-docs.yml`). For any library not yet snapshotted, check the library repo directly for the exact version in `pnpm-lock.yaml`. Public docs may be ahead of or behind the pinned version.
 
 Current peer-range targets (consumers must satisfy these):
 
-| Package | Version target | Notes |
-| --- | --- | --- |
-| `svelte` | ^5.55.4 | runes-first; no Svelte 4 compat |
-| `@sveltejs/kit` | ^2.x | exact minimum TBD in D5 |
-| `vite` | ^5 or ^6 | TBD — depends on rolldown timing |
-| `typescript` | ^6.0.3 | ADR-0020; published peerDep `>=5.5 <7` |
-| `zod` | ^4 | v3 unsupported |
-| `tailwindcss` | ^4 | v3 unsupported; preset compatible only with v4 |
-| `@tanstack/svelte-query` | ^6 | ADR-0008 |
-| `node` | >=24 | ADR-0021; LTS; closes D5 |
-| `pnpm` | >=10 | workspace features required |
+| Package                  | Version target | Notes                                          |
+| ------------------------ | -------------- | ---------------------------------------------- |
+| `svelte`                 | ^5.55.4        | runes-first; no Svelte 4 compat                |
+| `@sveltejs/kit`          | ^2.x           | exact minimum TBD in D5                        |
+| `vite`                   | ^5 or ^6       | TBD — depends on rolldown timing               |
+| `typescript`             | ^6.0.3         | ADR-0020; published peerDep `>=5.5 <7`         |
+| `zod`                    | ^4             | v3 unsupported                                 |
+| `tailwindcss`            | ^4             | v3 unsupported; preset compatible only with v4 |
+| `@tanstack/svelte-query` | ^6             | ADR-0008                                       |
+| `node`                   | >=24           | ADR-0021; LTS; closes D5                       |
+| `pnpm`                   | >=10           | workspace features required                    |
 
 ## CI gates
 
@@ -238,7 +238,7 @@ Every PR must pass:
 - **Prettier** — formatted (checked; not auto-fixed in CI).
 - **TypeScript** — 0 errors across workspaces (`turbo typecheck`).
 - **Vitest** — green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
-- **Playwright** — e2e green (when `apps/e2e` lands).
+- **Playwright** — e2e green (via `apps/integration`).
 - **axe-core** — clean on every Storybook story (via `@storybook/addon-a11y`).
 - **`pnpm audit`** — clean (no `>=high` advisories).
 - **`codeql.yml`** — clean.
@@ -246,7 +246,7 @@ Every PR must pass:
 
 Release PRs additionally:
 
-- **cosign** — signed artifacts via `release-sveltekit.yml`.
+- **cosign** — signed artifacts via `release-please.yml`.
 - **syft** — CycloneDX SBOM attached.
 - **SLSA L3 provenance** — attested via `slsa-framework/slsa-github-generator`.
 - **`npm publish --provenance`** — required for the npm registry provenance badge.

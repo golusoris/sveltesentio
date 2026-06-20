@@ -1,6 +1,6 @@
 # ADR-0036: First-class MFA/TOTP UI in `@sveltesentio/auth` + structured error codes
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D64 + D10 in `.workingdir/research/decisions-needed.md`
@@ -30,15 +30,18 @@ revenge detects MFA challenges by substring-matching the error message (`if (err
 ## Consequences
 
 **Positive**:
+
 - MFA UI consistent across sveltesentio apps with one component.
 - i18n / message wording changes don't break the flow.
 - Structured error codes flow end-to-end (server → `ProblemError` → narrowed switch).
 
 **Negative / trade-offs**:
+
 - Golusoris must emit the typed error codes (it's already the RFC 9457 owner — coordination, not new work).
 - Framework maintains the component accessibility + copy; apps override via slots.
 
 **Documentation obligations**:
+
 - `docs/compose/mfa.md` — enrolment + challenge flows with code examples.
 - `@sveltesentio/auth` AGENTS.md — error code contract with Golusoris.
 - Migration (critical): revenge replaces substring match with `handleAuthError`.

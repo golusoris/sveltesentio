@@ -1,6 +1,6 @@
 # ADR-0031: `@axe-core/playwright` + `vitest-axe` as the a11y testing lane inside `@sveltesentio/testing`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D164 in `.workingdir/research/decisions-needed.md`
@@ -30,15 +30,18 @@ stylelint with `a11y/contrast` plugin: evaluated, **not** adopted — duplicates
 ## Consequences
 
 **Positive**:
+
 - `0 axe violations` gate is enforceable at two levels.
 - Token-pair test fails loudly on palette drift (oklch-only palette still needs explicit contrast verification).
 - Consumers inherit the same fixtures via `@sveltesentio/testing/axe` + `@sveltesentio/testing/playwright-axe`.
 
 **Negative / trade-offs**:
+
 - CI time grows by the axe scan + token test; measured at <30s on the shortlist.
 - axe's rule set occasionally diverges from WCAG interpretation; we pin an axe version in `@sveltesentio/testing` and bump via ADR amendment.
 
 **Documentation obligations**:
+
 - `docs/compliance/wcag-checklist.md` — per-criterion coverage (automated vs manual).
 - `@sveltesentio/testing` AGENTS.md — fixture surfaces + how to extend.
 - Playwright fixture example in `docs/compose/e2e-axe.md`.

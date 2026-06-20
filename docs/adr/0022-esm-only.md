@@ -1,6 +1,6 @@
 # ADR-0022: ESM-only publish format
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D6 in `.workingdir/research/decisions-needed.md`
@@ -27,15 +27,18 @@ Every `@sveltesentio/*` package publishes ESM only:
 ## Consequences
 
 **Positive**:
+
 - Single build artefact per package; smaller publish, faster CI.
 - `exports` map stays readable (one condition per path).
 - No dual-package hazard class of bugs.
 
 **Negative / trade-offs**:
+
 - CJS consumers (if any appear) must use dynamic `import()` or bundler interop shims.
 - Jest (CJS by default) would need ESM support configured; none of our test stack uses Jest (Vitest / Playwright only).
 
 **Documentation obligations**:
+
 - `AGENTS.md` §Build section documents ESM-only posture.
 - Per-package `package.json` template enforces `"type": "module"` + missing `"main"`.
 

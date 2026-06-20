@@ -1,6 +1,6 @@
 # ADR-0035: Per-route `load`-derived permissions; no global `$permissions` rune
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D63 in `.workingdir/research/decisions-needed.md`
@@ -32,15 +32,18 @@ SvelteKit-canonical pattern only:
 ## Consequences
 
 **Positive**:
+
 - Permissions always flow from server → load → page, matching SvelteKit's data model.
 - Hydration is correct by construction; no rune rehydration dance.
 - Typed `can(action, resource)` reads naturally in components.
 
 **Negative / trade-offs**:
+
 - Permissions require an explicit `load` in every layout that needs them; depends on server-side `parent()` for inheritance.
 - Cross-route imperative checks (rare) must read `page.data` through a small helper.
 
 **Documentation obligations**:
+
 - `docs/compose/permissions.md` — `load` recipes, per-route vs layout scope.
 - `@sveltesentio/auth/permissions` AGENTS.md — `usePermissions` API.
 

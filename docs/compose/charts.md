@@ -96,9 +96,9 @@ LayerChart v2-next reads oklch via shadcn's chart tokens:
 :root {
   --color-chart-1: var(--color-accent);
   --color-chart-2: oklch(0.72 0.16 155); /* success */
-  --color-chart-3: oklch(0.80 0.16 85);  /* warning */
-  --color-chart-4: oklch(0.66 0.22 28);  /* danger */
-  --color-chart-5: oklch(0.70 0.14 200);
+  --color-chart-3: oklch(0.8 0.16 85); /* warning */
+  --color-chart-4: oklch(0.66 0.22 28); /* danger */
+  --color-chart-5: oklch(0.7 0.14 200);
 }
 ```
 
@@ -119,11 +119,7 @@ Never hard-code hex / HSL / `oklch(...)` in a chart component.
   let { data } = $props(); // { category: string; value: number }[]
 </script>
 
-<AccessibleChart
-  title="Revenue by region"
-  description="Q1 2026, EUR millions."
-  data={data.points}
->
+<AccessibleChart title="Revenue by region" description="Q1 2026, EUR millions." data={data.points}>
   <Chart
     data={data.points}
     x="category"
@@ -265,7 +261,7 @@ test('MyChart has an accessible name', () => {
 });
 ```
 
-Visual regressions via Histoire stories (`.story.svelte`) — one story
+Visual regressions via Storybook stories (`.stories.svelte`) — one story
 per chart variant.
 
 ## Anti-patterns

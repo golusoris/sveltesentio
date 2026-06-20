@@ -1,6 +1,6 @@
 # ADR-0010: `@xyflow/svelte` (SvelteFlow) for flow canvas
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D90 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Pin `@xyflow/svelte@^1.5` as the flow-canvas engine under `@sveltesentio/flow` (
 ## Consequences
 
 **Positive**:
+
 - Matches subdo day one.
 - Upstream xyflow is actively maintained with a shared core across React + Svelte ports.
 - Built-in Provider/Controls/Background/MiniMap/Handle cover subdo's feature list.
 
 **Negative / trade-offs**:
+
 - xyflow's Svelte port can lag the React port on new features.
 - Bundle overhead for apps that only need static graphs — mitigated by `@sveltesentio/flow` thin wrapper staying opt-in.
 
 **Documentation obligations**:
+
 - `@sveltesentio/flow` AGENTS.md — xyflow pin matrix + upgrade policy.
 - `docs/compose/flow-basics.md` — Provider/Controls/Background/MiniMap defaults.
 

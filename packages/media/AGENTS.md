@@ -1,20 +1,20 @@
 # @sveltesentio/media — AGENTS.md
 
-> Video / audio / image player surface. v0.2.0 ships the headless logic core; the `vidstack` UI shell + `./carousel` are follow-throughs. Phase 10 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> Video / audio / image player surface. v0.4.1 ships the headless logic core plus the a11y `<Player>` shell, responsive `<Image>`, and the preset-aware `<Carousel>`. Phase 10 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
 
 ## Status (reconciles README ↔ AGENTS — issue #67)
 
-- **Landed in v0.2.0:** `./player` headless model (`pickRendition`, `buildMediaSessionMetadata`, the `playbackReducer` play/pause/quality machine, `createHlsAttachment`) + `./image` `srcset` / `sizes` builders. Pure, framework-agnostic, unit-tested.
-- **Follow-through (not in v0.2.0):** the `<Player>` UI shell over `vidstack@next`, the `./carousel` embla re-export, and LQIP/`<Image>` component wrapper. These pull heavy runtime deps and are deferred so this package stays dependency-light.
+- **Landed (headless core):** `./player` headless model (`pickRendition`, `buildMediaSessionMetadata`, the `playbackReducer` play/pause/quality machine, `createHlsAttachment`) + `./image` `srcset` / `sizes` builders. Pure, framework-agnostic, unit-tested.
+- **Landed in v0.4.1 (UI shells):** the `<Player>` a11y shell over `vidstack@next` (`./player/component` + `./player/controls`), the responsive blur-up `<Image>` (`./image/component` + `./image/lqip`), the preset-aware embla `<Carousel>` (`./carousel/component`), and a Playwright e2e harness (`e2e/`). The 0.4.1 fix moved player-controls to import `@sveltesentio/core/problem` (subpath) so the server-only core barrel stays out of the `<Player>` client bundle. Heavy runtime deps (`vidstack`, `hls.js`, `embla-carousel-svelte`) remain optional peers so the package stays dependency-light.
 
 ## Scope
 
-| Sub-export | Status | Contents | ADR |
-|---|---|---|---|
-| `./player` | **landed** | Headless HLS rendition picking, OS media-session metadata, play/pause/quality state machine, bring-your-own-`hls.js` attachment seam | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md) |
-| `./image` | **landed** | Pure `srcset` / `sizes` / responsive-attr builders (template-driven, query-merge fallback) | [ADR-0055](../../docs/adr/0055-media-image-keep-wrapper.md) |
-| `<Player>` UI | follow-through | Thin runes shell over `vidstack@next` 1.12.13 with a11y defaults | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md) |
-| `./carousel` | follow-through | shadcn-svelte Carousel (embla) re-export + reduced-motion + target-size overrides | [ADR-0012](../../docs/adr/0012-embla-carousel-via-shadcn.md) |
+| Sub-export                                                 | Status     | Contents                                                                                                                             | ADR                                                          |
+| ---------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| `./player`                                                 | **landed** | Headless HLS rendition picking, OS media-session metadata, play/pause/quality state machine, bring-your-own-`hls.js` attachment seam | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md)         |
+| `./image`                                                  | **landed** | Pure `srcset` / `sizes` / responsive-attr builders (template-driven, query-merge fallback)                                           | [ADR-0055](../../docs/adr/0055-media-image-keep-wrapper.md)  |
+| `<Player>` UI (`./player/component` + `./player/controls`) | **landed** | Thin runes shell over `vidstack@next` 1.12.13 with a11y defaults                                                                     | [ADR-0042](../../docs/adr/0042-vidstack-next-hls.md)         |
+| `./carousel` (`./carousel/component`)                      | **landed** | embla `<Carousel>` (`embla-carousel-svelte`) + reduced-motion + target-size overrides                                                | [ADR-0012](../../docs/adr/0012-embla-carousel-via-shadcn.md) |
 
 ## `./player` headless design (issues #67 / #68)
 
@@ -49,15 +49,16 @@ raw `hls.js` (e.g. revenge) adopts it incrementally without swapping its player:
 
 ## Test policy
 
-- **v0.2.0 (landed):** pure-logic unit tests in `test/` cover every `./player` and `./image` export, including rendition tie-breaks, codec preference + fallback, the full state-machine transition table (valid + no-op), the injected-`hls.js` attach/destroy order, and `srcset` / `sizes` edge cases (query-merge, hash preservation, token templates).
-- **Follow-through (with the UI shell):** visual regression per preset (desktop / 10-foot / handheld); keyboard-only playback control tests (Space / Arrow / M / F / C per Vidstack defaults); HLS manifest fixtures under `test/fixtures/hls/`.
+- **Headless core (landed):** pure-logic unit tests in `test/` cover every `./player` and `./image` export, including rendition tie-breaks, codec preference + fallback, the full state-machine transition table (valid + no-op), the injected-`hls.js` attach/destroy order, and `srcset` / `sizes` edge cases (query-merge, hash preservation, token templates).
+- **UI shells (landed in v0.4.1):** Playwright e2e harness under `e2e/` (`playback.spec.ts`) drives keyboard-only playback control per Vidstack defaults; component + a11y coverage for the `<Player>`, `<Image>`, and `<Carousel>` shells.
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/media typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/media test` |
+| Task       | Command                                       |
+| ---------- | --------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/media typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/media test`      |
+| e2e tests  | `pnpm --filter @sveltesentio/media test:e2e`  |
 
 ## Related ADRs
 

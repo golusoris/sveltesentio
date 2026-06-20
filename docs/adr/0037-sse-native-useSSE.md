@@ -1,6 +1,6 @@
 # ADR-0037: Native `EventSource` + `useSSE()` rune; reject `sveltekit-sse` framework
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D70 + D73 in `.workingdir/research/decisions-needed.md`
@@ -31,15 +31,18 @@ No `useRealtime()` abstraction over SSE + ConnectRPC + Yjs. Each transport has i
 ## Consequences
 
 **Positive**:
+
 - Browser-native transport; no polyfill, no framework layer to maintain.
 - Runes lifecycle is correct by construction (auto-close on component destroy).
 - Three transport hooks each stay honest about their semantics.
 
 **Negative / trade-offs**:
+
 - Safari's `EventSource` connection limit (6 per origin) applies; documented escape hatches (HTTP/2, or swap to WebSocket) live in `docs/compose/realtime-limits.md`.
 - No automatic reconnection-with-sequence-resume; consumers can layer on `Last-Event-ID`.
 
 **Documentation obligations**:
+
 - `docs/compose/sse.md` — `useSSE` recipes, backoff config, `Last-Event-ID` pattern.
 - `@sveltesentio/realtime` AGENTS.md — three-transport split with rationale.
 

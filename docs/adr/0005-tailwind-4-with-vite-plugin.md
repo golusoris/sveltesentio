@@ -1,6 +1,6 @@
 # ADR-0005: Tailwind 4 + `@tailwindcss/vite`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D21 in `.workingdir/research/decisions-needed.md`
@@ -22,15 +22,18 @@ Adopt Tailwind `^4.0.0` (currently `^4.2.1+` in consumer apps) via `@tailwindcss
 ## Consequences
 
 **Positive**:
+
 - Zero-config theming via `@theme` + oklch tokens.
 - Native Tailwind 4 container queries unlock responsive recipes (see D112 carousel + D120 charts).
 - Vite plugin rebuilds are fast; no PostCSS config to maintain.
 
 **Negative / trade-offs**:
+
 - arca migrates from whatever it ships today to v4.
 - Any library in `@sveltesentio/*` using `@apply` with v3-only utilities needs audit.
 
 **Documentation obligations**:
+
 - `docs/compose/theming.md` — `@theme` token conventions, oklch channels, dark-mode variant.
 - Migration note for any v3-based consumer.
 

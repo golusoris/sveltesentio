@@ -1,6 +1,6 @@
 # ADR-0012: `embla-carousel-svelte` via shadcn-svelte CLI; `docs/compose/carousel.md` for reduced-motion + target-size
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D112 in `.workingdir/research/decisions-needed.md`
@@ -24,15 +24,18 @@ Adopt `embla-carousel-svelte@^8.6.0` installed via `pnpm dlx shadcn-svelte@lates
 ## Consequences
 
 **Positive**:
+
 - Ships with shadcn-svelte runes example (`let api = $state<CarouselAPI>()`) + Tailwind v4 basis/breakpoint utilities out of the box.
 - shadcn wrapper already compensates for v8 a11y gaps (role/aria/keyboard/sr-only).
 - Revenge's direct embla pattern migrates cleanly to the shadcn CLI path on next UI pass.
 
 **Negative / trade-offs**:
+
 - Three consumer obligations (reduced-motion, target-size, live-region) must be remembered per use — docs/compose is the enforcement surface, not a wrapper.
 - revenge carries a one-time migration from direct embla → shadcn Carousel.
 
 **Documentation obligations**:
+
 - `docs/compose/carousel.md` — reduced-motion breakpoint, `size="icon"` target-size override, optional v9 a11y plugin upgrade recipe, orientation variants, focus-follow with `watchFocus`.
 
 ## Evidence

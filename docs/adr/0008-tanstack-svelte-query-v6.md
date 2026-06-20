@@ -1,6 +1,6 @@
 # ADR-0008: `@tanstack/svelte-query@6` for server state
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D30 in `.workingdir/research/decisions-needed.md`
@@ -23,15 +23,18 @@ Pin `@tanstack/svelte-query@^6` as the server-state solution for `@sveltesentio/
 ## Consequences
 
 **Positive**:
+
 - Matches arca + revenge's pinned version exactly.
 - Rune wrappers remove the boilerplate arca complained about (deps present but unused).
 - Revenge's 2-min staleTime + refresh-memoization pattern is a reusable preset.
 
 **Negative / trade-offs**:
+
 - Two documented server-state paths (Query vs module `$state`); `docs/compose/server-state.md` must clearly delineate when to pick which.
 - SPA-only apps (revenge, Lurkarr, subdo) bypass SSR hydration entirely; arca is the only SSR consumer. Hydration tests must cover both paths.
 
 **Documentation obligations**:
+
 - `docs/compose/server-state.md` — rune wrapper vs plain `$state` decision flowchart.
 - `@sveltesentio/query` AGENTS.md — SSR hydration recipe (arca) vs SPA bypass (revenge/Lurkarr/subdo).
 

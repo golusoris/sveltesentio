@@ -14,15 +14,15 @@ the decision. Related: [ADR-0002](../adr/0002-lucide-svelte-default-icons.md)
 
 ## Why shadcn-svelte
 
-| | shadcn CLI | bits-ui direct |
-|---|---|---|
-| Source owned by | consumer | library |
-| Upgrade path | manual (re-run CLI) | pnpm update |
-| Tailwind 4 `@theme` wiring | pre-wired | hand-wired |
-| oklch token bindings | native | manual |
-| Copy-paste authoring | yes | no |
-| Wrapper depth | thicker (shadcn adds variants) | thinner |
-| shadcn ecosystem deps (Chart, Carousel, Sonner, Command) | compose cleanly | compose but re-wrap |
+|                                                          | shadcn CLI                     | bits-ui direct      |
+| -------------------------------------------------------- | ------------------------------ | ------------------- |
+| Source owned by                                          | consumer                       | library             |
+| Upgrade path                                             | manual (re-run CLI)            | pnpm update         |
+| Tailwind 4 `@theme` wiring                               | pre-wired                      | hand-wired          |
+| oklch token bindings                                     | native                         | manual              |
+| Copy-paste authoring                                     | yes                            | no                  |
+| Wrapper depth                                            | thicker (shadcn adds variants) | thinner             |
+| shadcn ecosystem deps (Chart, Carousel, Sonner, Command) | compose cleanly                | compose but re-wrap |
 
 shadcn CLI wins for 90% of surfaces. Apps that need a tighter wrapper
 layer (custom behavior across every button, e.g. telemetry) drop into
@@ -168,19 +168,19 @@ Update rhythm:
 
 ## Common components
 
-| Component | Install | Notes |
-|---|---|---|
-| Button | `add button` | Sveltesentio tokens: replace `bg-primary` → `bg-accent` on generation |
-| Dialog | `add dialog` | Focus trap + `aria-modal` out of the box |
-| Form | `add form` | Pairs with [forms.md](forms.md) (Superforms) — Formsnap included |
-| Input | `add input` | — |
-| Select | `add select` | bits-ui Select — keyboard-navigable |
-| DropdownMenu | `add dropdown-menu` | — |
-| Command | `add command` | Used by [command-palette.md](command-palette.md) |
-| Sheet | `add sheet` | Side drawer; mobile-friendly |
-| Sonner | `add sonner` | Wrapped further by [toast.md](toast.md) |
-| Chart | `add chart` | Wrapped further by [charts.md](charts.md) |
-| Carousel | `add carousel` | See [carousel.md](carousel.md) for obligations |
+| Component    | Install             | Notes                                                                 |
+| ------------ | ------------------- | --------------------------------------------------------------------- |
+| Button       | `add button`        | Sveltesentio tokens: replace `bg-primary` → `bg-accent` on generation |
+| Dialog       | `add dialog`        | Focus trap + `aria-modal` out of the box                              |
+| Form         | `add form`          | Pairs with [forms.md](forms.md) (Superforms) — Formsnap included      |
+| Input        | `add input`         | —                                                                     |
+| Select       | `add select`        | bits-ui Select — keyboard-navigable                                   |
+| DropdownMenu | `add dropdown-menu` | —                                                                     |
+| Command      | `add command`       | Used by [command-palette.md](command-palette.md)                      |
+| Sheet        | `add sheet`         | Side drawer; mobile-friendly                                          |
+| Sonner       | `add sonner`        | Wrapped further by [toast.md](toast.md)                               |
+| Chart        | `add chart`         | Wrapped further by [charts.md](charts.md)                             |
+| Carousel     | `add carousel`      | See [carousel.md](carousel.md) for obligations                        |
 
 Full list: <https://shadcn-svelte.com/docs/components>.
 
@@ -251,7 +251,7 @@ test('dialog is axe-clean', async () => {
 });
 ```
 
-Histoire stories render each variant; axe-core runs on each via the
+Storybook stories render each variant; axe-core runs on each via the
 ADR-0031 a11y lane.
 
 ## Anti-patterns

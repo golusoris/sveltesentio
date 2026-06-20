@@ -1,6 +1,6 @@
 # ADR-0033: `@simplewebauthn/browser@^13` for passkeys (WebAuthn); pairs with go-webauthn
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D61 in `.workingdir/research/decisions-needed.md`
@@ -28,15 +28,18 @@ Zero re-implementation of WebAuthn ceremony encoding (base64url, ArrayBuffer ↔
 ## Consequences
 
 **Positive**:
+
 - 1:1 ceremony JSON alignment with go-webauthn (server-side).
 - Browser support matrix stays honest (library owns polyfill warnings for unsupported browsers).
 - Small bundle (~10 KB).
 
 **Negative / trade-offs**:
+
 - Upstream major bumps require ADR amendment.
 - `@simplewebauthn` monorepo also ships `server/` + `typescript-types/`; we only use `browser/`, but version ranges should align if we add `server/` helpers later.
 
 **Documentation obligations**:
+
 - `docs/compose/passkeys.md` — ceremony flow, fallback UX when passkeys unsupported.
 - `@sveltesentio/auth/webauthn` AGENTS.md — component API + browser support notes.
 

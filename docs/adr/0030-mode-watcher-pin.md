@@ -1,6 +1,6 @@
 # ADR-0030: `mode-watcher@^1.1.0` pin (runes-native) — supersedes `mode-watcher@0.5`
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: mode-watcher entry in `.workingdir/research/ecosystem-pass-1-summary.md`
@@ -24,15 +24,18 @@ Tighten `packages/ui/package.json:24` peerDep to `"mode-watcher": ">=1.1.0 <2"`.
 ## Consequences
 
 **Positive**:
+
 - Single, runes-native source of truth for theme switching.
 - Cookie-backed persistence (ADR-0048) composes with mode-watcher's API.
 - revenge's 0.5 pin surfaces as an explicit migration, not a silent incompatibility.
 
 **Negative / trade-offs**:
+
 - revenge carries a one-time migration task (bump + API shift).
 - Tied to Huntabyte's cadence; major bumps gated via ADR amendment.
 
 **Documentation obligations**:
+
 - Downstream migration note: revenge 0.5 → 1.1+.
 - `@sveltesentio/ui` AGENTS.md — peerDep range + mode-watcher API.
 

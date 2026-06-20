@@ -1,6 +1,6 @@
 # ADR-0050: Tenant theming — minimal skeleton NOW (CSS custom props + oklch, server-injected)
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user) **[override]**, research agent
 - **D-row**: D162 in `.workingdir/research/decisions-needed.md`
@@ -25,7 +25,7 @@ Ship a minimal tenant-theming skeleton in v0.1:
   ```
 - Swap-in target: when Golusoris `tenancy/` lands, replace the consumer resolver with a shipped `golusorisTenancyResolver()` that reads from the tenancy API.
 
-**Explicitly out of scope for v0.1**: runtime per-tenant dark mode (multiplicative complexity), per-tenant font presets (too large a surface), per-tenant preset-* swap. All deferred.
+**Explicitly out of scope for v0.1**: runtime per-tenant dark mode (multiplicative complexity), per-tenant font presets (too large a surface), per-tenant preset-\* swap. All deferred.
 
 **No CSS-in-JS** — runtime cost + hydration mismatch risk. Server-injected `<style>` block is the posture.
 
@@ -39,16 +39,19 @@ Ship a minimal tenant-theming skeleton in v0.1:
 ## Consequences
 
 **Positive**:
+
 - Drop-in path for when Golusoris `tenancy/` lands — consumer replaces resolver with one-liner.
 - No runtime JS cost; custom props resolved natively by the browser.
 - Preserves ADR-0046's tier boundaries (this is Tier 3-adjacent but server-driven).
 
 **Negative / trade-offs**:
+
 - Cookie / subdomain / JWT resolver choice is consumer's; framework doesn't pick.
 - Custom-prop-only scope means tenant-specific density / typography require future ADR (intentional).
 - Skeleton API is likely to evolve as real tenancy lands — flagged for re-audit in v0.2.
 
 **Documentation obligations**:
+
 - `docs/compose/tenant-theming.md` — resolver contract, SSR injection, Tailwind 4 `theme(--*)` bridge.
 - `@sveltesentio/shell/tenancy` AGENTS.md — resolver API + migration plan when Golusoris `tenancy/` ships.
 
