@@ -20,6 +20,8 @@ Thin composition layer over `@tanstack/svelte-query@^6` (ADR-0008). This package
 - **Queries are typed via `openapi-fetch` / ConnectRPC** — no hand-written `fetch` + JSON decode. The raw-fetch pattern is a downstream antipattern (flagged in subdo row of [downstream-antipatterns-v0.1.md](../../docs/migrations/downstream-antipatterns-v0.1.md)).
 - **SSR hydration mandatory.** `load` prefetch → `dehydrate` → `HydrationBoundary` in the root layout. First render shows data, not a loading spinner.
 - **Typed errors surface as `ProblemError`** (RFC 9457, [ADR-0019](../../docs/adr/0019-openapi-fetch-rfc9457.md)) — retry policy keys off `error.type`, not status code.
+- **Reactive keys use the accessor form.** `createSentioQuery` / `createInfiniteItems` / `useConnectQuery` accept `options | (() => options)`. When `queryKey` derives from `$state`, pass `() => ({...})` so the accessor re-reads on every evaluation and TanStack refetches on key change; the plain-object form freezes the key at call time (static keys only).
+- **The index is optional-peer-free.** `src/index.ts` must NOT re-export `connect-query` — it imports the optional `@connectrpc/connect` + `@bufbuild/protobuf` peers and would break openapi-fetch-only builds. The ConnectRPC bridge is reachable only via the `./connect` subpath.
 
 ## Canonical recipe
 

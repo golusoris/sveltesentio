@@ -234,4 +234,18 @@ describe('useConnectQuery — v6 Accessor<Options> bridge to createQuery', () =>
 	it('createConnectQuery is an alias of useConnectQuery', () => {
 		expect(createConnectQuery).toBe(useConnectQuery);
 	});
+
+	it('accepts a function form and re-reads the queryKey each accessor invocation (issue #176)', () => {
+		const { client } = clientResolving({ id: 1, name: 'Ada' });
+		let id = 1;
+		useConnectQuery<DescService, User>(() => ({
+			client,
+			queryKey: ['user', id],
+			call: getUserBy(id),
+		}));
+		const accessor = accessorFromCall(sq.createQuery);
+		expect(accessor().queryKey).toEqual(['user', 1]);
+		id = 2;
+		expect(accessor().queryKey).toEqual(['user', 2]);
+	});
 });

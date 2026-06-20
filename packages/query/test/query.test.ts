@@ -63,6 +63,26 @@ describe('createSentioQuery — accessor-options shape (svelte-query v6)', () =>
 	});
 });
 
+describe('createSentioQuery — reactive (accessor) options form (issue #176)', () => {
+	it('accepts a function form and re-reads it on every accessor invocation', () => {
+		let sortBy = 'added';
+		createSentioQuery<number>(() => ({
+			queryKey: ['movies', 'list', sortBy],
+			queryFn: () => Promise.resolve(0),
+		}));
+		const accessor = accessorFromCall(sq.createQuery);
+		expect(accessor().queryKey).toEqual(['movies', 'list', 'added']);
+		// A reactive key (derived from $state) must be re-read so TanStack refetches.
+		sortBy = 'title';
+		expect(accessor().queryKey).toEqual(['movies', 'list', 'title']);
+	});
+
+	it('still applies the 30s stale-time default in the function form', () => {
+		createSentioQuery<number>(() => ({ queryKey: ['k'], queryFn: () => Promise.resolve(0) }));
+		expect(accessorFromCall(sq.createQuery)().staleTime).toBe(30_000);
+	});
+});
+
 describe('createQueryInvalidator', () => {
 	it('resolves the active client via useQueryClient and invalidates by key', async () => {
 		const invalidateQueries = vi.fn(() => Promise.resolve());

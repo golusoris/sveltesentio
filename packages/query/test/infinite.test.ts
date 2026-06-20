@@ -95,6 +95,33 @@ describe('createInfiniteItems — cursor pagination preset', () => {
 	});
 });
 
+describe('createInfiniteItems — reactive (accessor) options form (issue #176)', () => {
+	it('accepts a function form and re-reads the queryKey on every accessor invocation', () => {
+		let sortBy = 'added';
+		createInfiniteItems<string>(() => ({
+			queryKey: ['movies', 'infinite', sortBy],
+			queryFn: () => Promise.resolve({ items: [], nextCursor: null }),
+		}));
+		const accessor = accessorFromCall<InfiniteOpts<string>>(sq.createInfiniteQuery);
+		expect(accessor().queryKey).toEqual(['movies', 'infinite', 'added']);
+		sortBy = 'title';
+		expect(accessor().queryKey).toEqual(['movies', 'infinite', 'title']);
+	});
+
+	it('still adapts queryFn + shapes the defaults in the function form', async () => {
+		const queryFn = vi.fn((cursor: string | null) =>
+			Promise.resolve({ items: [`@${cursor}`], nextCursor: null }),
+		);
+		createInfiniteItems<string>(() => ({ queryKey: ['feed'], initialCursor: 'c0', queryFn }));
+		const opts = accessorFromCall<InfiniteOpts<string>>(sq.createInfiniteQuery)();
+		expect(opts.initialPageParam).toBe('c0');
+		expect(opts.staleTime).toBe(30_000);
+		expect(opts.queryFn).not.toBe(queryFn);
+		await opts.queryFn({ pageParam: 'c9' });
+		expect(queryFn).toHaveBeenCalledWith('c9');
+	});
+});
+
 describe('flattenPages', () => {
 	it('returns an empty array for undefined data', () => {
 		expect(flattenPages<string>(undefined)).toEqual([]);
