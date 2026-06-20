@@ -125,6 +125,10 @@ export function connectQueryOptions<T extends DescService, TData, TKey extends Q
  * off `error.status`, not the gRPC code. `client` is injected, so this unit-tests
  * against a `createRouterTransport(...)` fake.
  *
+ * Pass the **accessor form** (`() => ({...})`) when `queryKey` derives from
+ * `$state`: the accessor re-runs on every read so a reactive key change
+ * refetches. The plain-object form freezes the key at call time.
+ *
  * @example
  * ```ts
  * const q = useConnectQuery({
@@ -135,9 +139,10 @@ export function connectQueryOptions<T extends DescService, TData, TKey extends Q
  * ```
  */
 export function useConnectQuery<T extends DescService, TData, TKey extends QueryKey = QueryKey>(
-	options: ConnectQueryOptions<T, TData, TKey>,
+	options: ConnectQueryOptions<T, TData, TKey> | (() => ConnectQueryOptions<T, TData, TKey>),
 ) {
-	return createQuery<TData, ProblemError, TData, TKey>(() => connectQueryOptions(options));
+	const get = typeof options === 'function' ? options : () => options;
+	return createQuery<TData, ProblemError, TData, TKey>(() => connectQueryOptions(get()));
 }
 
 /** Alias of {@link useConnectQuery} for call sites preferring `create*` naming. */

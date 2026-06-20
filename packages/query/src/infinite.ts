@@ -36,24 +36,32 @@ export interface InfiniteItemsOptions<TItem, TKey extends QueryKey = QueryKey>
  * Cursor-based `createInfiniteQuery` preset for grids/feeds. Keeps previous data
  * during pagination so the grid doesn't flash. Works with any backend returning
  * `{ items, nextCursor, total? }`.
+ *
+ * Pass the **accessor form** (`() => ({...})`) when `queryKey` derives from
+ * `$state` (a sort filter, search box): the accessor re-runs on every read, so a
+ * reactive key change refetches. The plain-object form freezes the key at call
+ * time — fine for static keys, but a reactive key there never refetches.
  */
 export function createInfiniteItems<TItem, TKey extends QueryKey = QueryKey>(
-	options: InfiniteItemsOptions<TItem, TKey>,
+	options: InfiniteItemsOptions<TItem, TKey> | (() => InfiniteItemsOptions<TItem, TKey>),
 ) {
-	const { queryFn, initialCursor = null, ...rest } = options;
+	const get = typeof options === 'function' ? options : () => options;
 	return createInfiniteQuery<
 		PagedResponse<TItem>,
 		ProblemError,
 		InfiniteData<PagedResponse<TItem>>,
 		TKey,
 		string | null
-	>(() => ({
-		staleTime: 30_000,
-		...rest,
-		queryFn: (ctx: { pageParam: string | null }) => queryFn(ctx.pageParam),
-		initialPageParam: initialCursor,
-		getNextPageParam: (lastPage: PagedResponse<TItem>) => lastPage.nextCursor,
-	}));
+	>(() => {
+		const { queryFn, initialCursor = null, ...rest } = get();
+		return {
+			staleTime: 30_000,
+			...rest,
+			queryFn: (ctx: { pageParam: string | null }) => queryFn(ctx.pageParam),
+			initialPageParam: initialCursor,
+			getNextPageParam: (lastPage: PagedResponse<TItem>) => lastPage.nextCursor,
+		};
+	});
 }
 
 /** Flatten infinite-query pages into a single item array. */
