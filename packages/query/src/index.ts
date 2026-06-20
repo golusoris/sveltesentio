@@ -28,17 +28,10 @@ export type {
 	CreateMutationOptions,
 } from './mutation.js';
 
-export {
-	useConnectQuery,
-	createConnectQuery,
-	connectQueryOptions,
-	connectErrorToProblem,
-} from './connect-query.js';
-export type {
-	ConnectQueryOptions,
-	UnaryMethodSelector,
-	ConnectErrorMapper,
-} from './connect-query.js';
+// The ConnectRPC bridge lives behind the `./connect` subpath ONLY. Re-exporting
+// it here would drag the optional `@connectrpc/connect` + `@bufbuild/protobuf`
+// peers into every consumer's index import and break openapi-fetch-only builds
+// (issue #175). ConnectRPC users opt in: `@sveltesentio/query/connect`.
 
 // Core TanStack primitives consumers commonly need directly.
 export { QueryClient, useQueryClient } from '@tanstack/svelte-query';
