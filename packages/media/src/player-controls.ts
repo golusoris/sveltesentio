@@ -7,7 +7,10 @@
  * @see ADR-0042 (Vidstack `@next` + `hls.js`) — keyboard parity with Vidstack.
  */
 
-import { ProblemError } from '@sveltesentio/core';
+// Subpath import (not the `@sveltesentio/core` barrel): the barrel re-exports
+// `clock.ts`, which pulls `node:async_hooks` and would drag server-only code
+// into any client bundle that imports these headless `<Player>` controls.
+import { ProblemError } from '@sveltesentio/core/problem';
 
 /** A discrete player control intent produced by a key press. */
 export type PlayerAction =
