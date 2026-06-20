@@ -41,6 +41,9 @@
     "./eslint": {
       "import": "./src/eslint.ts",
       "types": "./src/eslint.ts"
+    },
+    "./sentio": {
+      "types": "./sentio.d.ts"
     }
   },
   "scripts": {
@@ -85,6 +88,7 @@
   },
   "files": [
     "src",
+    "sentio.d.ts",
     "CHANGELOG.md"
   ]
 }

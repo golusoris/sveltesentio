@@ -192,6 +192,7 @@ Trusted Types (DOM-XSS defense-in-depth)    → trusted-types.md
 | [search-autocomplete.md](search-autocomplete.md) | Combobox + listbox + `aria-activedescendant` + debounced + request-seq + recent queries | 0019, 0031 |
 | [search.md](search.md) | Typesense default + SSR pre-render + Postgres-FTS escape | 0019 |
 | [secrets-management.md](secrets-management.md) | `$env/static/private` Zod-boundary + Infisical default + rotation + redaction | 0019, 0005 |
+| [sentio-config.md](sentio-config.md) | Typed `$sentio` virtual module + `defineSentioConfig` Zod schema + ambient types | 0005 |
 | [sentry-or-equivalent.md](sentry-or-equivalent.md) | Error tracking (Sentry/GlitchTip/Highlight) complementary to OTel | 0023 |
 | [server-state.md](server-state.md) | TanStack Query v6 vs module `$state` | 0008 |
 | [signed-urls.md](signed-urls.md) | S3/R2/GCS pre-signed URLs + TTL policy + content-type pinning + IP binding + key-rotation revocation | 0041, 0034 |

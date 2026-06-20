@@ -47,4 +47,12 @@ export type {
 } from './vite.js';
 export { checkBundleBudget, sentioPlugin } from './vite.js';
 
+export type { InterfaceType, SentioConfig } from './sentio-config.js';
+export {
+	SentioConfigError,
+	defineSentioConfig,
+	interfaceTypeSchema,
+	sentioConfigSchema,
+} from './sentio-config.js';
+
 export { noDirectTime, sentioEslint } from './eslint.js';
