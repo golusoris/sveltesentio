@@ -49,7 +49,7 @@ importers:
         version: 9.1.7
       lint-staged:
         specifier: ^17.0.7
-        version: 17.0.7
+        version: 17.0.8
       prettier:
         specifier: ^3.8.4
         version: 3.8.4
@@ -1490,8 +1490,8 @@ packages:
       '@csstools/css-parser-algorithms': ^4.0.0
       '@csstools/css-tokenizer': ^4.0.0
 
-  '@csstools/css-color-parser@4.1.7':
-    resolution: {integrity: sha512-CmjJFQTFQx/U/xNJhSjCQ0ilpesPmNQ8+eOUeM/+kDOVW33qsIjeOXc27vrQDdWVkf83ZSWwtg7kXSUvKDJ8cQ==}
+  '@csstools/css-color-parser@4.1.8':
+    resolution: {integrity: sha512-3chWb7PRLijpJpPIKkDxdu6IBeO5MrFACND57On0j8OPpc0wZibcGc3xAHrSEbOx/KDRyMHoIxGn0w1PhXMYHw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@csstools/css-parser-algorithms': ^4.0.0
@@ -4589,8 +4589,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  libphonenumber-js@1.13.6:
-    resolution: {integrity: sha512-NdB6O6QvlGMCoG003m0YIKG2+Xw7DjmCZhmc1RH+K6HncADUbRf8TZeLegxBBN1VFyPHcNpPTKpIhYLXzJVy1Q==}
+  libphonenumber-js@1.13.7:
+    resolution: {integrity: sha512-rvr3HIMdOgzhz1RFGjftji+wjoAFlzhqCNqJOU/MKTZQ8d9NZxAR/tI+0weDicyoucqVR0U1GCniqHJ0f8aM2A==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -4673,8 +4673,8 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
-  lint-staged@17.0.7:
-    resolution: {integrity: sha512-JrSobt+tW3rH8IOMi8tDZd3foorM5yPEkLD/V2NxobgHrFfHWGee4MOLVuZeScgxftEwbHrPHIFA/ZL+nUJeuA==}
+  lint-staged@17.0.8:
+    resolution: {integrity: sha512-B2P/d+jVW0UXOQ0MVMLrB/9ydA1P+zz6jYfdrbbEd9ur3S2rcbduFWKiUCC02Sm5hbC8nrm7y24WuYMG54HfxA==}
     engines: {node: '>=22.22.1'}
     hasBin: true
 
@@ -6240,7 +6240,7 @@ snapshots:
     dependencies:
       '@asamuzakjp/generational-cache': 1.0.1
       '@csstools/css-calc': 3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
-      '@csstools/css-color-parser': 4.1.7(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
+      '@csstools/css-color-parser': 4.1.8(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
 
@@ -7066,7 +7066,7 @@ snapshots:
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
 
-  '@csstools/css-color-parser@4.1.7(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
+  '@csstools/css-color-parser@4.1.8(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/color-helpers': 6.0.2
       '@csstools/css-calc': 3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
@@ -8796,7 +8796,7 @@ snapshots:
   class-validator@0.14.4:
     dependencies:
       '@types/validator': 13.15.10
-      libphonenumber-js: 1.13.6
+      libphonenumber-js: 1.13.7
       validator: 13.15.35
     optional: true
 
@@ -10118,7 +10118,7 @@ snapshots:
     dependencies:
       isomorphic.js: 0.2.5
 
-  libphonenumber-js@1.13.6:
+  libphonenumber-js@1.13.7:
     optional: true
 
   lightningcss-android-arm64@1.32.0:
@@ -10174,7 +10174,7 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  lint-staged@17.0.7:
+  lint-staged@17.0.8:
     dependencies:
       listr2: 10.2.1
       picomatch: 4.0.4
