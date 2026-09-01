@@ -81,7 +81,7 @@
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.0",
     "vite": "^8.0.16",
     "vitest": "^4.1.9"
   },
