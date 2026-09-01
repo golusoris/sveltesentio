@@ -1,15 +1,71 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["config:recommended"],
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
+  "rebaseWhen": "auto",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"],
+    "vulnerabilityFixStrategy": "highest"
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"],
+    "groupName": "lockfile maintenance"
+  },
   "packageRules": [
+    {
+      "matchUpdateTypes": ["vulnerability"],
+      "groupName": null,
+      "minimumReleaseAge": null,
+      "schedule": ["at any time"],
+      "labels": ["security"]
+    },
     {
       "matchPackageNames": ["undici"],
       "allowedVersions": "<8",
       "description": "undici 8.x removes internals jsdom 29 requires; stay on patched 7.x"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "devDependencies (non-major)"
+    },
+    {
+      "matchPackageNames": [
+        "/eslint/",
+        "eslint**",
+        "@eslint/**",
+        "@typescript-eslint/**",
+        "prettier**",
+        "@commitlint/**",
+        "lint-staged"
+      ],
+      "groupName": "linters and formatters"
+    },
+    {
+      "matchPackageNames": [
+        "/vitest/",
+        "@vitest/**",
+        "@playwright/**",
+        "playwright",
+        "@testing-library/**",
+        "@axe-core/**",
+        "jsdom"
+      ],
+      "groupName": "test tooling"
+    },
+    {
+      "matchPackageNames": ["@tanstack/**"],
+      "groupName": "tanstack monorepo"
+    },
+    {
+      "matchPackageNames": ["svelte", "@sveltejs/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "svelte ecosystem (non-major)"
     }
   ]
 }
