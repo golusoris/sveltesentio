@@ -1,10 +1,17 @@
 {
-  "name": "@sveltesentio/core",
-  "version": "0.3.0",
   "description": "Vite plugin, env schema, error types, id/clock utils — sveltesentio core",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@sveltejs/kit": "^2.70.3",
+    "@types/node": "^24.13.4",
+    "esm-env": "^1.2.2",
+    "openapi-fetch": "^0.17.0",
+    "svelte": "^5.57.0",
+    "svelte-eslint-parser": "^1.8.1",
+    "typescript": "^5.7.3",
+    "uuid": "^14.0.2",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.1"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -14,9 +21,21 @@
       "import": "./src/clock.ts",
       "types": "./src/clock.ts"
     },
+    "./csp": {
+      "import": "./src/csp.ts",
+      "types": "./src/csp.ts"
+    },
     "./env": {
       "import": "./src/env.ts",
       "types": "./src/env.ts"
+    },
+    "./eslint": {
+      "import": "./src/eslint.ts",
+      "types": "./src/eslint.ts"
+    },
+    "./http": {
+      "import": "./src/http.ts",
+      "types": "./src/http.ts"
     },
     "./id": {
       "import": "./src/id.ts",
@@ -26,69 +45,50 @@
       "import": "./src/problem.ts",
       "types": "./src/problem.ts"
     },
-    "./http": {
-      "import": "./src/http.ts",
-      "types": "./src/http.ts"
-    },
-    "./csp": {
-      "import": "./src/csp.ts",
-      "types": "./src/csp.ts"
+    "./sentio": {
+      "types": "./sentio.d.ts"
     },
     "./vite": {
       "import": "./src/vite.ts",
       "types": "./src/vite.ts"
-    },
-    "./eslint": {
-      "import": "./src/eslint.ts",
-      "types": "./src/eslint.ts"
-    },
-    "./sentio": {
-      "types": "./sentio.d.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
+  "files": [
+    "src",
+    "sentio.d.ts",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "sveltesentio",
+    "sveltekit",
+    "vite-plugin"
+  ],
+  "name": "@sveltesentio/core",
   "peerDependencies": {
-    "@sveltejs/kit": ">=2.0.0",
-    "esm-env": ">=1.0.0",
-    "openapi-fetch": ">=0.17.0",
-    "svelte": ">=5.0.0",
-    "uuid": ">=13.0.0",
-    "vite": ">=8.0.0",
-    "zod": ">=4.0.0"
+    "@sveltejs/kit": "\u003e=2.0.0",
+    "esm-env": "\u003e=1.0.0",
+    "openapi-fetch": "\u003e=0.17.0",
+    "svelte": "\u003e=5.0.0",
+    "uuid": "\u003e=13.0.0",
+    "vite": "\u003e=8.0.0",
+    "zod": "\u003e=4.0.0"
   },
   "peerDependenciesMeta": {
     "openapi-fetch": {
       "optional": true
     }
   },
-  "devDependencies": {
-    "@sveltejs/kit": "^2.65.2",
-    "@types/node": "^24.13.2",
-    "esm-env": "^1.2.2",
-    "openapi-fetch": "^0.17.0",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "uuid": "^14.0.0",
-    "vitest": "^4.1.9",
-    "zod": "^4.4.3",
-    "svelte-eslint-parser": "^1.8.0"
-  },
-  "keywords": [
-    "sveltesentio",
-    "sveltekit",
-    "vite-plugin"
-  ],
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "sentio.d.ts",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.3.0"
 }

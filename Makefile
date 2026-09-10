@@ -59,3 +59,15 @@ add-package:
 	echo "// @sveltesentio/$$name — not yet implemented" > packages/$$name/src/index.ts; \
 	echo "# @sveltesentio/$$name" > packages/$$name/README.md; \
 	echo "Created packages/$$name"
+
+# cordanaLLM/praetor Governance Targets
+.PHONY: verify-all compile-context audit
+
+verify-all:
+	@standardsctl audit && standardsctl compile-context --verify
+
+compile-context:
+	@standardsctl compile-context
+
+audit:
+	@standardsctl audit

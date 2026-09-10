@@ -1,64 +1,83 @@
 {
-  "name": "@sveltesentio/media",
-  "version": "0.4.1",
-  "description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> — Svelte 5",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "esm-env": "^1.2.2"
+  },
+  "description": "Media player (headless HLS model + a11y \u003cPlayer\u003e shell), responsive blur-up \u003cImage\u003e, and a preset-aware embla \u003cCarousel\u003e — Svelte 5",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@sveltesentio/core": "workspace:*",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "axe-core": "^4.13.0",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
-    },
-    "./player": {
-      "import": "./src/player.ts",
-      "types": "./src/player.ts"
-    },
-    "./player/controls": {
-      "import": "./src/player-controls.ts",
-      "types": "./src/player-controls.ts"
-    },
-    "./player/component": {
-      "svelte": "./src/Player.svelte",
-      "default": "./src/Player.svelte"
-    },
-    "./image": {
-      "import": "./src/image.ts",
-      "types": "./src/image.ts"
-    },
-    "./image/lqip": {
-      "import": "./src/lqip.ts",
-      "types": "./src/lqip.ts"
-    },
-    "./image/component": {
-      "svelte": "./src/Image.svelte",
-      "default": "./src/Image.svelte"
     },
     "./carousel": {
       "import": "./src/carousel.ts",
       "types": "./src/carousel.ts"
     },
     "./carousel/component": {
-      "svelte": "./src/Carousel.svelte",
-      "default": "./src/Carousel.svelte"
+      "default": "./src/Carousel.svelte",
+      "svelte": "./src/Carousel.svelte"
+    },
+    "./image": {
+      "import": "./src/image.ts",
+      "types": "./src/image.ts"
+    },
+    "./image/component": {
+      "default": "./src/Image.svelte",
+      "svelte": "./src/Image.svelte"
+    },
+    "./image/lqip": {
+      "import": "./src/lqip.ts",
+      "types": "./src/lqip.ts"
+    },
+    "./player": {
+      "import": "./src/player.ts",
+      "types": "./src/player.ts"
+    },
+    "./player/component": {
+      "default": "./src/Player.svelte",
+      "svelte": "./src/Player.svelte"
+    },
+    "./player/controls": {
+      "import": "./src/player-controls.ts",
+      "types": "./src/player-controls.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage",
-    "test:e2e": "playwright test --config e2e/playwright.config.ts"
-  },
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*",
-    "esm-env": "^1.2.2"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md",
+    "!src/**/*.stories.svelte"
+  ],
+  "keywords": [
+    "sveltesentio",
+    "media",
+    "hls",
+    "player",
+    "carousel",
+    "image",
+    "srcset",
+    "media-session",
+    "10-foot-ui"
+  ],
+  "name": "@sveltesentio/media",
   "peerDependencies": {
-    "embla-carousel-svelte": ">=8.6.0",
-    "hls.js": ">=1.6.0",
-    "svelte": ">=5.0.0",
-    "vidstack": ">=1.12.13 <2"
+    "embla-carousel-svelte": "\u003e=8.6.0",
+    "hls.js": "\u003e=1.6.0",
+    "svelte": "\u003e=5.0.0",
+    "vidstack": "\u003e=1.12.13 \u003c2"
   },
   "peerDependenciesMeta": {
     "embla-carousel-svelte": {
@@ -71,37 +90,18 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@playwright/test": "^1.61.0",
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@sveltesentio/core": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "axe-core": "^4.12.1",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.9"
-  },
-  "keywords": [
-    "sveltesentio",
-    "media",
-    "hls",
-    "player",
-    "carousel",
-    "image",
-    "srcset",
-    "media-session",
-    "10-foot-ui"
-  ],
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.4.1"
 }

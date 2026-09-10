@@ -1,14 +1,27 @@
 {
-  "name": "@sveltesentio/i18n",
-  "version": "0.3.0",
   "description": "Paraglide-js v2 wrappers — locale detection, Intl formatters, a11y announcer, RTL direction",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.25.1",
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "axe-core": "^4.13.0",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./announcer": {
+      "import": "./src/announcer.ts",
+      "types": "./src/announcer.ts"
     },
     "./direction": {
       "import": "./src/direction.ts",
@@ -18,48 +31,24 @@
       "import": "./src/intl.ts",
       "types": "./src/intl.ts"
     },
-    "./announcer": {
-      "import": "./src/announcer.ts",
-      "types": "./src/announcer.ts"
+    "./lang-sync": {
+      "default": "./src/LangSync.svelte",
+      "svelte": "./src/LangSync.svelte"
     },
     "./load-locale-font": {
       "import": "./src/load-locale-font.ts",
       "types": "./src/load-locale-font.ts"
     },
-    "./lang-sync": {
-      "svelte": "./src/LangSync.svelte",
-      "default": "./src/LangSync.svelte"
-    },
     "./locale-switcher": {
-      "svelte": "./src/LocaleSwitcher.svelte",
-      "default": "./src/LocaleSwitcher.svelte"
+      "default": "./src/LocaleSwitcher.svelte",
+      "svelte": "./src/LocaleSwitcher.svelte"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "peerDependencies": {
-    "@inlang/paraglide-js": ">=2.0.0",
-    "@sveltejs/kit": ">=2.0.0",
-    "svelte": ">=5.0.0"
-  },
-  "devDependencies": {
-    "@inlang/paraglide-js": "^2.20.0",
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/kit": "^2.65.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "axe-core": "^4.12.1",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md",
+    "!src/**/*.stories.svelte"
+  ],
   "keywords": [
     "sveltesentio",
     "i18n",
@@ -68,12 +57,23 @@
     "rtl",
     "a11y"
   ],
+  "name": "@sveltesentio/i18n",
+  "peerDependencies": {
+    "@inlang/paraglide-js": "\u003e=2.0.0",
+    "@sveltejs/kit": "\u003e=2.0.0",
+    "svelte": "\u003e=5.0.0"
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.3.0"
 }

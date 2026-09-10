@@ -1,18 +1,20 @@
 {
-  "name": "@sveltesentio/ipc-sockmap",
-  "version": "0.2.0",
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  },
   "description": "Colocated-IPC client for SvelteKit ↔ Golusoris: AF_UNIX (Tier 1) + length-prefixed framing + transport-ladder detection + eBPF SK_MSG sockhash (Tier 3) observe/handoff client — capability probe, systemd socket-activation, key-count/Prometheus observability, degrades to Tier 1. Node + Linux.",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@types/node": "^24.13.4",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "\u003e=24"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
-    },
-    "./transport": {
-      "import": "./src/transport.ts",
-      "types": "./src/transport.ts"
     },
     "./client": {
       "import": "./src/client.ts",
@@ -21,25 +23,16 @@
     "./sockmap": {
       "import": "./src/sockmap.ts",
       "types": "./src/sockmap.ts"
+    },
+    "./transport": {
+      "import": "./src/transport.ts",
+      "types": "./src/transport.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "engines": {
-    "node": ">=24"
-  },
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^24.13.2",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "ipc",
@@ -49,11 +42,18 @@
     "golusoris",
     "colocated"
   ],
+  "name": "@sveltesentio/ipc-sockmap",
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.2.0"
 }

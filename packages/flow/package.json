@@ -1,14 +1,35 @@
 {
-  "name": "@sveltesentio/flow",
-  "version": "0.4.0",
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  },
   "description": "@xyflow/svelte wrappers — node editors, DAG helpers, canvas utilities",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "@xyflow/svelte": "^1.6.6",
+    "axe-core": "^4.13.0",
+    "elkjs": "^0.11.1",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./canvas": {
+      "import": "./src/canvas.ts",
+      "svelte": "./src/FlowCanvas.svelte",
+      "types": "./src/canvas.ts"
+    },
+    "./canvas-model": {
+      "import": "./src/canvas-model.ts",
+      "types": "./src/canvas-model.ts"
     },
     "./dag": {
       "import": "./src/dag.ts",
@@ -26,53 +47,16 @@
       "import": "./src/node-palette.ts",
       "types": "./src/node-palette.ts"
     },
-    "./canvas": {
-      "svelte": "./src/FlowCanvas.svelte",
-      "types": "./src/canvas.ts",
-      "import": "./src/canvas.ts"
-    },
-    "./canvas-model": {
-      "import": "./src/canvas-model.ts",
-      "types": "./src/canvas-model.ts"
-    },
     "./nodes": {
       "import": "./src/nodes.ts",
       "types": "./src/nodes.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "peerDependencies": {
-    "@xyflow/svelte": ">=1.0.0",
-    "elkjs": ">=0.11.0",
-    "svelte": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@xyflow/svelte": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "@xyflow/svelte": "^1.6.0",
-    "axe-core": "^4.12.1",
-    "elkjs": "^0.11.0",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md",
+    "!src/**/*.stories.svelte"
+  ],
   "keywords": [
     "sveltesentio",
     "flow",
@@ -80,12 +64,28 @@
     "dag",
     "xyflow"
   ],
+  "name": "@sveltesentio/flow",
+  "peerDependencies": {
+    "@xyflow/svelte": "\u003e=1.0.0",
+    "elkjs": "\u003e=0.11.0",
+    "svelte": "\u003e=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@xyflow/svelte": {
+      "optional": true
+    }
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.4.0"
 }

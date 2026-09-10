@@ -1,14 +1,27 @@
 {
-  "name": "@sveltesentio/forms",
-  "version": "0.3.0",
   "description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltesentio/core": "workspace:*",
+    "svelte": "^5.57.0",
+    "sveltekit-superforms": "^2.30.2",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.1"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./action": {
+      "import": "./src/form-action.ts",
+      "types": "./src/form-action.ts"
+    },
+    "./formsnap": {
+      "import": "./src/formsnap.ts",
+      "svelte": "./src/formsnap.ts",
+      "types": "./src/formsnap.ts"
     },
     "./problem": {
       "import": "./src/problem-to-field-errors.ts",
@@ -18,49 +31,16 @@
       "import": "./src/server.ts",
       "types": "./src/server.ts"
     },
-    "./action": {
-      "import": "./src/form-action.ts",
-      "types": "./src/form-action.ts"
-    },
     "./use-form": {
-      "svelte": "./src/use-form.svelte.ts",
       "import": "./src/use-form.svelte.ts",
+      "svelte": "./src/use-form.svelte.ts",
       "types": "./src/use-form.svelte.ts"
-    },
-    "./formsnap": {
-      "svelte": "./src/formsnap.ts",
-      "import": "./src/formsnap.ts",
-      "types": "./src/formsnap.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "peerDependencies": {
-    "@sveltejs/kit": ">=2.0.0",
-    "@sveltesentio/core": "workspace:*",
-    "formsnap": ">=2.0.0",
-    "svelte": ">=5.0.0",
-    "sveltekit-superforms": ">=2.0.0",
-    "zod": ">=4.0.0"
-  },
-  "peerDependenciesMeta": {
-    "formsnap": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@sveltejs/kit": "^2.65.1",
-    "@sveltesentio/core": "workspace:*",
-    "svelte": "^5.56.3",
-    "sveltekit-superforms": "^2.30.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
-    "zod": "^4.4.3"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "forms",
@@ -69,11 +49,31 @@
     "validation",
     "rfc9457"
   ],
+  "name": "@sveltesentio/forms",
+  "peerDependencies": {
+    "@sveltejs/kit": "\u003e=2.0.0",
+    "@sveltesentio/core": "workspace:*",
+    "formsnap": "\u003e=2.0.0",
+    "svelte": "\u003e=5.0.0",
+    "sveltekit-superforms": "\u003e=2.0.0",
+    "zod": "\u003e=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "formsnap": {
+      "optional": true
+    }
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.3.0"
 }

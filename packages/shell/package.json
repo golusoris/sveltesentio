@@ -1,10 +1,15 @@
 {
-  "name": "@sveltesentio/shell",
-  "version": "0.2.0",
   "description": "Device-class layout + input primitives — classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@sveltesentio/testing": "workspace:*",
+    "@types/node": "^24.13.4",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -18,27 +23,36 @@
       "import": "./src/dpad-index.ts",
       "types": "./src/dpad-index.ts"
     },
-    "./safe-area": {
-      "import": "./src/safe-area.ts",
-      "types": "./src/safe-area.ts"
-    },
     "./pwa": {
       "import": "./src/pwa.ts",
       "types": "./src/pwa.ts"
+    },
+    "./safe-area": {
+      "import": "./src/safe-area.ts",
+      "types": "./src/safe-area.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage",
-    "test:e2e": "playwright test --config e2e/playwright.config.ts"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "sveltesentio",
+    "shell",
+    "device-class",
+    "pwa",
+    "10-foot",
+    "handheld",
+    "d-pad",
+    "gamepad",
+    "safe-area"
+  ],
+  "name": "@sveltesentio/shell",
   "peerDependencies": {
-    "@sveltejs/kit": ">=2.0.0",
-    "@vite-pwa/sveltekit": ">=1.1.0",
-    "svelte": ">=5.0.0",
-    "vite-plugin-pwa": ">=1.2.0"
+    "@sveltejs/kit": "\u003e=2.0.0",
+    "@vite-pwa/sveltekit": "\u003e=1.1.0",
+    "svelte": "\u003e=5.0.0",
+    "vite-plugin-pwa": "\u003e=1.2.0"
   },
   "peerDependenciesMeta": {
     "@sveltejs/kit": {
@@ -51,32 +65,18 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@axe-core/playwright": "^4.11.3",
-    "@playwright/test": "^1.61.0",
-    "@sveltesentio/testing": "workspace:*",
-    "@types/node": "^24.13.2",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.9"
-  },
-  "keywords": [
-    "sveltesentio",
-    "shell",
-    "device-class",
-    "pwa",
-    "10-foot",
-    "handheld",
-    "d-pad",
-    "gamepad",
-    "safe-area"
-  ],
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.2.0"
 }

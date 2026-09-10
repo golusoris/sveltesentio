@@ -1,10 +1,10 @@
 {
-  "name": "@sveltesentio/collab",
-  "version": "0.4.0",
   "description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers + awareness/presence helpers",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
@@ -14,13 +14,21 @@
       "import": "./src/yjs-array.ts",
       "types": "./src/yjs-array.ts"
     },
+    "./awareness": {
+      "import": "./src/awareness.ts",
+      "types": "./src/awareness.ts"
+    },
     "./map": {
       "import": "./src/yjs-map.ts",
       "types": "./src/yjs-map.ts"
     },
-    "./text": {
-      "import": "./src/yjs-text.ts",
-      "types": "./src/yjs-text.ts"
+    "./map-store": {
+      "import": "./src/createYjsMap.svelte.ts",
+      "types": "./src/createYjsMap.svelte.ts"
+    },
+    "./presence-store": {
+      "import": "./src/presence-store.svelte.ts",
+      "types": "./src/presence-store.svelte.ts"
     },
     "./provider": {
       "import": "./src/provider.ts",
@@ -30,45 +38,19 @@
       "import": "./src/createYjsStore.svelte.ts",
       "types": "./src/createYjsStore.svelte.ts"
     },
-    "./map-store": {
-      "import": "./src/createYjsMap.svelte.ts",
-      "types": "./src/createYjsMap.svelte.ts"
+    "./text": {
+      "import": "./src/yjs-text.ts",
+      "types": "./src/yjs-text.ts"
     },
     "./text-store": {
       "import": "./src/createYjsText.svelte.ts",
       "types": "./src/createYjsText.svelte.ts"
-    },
-    "./awareness": {
-      "import": "./src/awareness.ts",
-      "types": "./src/awareness.ts"
-    },
-    "./presence-store": {
-      "import": "./src/presence-store.svelte.ts",
-      "types": "./src/presence-store.svelte.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "peerDependencies": {
-    "svelte": ">=5.0.0",
-    "y-protocols": ">=1.0.5",
-    "y-websocket": ">=2.0.0",
-    "yjs": ">=13.6.0"
-  },
-  "peerDependenciesMeta": {
-    "y-protocols": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "yjs",
@@ -78,11 +60,29 @@
     "awareness",
     "presence"
   ],
+  "name": "@sveltesentio/collab",
+  "peerDependencies": {
+    "svelte": "\u003e=5.0.0",
+    "y-protocols": "\u003e=1.0.5",
+    "y-websocket": "\u003e=2.0.0",
+    "yjs": "\u003e=13.6.0"
+  },
+  "peerDependenciesMeta": {
+    "y-protocols": {
+      "optional": true
+    }
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.4.0"
 }

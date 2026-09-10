@@ -16,24 +16,24 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
-    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "^10.0.1",
-    "@typescript-eslint/eslint-plugin": "^8.61.0",
-    "@typescript-eslint/parser": "^8.61.0",
-    "@vitest/coverage-v8": "^4.1.9",
-    "eslint": "^10.5.0",
+    "@sveltesentio/core": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-svelte": "^3.19.0",
+    "eslint-plugin-svelte": "^3.23.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "prettier": "^3.8.4",
+    "lint-staged": "^17.5.0",
+    "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
-    "svelte": "^5.56.3",
-    "svelte-eslint-parser": "^1.8.0",
-    "turbo": "^2.9.18",
-    "typescript": "^6.0.3",
-    "@sveltesentio/core": "workspace:*"
+    "svelte": "^5.57.0",
+    "svelte-eslint-parser": "^1.8.1",
+    "turbo": "^2.10.12",
+    "typescript": "^6.0.3"
   },
   "lint-staged": {
     "*.{ts,svelte,js}": [

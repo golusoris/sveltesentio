@@ -11,6 +11,13 @@ release-please cannot infer them from Conventional Commits.
 
 ## [Unreleased]
 
+
+## [v0.3.0] - 2026-09-10
+
+### Changed
+
+- Adopt Praetor standards governance and fast-forward pnpm workspace dependencies
+
 ### Added
 
 - Monorepo scaffold: 11 `@sveltesentio/*` package stubs with `package.json`, `tsconfig.json`, `README.md`, `src/index.ts`.
