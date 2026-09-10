@@ -1,17 +1,25 @@
 {
-  "name": "@sveltesentio/mcp",
-  "version": "0.2.0",
-  "description": "Model Context Protocol server exposing sveltesentio's module catalog, ADR index, compose recipes, and compliance checklists to AI coding assistants",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
   "bin": {
     "sveltesentio-mcp": "./bin/sveltesentio-mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "description": "Model Context Protocol server exposing sveltesentio's module catalog, ADR index, compose recipes, and compliance checklists to AI coding assistants",
+  "devDependencies": {
+    "@types/node": "^24.13.4",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.1"
   },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./subscriptions": {
+      "import": "./src/subscriptions.ts",
+      "types": "./src/subscriptions.ts"
     },
     "./tools/compose-search": {
       "import": "./src/tools/compose-search.ts",
@@ -20,42 +28,34 @@
     "./tools/principle-lookup": {
       "import": "./src/tools/principle-lookup.ts",
       "types": "./src/tools/principle-lookup.ts"
-    },
-    "./subscriptions": {
-      "import": "./src/subscriptions.ts",
-      "types": "./src/subscriptions.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/ bin/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage --passWithNoTests",
-    "start": "node --experimental-strip-types bin/sveltesentio-mcp.ts"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
-  },
-  "peerDependencies": {
-    "zod": ">=4.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.13.2",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
-    "zod": "^4.4.3"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "mcp",
     "model-context-protocol",
     "ai-tools"
   ],
+  "name": "@sveltesentio/mcp",
+  "peerDependencies": {
+    "zod": "\u003e=4.0.0"
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/ bin/",
+    "start": "node --experimental-strip-types bin/sveltesentio-mcp.ts",
+    "test": "vitest run --coverage --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.2.0"
 }

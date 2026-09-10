@@ -1,18 +1,19 @@
 {
-  "name": "@sveltesentio/uploads",
-  "version": "0.2.0",
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*",
+    "exifr": "^7.1.3",
+    "file-type": "^22.0.2"
+  },
   "description": "Resumable uploads — tus-js-client + exifr (EXIF strip) + file-type (magic-byte sniffing)",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "tus-js-client": "^4.3.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
-    },
-    "./validate": {
-      "import": "./src/validate.ts",
-      "types": "./src/validate.ts"
     },
     "./exif": {
       "import": "./src/exif.ts",
@@ -21,22 +22,16 @@
     "./resumable": {
       "import": "./src/resumable.ts",
       "types": "./src/resumable.ts"
+    },
+    "./validate": {
+      "import": "./src/validate.ts",
+      "types": "./src/validate.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "peerDependencies": {
-    "tus-js-client": ">=4.3.0"
-  },
-  "devDependencies": {
-    "tus-js-client": "^4.3.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "uploads",
@@ -45,21 +40,26 @@
     "file-type",
     "resumable"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ],
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*",
-    "exifr": "^7.1.3",
-    "file-type": "^22.0.1"
+  "name": "@sveltesentio/uploads",
+  "peerDependencies": {
+    "tus-js-client": "\u003e=4.3.0"
   },
   "peerDependenciesMeta": {
     "tus-js-client": {
       "optional": true
     }
-  }
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.2.0"
 }

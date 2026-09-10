@@ -1,14 +1,30 @@
 {
-  "name": "@sveltesentio/emulator",
-  "version": "0.1.0",
-  "description": "SSR-safe EmulatorJS loader (Svelte 5 <Emulator>) + platform→core map + strict-CSP additions for WASM/worker cores",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "description": "SSR-safe EmulatorJS loader (Svelte 5 \u003cEmulator\u003e) + platform→core map + strict-CSP additions for WASM/worker cores",
+  "devDependencies": {
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "axe-core": "^4.13.0",
+    "esm-env": "^1.2.2",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./Emulator.svelte": {
+      "svelte": "./src/Emulator.svelte",
+      "types": "./src/Emulator.svelte"
+    },
+    "./cores": {
+      "import": "./src/cores.ts",
+      "types": "./src/cores.ts"
     },
     "./csp": {
       "import": "./src/csp.ts",
@@ -17,39 +33,13 @@
     "./loader": {
       "import": "./src/loader.ts",
       "types": "./src/loader.ts"
-    },
-    "./cores": {
-      "import": "./src/cores.ts",
-      "types": "./src/cores.ts"
-    },
-    "./Emulator.svelte": {
-      "svelte": "./src/Emulator.svelte",
-      "types": "./src/Emulator.svelte"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "peerDependencies": {
-    "esm-env": ">=1.0.0",
-    "svelte": ">=5.0.0"
-  },
-  "devDependencies": {
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "axe-core": "^4.12.1",
-    "esm-env": "^1.2.2",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
-  },
+  "files": [
+    "src",
+    "!src/**/*.stories.svelte",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "emulatorjs",
@@ -58,12 +48,22 @@
     "wasm",
     "csp"
   ],
+  "name": "@sveltesentio/emulator",
+  "peerDependencies": {
+    "esm-env": "\u003e=1.0.0",
+    "svelte": "\u003e=5.0.0"
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "!src/**/*.stories.svelte",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.1.0"
 }

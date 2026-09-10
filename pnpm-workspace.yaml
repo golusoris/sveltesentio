@@ -39,3 +39,6 @@ overrides:
   postcss: '>=8.5.18'
   adm-zip: '>=0.6.0'
   ip-address: '>=10.3.1'
+allowBuilds:
+  esbuild: set this to true or false
+  protobufjs: set this to true or false

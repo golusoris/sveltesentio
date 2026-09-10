@@ -1,22 +1,66 @@
 {
-  "name": "@sveltesentio/auth",
-  "version": "0.6.0",
   "description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@playwright/test": "1.61.0",
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@sveltesentio/core": "workspace:*",
+    "@sveltesentio/testing": "workspace:*",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "axe-core": "^4.13.0",
+    "jsdom": "^29.1.1",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^4.1.11",
+    "zod": "^4.6.1"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
+    "./cookies": {
+      "import": "./src/cookies.ts",
+      "types": "./src/cookies.ts"
+    },
     "./csrf": {
       "import": "./src/csrf.ts",
       "types": "./src/csrf.ts"
     },
-    "./cookies": {
-      "import": "./src/cookies.ts",
-      "types": "./src/cookies.ts"
+    "./csrf-hook": {
+      "import": "./src/csrf-hook.ts",
+      "types": "./src/csrf-hook.ts"
+    },
+    "./mfa": {
+      "import": "./src/mfa.ts",
+      "types": "./src/mfa.ts"
+    },
+    "./mfa-challenge": {
+      "default": "./src/MfaChallenge.svelte",
+      "svelte": "./src/MfaChallenge.svelte"
+    },
+    "./mfa-enroll": {
+      "default": "./src/MfaEnroll.svelte",
+      "svelte": "./src/MfaEnroll.svelte"
+    },
+    "./mfa-view": {
+      "import": "./src/mfa-view.ts",
+      "types": "./src/mfa-view.ts"
+    },
+    "./oidc": {
+      "import": "./src/oidc.ts",
+      "types": "./src/oidc.ts"
+    },
+    "./passkey": {
+      "import": "./src/passkey.ts",
+      "types": "./src/passkey.ts"
+    },
+    "./permissions": {
+      "import": "./src/permissions.ts",
+      "types": "./src/permissions.ts"
     },
     "./pkce": {
       "import": "./src/pkce.ts",
@@ -26,83 +70,20 @@
       "import": "./src/random.ts",
       "types": "./src/random.ts"
     },
-    "./permissions": {
-      "import": "./src/permissions.ts",
-      "types": "./src/permissions.ts"
-    },
-    "./oidc": {
-      "import": "./src/oidc.ts",
-      "types": "./src/oidc.ts"
-    },
-    "./csrf-hook": {
-      "import": "./src/csrf-hook.ts",
-      "types": "./src/csrf-hook.ts"
-    },
     "./session": {
       "import": "./src/session-hook.ts",
       "types": "./src/session-hook.ts"
     },
-    "./mfa": {
-      "import": "./src/mfa.ts",
-      "types": "./src/mfa.ts"
-    },
-    "./passkey": {
-      "import": "./src/passkey.ts",
-      "types": "./src/passkey.ts"
-    },
     "./use-permissions": {
       "import": "./src/use-permissions.svelte.ts",
       "types": "./src/use-permissions.svelte.ts"
-    },
-    "./mfa-view": {
-      "import": "./src/mfa-view.ts",
-      "types": "./src/mfa-view.ts"
-    },
-    "./mfa-challenge": {
-      "svelte": "./src/MfaChallenge.svelte",
-      "default": "./src/MfaChallenge.svelte"
-    },
-    "./mfa-enroll": {
-      "svelte": "./src/MfaEnroll.svelte",
-      "default": "./src/MfaEnroll.svelte"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage",
-    "test:e2e": "playwright test --config e2e/playwright.config.ts"
-  },
-  "peerDependencies": {
-    "@simplewebauthn/browser": ">=13.0.0",
-    "@sveltejs/kit": ">=2.0.0",
-    "@sveltesentio/core": "workspace:*",
-    "svelte": ">=5.0.0",
-    "zod": ">=4.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@simplewebauthn/browser": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@playwright/test": "1.61.0",
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/kit": "^2.65.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@sveltesentio/core": "workspace:*",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "axe-core": "^4.12.1",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vite": "8.0.16",
-    "vitest": "^4.1.9",
-    "zod": "^4.4.3"
-  },
+  "files": [
+    "src",
+    "!src/**/*.stories.svelte",
+    "CHANGELOG.md"
+  ],
   "keywords": [
     "sveltesentio",
     "auth",
@@ -113,12 +94,31 @@
     "permissions",
     "webauthn"
   ],
+  "name": "@sveltesentio/auth",
+  "peerDependencies": {
+    "@simplewebauthn/browser": "\u003e=13.0.0",
+    "@sveltejs/kit": "\u003e=2.0.0",
+    "@sveltesentio/core": "workspace:*",
+    "svelte": "\u003e=5.0.0",
+    "zod": "\u003e=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@simplewebauthn/browser": {
+      "optional": true
+    }
+  },
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "!src/**/*.stories.svelte",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.6.0"
 }

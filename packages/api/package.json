@@ -1,14 +1,25 @@
 {
-  "name": "@sveltesentio/api",
-  "version": "0.3.0",
+  "bin": {
+    "sveltesentio-codegen": "./src/codegen-bin.ts"
+  },
+  "dependencies": {
+    "@sveltesentio/core": "workspace:*"
+  },
   "description": "Typed openapi-fetch client wired with core's RFC 9457 problemMiddleware + an openapi-typescript codegen recipe",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "openapi-fetch": "^0.17.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./auth-middleware": {
+      "import": "./src/auth-middleware.ts",
+      "types": "./src/auth-middleware.ts"
     },
     "./client": {
       "import": "./src/client.ts",
@@ -17,46 +28,12 @@
     "./codegen": {
       "import": "./src/codegen.ts",
       "types": "./src/codegen.ts"
-    },
-    "./auth-middleware": {
-      "import": "./src/auth-middleware.ts",
-      "types": "./src/auth-middleware.ts"
     }
-  },
-  "bin": {
-    "sveltesentio-codegen": "./src/codegen-bin.ts"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "files": [
     "src",
     "CHANGELOG.md"
   ],
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "peerDependencies": {
-    "openapi-fetch": ">=0.17.0",
-    "openapi-typescript": ">=7.0.0"
-  },
-  "peerDependenciesMeta": {
-    "openapi-typescript": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "openapi-fetch": "^0.17.0",
-    "openapi-typescript": "^7.13.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
-  },
   "keywords": [
     "sveltesentio",
     "api",
@@ -64,5 +41,28 @@
     "openapi-fetch",
     "rfc9457",
     "rest"
-  ]
+  ],
+  "name": "@sveltesentio/api",
+  "peerDependencies": {
+    "openapi-fetch": "\u003e=0.17.0",
+    "openapi-typescript": "\u003e=7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "openapi-typescript": {
+      "optional": true
+    }
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.3.0"
 }

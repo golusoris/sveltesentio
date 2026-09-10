@@ -1,18 +1,19 @@
 {
-  "name": "@sveltesentio/realtime",
-  "version": "0.4.0",
   "description": "Native SSE client with exponential backoff + buffered emitter (ConnectRPC + Yjs WS follow-through)",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@bufbuild/protobuf": "^2.14.1",
+    "@connectrpc/connect": "^2.2.0",
+    "@connectrpc/connect-web": "^2.2.0",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltesentio/core": "workspace:*",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
-    },
-    "./sse": {
-      "import": "./src/sse-client.ts",
-      "types": "./src/sse-client.ts"
     },
     "./backoff": {
       "import": "./src/backoff.ts",
@@ -22,39 +23,50 @@
       "import": "./src/buffered-emitter.ts",
       "types": "./src/buffered-emitter.ts"
     },
-    "./use-sse": {
-      "svelte": "./src/use-sse.svelte.ts",
-      "import": "./src/use-sse.svelte.ts",
-      "types": "./src/use-sse.svelte.ts"
-    },
     "./connect-stream": {
       "import": "./src/connect-stream.ts",
       "types": "./src/connect-stream.ts"
     },
+    "./rpc": {
+      "import": "./src/rpc/index.ts",
+      "svelte": "./src/rpc/index.ts",
+      "types": "./src/rpc/index.ts"
+    },
+    "./sse": {
+      "import": "./src/sse-client.ts",
+      "types": "./src/sse-client.ts"
+    },
     "./use-connect-stream": {
-      "svelte": "./src/use-connect-stream.svelte.ts",
       "import": "./src/use-connect-stream.svelte.ts",
+      "svelte": "./src/use-connect-stream.svelte.ts",
       "types": "./src/use-connect-stream.svelte.ts"
     },
-    "./rpc": {
-      "svelte": "./src/rpc/index.ts",
-      "import": "./src/rpc/index.ts",
-      "types": "./src/rpc/index.ts"
+    "./use-sse": {
+      "import": "./src/use-sse.svelte.ts",
+      "svelte": "./src/use-sse.svelte.ts",
+      "types": "./src/use-sse.svelte.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "sveltesentio",
+    "realtime",
+    "sse",
+    "websocket",
+    "connectrpc",
+    "grpc"
+  ],
+  "name": "@sveltesentio/realtime",
   "peerDependencies": {
-    "@bufbuild/protobuf": ">=2.0.0",
-    "@connectrpc/connect": ">=2.0.0",
-    "@connectrpc/connect-web": ">=2.0.0",
-    "@sveltejs/kit": ">=2.0.0",
+    "@bufbuild/protobuf": "\u003e=2.0.0",
+    "@connectrpc/connect": "\u003e=2.0.0",
+    "@connectrpc/connect-web": "\u003e=2.0.0",
+    "@sveltejs/kit": "\u003e=2.0.0",
     "@sveltesentio/core": "workspace:*",
-    "svelte": ">=5.0.0"
+    "svelte": "\u003e=5.0.0"
   },
   "peerDependenciesMeta": {
     "@bufbuild/protobuf": {
@@ -70,29 +82,17 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@bufbuild/protobuf": "^2.11.0",
-    "@connectrpc/connect": "^2.1.2",
-    "@connectrpc/connect-web": "^2.1.2",
-    "@sveltejs/kit": "^2.65.2",
-    "@sveltesentio/core": "workspace:*",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
-  },
-  "keywords": [
-    "sveltesentio",
-    "realtime",
-    "sse",
-    "websocket",
-    "connectrpc",
-    "grpc"
-  ],
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.4.0"
 }

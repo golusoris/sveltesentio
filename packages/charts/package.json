@@ -1,74 +1,90 @@
 {
-  "name": "@sveltesentio/charts",
-  "version": "0.5.0",
   "description": "Thin LayerChart wrappers with a WCAG 2.2 AA accessibility envelope (ChartFigure) and dashboard presets",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
+  "devDependencies": {
+    "@storybook/addon-svelte-csf": "5.1.2",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/svelte": "^5.4.2",
+    "axe-core": "^4.13.0",
+    "jsdom": "^29.1.1",
+    "layerchart": "2.0.0-next.65",
+    "svelte": "^5.57.0",
+    "typescript": "^5.7.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  },
   "exports": {
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./figure": {
-      "svelte": "./src/ChartFigure.svelte",
-      "default": "./src/ChartFigure.svelte"
-    },
     "./a11y-table": {
       "import": "./src/a11y-table.ts",
       "types": "./src/a11y-table.ts"
     },
-    "./preset": {
-      "import": "./src/preset.ts",
-      "types": "./src/preset.ts"
+    "./area": {
+      "default": "./src/AreaChart.svelte",
+      "svelte": "./src/AreaChart.svelte"
     },
-    "./palette": {
-      "import": "./src/palette.ts",
-      "types": "./src/palette.ts"
+    "./bar": {
+      "default": "./src/BarChart.svelte",
+      "svelte": "./src/BarChart.svelte"
+    },
+    "./chart": {
+      "default": "./src/Chart.svelte",
+      "svelte": "./src/Chart.svelte"
     },
     "./chart-series": {
       "import": "./src/chart-series.ts",
       "types": "./src/chart-series.ts"
     },
-    "./chart": {
-      "svelte": "./src/Chart.svelte",
-      "default": "./src/Chart.svelte"
+    "./figure": {
+      "default": "./src/ChartFigure.svelte",
+      "svelte": "./src/ChartFigure.svelte"
     },
     "./line": {
-      "svelte": "./src/LineChart.svelte",
-      "default": "./src/LineChart.svelte"
+      "default": "./src/LineChart.svelte",
+      "svelte": "./src/LineChart.svelte"
     },
-    "./area": {
-      "svelte": "./src/AreaChart.svelte",
-      "default": "./src/AreaChart.svelte"
-    },
-    "./bar": {
-      "svelte": "./src/BarChart.svelte",
-      "default": "./src/BarChart.svelte"
+    "./palette": {
+      "import": "./src/palette.ts",
+      "types": "./src/palette.ts"
     },
     "./pie": {
-      "svelte": "./src/PieChart.svelte",
-      "default": "./src/PieChart.svelte"
+      "default": "./src/PieChart.svelte",
+      "svelte": "./src/PieChart.svelte"
+    },
+    "./preset": {
+      "import": "./src/preset.ts",
+      "types": "./src/preset.ts"
     },
     "./scatter": {
-      "svelte": "./src/ScatterChart.svelte",
-      "default": "./src/ScatterChart.svelte"
+      "default": "./src/ScatterChart.svelte",
+      "svelte": "./src/ScatterChart.svelte"
     },
     "./uplot": {
       "import": "./src/uplot.ts",
       "types": "./src/uplot.ts"
     }
   },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --coverage"
-  },
+  "files": [
+    "src",
+    "CHANGELOG.md",
+    "!src/**/*.stories.svelte"
+  ],
+  "keywords": [
+    "sveltesentio",
+    "charts",
+    "layerchart",
+    "dashboard",
+    "accessibility",
+    "data-visualization"
+  ],
+  "name": "@sveltesentio/charts",
   "peerDependencies": {
-    "layerchart": ">=2.0.0-next.43",
-    "svelte": ">=5.0.0",
-    "uplot": ">=1.6.0"
+    "layerchart": "\u003e=2.0.0-next.43",
+    "svelte": "\u003e=5.0.0",
+    "uplot": "\u003e=1.6.0"
   },
   "peerDependenciesMeta": {
     "layerchart": {
@@ -78,33 +94,17 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@storybook/addon-svelte-csf": "5.1.2",
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/svelte": "^5.3.1",
-    "axe-core": "^4.12.1",
-    "jsdom": "^29.1.1",
-    "layerchart": "2.0.0-next.65",
-    "svelte": "^5.56.3",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
-  },
-  "keywords": [
-    "sveltesentio",
-    "charts",
-    "layerchart",
-    "dashboard",
-    "accessibility",
-    "data-visualization"
-  ],
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ]
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.5.0"
 }
