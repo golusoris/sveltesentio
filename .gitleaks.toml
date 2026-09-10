@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documentation placeholder tokens in compose docs — not real secrets"
+regexes = [
+  '''sk_live_XXXXXRANDOMBASE64''',
+  '''REPLACE_ME_32_PLUS_CHARS''',
+  '''REPLACE_ME_64_PLUS_CHARS_HEX''',
+  '''sk_live_abc123XYZ456DEFghi''',
+]
