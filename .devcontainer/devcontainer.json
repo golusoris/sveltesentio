@@ -1,75 +1,40 @@
 {
   "name": "sveltesentio",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:4-22-bookworm",
+  "build": {
+    "dockerfile": "../docker/dev/Dockerfile",
+    "context": ".."
+  },
   "features": {
-    "ghcr.io/devcontainers/features/git:1": { "ppa": true, "version": "latest" },
-    "ghcr.io/devcontainers/features/github-cli:1": { "installDirectlyFromGitHubRelease": true, "version": "latest" },
-    "ghcr.io/devcontainers/features/node:2": { "nodeGypDependencies": true, "version": "24" },
-    "ghcr.io/devcontainers-contrib/features/pnpm:2": { "version": "latest" },
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": true,
-      "configureZshAsDefaultShell": true,
-      "installOhMyZsh": true,
+      "installZsh": false,
       "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.27"
     }
   },
   "customizations": {
     "vscode": {
       "extensions": [
-        "svelte.svelte-vscode",
-        "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "EditorConfig.EditorConfig",
-        "vitest.explorer",
-        "ms-playwright.playwright",
-        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github",
+        "aquasecurity.trivy-vulnerability-scanner",
+        "davidanson.vscode-markdownlint",
         "eamodio.gitlens",
-        "ms-vscode.vscode-typescript-next",
-        "antfu.iconify",
-        "lokalise.i18n-ally",
-        "unional.vscode-sort-package-json",
-        "christian-kohler.path-intellisense",
-        "streetsidesoftware.code-spell-checker",
-        "usernamehw.errorlens"
+        "github.copilot",
+        "golang.go",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml"
       ],
       "settings": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": "explicit"
-        },
-        "editor.tabSize": 2,
-        "editor.insertSpaces": true,
-        "files.eol": "\n",
-        "typescript.tsdk": "node_modules/typescript/lib",
-        "typescript.enablePromptUseWorkspaceTsdk": true,
-        "[svelte]": {
-          "editor.defaultFormatter": "svelte.svelte-vscode"
-        },
-        "svelte.enable-ts-plugin": true,
-        "tailwindCSS.experimental.classRegex": [
-          ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
-          ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-        ],
-        "i18n-ally.localesPaths": ["src/lib/paraglide/messages"],
-        "i18n-ally.keystyle": "nested",
-        "eslint.useFlatConfig": true,
-        "vitest.enable": true
+        "go.lintOnSave": "package",
+        "go.lintTool": "golangci-lint",
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "security.workspace.trust.enabled": true
       }
     }
   },
-  "forwardPorts": [5173, 4173, 6006],
-  "portsAttributes": {
-    "5173": { "label": "Vite dev", "onAutoForward": "notify" },
-    "4173": { "label": "Vite preview", "onAutoForward": "silent" },
-    "6006": { "label": "Histoire", "onAutoForward": "silent" }
-  },
-  "postCreateCommand": "make setup",
-  "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
-  "remoteUser": "node",
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached,readonly"
-  ],
-  "runArgs": ["--init"]
+  "remoteUser": "vscode",
+  "postCreateCommand": "make verify-all"
 }
