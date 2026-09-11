@@ -1,0 +1,181 @@
+version: 1
+repository: sveltesentio
+language: typescript
+languages:
+    - typescript
+    - svelte
+framework: github.com/golusoris/sveltesentio
+builder_kits:
+    - golusoris/sveltesentio
+capabilities:
+    required:
+        - ui.external.vitest_coverage_v8
+        - ui.external.eslint_plugin_svelte
+        - ui.external.turbo
+        - ui.external.lint_staged
+        - ui.framework
+        - ui.external.svelte_eslint_parser
+        - ui.external.eslint
+        - ui.external.commitlint_cli
+        - ui.external.typescript
+        - ui.external.commitlint_config_conventional
+        - ui.external.typescript_eslint_parser
+        - ui.external.typescript_eslint_eslint_plugin
+        - ui.external.prettier
+        - ui.external.eslint_js
+        - ui.external.eslint_config_prettier
+        - ui.external.sveltesentio_core
+        - ui.external.husky
+        - ui.external.prettier_plugin_svelte
+dependencies:
+    - package: svelte
+      version: ^5.57.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.framework
+      status: covered
+      golusoris_replacement: github.com/golusoris/sveltesentio
+      target_builder_kit: golusoris/sveltesentio
+      notes: Core Svelte reactive UI framework
+    - package: turbo
+      version: ^2.10.12
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.turbo
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: eslint
+      version: ^10.10.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.eslint
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: husky
+      version: ^9.1.7
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.husky
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@typescript-eslint/parser'
+      version: ^8.70.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.typescript_eslint_parser
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: typescript
+      version: ^6.0.3
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.typescript
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: prettier
+      version: ^3.9.6
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.prettier
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@commitlint/config-conventional'
+      version: ^21.2.2
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.commitlint_config_conventional
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: eslint-plugin-svelte
+      version: ^3.23.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.eslint_plugin_svelte
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: lint-staged
+      version: ^17.5.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.lint_staged
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@vitest/coverage-v8'
+      version: ^4.1.11
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.vitest_coverage_v8
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@sveltesentio/core'
+      version: workspace:*
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.sveltesentio_core
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@eslint/js'
+      version: ^10.0.1
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.eslint_js
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: svelte-eslint-parser
+      version: ^1.8.1
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.svelte_eslint_parser
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: prettier-plugin-svelte
+      version: ^4.1.1
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.prettier_plugin_svelte
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@commitlint/cli'
+      version: ^21.2.2
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.commitlint_cli
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: '@typescript-eslint/eslint-plugin'
+      version: ^8.70.0
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.typescript_eslint_eslint_plugin
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+    - package: eslint-config-prettier
+      version: ^10.1.8
+      language: typescript
+      ecosystem: npm
+      capability: ui.external.eslint_config_prettier
+      status: gap
+      target_builder_kit: golusoris/sveltesentio
+      notes: External npm dependency requiring SvelteSentio adapter or evaluation
+readiness:
+    score: 5.555555555555555
+    total_third_party_deps: 18
+    covered_deps: 1
+    gap_deps: 17
+updated_at: 2026-09-11T16:38:42.881435669Z
