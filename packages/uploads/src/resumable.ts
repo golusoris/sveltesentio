@@ -156,10 +156,13 @@ async function loadTusUpload(): Promise<TusUploadConstructor> {
  * @throws {ProblemError} synchronously from `start()` when neither `endpoint`
  *   nor `uploadUrl` is provided.
  */
-export function createResumableUpload(
-	file: Blob,
-	options: ResumableUploadOptions,
-): ResumableUpload {
+/**
+ * tus needs somewhere to send the bytes, and neither field has a default.
+ *
+ * Checked before any state is allocated so a misconfigured call fails on the way
+ * in rather than on `start()`, when the caller has already wired up handlers.
+ */
+function assertDestinationConfigured(options: ResumableUploadOptions): void {
 	if (options.endpoint === undefined && options.uploadUrl === undefined) {
 		throw new ProblemError({
 			type: RESUMABLE_PROBLEM_TYPE,
@@ -168,18 +171,35 @@ export function createResumableUpload(
 			detail: 'Either `endpoint` or `uploadUrl` is required.',
 		});
 	}
+}
 
-	let state: ResumableState = 'idle';
-	let progress: ResumableProgress = toProgress(0, Math.max(file.size, 0));
-	let tus: TusUpload | undefined;
-
-	const tusOptions: TusUploadOptions = {
+/**
+ * The options that map straight across to tus, omitted rather than passed as
+ * `undefined` so tus applies its own defaults for the ones the caller left out.
+ */
+function passthroughTusOptions(options: ResumableUploadOptions): Partial<TusUploadOptions> {
+	return {
 		...(options.endpoint !== undefined ? { endpoint: options.endpoint } : {}),
 		...(options.uploadUrl !== undefined ? { uploadUrl: options.uploadUrl } : {}),
 		...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
 		...(options.chunkSize !== undefined ? { chunkSize: options.chunkSize } : {}),
 		...(options.retryDelays !== undefined ? { retryDelays: options.retryDelays } : {}),
 		...(options.headers !== undefined ? { headers: options.headers } : {}),
+	};
+}
+
+export function createResumableUpload(
+	file: Blob,
+	options: ResumableUploadOptions,
+): ResumableUpload {
+	assertDestinationConfigured(options);
+
+	let state: ResumableState = 'idle';
+	let progress: ResumableProgress = toProgress(0, Math.max(file.size, 0));
+	let tus: TusUpload | undefined;
+
+	const tusOptions: TusUploadOptions = {
+		...passthroughTusOptions(options),
 		onProgress: (bytesSent: number, bytesTotal: number): void => {
 			progress = toProgress(bytesSent, bytesTotal);
 			options.onProgress?.(progress);
