@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/state';
+  import { resolve } from '$app/paths';
   import type { Snippet } from 'svelte';
   import type { NavGroup } from '$lib/docs';
 
@@ -16,14 +17,14 @@
 <div class="layout">
   <a class="skip-link" href="#main">Skip to content</a>
   <aside class="sidebar" aria-label="Documentation navigation">
-    <a class="brand" href="/">
+    <a class="brand" href={resolve('/')}>
       <span class="brand-mark" aria-hidden="true">s</span>
       <span>sveltesentio</span>
     </a>
     <nav>
       <ul class="nav-root">
         <li>
-          <a href="/" class:active={page.url.pathname === '/'}>Overview</a>
+          <a href={resolve('/')} class:active={page.url.pathname === '/'}>Overview</a>
         </li>
       </ul>
       {#each data.nav as group (group.section)}
@@ -33,7 +34,7 @@
             {#each group.docs as doc (doc.slug)}
               <li>
                 <a
-                  href={`/docs/${doc.slug}`}
+                  href={resolve('/docs/[...slug]', { slug: doc.slug })}
                   class:active={currentSlug === doc.slug}
                   aria-current={currentSlug === doc.slug ? 'page' : undefined}
                 >

@@ -120,12 +120,18 @@ const config: Linter.Config[] = [
   },
   {
     ignores: [
-      'node_modules/**',
-      'dist/**',
-      '.svelte-kit/**',
-      'build/**',
-      '.turbo/**',
-      'coverage/**',
+      // `**/` prefixes: these patterns are resolved from the config's directory,
+      // so the bare form matched only root-level build output and left every
+      // package's own dist/, coverage/ and .svelte-kit/ to be linted as source.
+      // That surfaced as parse errors ("TSConfig does not include this file")
+      // rather than as anything actionable.
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.svelte-kit/**',
+      '**/build/**',
+      '**/.turbo/**',
+      '**/coverage/**',
+      '**/storybook-static/**',
       // Illustrative copy-paste snippets — intentionally reference undeclared
       // identifiers (paths, edges, secret…) the consumer supplies; not compiled.
       'examples/**',

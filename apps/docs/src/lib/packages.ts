@@ -12,10 +12,14 @@ interface RawManifest {
   private?: unknown;
 }
 
-const manifests = import.meta.glob('../../../../packages/*/package.json', {
+// Typed through the glob's type parameter rather than a trailing `as`. The cast
+// form is load-bearing here — without it `manifest` is `unknown` and every field
+// read fails — but `@typescript-eslint/no-unnecessary-type-assertion` reports it
+// as redundant, so the parameter states the same thing where the rule agrees.
+const manifests = import.meta.glob<RawManifest>('../../../../packages/*/package.json', {
   import: 'default',
   eager: true,
-}) as Record<string, RawManifest>;
+});
 
 /** One published `@sveltesentio/*` package. */
 export interface PackageEntry {
