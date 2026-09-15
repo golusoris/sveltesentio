@@ -18,6 +18,30 @@ rune have shipped.
 pnpm add @sveltesentio/auth
 ```
 
+## Sub-exports
+
+| Import                               | What                                                                                                                                                                                                                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/auth`                 | The re-export surface for everything below                                                                                                                                                                                                           |
+| `@sveltesentio/auth/random`          | `randomBytes`, `randomBase64Url`, `generateState`, `generateNonce`, `base64UrlEncode` / `base64UrlDecode` — the CSPRNG and base64url codec every other primitive here builds on                                                                      |
+| `@sveltesentio/auth/pkce`            | `generatePkceChallenge` (64-byte verifier + S256 challenge), `codeChallengeS256`, `generateVerifier`                                                                                                                                                 |
+| `@sveltesentio/auth/csrf`            | `issueCsrfToken(sessionId, secret)`, `verifyCsrfToken`, `timingSafeEqual` — tokens are HMAC-bound to the session id, so a token from one session cannot be replayed into another                                                                     |
+| `@sveltesentio/auth/csrf-hook`       | `handleCsrf` (SvelteKit hook) and `evaluateCsrf` (the pure decision, returning a failure reason or `undefined`). The submitted header token must both equal the cookie token and verify against the session id and secret; safe methods pass through |
+| `@sveltesentio/auth/cookies`         | `sessionCookieOptions`, `csrfCookieOptions`, `loginNonceCookieOptions` and the `__Host-*` cookie names                                                                                                                                               |
+| `@sveltesentio/auth/oidc`            | `buildAuthorizationUrl`, `createAuthorizationRequest`, `exchangeAuthorizationCode` — framework-agnostic OIDC orchestration                                                                                                                           |
+| `@sveltesentio/auth/passkey`         | `registerPasskey`, `authenticatePasskey`, `passkeysSupported`                                                                                                                                                                                        |
+| `@sveltesentio/auth/session`         | `handleSession`, `resolveSessionLocals` — the session hook and its `locals` resolution                                                                                                                                                               |
+| `@sveltesentio/auth/permissions`     | `createPermissions` — the framework-free permission checker                                                                                                                                                                                          |
+| `@sveltesentio/auth/use-permissions` | `usePermissions` — the rune-backed counterpart, e.g. `{#if perms.can('billing.read')}`                                                                                                                                                               |
+| `@sveltesentio/auth/mfa`             | `handleAuthError`, `isMfaRequired`, `MFA_REQUIRED` / `MFA_INVALID` / `MFA_RATE_LIMITED` — typed narrowing of the MFA error codes a provider emits as RFC 9457 `type` URNs (ADR-0036)                                                                 |
+| `@sveltesentio/auth/mfa-view`        | `deriveMfaChallengeView`, `isSubmittableCode`, `DEFAULT_MFA_CHALLENGE_COPY` — the view model behind `<MfaChallenge>`, overridable through its `copy` prop                                                                                            |
+| `@sveltesentio/auth/mfa-challenge`   | `<MfaChallenge>`                                                                                                                                                                                                                                     |
+| `@sveltesentio/auth/mfa-enroll`      | `<MfaEnroll>`                                                                                                                                                                                                                                        |
+
+The framework never branches on the copy strings — the typed `AuthErrorState.kind`
+is the source of truth (ADR-0036), so translating or replacing the copy cannot
+change a security decision.
+
 ## Orchestration surface (v0.6.0)
 
 ```ts

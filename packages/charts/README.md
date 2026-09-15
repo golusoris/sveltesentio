@@ -21,12 +21,21 @@ that supplies the text alternative, independent of which library draws the pixel
 
 ## Sub-exports
 
-| Import                            | What                                                                              |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| `@sveltesentio/charts`            | `buildDataTableModel`, `dashboardPreset`, `prefersReducedMotion` + types          |
-| `@sveltesentio/charts/figure`     | `<ChartFigure>` — `<figure>` + `role="img"` + aria wiring + off-screen data table |
-| `@sveltesentio/charts/a11y-table` | `buildDataTableModel` alone (zero-dep pull)                                       |
-| `@sveltesentio/charts/preset`     | `dashboardPreset` + `prefersReducedMotion` alone                                  |
+| Import                              | What                                                                                                                                                                                                                       |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/charts`              | `buildDataTableModel`, `dashboardPreset`, `prefersReducedMotion` + types                                                                                                                                                   |
+| `@sveltesentio/charts/figure`       | `<ChartFigure>` — `<figure>` + `role="img"` + aria wiring + off-screen data table                                                                                                                                          |
+| `@sveltesentio/charts/a11y-table`   | `buildDataTableModel` alone (zero-dep pull)                                                                                                                                                                                |
+| `@sveltesentio/charts/preset`       | `dashboardPreset` + `prefersReducedMotion` alone                                                                                                                                                                           |
+| `@sveltesentio/charts/chart`        | `<Chart>` — the primitive every semantic wrapper builds on                                                                                                                                                                 |
+| `@sveltesentio/charts/line`         | `<LineChart>`                                                                                                                                                                                                              |
+| `@sveltesentio/charts/area`         | `<AreaChart>`                                                                                                                                                                                                              |
+| `@sveltesentio/charts/bar`          | `<BarChart>`                                                                                                                                                                                                               |
+| `@sveltesentio/charts/pie`          | `<PieChart>`                                                                                                                                                                                                               |
+| `@sveltesentio/charts/scatter`      | `<ScatterChart>`                                                                                                                                                                                                           |
+| `@sveltesentio/charts/chart-series` | `resolveSeriesColors`, `toFigureSeries`, `categoricalToFigure` — the pure bridge feeding the same `{data, series, x, y}` to the visual and to the screen-reader table, so the two cannot drift                             |
+| `@sveltesentio/charts/palette`      | `chartPalette`, `chartSeriesColor`, `CHART_PALETTE_SIZE` — the semantic series palette. Series N maps to `--color-chart-N`, with an oklch literal fallback so hues stay distinguishable and contrast-aware without a theme |
+| `@sveltesentio/charts/uplot`        | Streaming escape hatch — uPlot config types for high-frequency series                                                                                                                                                      |
 
 ## Usage
 

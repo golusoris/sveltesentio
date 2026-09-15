@@ -20,13 +20,33 @@ const { provider } = connectProvider({
 });
 
 const items = createYjsStore(doc.getArray<Item>('items'));
-const meta  = createYjsMap(doc.getMap<string>('meta'));
+const meta = createYjsMap(doc.getMap<string>('meta'));
 ```
 
 - `createYjsStore<T>(yArray)` → `$state`-backed proxy with `push`, `insert`, `delete` routing through the Y.Array.
 - `createYjsMap<V>(yMap)` → `$state`-backed proxy with `set`, `delete`, `clear`, iteration routing through the Y.Map.
 - `createYjsText(yText)` → `$state`-backed proxy with `insert`, `delete`, `append` routing through the Y.Text.
 - Lifecycle: subscribes on `$effect` mount, unsubscribes on destroy. No leaks.
+
+## Sub-exports
+
+Two layers. The `yjs-*` helpers are plain functions over a Y type — no Svelte, no
+DOM, unit-testable in Node. The `*-store` entry points wrap the same types in a
+`$state`-backed proxy that subscribes on mount and unsubscribes on destroy. Reach
+for a store in a component and the raw helper everywhere else.
+
+| Import                                | What                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/collab`                | The re-export surface for everything below                                                                           |
+| `@sveltesentio/collab/array`          | `snapshotYjsArray`, `observeYjsArray`, `appendToYjsArray`, `insertIntoYjsArray`, `deleteFromYjsArray`, `transactYjs` |
+| `@sveltesentio/collab/map`            | `snapshotYjsMap`, `snapshotYjsMapEntries`, `observeYjsMap`, `setYjsMap`, `deleteYjsMap`, `clearYjsMap`               |
+| `@sveltesentio/collab/text`           | `snapshotYjsText`, `observeYjsText`, `insertYjsText`, `deleteYjsText`, `appendYjsText`                               |
+| `@sveltesentio/collab/store`          | `createYjsStore` — `$state` proxy over a `Y.Array`                                                                   |
+| `@sveltesentio/collab/map-store`      | `createYjsMap` — `$state` proxy over a `Y.Map`                                                                       |
+| `@sveltesentio/collab/text-store`     | `createYjsText` — `$state` proxy over a `Y.Text`                                                                     |
+| `@sveltesentio/collab/awareness`      | `PresenceEntry`, `PresenceDiff`, presence observation over an awareness provider                                     |
+| `@sveltesentio/collab/presence-store` | `createPresenceStore` — the rune-backed counterpart to `./awareness`                                                 |
+| `@sveltesentio/collab/provider`       | `connectProvider`, `resolveAuthParams` — provider connection and auth binding                                        |
 
 ## Awareness / presence (v0.2.0)
 

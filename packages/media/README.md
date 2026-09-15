@@ -24,6 +24,24 @@ pnpm add hls.js
 `hls.js` is an **optional** peer — nothing in this package imports it. You
 inject its constructor at the `createHlsAttachment` seam.
 
+## Sub-exports
+
+Each feature splits into a logic entry point and a `/component` entry point, so
+the pure functions stay testable in Node and a consumer can take the logic
+without pulling a Svelte component.
+
+| Import                                   | What                                                                                                                                                      |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/media`                    | The re-export surface for everything below                                                                                                                |
+| `@sveltesentio/media/player`             | `pickRendition`, `buildMediaSessionMetadata` — HLS rendition selection and Media Session metadata                                                         |
+| `@sveltesentio/media/player/component`   | `<Player>`                                                                                                                                                |
+| `@sveltesentio/media/player/controls`    | `actionForKey`, `applyTransportAction`, `formatMediaTime`, `clampVolume`, `assertCaptionsContract` — keyboard transport mapping and the captions contract |
+| `@sveltesentio/media/image`              | `buildSrcSet`, `buildSrcSetCandidates`, `buildSizes` — responsive `srcset` / `sizes` construction                                                         |
+| `@sveltesentio/media/image/component`    | `<Image>`                                                                                                                                                 |
+| `@sveltesentio/media/image/lqip`         | `buildPlaceholderStyle`, `resolveAspectRatio`, `imageLoadingAttrs` — low-quality placeholder and loading-priority attributes                              |
+| `@sveltesentio/media/carousel`           | `buildCarouselOptions`, `navButtonTargetPx`, `carouselPrefersReducedMotion` — Embla options with the reduced-motion and target-size defaults applied      |
+| `@sveltesentio/media/carousel/component` | `<Carousel>`                                                                                                                                              |
+
 ## `@sveltesentio/media/player`
 
 ```ts

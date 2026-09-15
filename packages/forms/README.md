@@ -12,13 +12,14 @@ pnpm add @sveltesentio/forms
 
 ## Exports
 
-| Path | Purpose |
-|---|---|
-| `@sveltesentio/forms` | `superValidate` (Zod v4 pre-wired), `problemToFieldErrors`, `superForm`, proxies, and the Superforms runtime re-exports |
-| `@sveltesentio/forms/server` | Server-safe subset — `superValidate` + helpers without client `superForm`/`$app/*` |
-| `@sveltesentio/forms/problem` | `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull) |
-| `@sveltesentio/forms/action` | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })` |
-| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, …); optional `formsnap@^2` peer |
+| Path                           | Purpose                                                                                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/forms`          | `superValidate` (Zod v4 pre-wired), `problemToFieldErrors`, `superForm`, proxies, and the Superforms runtime re-exports                             |
+| `@sveltesentio/forms/server`   | Server-safe subset — `superValidate` + helpers without client `superForm`/`$app/*`                                                                  |
+| `@sveltesentio/forms/problem`  | `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull)                                                                                  |
+| `@sveltesentio/forms/action`   | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`                                           |
+| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, …); optional `formsnap@^2` peer                                                             |
+| `@sveltesentio/forms/use-form` | `useForm()` — runes-native sugar over `superForm`. Pulls `superForm` from Superforms' `/client` subpath, so it stays loadable in a Node test runner |
 
 ### `formAction`
 
@@ -30,10 +31,14 @@ import { fail } from '@sveltejs/kit';
 import { schema } from './schema';
 
 export const actions = {
-  default: formAction(schema, async ({ form }) => {
-    await createUser(form.data); // throws a @sveltesentio/core ProblemError on conflict
-    return { form };
-  }, { superValidate, fail }),
+  default: formAction(
+    schema,
+    async ({ form }) => {
+      await createUser(form.data); // throws a @sveltesentio/core ProblemError on conflict
+      return { form };
+    },
+    { superValidate, fail },
+  ),
 };
 ```
 
