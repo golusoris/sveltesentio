@@ -62,14 +62,22 @@ add-package:
 	echo "Created packages/$$name"
 
 # cordanaLLM/praetor Governance Targets
-.PHONY: verify-all compile-context audit hiss-coverage
+.PHONY: verify-all compile-context audit hiss-coverage state-audit
 
 verify-all:
 	@pnpm run ci
+	@pnpm check:cycles
 	@pnpm audit --audit-level=high
 	@praetorctl audit
 	@praetorctl compile-context --verify
 	@$(MAKE) --no-print-directory hiss-coverage
+	@$(MAKE) --no-print-directory state-audit
+
+# HISS-17: the ledgers are only worth keeping if something reads them. This
+# fails on an unresolved P0 in the bug ledger or a pending question, so a
+# blocker recorded mid-session cannot be forgotten by the end of it.
+state-audit:
+	@praetorctl state audit .
 
 # HISS-20: every enforcement claim in .config/hiss/coverage.yaml is replayed
 # against its fixture corpus, so a declared state cannot drift from what the

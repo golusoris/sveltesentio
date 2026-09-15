@@ -13,7 +13,8 @@
     "ci": "turbo lint typecheck test build",
     "check:exports": "node scripts/check-export-targets.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check:cycles": "node scripts/check-import-cycles.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",

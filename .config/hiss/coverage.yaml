@@ -27,17 +27,23 @@ rules:
     title: Acyclic Control Flow
     coverage:
       - language: typescript
-        state: unsupported
+        state: partial
+        runner: node
         mechanism: >-
-          none. No import-cycle rule is configured: eslint-plugin-import and
-          eslint-plugin-import-x are both absent from the workspace, and
-          eslint.config.ts enables no equivalent. Nothing checks self-recursion
-          either.
+          scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
+          Lint job and in verify-all. It builds two graphs from static
+          import/export specifiers -- modules within packages/*/src, and packages
+          via @sveltesentio/* specifiers -- and fails on the first cycle in
+          either, printing the path. An ESLint rule would have meant a new
+          dependency, which hard rule 2 puts behind a D-row; a script needs none.
         rationale: >-
-          positive/ is empty because no mechanism reports either shape. Both gap
-          fixtures are real violations of the rule as written -- a directly
-          self-recursive function, and a two-module import cycle -- and the HISS
-          scanner returns 0 for both because it does not read .ts at all.
+          Both cycle shapes are reported, verified by planting one of each and
+          watching the checker exit 1 with the path before removing them: a
+          two-module cycle inside core, and a core-to-ui-to-core package cycle.
+          The gaps are resolution and recursion. Specifiers are read
+          syntactically, so a cycle formed through `import()` or a path alias is
+          missed, and self-recursion within one function is not an import edge
+          and goes unreported -- the gap fixtures are exactly those two shapes.
       - language: svelte
         state: unsupported
         mechanism: none. No component-graph or import-cycle check runs anywhere.
@@ -194,12 +200,18 @@ rules:
         state: enforced
         runner: praetorctl
         mechanism: >-
-          The lefthook post-commit hook runs `praetorctl state sync .`, and the
-          commit-msg hook rejects a message when the ledger is stale.
+          The lefthook post-commit hook runs `praetorctl state sync .`, the
+          commit-msg hook rejects a message when the ledger is stale, and
+          `make state-audit` runs inside verify-all, failing on an unresolved P0
+          or a pending question.
         rationale: >-
           Measured during this adoption: a commit was rejected with "state
           synchronization stale; run praetorctl state sync ." until the ledger
-          was synced, so the gate demonstrably fires.
+          was synced. Sync alone proved insufficient though — it kept an empty
+          ledger fresh for a whole session while nine bugs and thirteen decisions
+          lived only in the transcript. `state audit` is what reads the contents,
+          and it reported Valid:false on the first P0 recorded, so verify-all now
+          runs it.
 
   - id: HISS-18
     title: CI Efficiency
