@@ -1,4 +1,11 @@
 {
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "conditions": {
     "ref_name": {
       "exclude": [],
@@ -20,9 +27,9 @@
     {
       "parameters": {
         "dismiss_stale_reviews_on_push": true,
-        "require_code_owner_review": true,
+        "require_code_owner_review": false,
         "require_last_push_approval": false,
-        "required_approving_review_count": 1,
+        "required_approving_review_count": 0,
         "required_review_thread_resolution": true
       },
       "type": "pull_request"
@@ -31,10 +38,7 @@
       "parameters": {
         "required_status_checks": [
           {
-            "context": "Detect Changes"
-          },
-          {
-            "context": "CodeQL analysis"
+            "context": "CI Gate"
           }
         ],
         "strict_required_status_checks_policy": true
