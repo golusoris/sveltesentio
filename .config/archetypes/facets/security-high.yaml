@@ -1,6 +1,6 @@
-id: 'security:high'
-name: 'High-Security Provenance & Hardening'
-description: 'SLSA Level 3 attestations, keyless Cosign signatures, SBOM generation, and non-root execution'
+id: "security:high"
+name: "High-Security Provenance & Hardening"
+description: "SLSA Level 3 attestations, keyless Cosign signatures, SBOM generation, and non-root execution"
 
 supply_chain:
   slsa_level: 3
@@ -14,8 +14,8 @@ branch_protection:
   dismiss_stale_reviews: true
 
 linters:
-  - 'gitleaks'
-  - 'trivy'
+  - "gitleaks"
+  - "trivy"
 
 devcontainer_features:
-  - 'ghcr.io/devcontainers/features/common-utils:2'
+  - "ghcr.io/devcontainers/features/common-utils:2"
