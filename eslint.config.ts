@@ -120,6 +120,26 @@ const config: Linter.Config[] = [
       '@sveltesentio/chart-a11y-wrapper': 'error',
     },
   },
+  // --- root-level Node scripts ----------------------------------------------------
+  // `scripts/*.mjs` is CI-critical logic — affected-package selection, the import-cycle
+  // check, the export-target check — that nothing linted. `turbo lint` runs per package
+  // and never reaches the repository root, and the pre-commit hook's glob is
+  // `*.{ts,svelte,js}`, which does not match `.mjs`. The gap hid a self-comparison in
+  // ci-affected.mjs's entry-point guard (`resolve(argv[1]) === resolve(argv[1])`) that
+  // made the module run its CLI whenever it was merely imported; `no-self-compare`
+  // reports exactly that, so the rule is enabled here rather than left to review.
+  //
+  // These files are plain ESM outside every tsconfig, so the type-aware parser does not
+  // apply and the three Node globals they use are declared instead of inferred.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
+    },
+    rules: {
+      'no-self-compare': 'error',
+    },
+  },
   // --- root-level config files ---------------------------------------------------
   // These sit outside every package's tsconfig `include`, and there is no root
   // tsconfig.json — the shared compiler options live in tsconfig.base.json, which

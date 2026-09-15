@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
   analyzeChanges,
   SHARED_SURFACE_PATTERNS,
@@ -188,5 +190,56 @@ describe('CI Workflows Configuration (.github/workflows/)', () => {
       'needs: [pr-title, detect-changes, lint, typecheck, test, build, audit]',
     );
     expect(content).toContain('if: always()');
+  });
+});
+
+describe('scripts/ci-affected.mjs runs its CLI only as the entry point', () => {
+  const scriptPath = resolve(__dirname, '../../../scripts/ci-affected.mjs');
+
+  /**
+   * Runs `node <entry>` with GITHUB_OUTPUT pointed at a throwaway file and
+   * returns what the process printed and what it appended to that file.
+   */
+  function runNode(entry: string, args: string[] = []) {
+    const dir = mkdtempSync(join(tmpdir(), 'ci-affected-'));
+    const outputFile = join(dir, 'github_output');
+    writeFileSync(outputFile, '');
+    const stdout = execFileSync(process.execPath, [entry, ...args], {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_OUTPUT: outputFile },
+    });
+    return { stdout, githubOutput: readFileSync(outputFile, 'utf8') };
+  }
+
+  /** An entry point whose only job is to import the module for its exports. */
+  function importerEntry(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'ci-affected-importer-'));
+    const entry = join(dir, 'importer.mjs');
+    writeFileSync(
+      entry,
+      `import ${'{'} analyzeChanges ${'}'} from ${JSON.stringify(scriptPath)};\n`,
+    );
+    return entry;
+  }
+
+  it('writes no step outputs when the module is merely imported', () => {
+    // The guard used to compare resolve(process.argv[1]) with itself, so the CLI
+    // ran on import: under vitest this test file made the Test job append
+    // `has_code_changes=false` to its own GITHUB_OUTPUT.
+    const { githubOutput } = runNode(importerEntry());
+    expect(githubOutput).toBe('');
+  });
+
+  it('prints nothing when the module is merely imported', () => {
+    const { stdout } = runNode(importerEntry());
+    expect(stdout).toBe('');
+  });
+
+  it('still writes step outputs when invoked directly as a CLI', () => {
+    // The contrast case: a guard that is simply always false would satisfy the
+    // two assertions above while silently disabling change detection in CI.
+    const { githubOutput } = runNode(scriptPath, ['--files', 'packages/core/src/index.ts']);
+    expect(githubOutput).toContain('has_code_changes=true');
+    expect(githubOutput).toContain('affected_packages=');
   });
 });
