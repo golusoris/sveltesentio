@@ -161,8 +161,10 @@ rules:
           covers test/ as well as src/.
         rationale: >-
           Type warnings are errors and the tree is clean: putting tests under a
-          project surfaced 32 and all 32 were fixed. The gap is formatting --
-          `prettier --check .` has never run in CI, and reports 574 files.
+          project surfaced 32 and all 32 were fixed. Lint now also covers the
+          root scripts/ directory, which no linter reached before. The gap is
+          formatting -- `prettier --check .` has never run in CI, and reports
+          574 files.
 
   - id: HISS-15
     title: Three-Dimensional Testing
@@ -222,11 +224,24 @@ rules:
         mechanism: >-
           scripts/ci-affected.mjs computes the affected set, and ci.yml gates the
           heavy jobs on `has_code_changes` while the if:always() `CI Gate`
-          aggregator still reports.
+          aggregator still reports. The script is itself linted by
+          `pnpm lint:scripts`, and turbo.json names the root configs as
+          globalDependencies so a cached result cannot outlive the config that
+          produced it.
         rationale: >-
           Measured on a config-only pull request in this adoption: Build, Lint,
           Test, Type check and Security audit all reported "skipping" while CI
           Gate passed, which is the behaviour the filter exists for.
+
+          Both supports were added after that measurement, because neither held.
+          Nothing linted scripts/ -- turbo lint runs per package and the hook
+          glob did not match .mjs -- which hid a self-comparison that made the
+          module run its CLI on import. And with no globalDependencies, turbo
+          replayed cached lint and typecheck results across config changes:
+          `max-lines: 1` made `eslint packages/core/src/` exit 1 on every file
+          while `turbo run lint` still reported "1 successful, 1 cached, FULL
+          TURBO". Every claim in this catalog that cites a turbo task depended
+          on that cache being keyed correctly.
 
   - id: HISS-19
     title: Reuse Before Writing
