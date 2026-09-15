@@ -187,7 +187,7 @@ describe('CI Workflows Configuration (.github/workflows/)', () => {
     const content = readFileSync(ciWorkflowPath, 'utf8');
     expect(content).toContain('ci-gate:');
     expect(content).toContain(
-      'needs: [pr-title, detect-changes, lint, typecheck, test, build, audit]',
+      'needs: [pr-title, detect-changes, lint, typecheck, test, build, audit, docs-drift]',
     );
     expect(content).toContain('if: always()');
   });

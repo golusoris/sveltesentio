@@ -107,11 +107,36 @@ After:
 - **Size budget**: aim for <500 LOC changed. If you need more, split the PR.
 - **CI must be green** before requesting review.
 - **Update docs in the same PR**:
+  - The package's own `README.md` whenever you add, remove or rename an entry
+    point in its `exports` map. This one is enforced — see below.
   - `CHANGELOG.md` — only if release-please cannot infer the entry.
   - `.workingdir/STATE.md` session log.
   - `AGENTS.md` layout tree when adding a package.
   - Per-package `AGENTS.md` when adding a module.
   - `README.md` when completing a phase.
+
+### Documentation drift check
+
+The `Docs drift` job fails a pull request that changes the set of entry points a
+package publishes without touching that package's `README.md`. Only the
+`exports` key set counts: editing the code behind an existing subpath is not a
+documentation event, and dependency bumps and releases rewrite `package.json`
+without touching what it publishes.
+
+The check is not hypothetical. Of the 42 recent commits that touched
+`packages/`, 12 added a public subpath and every one of them shipped without a
+README change — `@sveltesentio/core` has published `./eslint` undocumented ever
+since.
+
+If a change genuinely needs no documentation, say so in the pull request body:
+
+```text
+no docs needed: the subpath is a build-time entry point, not a consumer API
+```
+
+An ADR does not satisfy the check. An ADR records a decision; a README describes
+a surface. Accepting one for the other would reduce the requirement to "it was
+written down somewhere".
 
 ## New dependency checklist
 
