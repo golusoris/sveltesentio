@@ -66,6 +66,7 @@ add-package:
 
 verify-all:
 	@pnpm run ci
+	@pnpm check:cycles
 	@pnpm audit --audit-level=high
 	@praetorctl audit
 	@praetorctl compile-context --verify

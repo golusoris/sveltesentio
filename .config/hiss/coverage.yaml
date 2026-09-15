@@ -27,17 +27,23 @@ rules:
     title: Acyclic Control Flow
     coverage:
       - language: typescript
-        state: unsupported
+        state: partial
+        runner: node
         mechanism: >-
-          none. No import-cycle rule is configured: eslint-plugin-import and
-          eslint-plugin-import-x are both absent from the workspace, and
-          eslint.config.ts enables no equivalent. Nothing checks self-recursion
-          either.
+          scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
+          Lint job and in verify-all. It builds two graphs from static
+          import/export specifiers -- modules within packages/*/src, and packages
+          via @sveltesentio/* specifiers -- and fails on the first cycle in
+          either, printing the path. An ESLint rule would have meant a new
+          dependency, which hard rule 2 puts behind a D-row; a script needs none.
         rationale: >-
-          positive/ is empty because no mechanism reports either shape. Both gap
-          fixtures are real violations of the rule as written -- a directly
-          self-recursive function, and a two-module import cycle -- and the HISS
-          scanner returns 0 for both because it does not read .ts at all.
+          Both cycle shapes are reported, verified by planting one of each and
+          watching the checker exit 1 with the path before removing them: a
+          two-module cycle inside core, and a core-to-ui-to-core package cycle.
+          The gaps are resolution and recursion. Specifiers are read
+          syntactically, so a cycle formed through `import()` or a path alias is
+          missed, and self-recursion within one function is not an import edge
+          and goes unreported -- the gap fixtures are exactly those two shapes.
       - language: svelte
         state: unsupported
         mechanism: none. No component-graph or import-cycle check runs anywhere.
