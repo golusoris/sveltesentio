@@ -27,3 +27,4 @@ Thumbs.db
 
 # praetor gate receipt (regenerated per run, Ed25519-signed)
 .standards-receipt.json
+/.workingdir/
