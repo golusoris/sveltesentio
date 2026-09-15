@@ -1,78 +1,4 @@
-<!-- markdownlint-disable MD013 MD025 -->
-# sveltesentio Agent Operating Harness
-
-Run verification before concluding any turn:
-
-```bash
-make verify-all
-```
-
-```mermaid
-flowchart LR
-    AGENT["Autonomous Agent"] --> CHECK["make verify-all"]
-    CHECK --> AUDIT["standardsctl audit"]
-    CHECK --> COMPILER["standardsctl compile-context --verify"]
-    CHECK --> GATE{"All checks Pass?"}
-    GATE -- Yes --> RECEIPT["Ed25519 Exit-0 Receipt"]
-    GATE -- No --> DISTILL["SARIF Diagnostic Distillation (<= 1500 tokens)"]
-```
-
-## Core Directives & Invariants (Modernized NASA JPL Power-of-10)
-
-| Invariant | Scope | NASA Rule | Enforcement Mechanism | Failure Action |
-| :--- | :--- | :--- | :--- | :--- |
-| **HISS-01** | Control Flow | Rule 1 | Recursion strictly prohibited; call graph must be DAG; zero `goto`. | Immediate build failure |
-| **HISS-02** | Loops & I/O | Rule 2 | Scalar upper bound on all loops; explicit `context.Context` timeout on all I/O. | Semgrep / AST error |
-| **HISS-03** | Memory | Rule 3 | Zero dynamic heap allocation (`malloc` / `free`) in hot simulation/tick loops. | Allocation audit sweep |
-| **HISS-04** | Complexity | Rule 4 | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Statements $\le 50$. | AST sweep blocker |
-| **HISS-07** | Error Handling | Rule 7 | Zero `.unwrap()` / `.expect()`; all errors handled or wrapped with context. | Linter / Compiler error |
-| **HISS-08** | Determinism | Rule 8 | Zero dynamic execution (`eval` / `exec`); zero banned unsafe libc (`gets` / `strcpy` / `sprintf`). | AST / Linter error |
-| **HISS-09** | Reference Safety | Rule 9 | Mandatory `// SAFETY:` proofs for all pointer arithmetic and `unsafe` blocks. | AST check blocker |
-| **HISS-10** | Warning Hygiene | Rule 10 | Zero-warning tolerance across compiler, linter, and format sweeps. | Exit code 1 |
-| **HISS-15** | 3D Testing | Rule 5 | Positive, negative, and boundary tests mandatory for all public interfaces. | CI coverage gate |
-| **HISS-16** | Context Integrity | Fleet | Single canonical `AGENTS.md`; vendor files compiled via `standardsctl compile-context`. | Pre-commit blocker |
-
-## Operational Rules
-
-1. **Act on Verified State**:
-   Read source files and run real commands before hypothesizing or editing. Never guess flag names, library signatures, or repo configurations from memory.
-
-2. **Lead with Output**:
-   Provide direct answers, diffs, and commands. Avoid filler preambles, "Based on", restatements, or conversational chatter.
-
-3. **Context Transpiler First**:
-   Never edit `CLAUDE.md`, `.cursor/rules/*.mdc`, `.windsurfrules`, or `.github/copilot-instructions.md` manually. Make all agent instruction updates in `AGENTS.md` and execute:
-
-   ```bash
-   standardsctl compile-context
-   ```
-
-4. **SARIF Diagnostic Distillation**:
-   When reporting compiler or linter errors, distill output to $\le 1,500$ tokens ($< 60$ lines). Print the top 3 root-cause failures with file/line pointers and write full SARIF logs to ephemeral storage.
-
-5. **No Evasion Tolerated**:
-   Do not attempt `--no-verify`, `LEFTHOOK=0`, or modifying `.git/hooks`. All pull requests are authoritatively re-checked in an ephemeral isolated sandbox by `cordana-standards[bot]`.
-
-6. **Anti-Loop Interception**:
-   If the same AST diff and error category repeats $\ge 3$ times, halt execution immediately. Re-evaluate the underlying design instead of making micro-textual retries.
-
-## Primary Verification Commands
-
-```bash
-# Fast local test suite
-go test -v -race ./...
-
-# Recompile and verify cross-agent context outputs
-standardsctl compile-context --verify
-
-# Audit repository against declared HISS-16 standards
-standardsctl audit
-
-# Run all formatting, linting, and security gates
-make verify-all
-```
-
----
+<!-- markdownlint-disable MD013 -->
 
 # Agent guide — sveltesentio
 
@@ -135,45 +61,15 @@ sveltesentio/
 ├── .release-please-manifest.json   # per-package published version manifest
 ├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
 │
-├── packages/                       # @sveltesentio/* publishable modules
-│   ├── core/                       # env schema, errors (RFC 9457 parser), id, clock, CSP helpers, openapi-fetch presets, vite plugin
-│   │   ├── src/
-│   │   │   ├── index.ts            # public API
-│   │   │   └── internal/           # off-limits to consumers
-│   │   ├── AGENTS.md               # per-package agent guide (add when implementing)
+├── packages/                       # @sveltesentio/* publishable modules — 19 published; see the package purpose table below
+│   ├── core/                       # every package follows this shape:
+│   │   ├── src/index.ts            #   the entire public API (named exports only)
+│   │   ├── src/internal/           #   off-limits to consumers
+│   │   ├── AGENTS.md               #   per-package conventions — read before touching the area
 │   │   └── README.md
-│   ├── ui/                         # Tailwind 4 preset + oklch tokens + shadcn-svelte CLI wrapper + interface-type presets
-│   │   ├── preset-desktop/         # default desktop dashboard tokens
-│   │   ├── preset-10foot/          # TV UI — 44px+ hit targets, focus ring, high contrast (ADR-0047)
-│   │   ├── preset-handheld/        # phone / deck landscape, safe-area insets
-│   │   ├── preset-dashboard/       # admin dashboard overrides on top of desktop
-│   │   ├── data/                   # virtualized list/grid/table (TanStack Virtual + TanStack Table, ADR-0011 + ADR-0024)
-│   │   ├── markdown/               # marked + DOMPurify sanitized renderer (ADR-0026)
-│   │   ├── cmd/                    # cmd+K command palette + bits-ui Command + tinykeys shortcuts (ADR-0015 + ADR-0025)
-│   │   ├── icons/                  # @lucide/svelte default + pluggable @iconify/svelte loader (ADR-0002)
-│   │   ├── chart/                  # a11y wrapper over LayerChart + uPlot escape hatch (ADR-0013)
-│   │   ├── theme-toggle/           # mode-watcher + cookie + user-account override (ADR-0048)
-│   │   ├── theme-customizer/       # user-customiser opt-in (ADR-0046)
-│   │   ├── font-preset-{inter,geist,mono}/ # Fontsource variable-font opt-in (ADR-0049)
-│   │   └── toast/                  # svelte-sonner wrapper with interface-type theming (ADR-0016)
-│   ├── query/                      # TanStack Query v6 SvelteKit integration — SSR hydration, optimistic, pagination
-│   ├── forms/                      # Superforms v2 + Zod v4 patterns, field components, error mapping
-│   ├── i18n/                       # Paraglide-js v2 locale middleware, RTL, message helpers, money/number formatting
-│   ├── auth/                       # OIDC + PKCE client, passkeys (@simplewebauthn/browser), session, permission runes, TOTP MFA UI
-│   ├── realtime/                   # sveltekit-sse + @connectrpc/connect-web + WebSocket transport adapter
-│   ├── collab/                     # Yjs CRDT + Svelte binding + y-websocket provider
-│   ├── flow/                       # @xyflow/svelte wrappers — DAG helpers + elkjs layout (canvas + palette deferred)
-│   ├── uploads/                    # tus-js-client + presigned S3 direct-to-browser + EXIF/MIME/size guards
-│   ├── media/
-│   │   ├── player/                 # Vidstack + HLS.js — trickplay, skip-intro, syncplay, subtitle rendering
-│   │   ├── image/                  # artwork grid, lightbox, embla-carousel, EXIF strip
-│   │   └── game/                   # EmulatorJS wrapper + WebRTC netplay (simple-peer)
-│   ├── shell/                      # device-class layouts — desktop / 10-foot D-pad / handheld / PWA install + update
-│   ├── charts/                     # Layerchart wrappers + dashboard presets
-│   ├── ai/                         # LLM chat components (streaming), edge AI (@huggingface/transformers WebGPU), semantic search, EU AI Act audit hook (ADR-0043 + ADR-0044 + ADR-0045)
-│   ├── ipc-sockmap/                # Colocated-IPC client: AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG sockmap (Tier 3) observe/handoff via `./sockmap` (probeSockmap + activationListeners + readSockmapStats); golusoris owns map writes (Linux + cgroup v2 + kernel ≥5.10)   [ADR-0051]
-│   ├── mcp/                        # MCP server — exposes ADR/compose/compliance docs + module-lookup tool to AI clients
-│   └── testing/                    # testClock + a11y harness + Superforms + TanStack Query fixtures   [ADR-0031 + ADR-0052]
+│   └── …                           # ai · api · auth · charts · collab · emulator · flow · forms · i18n
+│                                   # ipc-sockmap · mcp · media · query · realtime · shell · testing · ui · uploads
+│                                   # Sub-exports (ui/toast, media/player, …) are module subpaths, not directories.
 │
 ├── apps/                           # consuming apps (integration tests + showcase)
 │   ├── storybook/                  # Storybook 10 component showcase (Svelte 5; axe via addon-a11y)           [LANDED]
@@ -194,44 +90,21 @@ sveltesentio/
 │
 ├── .claude/
 │   ├── settings.json               # hooks (PreToolUse, PostToolUse prettier, PreCommit `make ci`)
-│   └── skills/
-│       ├── wire-module.md          # /wire-module — add a new @sveltesentio/* package
-│       ├── scaffold-route.md       # /scaffold-route — generate SvelteKit route + Superforms + TanStack Query
-│       ├── add-shadcn.md           # /add-shadcn — shadcn-svelte CLI wrapper
-│       └── add-storybook.md        # /add-storybook — add a Storybook story for a component
+│   └── skills/                     # /wire-module · /scaffold-route · /add-shadcn · /add-storybook
 │
 ├── .github/
 │   ├── CODEOWNERS                  # @lusoris global
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
-│   └── workflows/
-│       ├── ci.yml                  # PR-title + lint + typecheck + test + build + audit
-│       ├── ci-sveltekit.yml        # REUSABLE — downstream apps call this
-│       ├── release-please.yml      # release-please orchestrator + npm publish + cosign + syft SBOM + SLSA provenance
-│       ├── refresh-upstream-docs.yml  # refreshes pinned docs/upstream snapshots
-│       ├── scorecard.yml           # OpenSSF Scorecard
-│       ├── codeql.yml              # CodeQL JS/TS
-│       └── auto-assign.yml         # assign @lusoris on issues/PRs
+│   └── workflows/                  # ci · ci-sveltekit (reusable) · release-please · refresh-upstream-docs
+│                                   # scorecard · codeql · auto-assign — see "CI gates" for what each enforces
 │
 ├── .devcontainer/
 │   └── devcontainer.json           # Node 24 (ADR-0021), pnpm, zsh + oh-my-zsh, 15 VS Code extensions, ports 5173/4173/6006
 │
-├── .workingdir/                    # persistent plan + state across machines/sessions (gitignored? no — committed!)
-│   ├── PLAN.md                     # full multi-phase roadmap (source of truth for framework design)
-│   ├── STATE.md                    # current status + decision log
-│   ├── V0.1.0.md                   # concrete first-tag release goal
-│   └── research/
-│       ├── governance-gaps.md      # gap analysis vs. golusoris/golusoris template
-│       ├── module-coverage.md      # downstream-app need vs. module surface
-│       ├── module-backlog.md       # full golusoris-module cross-reference (~60 candidates)
-│       ├── decisions-needed.md     # open decisions (D1..D166+) with evidence requirements
-│       ├── existing-apps-deepread.md  # plan to actually read arca/subdo/revenge/lurkarr source
-│       ├── svelte-ecosystem-audit.md  # per-library evaluation template + buckets
-│       ├── awesome-harvest.md      # awesome-list digests (done 2026-04-17)
-│       ├── ecosystem-pass-1-summary.md  # cross-batch ecosystem audit aggregation
-│       ├── deepread-{arca,subdo,revenge,lurkarr}.md  # per-app deep-read findings
-│       ├── d13-clock-injection.md  # live-docs research for ADR-0052
-│       └── reaudit-d{112,120,50}-*.md  # 4-axes re-audit reports
+├── .workingdir/                    # local-only planning state, gitignored (PLAN · STATE · V0.1.0 · BACKLOG)
+│   └── research/                   # per-library audits, app deep-reads, and the D-row decision ledger
+│                                   # (decisions-needed.md is the one to read first — see "When in doubt")
 │
 ├── CLAUDE.md                       # Claude Code-specific guide (hooks, skills, project principles)
 ├── AGENTS.md                       # this file
