@@ -93,27 +93,46 @@ rules:
         state: partial
         runner: eslint
         mechanism: >-
-          `@typescript-eslint/no-floating-promises` and `no-misused-promises`,
-          both from recommended-type-checked and both confirmed on. Errors route
-          through `@sveltesentio/core/errors` by convention, which nothing checks.
+          `@typescript-eslint/no-floating-promises`, `no-misused-promises` and
+          `no-non-null-assertion`, the last enabled over packages/*/src by this
+          repository — which required declaring the plugin in that config object,
+          since flat config resolves a rule's plugin from the object it appears
+          in. `no-empty` from eslint:recommended covers the swallowed catch.
+          Errors route through `@sveltesentio/core/errors` by convention, which
+          nothing checks.
         rationale: >-
-          An unawaited promise is reported. The gap is the non-null assertion:
-          `@typescript-eslint/no-non-null-assertion` prints as OFF, and five `!`
-          assertions were found in test code once tests were put under a
-          TypeScript project.
+          An unawaited promise is reported, and so is a non-null assertion: the
+          rule was enabled after this catalog first declared it a gap. It was not
+          free — four assertions in shipped source were fixed rather than
+          exempted, two in charts/palette.ts where a non-empty tuple type now
+          carries what the construction already guaranteed, and two in flow/dag.ts
+          where the loop tests `shift()` instead of asserting it. The remaining gap is the
+          routing — the invariant requires every error to leave package code as
+          an RFC 9457 ProblemDetails through `@sveltesentio/core/errors`, and a
+          bare `throw new Error` is unreported.
 
   - id: HISS-08
     title: Static Determinism
     coverage:
       - language: typescript
-        state: unsupported
+        state: partial
+        runner: eslint
         mechanism: >-
-          none. `no-eval` and `no-new-func` both print as OFF; neither is in
-          `eslint:recommended` as this config composes it.
+          `no-eval`, `no-new-func` and `no-implied-eval` over packages/*/src,
+          enabled by this repository after the first version of this catalog
+          recorded them as OFF, plus the local
+          `@sveltesentio/no-unsanitised-html` rule in packages/core/src/eslint.ts.
+          Measured free: zero violations in shipped source.
         rationale: >-
-          The gap fixture calls `eval` on a template string and nothing reports
-          it. DOMPurify is used at innerHTML boundaries by convention, and no
-          rule requires it in .ts.
+          Dynamic execution is reported in all three of its forms, including
+          `setTimeout` on a string, and so is an unsanitised HTML sink:
+          `@sveltesentio/no-unsanitised-html` was written for this gap after the
+          catalog named it, and reports `innerHTML`, `outerHTML` and
+          `insertAdjacentHTML` unless the value comes from `sanitizeHtml()` or a
+          `.sanitize()` call. It is partial rather than enforced because the rule
+          recognises sanitisation at the sink: a value sanitised further up the
+          call chain and passed in as a bare identifier is still reported, and a
+          sink reached through a computed member is not.
       - language: svelte
         state: partial
         runner: eslint

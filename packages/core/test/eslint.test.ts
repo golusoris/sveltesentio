@@ -1,7 +1,12 @@
 import { RuleTester } from 'eslint';
 import * as svelteParser from 'svelte-eslint-parser';
 import { describe, expect, it } from 'vitest';
-import { chartA11yWrapper, noDirectTime, sentioEslint } from '../src/eslint';
+import {
+	chartA11yWrapper,
+	noDirectTime,
+	noUnsanitisedHtml,
+	sentioEslint,
+} from '../src/eslint';
 
 const ruleTester = new RuleTester({
 	languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
@@ -188,5 +193,56 @@ describe('chart-a11y-wrapper rule', () => {
 				},
 			],
 		});
+	});
+});
+
+describe('no-unsanitised-html rule', () => {
+	it('passes sanitised sinks + flags raw ones', () => {
+		ruleTester.run('no-unsanitised-html', noUnsanitisedHtml, {
+			valid: [
+				// Positive control: the sanctioned form this repo uses.
+				{ code: 'host.innerHTML = sanitizeHtml(raw);' },
+				{ code: 'host.innerHTML = DOMPurify.sanitize(raw);' },
+				{ code: 'host.innerHTML = purifier.sanitize(raw, config);' },
+				{ code: 'host.outerHTML = sanitizeHtml(raw);' },
+				{ code: 'host.insertAdjacentHTML("beforeend", sanitizeHtml(raw));' },
+				// Clearing a node carries no markup.
+				{ code: 'host.innerHTML = "";' },
+				// Boundary: a similarly-named property that is not an HTML sink.
+				{ code: 'host.innerText = raw;' },
+				{ code: 'host.textContent = raw;' },
+				// A computed member is not statically an HTML sink.
+				{ code: 'host[key] = raw;' },
+			],
+			invalid: [
+				{
+					code: 'host.innerHTML = raw;',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				{
+					code: 'host.innerHTML = `<p>${raw}</p>`;',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				{
+					code: 'host.outerHTML = raw;',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				// A non-empty literal is still markup.
+				{
+					code: 'host.innerHTML = "<img onerror=alert(1)>";',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				{
+					code: 'host.insertAdjacentHTML("beforeend", raw);',
+					errors: [{ messageId: 'insertAdjacent' }],
+				},
+				// An unrelated call in the markup slot does not sanitise it.
+				{
+					code: 'host.innerHTML = escapeNothing(raw);',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+			],
+		});
+		expect(sentioEslint.rules['no-unsanitised-html']).toBe(noUnsanitisedHtml);
 	});
 });

@@ -26,9 +26,15 @@ export const CHART_PALETTE_SIZE = CHART_OKLCH_FALLBACKS.length;
  * The full ordered palette as CSS color strings, each
  * `var(--color-chart-N, <oklch fallback>)`. Index 0 is series 1.
  */
-export const chartPalette: readonly string[] = CHART_OKLCH_FALLBACKS.map(
-	(fallback, i) => `var(--color-chart-${i + 1}, ${fallback})`,
-);
+// Typed as a non-empty tuple so `chartPalette[0]` is `string` rather than
+// `string | undefined` under noUncheckedIndexedAccess. The palette is built
+// from a non-empty constant, so the assertion the type now carries is one the
+// construction already guarantees — which is what lets chartSeriesColor drop
+// its non-null assertions rather than move them.
+export const chartPalette: readonly [string, ...string[]] =
+	CHART_OKLCH_FALLBACKS.map(
+		(fallback, i) => `var(--color-chart-${i + 1}, ${fallback})`,
+	) as [string, ...string[]];
 
 /**
  * Resolve the semantic color for series `index` (0-based). Wraps around the
@@ -36,6 +42,9 @@ export const chartPalette: readonly string[] = CHART_OKLCH_FALLBACKS.map(
  * a deterministic, repeatable color rather than `undefined`.
  */
 export function chartSeriesColor(index: number): string {
-	if (!Number.isFinite(index) || index < 0) return chartPalette[0]!;
-	return chartPalette[Math.floor(index) % CHART_PALETTE_SIZE]!;
+	if (!Number.isFinite(index) || index < 0) return chartPalette[0];
+	// The modulo is in range by construction, but the index signature cannot
+	// say so; falling back to the first colour keeps the return type `string`
+	// without asserting.
+	return chartPalette[Math.floor(index) % CHART_PALETTE_SIZE] ?? chartPalette[0];
 }

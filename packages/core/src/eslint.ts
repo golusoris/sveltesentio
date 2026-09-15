@@ -39,6 +39,7 @@ type Node = Rule.Node;
 type CallExpressionNode = Extract<Node, { type: 'CallExpression' }>;
 type NewExpressionNode = Extract<Node, { type: 'NewExpression' }>;
 type ImportDeclarationNode = Extract<Node, { type: 'ImportDeclaration' }>;
+type AssignmentExpressionNode = Extract<Node, { type: 'AssignmentExpression' }>;
 type Callee = CallExpressionNode['callee'];
 
 const CLOCK_HINT =
@@ -193,17 +194,92 @@ const chartA11yWrapper: Rule.RuleModule = {
 	},
 };
 
+// --- no-unsanitised-html ------------------------------------------------------
+
+const SANITISE_HINT =
+	'pass it through the sanitiser first — `sanitizeHtml()` from ' +
+	'@sveltesentio/ui/markdown, or DOMPurify.sanitize() directly — so untrusted ' +
+	'markup cannot reach the DOM (§2.2 OWASP ASVS L2, ADR-0026)';
+
+/** Property names that parse their assigned string as HTML. */
+const HTML_SINKS = new Set(['innerHTML', 'outerHTML']);
+
+/**
+ * Whether an expression is a sanitiser call.
+ *
+ * Recognises `sanitizeHtml(...)`, `DOMPurify.sanitize(...)` and
+ * `purifier.sanitize(...)` — the shapes this repository actually uses. A bare
+ * identifier holding an already-sanitised string is not recognised, and that is
+ * deliberate: the rule reports the sink so the sanitisation is visible where the
+ * markup enters the DOM rather than somewhere up the call chain.
+ */
+function isSanitiserCall(node: { type: string; callee?: unknown } | null | undefined): boolean {
+	if (!node || node.type !== 'CallExpression') return false;
+	const callee = (node as { callee: Callee }).callee;
+	if (callee.type === 'Identifier') return callee.name === 'sanitizeHtml';
+	if (callee.type !== 'MemberExpression') return false;
+	if (callee.computed || callee.property.type !== 'Identifier') return false;
+	return callee.property.name === 'sanitize';
+}
+
+const noUnsanitisedHtml: Rule.RuleModule = {
+	meta: {
+		type: 'problem',
+		docs: {
+			description:
+				'disallow assigning unsanitised markup to an HTML sink (innerHTML, outerHTML, insertAdjacentHTML)',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			htmlSink: `Assigning to \`{{sink}}\` bypasses sanitisation — ${SANITISE_HINT}.`,
+			insertAdjacent: `\`insertAdjacentHTML\` parses its argument as HTML — ${SANITISE_HINT}.`,
+		},
+	},
+
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		return {
+			AssignmentExpression(node: AssignmentExpressionNode): void {
+				const left = node.left;
+				if (left.type !== 'MemberExpression') return;
+				if (left.computed || left.property.type !== 'Identifier') return;
+				if (!HTML_SINKS.has(left.property.name)) return;
+				// An empty string literal clears the node; it cannot carry markup.
+				if (node.right.type === 'Literal' && node.right.value === '') return;
+				if (isSanitiserCall(node.right)) return;
+				context.report({
+					node,
+					messageId: 'htmlSink',
+					data: { sink: left.property.name },
+				});
+			},
+
+			CallExpression(node: CallExpressionNode): void {
+				// Any receiver, unlike the Date/performance checks above: the sink is
+				// the method, and it is reached on whatever element is to hand.
+				const callee = node.callee;
+				if (callee.type !== 'MemberExpression') return;
+				if (callee.computed || callee.property.type !== 'Identifier') return;
+				if (callee.property.name !== 'insertAdjacentHTML') return;
+				if (isSanitiserCall(node.arguments[1])) return;
+				context.report({ node, messageId: 'insertAdjacent' });
+			},
+		};
+	},
+};
+
 /** The flat-config plugin object (`plugins: { '@sveltesentio': sentioEslint }`). */
 const sentioEslint = {
 	meta: { name: '@sveltesentio/core', version: '0.2.0' },
 	rules: {
 		'no-direct-time': noDirectTime,
 		'chart-a11y-wrapper': chartA11yWrapper,
+		'no-unsanitised-html': noUnsanitisedHtml,
 	},
 } satisfies {
 	meta: { name: string; version: string };
 	rules: Record<string, Rule.RuleModule>;
 };
 
-export { noDirectTime, chartA11yWrapper, sentioEslint };
+export { noDirectTime, chartA11yWrapper, noUnsanitisedHtml, sentioEslint };
 export default sentioEslint;
