@@ -31,6 +31,31 @@ export interface DpadNavigationOptions extends FocusGraphSource {
  * <div use:dpadNavigation={{ candidates, current, focus }}>…</div>
  * ```
  */
+/**
+ * The directions currently held on any connected gamepad, from both the D-pad
+ * buttons and the left stick.
+ *
+ * A pad contributes at most one axis direction but any number of button
+ * directions, and disconnected slots read as `null`. Collecting into a set means a
+ * direction held on two pads, or on both the stick and the D-pad, is one entry —
+ * which is what the caller's edge-trigger needs to see.
+ */
+function collectActiveDirections(): Set<Direction> {
+	const pads = navigator.getGamepads?.() ?? [];
+	const active = new Set<Direction>();
+	for (const pad of pads) {
+		if (pad === null) continue;
+		pad.buttons.forEach((button, index) => {
+			if (!button.pressed) return;
+			const direction = directionFromGamepadButton(index);
+			if (direction !== null) active.add(direction);
+		});
+		const axisDirection = directionFromAxes(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
+		if (axisDirection !== null) active.add(axisDirection);
+	}
+	return active;
+}
+
 export const dpadNavigation: Action<HTMLElement, DpadNavigationOptions> = (
 	node,
 	initial,
@@ -61,18 +86,7 @@ export const dpadNavigation: Action<HTMLElement, DpadNavigationOptions> = (
 		if (timestamp - lastPoll < interval) return;
 		lastPoll = timestamp;
 
-		const pads = navigator.getGamepads?.() ?? [];
-		const active = new Set<Direction>();
-		for (const pad of pads) {
-			if (pad === null) continue;
-			pad.buttons.forEach((button, index) => {
-				if (!button.pressed) return;
-				const direction = directionFromGamepadButton(index);
-				if (direction !== null) active.add(direction);
-			});
-			const axisDirection = directionFromAxes(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
-			if (axisDirection !== null) active.add(axisDirection);
-		}
+		const active = collectActiveDirections();
 
 		// Edge-trigger: fire only on a fresh press. One cell per discrete press —
 		// no hold-to-repeat (reduced-motion-friendly; repeat lives upstream).

@@ -21,9 +21,9 @@ thin, a11y-correct view.
 	import { BROWSER } from 'esm-env';
 	import {
 		actionForKey,
+		applyTransportAction,
 		assertCaptionsContract,
 		formatMediaTime,
-		clampVolume,
 		type MediaTrack,
 	} from './player-controls.js';
 
@@ -67,23 +67,8 @@ thin, a11y-correct view.
 		const action = actionForKey(key);
 		if (action === undefined) return;
 		key.preventDefault();
+		if (applyTransportAction(el, action)) return;
 		switch (action) {
-			case 'toggle-play':
-				if (el.paused) void el.play();
-				else el.pause();
-				break;
-			case 'seek-back':
-				el.currentTime = Math.max(0, el.currentTime - 5);
-				break;
-			case 'seek-forward':
-				el.currentTime = Math.min(el.duration || Infinity, el.currentTime + 5);
-				break;
-			case 'volume-up':
-				el.volume = clampVolume(el.volume, 0.1);
-				break;
-			case 'volume-down':
-				el.volume = clampVolume(el.volume, -0.1);
-				break;
 			case 'toggle-mute':
 				el.muted = !el.muted;
 				muted = el.muted;

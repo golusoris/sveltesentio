@@ -129,14 +129,14 @@ function degrade(reason: string): SockmapUnavailable {
 }
 
 /**
- * Probe whether the Tier-3 fast path is usable on this host. Checks, in order:
- * Linux platform, kernel ≥ {@link MIN_KERNEL_MAJOR}.{@link MIN_KERNEL_MINOR}, a
- * cgroup v2 unified hierarchy, and the presence of golusoris's pinned sockhash.
- * Never throws — an unusable host returns a {@link SockmapUnavailable} with a
- * human-readable `reason`, so callers transparently stay on Tier 1.
+ * The host checks that need no I/O: platform, then kernel version.
+ *
+ * Split out of {@link probeSockmap} so the synchronous host gates and the
+ * asynchronous filesystem gates are separately readable and separately testable.
+ * Returns the parsed kernel when the host qualifies, or the degraded probe naming
+ * the first gate that rejected it.
  */
-export async function probeSockmap(options: ProbeOptions = {}): Promise<SockmapProbe> {
-  const pinPath = options.pinPath ?? DEFAULT_PIN_PATH;
+function probeHostKernel(options: ProbeOptions): SockmapUnavailable | { kernel: KernelVersion } {
   const platform = options.platform ?? process.platform;
   if (platform !== 'linux') {
     return degrade(
@@ -153,6 +153,21 @@ export async function probeSockmap(options: ProbeOptions = {}): Promise<SockmapP
       `kernel ${kernel.major}.${kernel.minor} < required ${MIN_KERNEL_MAJOR}.${MIN_KERNEL_MINOR}`,
     );
   }
+  return { kernel };
+}
+
+/**
+ * Probe whether the Tier-3 fast path is usable on this host. Checks, in order:
+ * Linux platform, kernel ≥ {@link MIN_KERNEL_MAJOR}.{@link MIN_KERNEL_MINOR}, a
+ * cgroup v2 unified hierarchy, and the presence of golusoris's pinned sockhash.
+ * Never throws — an unusable host returns a {@link SockmapUnavailable} with a
+ * human-readable `reason`, so callers transparently stay on Tier 1.
+ */
+export async function probeSockmap(options: ProbeOptions = {}): Promise<SockmapProbe> {
+  const pinPath = options.pinPath ?? DEFAULT_PIN_PATH;
+  const host = probeHostKernel(options);
+  if (!('kernel' in host)) return host;
+  const kernel = host.kernel;
   const exists = options.exists ?? fsExists;
   if (!(await exists(CGROUP_V2_MARKER))) {
     return degrade(
@@ -206,12 +221,18 @@ function parseFdNames(raw: string | undefined, count: number): readonly string[]
  *
  * @throws {ProblemError} when `LISTEN_FDS` is present but not a non-negative integer.
  */
-export function activationListeners(
-  env: ActivationEnv = process.env,
-  selfPid: number = process.pid,
-): readonly ActivatedListener[] {
+/**
+ * How many descriptors systemd handed *this* process, or 0 when none apply.
+ *
+ * Returns 0 for all the "not socket-activated" cases — absent `LISTEN_FDS`, a count
+ * of zero, or a `LISTEN_PID` naming a different process — so the caller has one
+ * condition to check instead of four. A present but malformed `LISTEN_FDS` still
+ * throws, and still throws before the PID is consulted: a corrupt environment is a
+ * fault to report, not a reason to silently return nothing.
+ */
+function activationCount(env: ActivationEnv, selfPid: number): number {
   const rawFds = env.LISTEN_FDS;
-  if (rawFds === undefined || rawFds === '') return [];
+  if (rawFds === undefined || rawFds === '') return 0;
   const count = Number(rawFds);
   if (!Number.isInteger(count) || count < 0) {
     throw sockmapError(
@@ -221,9 +242,18 @@ export function activationListeners(
       },
     );
   }
-  if (count === 0) return [];
+  if (count === 0) return 0;
   const pid = env.LISTEN_PID;
-  if (pid !== undefined && pid !== '' && Number(pid) !== selfPid) return [];
+  if (pid !== undefined && pid !== '' && Number(pid) !== selfPid) return 0;
+  return count;
+}
+
+export function activationListeners(
+  env: ActivationEnv = process.env,
+  selfPid: number = process.pid,
+): readonly ActivatedListener[] {
+  const count = activationCount(env, selfPid);
+  if (count === 0) return [];
   const names = parseFdNames(env.LISTEN_FDNAMES, count);
   const listeners: ActivatedListener[] = [];
   for (let i = 0; i < count; i++) {

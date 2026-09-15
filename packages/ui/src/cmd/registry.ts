@@ -75,6 +75,25 @@ export class CommandRegistry {
  * match. Title hits outrank keyword/subtitle hits; prefix outranks substring;
  * a subsequence (fuzzy) match is the weakest positive signal.
  */
+/**
+ * Best keyword match for `needle`, or 0 when none match.
+ *
+ * Scores sit below the title bands and above a subsequence hit: a keyword is a
+ * deliberate alias, so matching one should beat a fuzzy match on the title but
+ * never outrank the title matching directly. First match wins, so declaration
+ * order breaks ties.
+ */
+function scoreKeywords(keywords: readonly string[] | undefined, needle: string): number {
+	if (!keywords) return 0;
+	for (const keyword of keywords) {
+		const term = keyword.toLowerCase();
+		if (term === needle) return 50;
+		if (term.startsWith(needle)) return 45;
+		if (term.includes(needle)) return 35;
+	}
+	return 0;
+}
+
 export function scoreCommand(command: Command, query: string): number {
 	const needle = query.trim().toLowerCase();
 	if (needle === '') return 1;
@@ -86,14 +105,8 @@ export function scoreCommand(command: Command, query: string): number {
 
 	if (command.subtitle && command.subtitle.toLowerCase().includes(needle)) return 40;
 
-	if (command.keywords) {
-		for (const keyword of command.keywords) {
-			const term = keyword.toLowerCase();
-			if (term === needle) return 50;
-			if (term.startsWith(needle)) return 45;
-			if (term.includes(needle)) return 35;
-		}
-	}
+	const keywordScore = scoreKeywords(command.keywords, needle);
+	if (keywordScore > 0) return keywordScore;
 
 	if (isSubsequence(needle, title)) return 20;
 	return 0;

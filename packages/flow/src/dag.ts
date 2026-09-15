@@ -41,11 +41,16 @@ export class CycleError extends Error {
 	}
 }
 
-export function topologicalSort(
+/**
+ * Seeds Kahn's algorithm: the indegree of every node, and the ids that start ready.
+ *
+ * The ready queue is sorted so a graph with several roots yields one deterministic
+ * order rather than whatever order the node list happened to arrive in.
+ */
+function initialIndegrees(
 	nodes: readonly DagNodeLike[],
-	edges: readonly DagEdgeLike[],
-): string[] {
-	const { outgoing, incoming } = buildAdjacency(nodes, edges);
+	incoming: ReadonlyMap<string, readonly string[]>,
+): { indegree: Map<string, number>; queue: string[] } {
 	const indegree = new Map<string, number>();
 	for (const node of nodes) {
 		indegree.set(node.id, incoming.get(node.id)?.length ?? 0);
@@ -53,6 +58,15 @@ export function topologicalSort(
 	const queue: string[] = [];
 	for (const [id, deg] of indegree) if (deg === 0) queue.push(id);
 	queue.sort();
+	return { indegree, queue };
+}
+
+export function topologicalSort(
+	nodes: readonly DagNodeLike[],
+	edges: readonly DagEdgeLike[],
+): string[] {
+	const { outgoing, incoming } = buildAdjacency(nodes, edges);
+	const { indegree, queue } = initialIndegrees(nodes, incoming);
 
 	const order: string[] = [];
 	while (queue.length > 0) {
