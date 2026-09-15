@@ -1,3 +1,4 @@
+import { appendBounded } from './bounded-history.js';
 import { createBufferedEmitter } from './buffered-emitter.js';
 import {
 	SseClient,
@@ -58,8 +59,7 @@ export function useSSE(options: UseSseOptions): UseSse {
 	const append = (batch: readonly SseEventLike[]): void => {
 		if (batch.length === 0) return;
 		lastMessage = batch[batch.length - 1];
-		const next = messages.concat(batch);
-		messages = next.length > historyLimit ? next.slice(next.length - historyLimit) : next;
+		messages = appendBounded(messages, batch, historyLimit);
 	};
 
 	const emitter =

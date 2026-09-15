@@ -63,6 +63,23 @@ export interface UseLLMChat {
  * </script>
  * ```
  */
+/**
+ * A new message list with `text` appended to the message at `index`.
+ *
+ * Copies rather than mutating: the list is `$state`, and runes observe a
+ * reassignment, not an in-place edit of the array it already holds. A missing
+ * index yields the list unchanged, so a stream that outlives its placeholder
+ * cannot write past the end.
+ */
+function appendChunk(messages: ChatMessage[], index: number, text: string): ChatMessage[] {
+	const next = [...messages];
+	const current = next[index];
+	if (current) {
+		next[index] = { role: current.role, content: current.content + text };
+	}
+	return next;
+}
+
 export function useLLMChat(options: UseLLMChatOptions): UseLLMChat {
 	const seed = options.initialMessages ? [...options.initialMessages] : [];
 
@@ -100,15 +117,7 @@ export function useLLMChat(options: UseLLMChatOptions): UseLLMChat {
 					signal: controller.signal,
 				});
 				for await (const chunk of stream) {
-					const next = [...messages];
-					const current = next[replyIndex];
-					if (current) {
-						next[replyIndex] = {
-							role: current.role,
-							content: current.content + chunk.text,
-						};
-					}
-					messages = next;
+					messages = appendChunk(messages, replyIndex, chunk.text);
 				}
 			} catch (err) {
 				error = err;

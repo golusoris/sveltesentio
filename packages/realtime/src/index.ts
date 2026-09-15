@@ -1,6 +1,8 @@
 export { computeBackoff } from './backoff.js';
 export type { BackoffOptions } from './backoff.js';
 
+export { appendBounded } from './bounded-history.js';
+
 export { createBufferedEmitter } from './buffered-emitter.js';
 export type { BufferedEmitter, BufferedEmitterOptions } from './buffered-emitter.js';
 
