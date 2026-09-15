@@ -69,8 +69,10 @@ export function topologicalSort(
 	const { indegree, queue } = initialIndegrees(nodes, incoming);
 
 	const order: string[] = [];
-	while (queue.length > 0) {
-		const id = queue.shift()!;
+	for (;;) {
+		const id = queue.shift();
+		// Ends the loop on an empty queue without asserting what `shift` returned.
+		if (id === undefined) break;
 		order.push(id);
 		for (const next of outgoing.get(id) ?? []) {
 			const deg = (indegree.get(next) ?? 0) - 1;
@@ -125,8 +127,10 @@ export function reachableFrom(
 	const { outgoing } = buildAdjacency(nodes, edges);
 	const reached = new Set<string>();
 	const queue: string[] = [startId];
-	while (queue.length > 0) {
-		const id = queue.shift()!;
+	for (;;) {
+		const id = queue.shift();
+		// Ends the loop on an empty queue without asserting what `shift` returned.
+		if (id === undefined) break;
 		if (reached.has(id)) continue;
 		reached.add(id);
 		for (const next of outgoing.get(id) ?? []) queue.push(next);

@@ -76,8 +76,25 @@ const config: Linter.Config[] = [
   // shipped code's.
   {
     files: ['packages/*/src/**/*.ts', 'packages/*/src/**/*.svelte'],
+    // Flat config resolves a rule's plugin from the same object the rule is in,
+    // so this block declares @typescript-eslint even though the block above
+    // already does.
+    plugins: { '@typescript-eslint': ts },
     rules: {
       complexity: ['error', 10],
+
+      // HISS-08 static determinism. Measured as free: zero violations in shipped
+      // source when enabled, so the rules pin the current state rather than
+      // demanding a cleanup. `no-implied-eval` is included because
+      // `setTimeout('code')` evaluates a string exactly as `eval` does.
+      'no-eval': 'error',
+      'no-new-func': 'error',
+      'no-implied-eval': 'error',
+
+      // HISS-07 checked errors. `!` discards the undefined case that
+      // `noUncheckedIndexedAccess` exists to surface, which is the unchecked
+      // error this invariant names. Also free at the time of enabling.
+      '@typescript-eslint/no-non-null-assertion': 'error',
     },
   },
 
@@ -91,6 +108,9 @@ const config: Linter.Config[] = [
     plugins: { '@sveltesentio': sentio },
     rules: {
       '@sveltesentio/no-direct-time': 'error',
+      // HISS-08's other half: `{@html}` is covered by svelte/no-at-html-tags,
+      // but nothing checked the TypeScript side until this rule existed.
+      '@sveltesentio/no-unsanitised-html': 'error',
     },
   },
   {
