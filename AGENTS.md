@@ -21,18 +21,21 @@ flowchart LR
 
 ## Core Directives & Invariants (Modernized NASA JPL Power-of-10)
 
-Adapted to TypeScript; HISS-03 (manual heap management) and HISS-09 (pointer arithmetic) have no analogue here.
+Adapted to TypeScript. HISS-03 (manual heap management) and HISS-09 (pointer arithmetic) have no analogue here. HISS-11..14 are tracked by the upstream HISS-20 coverage catalog, not asserted here.
 
-| Invariant   | Scope             | NASA Rule | Enforcement Mechanism                                                                                                                           | Failure Action       |
-| :---------- | :---------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
-| **HISS-01** | Control Flow      | Rule 1    | Recursion prohibited; call graph must be a DAG. No circular imports between `@sveltesentio/*` packages.                                         | Build failure        |
-| **HISS-02** | Loops & I/O       | Rule 2    | Scalar upper bound on all loops; explicit `AbortSignal` timeout on all I/O.                                                                     | ESLint / review      |
-| **HISS-04** | Complexity        | Rule 4    | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                     | ESLint `complexity`  |
-| **HISS-07** | Error Handling    | Rule 7    | Zero unchecked errors: no non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457). | `@typescript-eslint` |
-| **HISS-08** | Determinism       | Rule 8    | Zero dynamic execution (`eval` / `new Function`); no unsanitised `innerHTML` — DOMPurify at every boundary.                                     | ESLint / CodeQL      |
-| **HISS-10** | Warning Hygiene   | Rule 10   | Zero-warning tolerance across `tsc`, ESLint, and Prettier. No `any`.                                                                            | Exit code 1          |
-| **HISS-15** | 3D Testing        | Rule 5    | Positive, negative, and boundary tests mandatory for every public export.                                                                       | CI coverage gate     |
-| **HISS-16** | Context Integrity | Fleet     | Single canonical `AGENTS.md`; vendor files compiled via `praetorctl compile-context`.                                                           | Pre-commit blocker   |
+| Invariant   | Scope                | NASA Rule | Enforcement Mechanism                                                                                                                           | Failure Action       |
+| :---------- | :------------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
+| **HISS-01** | Control Flow         | Rule 1    | Recursion prohibited; call graph must be a DAG. No circular imports between `@sveltesentio/*` packages.                                         | Build failure        |
+| **HISS-02** | Loops & I/O          | Rule 2    | Scalar upper bound on all loops; explicit `AbortSignal` timeout on all I/O.                                                                     | ESLint / review      |
+| **HISS-04** | Complexity           | Rule 4    | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                     | ESLint `complexity`  |
+| **HISS-07** | Error Handling       | Rule 7    | Zero unchecked errors: no non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457). | `@typescript-eslint` |
+| **HISS-08** | Determinism          | Rule 8    | Zero dynamic execution (`eval` / `new Function`); no unsanitised `innerHTML` — DOMPurify at every boundary.                                     | ESLint / CodeQL      |
+| **HISS-10** | Warning Hygiene      | Rule 10   | Zero-warning tolerance across `tsc`, ESLint, and Prettier. No `any`.                                                                            | Exit code 1          |
+| **HISS-15** | 3D Testing           | Rule 5    | Positive, negative, and boundary tests mandatory for every public export.                                                                       | CI coverage gate     |
+| **HISS-16** | Context Integrity    | Fleet     | Single canonical `AGENTS.md`; vendor files compiled via `praetorctl compile-context`.                                                           | Pre-commit blocker   |
+| **HISS-17** | State Ledger         | Fleet     | Turn start reads `.workingdir/STATE.md` and `OPEN.md`; turn end runs `praetorctl state sync .`.                                                 | Pre-commit blocker   |
+| **HISS-18** | CI Efficiency        | Fleet     | Diff-aware gating; `scripts/ci-affected.mjs` skips unaffected packages, `CI Gate` still reports.                                                | Wasted runner time   |
+| **HISS-19** | Reuse Before Writing | Fleet     | One behaviour, one implementation. Extend or call what exists — upstream libs included (see the streamlining rule).                             | Review blocker       |
 
 ## Operational Rules
 
