@@ -2,7 +2,7 @@
   "description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers + awareness/presence helpers",
   "devDependencies": {
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
   "exports": {

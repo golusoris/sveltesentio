@@ -12,8 +12,8 @@
     "axe-core": "^4.13.0",
     "jsdom": "^29.1.1",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
     "vitest": "^4.1.11",
     "zod": "^4.6.1"
   },
@@ -39,12 +39,12 @@
       "types": "./src/mfa.ts"
     },
     "./mfa-challenge": {
-      "default": "./src/MfaChallenge.svelte",
-      "svelte": "./src/MfaChallenge.svelte"
+      "svelte": "./src/MfaChallenge.svelte",
+      "default": "./src/MfaChallenge.svelte"
     },
     "./mfa-enroll": {
-      "default": "./src/MfaEnroll.svelte",
-      "svelte": "./src/MfaEnroll.svelte"
+      "svelte": "./src/MfaEnroll.svelte",
+      "default": "./src/MfaEnroll.svelte"
     },
     "./mfa-view": {
       "import": "./src/mfa-view.ts",
@@ -96,11 +96,11 @@
   ],
   "name": "@sveltesentio/auth",
   "peerDependencies": {
-    "@simplewebauthn/browser": "\u003e=13.0.0",
-    "@sveltejs/kit": "\u003e=2.0.0",
+    "@simplewebauthn/browser": ">=13.0.0",
+    "@sveltejs/kit": ">=2.0.0",
     "@sveltesentio/core": "workspace:*",
-    "svelte": "\u003e=5.0.0",
-    "zod": "\u003e=4.0.0"
+    "svelte": ">=5.0.0",
+    "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "@simplewebauthn/browser": {
