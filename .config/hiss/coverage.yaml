@@ -200,12 +200,18 @@ rules:
         state: enforced
         runner: praetorctl
         mechanism: >-
-          The lefthook post-commit hook runs `praetorctl state sync .`, and the
-          commit-msg hook rejects a message when the ledger is stale.
+          The lefthook post-commit hook runs `praetorctl state sync .`, the
+          commit-msg hook rejects a message when the ledger is stale, and
+          `make state-audit` runs inside verify-all, failing on an unresolved P0
+          or a pending question.
         rationale: >-
           Measured during this adoption: a commit was rejected with "state
           synchronization stale; run praetorctl state sync ." until the ledger
-          was synced, so the gate demonstrably fires.
+          was synced. Sync alone proved insufficient though — it kept an empty
+          ledger fresh for a whole session while nine bugs and thirteen decisions
+          lived only in the transcript. `state audit` is what reads the contents,
+          and it reported Valid:false on the first P0 recorded, so verify-all now
+          runs it.
 
   - id: HISS-18
     title: CI Efficiency
