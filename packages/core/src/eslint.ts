@@ -1,7 +1,7 @@
 import type { Rule } from 'eslint';
 
 /**
- * Flat-config ESLint plugin bundling sveltesentio's two cross-package
+ * Flat-config ESLint plugin bundling sveltesentio's three cross-package
  * invariants:
  *
  * - `no-direct-time` — time must flow through the injected {@link Clock}
@@ -13,6 +13,11 @@ import type { Rule } from 'eslint';
  *   2.2 SC 1.1.1 text alternative cannot be skipped (charts/AGENTS.md §Invariants,
  *   ADR-0013). A bare `<LineChart>` / `<Chart>` / uPlot element with no
  *   `<ChartFigure>` ancestor is an error.
+ * - `no-unsanitised-html` — assigning to an HTML sink (`innerHTML`,
+ *   `outerHTML`, `insertAdjacentHTML`) is an error unless the value came from
+ *   `sanitizeHtml(...)` or a `.sanitize(...)` call. Svelte's `{@html}` is
+ *   covered by `svelte/no-at-html-tags`; nothing checked the TypeScript side
+ *   until this rule existed.
  *
  * Register in a flat `eslint.config.js`:
  *
