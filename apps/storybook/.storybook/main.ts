@@ -12,6 +12,19 @@ import type { StorybookConfig } from '@storybook/svelte-vite';
  * The repo's own `@sveltejs/vite-plugin-svelte` is injected in `viteFinal` so
  * Svelte 5 (runes) components compile exactly as they do in the package builds.
  */
+/**
+ * A Vite plugin's `name`, or `undefined` for entries that carry none.
+ *
+ * A plugin array legitimately contains `false`, `null` and promises alongside
+ * plugin objects, so every lookup has to narrow before reading `.name`. Doing it
+ * once here keeps the two searches below to their actual question.
+ */
+function pluginName(plugin: unknown): string | undefined {
+  if (!plugin || typeof plugin !== 'object' || !('name' in plugin)) return undefined;
+  const { name } = plugin as { name?: unknown };
+  return typeof name === 'string' ? name : undefined;
+}
+
 const config: StorybookConfig = {
   stories: ['../../../packages/*/src/**/*.stories.@(svelte|ts)'],
   addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
@@ -30,16 +43,16 @@ const config: StorybookConfig = {
   core: {
     disableTelemetry: true,
   },
-  async viteFinal(viteConfig) {
-    const plugins = (viteConfig.plugins ?? []).flat(Infinity);
+  viteFinal(viteConfig) {
+    // `.flat(Infinity)` returns `any[]`: TypeScript's `FlatArray` is only defined
+    // for depths up to 20, and a `number`-typed depth collapses the element type
+    // to `any` — which silently removed type-checking from every plugin read
+    // below. A finite depth keeps the real `PluginOption` element type, and Vite
+    // plugin arrays never nest anywhere near this deep.
+    const plugins = (viteConfig.plugins ?? []).flat(8);
 
     const hasSveltePlugin = plugins.some(
-      (plugin) =>
-        plugin &&
-        typeof plugin === 'object' &&
-        'name' in plugin &&
-        typeof plugin.name === 'string' &&
-        plugin.name.startsWith('vite-plugin-svelte'),
+      (plugin) => pluginName(plugin)?.startsWith('vite-plugin-svelte') ?? false,
     );
     if (hasSveltePlugin) {
       viteConfig.plugins = plugins;
@@ -53,11 +66,7 @@ const config: StorybookConfig = {
     // to have ALREADY compiled `*.stories.svelte` to JS — so svelte() must sit
     // BEFORE it, not after. Splice it in just ahead of the addon transform.
     const csfIndex = plugins.findIndex(
-      (plugin) =>
-        plugin &&
-        typeof plugin === 'object' &&
-        'name' in plugin &&
-        plugin.name === 'storybook:addon-svelte-csf',
+      (plugin) => pluginName(plugin) === 'storybook:addon-svelte-csf',
     );
     const sveltePlugins = svelte();
     const insertAt = csfIndex === -1 ? plugins.length : csfIndex;

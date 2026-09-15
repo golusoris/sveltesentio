@@ -1,5 +1,5 @@
 {
-  "description": "Private SvelteKit documentation site — prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
+  "description": "Private SvelteKit documentation site \u2014 prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "2.70.3",
@@ -15,7 +15,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite dev",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src/"
   },
   "type": "module",
   "version": "0.0.0"

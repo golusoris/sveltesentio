@@ -10,11 +10,11 @@ import type { Component } from 'svelte';
  * Paths are relative to this file (`apps/docs/src/lib/`), so the repo
  * `docs/` directory sits three levels up.
  */
-const rawModules = import.meta.glob('../../../../docs/**/*.md', {
+const rawModules = import.meta.glob<string>('../../../../docs/**/*.md', {
   query: '?raw',
   import: 'default',
   eager: true,
-}) as Record<string, string>;
+});
 
 const componentModules = import.meta.glob('../../../../docs/**/*.md') as Record<
   string,

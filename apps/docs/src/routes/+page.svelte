@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import type { PackageEntry } from '$lib/packages';
 
   interface PageData {
@@ -25,9 +26,9 @@
     <code>@sveltesentio/*</code> packages, Svelte 5 runes-first, OWASP ASVS L2 + WCAG 2.2 AA by default.
   </p>
   <div class="hero-actions">
-    <a class="btn btn-primary" href="/docs/principles">Read the §2 contract</a>
-    <a class="btn" href="/docs/adr/README">Browse ADRs</a>
-    <a class="btn" href={storybookPath}>Component showcase ↗</a>
+    <a class="btn btn-primary" href={resolve('/docs/[...slug]', { slug: 'principles' })}>Read the §2 contract</a>
+    <a class="btn" href={resolve('/docs/[...slug]', { slug: 'adr/README' })}>Browse ADRs</a>
+    <a class="btn" href={storybookPath} rel="external">Component showcase ↗</a>
   </div>
 </header>
 
@@ -70,11 +71,11 @@
 <section aria-labelledby="docs-heading">
   <h2 id="docs-heading">Documentation</h2>
   <ul class="doc-links">
-    <li><a href="/docs/principles">§2 Coding Contract</a> — the quality bar.</li>
-    <li><a href="/docs/ux-principles">§3 UX Principles</a> — interface-type design paradigms.</li>
-    <li><a href="/docs/adr/README">Architecture Decision Records</a> — the decision log.</li>
-    <li><a href="/docs/compliance/README">Compliance</a> — OWASP / WCAG / EU CRA / EU AI Act.</li>
-    <li><a href="/docs/compose/README">Composition recipes</a> — compose-don't-wrap patterns.</li>
+    <li><a href={resolve('/docs/[...slug]', { slug: 'principles' })}>§2 Coding Contract</a> — the quality bar.</li>
+    <li><a href={resolve('/docs/[...slug]', { slug: 'ux-principles' })}>§3 UX Principles</a> — interface-type design paradigms.</li>
+    <li><a href={resolve('/docs/[...slug]', { slug: 'adr/README' })}>Architecture Decision Records</a> — the decision log.</li>
+    <li><a href={resolve('/docs/[...slug]', { slug: 'compliance/README' })}>Compliance</a> — OWASP / WCAG / EU CRA / EU AI Act.</li>
+    <li><a href={resolve('/docs/[...slug]', { slug: 'compose/README' })}>Composition recipes</a> — compose-don't-wrap patterns.</li>
   </ul>
 </section>
 
