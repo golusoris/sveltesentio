@@ -126,6 +126,23 @@ export interface UseForm<
  * `superForm` is an injected seam (defaults to upstream) so the rune unit-tests
  * against a fake `SuperForm` with no Superforms client runtime.
  */
+/**
+ * The current value of a store, read synchronously.
+ *
+ * Subscribing and immediately unsubscribing is the documented way to read a
+ * Svelte store outside a component: the callback fires once with the current
+ * value before `subscribe` returns. Used to give each rune its initial value so
+ * the first render matches the store rather than showing an empty frame until
+ * the `$effect` subscriptions land.
+ */
+const seed = <T>(store: Readable<T>): T => {
+	let captured!: T;
+	store.subscribe((value) => {
+		captured = value;
+	})();
+	return captured;
+};
+
 export function useForm<
 	Out extends Record<string, unknown>,
 	In extends Record<string, unknown> = Out,
@@ -143,14 +160,6 @@ export function useForm<
 		? C
 		: never;
 	type Tainted = SuperForm<Out>['tainted'] extends Readable<infer T> ? T : never;
-
-	const seed = <T>(store: Readable<T>): T => {
-		let captured!: T;
-		store.subscribe((value) => {
-			captured = value;
-		})();
-		return captured;
-	};
 
 	let data = $state<Data>(seed(sf.form));
 	let errors = $state<Errors>(seed(sf.errors));
