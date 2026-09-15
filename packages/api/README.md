@@ -16,6 +16,15 @@ pnpm add @sveltesentio/api openapi-fetch
 pnpm add -D openapi-typescript
 ```
 
+## Sub-exports
+
+| Import                              | What                                                                                                                                                                                                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/api`                 | `createClient`, `generateTypes`, `runCodegen`, `parseCodegenArgs`, `GENERATED_BANNER` + types                                                                                                                                                        |
+| `@sveltesentio/api/client`          | `createClient` alone                                                                                                                                                                                                                                 |
+| `@sveltesentio/api/codegen`         | `generateTypes`, `runCodegen`, `parseCodegenArgs` — the openapi-typescript wrapper, separated so a runtime bundle never pulls the generator                                                                                                          |
+| `@sveltesentio/api/auth-middleware` | `authMiddleware`, `TokenStore` — attaches a bearer token per request and, on a 401, refreshes once and retries. The store and refresh function are injected, so it composes with any session strategy; a failed refresh surfaces as a `ProblemError` |
+
 ## 1. Generate types from your OpenAPI spec
 
 `@sveltesentio/api` does not bundle a spec — point openapi-typescript at yours

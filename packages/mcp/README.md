@@ -31,6 +31,18 @@ Clients that support it can also subscribe to resource URIs and receive change n
 
 The server is **read-only** — no shell-outs, no mutations, no network calls. Output is always a doc snippet or instruction text the agent can act on.
 
+## Sub-exports
+
+| Import                                     | What                                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `@sveltesentio/mcp`                        | `createSveltesentioServer`, `createSveltesentioServerWith` — the assembled server        |
+| `@sveltesentio/mcp/subscriptions`          | `registerResourceSubscriptions`, `SubscriptionController` — resource subscription wiring |
+| `@sveltesentio/mcp/tools/compose-search`   | `registerComposeSearchTool` — registers the compose-search tool on a server              |
+| `@sveltesentio/mcp/tools/principle-lookup` | `registerPrincipleLookupTool`, `parseSections` — registers the principle-lookup tool     |
+
+Each tool registers itself onto a server you own, so a host can compose only the
+tools it wants rather than taking the whole set.
+
 ## Install
 
 ```bash
