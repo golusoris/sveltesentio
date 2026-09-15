@@ -30,7 +30,7 @@ pre-commit:
       # on them outright rather than degrading. Linting tests would need them in
       # a project first; that is a gap worth closing, but not by making this hook
       # fail on any staged test file.
-      glob: '*.{ts,svelte,js}'
+      glob: '*.{ts,svelte,js,mjs}'
       exclude:
         - '**/test/**'
         - '**/e2e/**'
