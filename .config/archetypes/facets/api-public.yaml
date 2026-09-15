@@ -1,6 +1,6 @@
-id: 'api:public-contract'
-name: 'Public API Contract & Stability'
-description: 'Enforces append-only ABI evolution (HISS-14), OpenAPI schema drift checks, and breaking change PR footers'
+id: "api:public-contract"
+name: "Public API Contract & Stability"
+description: "Enforces append-only ABI evolution (HISS-14), OpenAPI schema drift checks, and breaking change PR footers"
 
 branch_protection:
   enforce_linear_history: true
@@ -9,9 +9,9 @@ branch_protection:
   dismiss_stale_reviews: true
 
 linters:
-  - 'buf'
-  - 'spectral'
-  - 'oapi-codegen'
+  - "buf"
+  - "spectral"
+  - "oapi-codegen"
 
 devcontainer_features:
-  - 'ghcr.io/devcontainers/features/common-utils:2'
+  - "ghcr.io/devcontainers/features/common-utils:2"
