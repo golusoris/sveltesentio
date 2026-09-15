@@ -17,8 +17,10 @@ function renderBody(props: {
   selected?: boolean;
 }) {
   const view = deriveNodeView(props.kind, {
-    label: props.label,
-    description: props.description,
+    // `exactOptionalPropertyTypes` treats an absent key and one set to
+    // `undefined` as different, so omit rather than pass through.
+    ...(props.label !== undefined ? { label: props.label } : {}),
+    ...(props.description !== undefined ? { description: props.description } : {}),
   });
   return render(NodeBody, {
     id: props.id ?? 'n1',

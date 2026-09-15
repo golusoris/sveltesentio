@@ -96,8 +96,26 @@ export function resolveAuthParams(
  * `provider.params` each time it dials. Returns an unbind function. Exported for
  * callers that construct the provider themselves.
  */
+/**
+ * The slice of `WebsocketProvider` the auth binding touches.
+ *
+ * Structural rather than `Pick<WebsocketProvider, …>`: y-websocket types `on` and
+ * `off` through its observable base, and a hand-written double cannot satisfy
+ * those signatures without reproducing the class. Naming the four members this
+ * function actually uses lets a test pass a stand-in, which is what its own
+ * fake was already trying to be.
+ *
+ * A real `WebsocketProvider` remains assignable, so callers are unchanged.
+ */
+export interface AuthBindableProvider {
+	params: Record<string, string>;
+	protocols: string[];
+	on(event: 'connection-close', cb: () => void): void;
+	off(event: 'connection-close', cb: () => void): void;
+}
+
 export function bindProviderAuth(
-	provider: Pick<WebsocketProvider, 'params' | 'protocols' | 'on' | 'off'>,
+	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
 	const apply = (): void => {

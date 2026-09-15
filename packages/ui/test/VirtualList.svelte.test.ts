@@ -7,6 +7,7 @@
 import { tick } from 'svelte';
 import { fireEvent, render, within } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
+import { requireAt } from '@sveltesentio/testing';
 import Harness from './VirtualListHarness.svelte';
 import { flushResizeObservers, setClientSize } from './resize-observer-stub.js';
 import { expectNoAxeViolations } from './axe-helper.js';
@@ -78,7 +79,7 @@ describe('<VirtualList>', () => {
 		const rows = within(grid).getAllByRole('row');
 		expect(rows.length).toBeGreaterThan(0);
 
-		const first = rows[0];
+		const first = requireAt(rows, 0, 'row');
 		// First rendered row is absolute index 0 -> aria-rowindex 1 (ADR-0024).
 		expect(first).toHaveAttribute('aria-rowindex', '1');
 		expect(within(first).getByTestId('vrow')).toHaveTextContent('Row 0: Item 0');

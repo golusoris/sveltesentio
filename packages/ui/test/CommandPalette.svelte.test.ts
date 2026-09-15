@@ -4,6 +4,7 @@
 // open with a real registry and drive it through the DOM.
 import { fireEvent, render, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
+import { requireAt } from '@sveltesentio/testing';
 import CommandPalette from '../src/cmd/CommandPalette.svelte';
 import { CommandRegistry, type Command } from '../src/cmd/registry.js';
 import { expectNoAxeViolations } from './axe-helper.js';
@@ -74,7 +75,7 @@ describe('<CommandPalette>', () => {
 		const input = getByRole('combobox');
 		// The first option is active and the input points at it.
 		expect(options[0]).toHaveAttribute('aria-selected', 'true');
-		expect(input).toHaveAttribute('aria-activedescendant', options[0].id);
+		expect(input).toHaveAttribute('aria-activedescendant', requireAt(options, 0, 'option').id);
 	});
 
 	it('moves the active option down on ArrowDown (aria-activedescendant follows)', async () => {
@@ -86,7 +87,7 @@ describe('<CommandPalette>', () => {
 		const options = getAllByRole('option');
 		expect(options[0]).toHaveAttribute('aria-selected', 'false');
 		expect(options[1]).toHaveAttribute('aria-selected', 'true');
-		expect(input).toHaveAttribute('aria-activedescendant', options[1].id);
+		expect(input).toHaveAttribute('aria-activedescendant', requireAt(options, 1, 'option').id);
 	});
 
 	it('does not move past the last option on repeated ArrowDown', async () => {
@@ -96,7 +97,7 @@ describe('<CommandPalette>', () => {
 		for (let i = 0; i < 5; i++) await fireEvent.keyDown(input, { key: 'ArrowDown' });
 
 		const options = getAllByRole('option');
-		const last = options[options.length - 1];
+		const last = requireAt(options, options.length - 1, 'last option');
 		expect(last).toHaveAttribute('aria-selected', 'true');
 		expect(input).toHaveAttribute('aria-activedescendant', last.id);
 	});
@@ -117,7 +118,7 @@ describe('<CommandPalette>', () => {
 
 	it('runs a command on option click', async () => {
 		const { getAllByRole, runs } = renderOpen();
-		const settings = getAllByRole('option')[2];
+		const settings = requireAt(getAllByRole('option'), 2, 'option');
 
 		await fireEvent.click(settings);
 		expect(runs.settings).toHaveBeenCalledTimes(1);
@@ -168,7 +169,7 @@ describe('<CommandPalette>', () => {
 
 		const options = getAllByRole('option');
 		expect(options[0]).toHaveAttribute('aria-selected', 'true');
-		expect(input).toHaveAttribute('aria-activedescendant', options[0].id);
+		expect(input).toHaveAttribute('aria-activedescendant', requireAt(options, 0, 'option').id);
 	});
 
 	it('closes on the dismiss overlay button', async () => {

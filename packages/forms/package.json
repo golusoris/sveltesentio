@@ -51,12 +51,12 @@
   ],
   "name": "@sveltesentio/forms",
   "peerDependencies": {
-    "@sveltejs/kit": "\u003e=2.0.0",
+    "@sveltejs/kit": ">=2.0.0",
     "@sveltesentio/core": "workspace:*",
-    "formsnap": "\u003e=2.0.0",
-    "svelte": "\u003e=5.0.0",
-    "sveltekit-superforms": "\u003e=2.0.0",
-    "zod": "\u003e=4.0.0"
+    "formsnap": ">=2.0.0",
+    "svelte": ">=5.0.0",
+    "sveltekit-superforms": ">=2.0.0",
+    "zod": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "formsnap": {
@@ -71,7 +71,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

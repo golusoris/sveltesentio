@@ -207,11 +207,23 @@ export function createLayoutWorker(
  * without the elkjs bundle. Errors are caught and posted back as a
  * {@link LayoutWorkerFailure} rather than throwing out of the worker.
  */
+/**
+ * What the handler reads off the worker message: its `data`, nothing else.
+ *
+ * A real `MessageEvent` satisfies this, so the worker wiring is unchanged. Typing
+ * the parameter as the full DOM interface meant a test could not hand it a
+ * request without casting a two-field literal through `unknown`, which discards
+ * the very checking the annotation was there to provide.
+ */
+export interface LayoutWorkerMessage<E extends DagEdgeLike = DagEdgeLike> {
+	readonly data: LayoutWorkerRequest<E>;
+}
+
 export function layoutWorkerHandler(
 	post: (response: LayoutWorkerResponse) => void,
 	elkFactory?: ElkFactory,
-): (event: MessageEvent<LayoutWorkerRequest>) => Promise<void> {
-	return async (event: MessageEvent<LayoutWorkerRequest>): Promise<void> => {
+): (event: LayoutWorkerMessage) => Promise<void> {
+	return async (event: LayoutWorkerMessage): Promise<void> => {
 		const request = event.data;
 		if (!request || typeof request.id !== 'number') return;
 		try {

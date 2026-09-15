@@ -6,7 +6,7 @@ import {
   SHARED_SURFACE_PATTERNS,
   DOCS_ONLY_PATTERNS,
   PACKAGE_DIRECTORY_MAP,
-} from '../../scripts/ci-affected.mjs';
+} from '../../../scripts/ci-affected.mjs';
 
 describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
   it('returns no code changes when file list is empty', () => {

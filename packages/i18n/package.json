@@ -1,5 +1,5 @@
 {
-  "description": "Paraglide-js v2 wrappers — locale detection, Intl formatters, a11y announcer, RTL direction",
+  "description": "Paraglide-js v2 wrappers \u2014 locale detection, Intl formatters, a11y announcer, RTL direction",
   "devDependencies": {
     "@inlang/paraglide-js": "^2.25.1",
     "@storybook/addon-svelte-csf": "5.1.2",
@@ -71,7 +71,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

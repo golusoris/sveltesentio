@@ -27,7 +27,12 @@ const columns: readonly ColumnDef<Person>[] = [
 ];
 
 function renderTable() {
-	return render(DataTable<Person>, {
+	// Rendered without the `DataTable<Person>` instantiation this used to carry.
+	// Plain tsc resolves a .svelte import as a legacy component type with no call
+	// signatures, so the generic form is an error outside svelte-check — which this
+	// repo does not yet run (see the note in src/runes-ambient.d.ts). The row type
+	// is still pinned by `rows` and the explicitly typed `rowKey` below.
+	return render(DataTable, {
 		rows,
 		columns,
 		label: 'People',

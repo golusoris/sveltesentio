@@ -77,7 +77,7 @@ describe('applyElkLayout', () => {
     expect(next[0]).toMatchObject({ id: 'a', type: 'process', position: { x: 0, y: 0 } });
     expect(next[1]).toMatchObject({ id: 'b', type: 'data', position: { x: 100, y: 100 } });
     // Original array untouched (immutability).
-    expect(nodes[0].position).toEqual({ x: 5, y: 5 });
+    expect(nodes[0]?.position).toEqual({ x: 5, y: 5 });
   });
 
   it('keeps a node at its original position when ELK does not place it', async () => {
@@ -97,8 +97,8 @@ describe('applyElkLayout', () => {
     const nodes = [node('a'), node('b', { position: { x: 11, y: 22 } })];
     const next = await applyElkLayout(nodes, [], {}, undefined, partialFactory);
 
-    expect(next[0].position).toEqual({ x: 42, y: 7 });
-    expect(next[1].position).toEqual({ x: 11, y: 22 });
+    expect(next[0]?.position).toEqual({ x: 42, y: 7 });
+    expect(next[1]?.position).toEqual({ x: 11, y: 22 });
     expect(next[1]).toBe(nodes[1]);
   });
 });

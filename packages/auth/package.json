@@ -116,7 +116,7 @@
     "lint": "eslint src/",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",
