@@ -1,3 +1,4 @@
+import { appendBounded } from './bounded-history.js';
 import { createBufferedEmitter } from './buffered-emitter.js';
 import {
 	createConnectStream,
@@ -65,8 +66,7 @@ export function useConnectStream<TMessage>(
 	const append = (batch: readonly TMessage[]): void => {
 		if (batch.length === 0) return;
 		lastMessage = batch[batch.length - 1];
-		const next = messages.concat(batch);
-		messages = next.length > historyLimit ? next.slice(next.length - historyLimit) : next;
+		messages = appendBounded(messages, batch, historyLimit);
 	};
 
 	const emitter =

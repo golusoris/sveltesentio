@@ -76,6 +76,36 @@ function formatViolations(violations: readonly BudgetViolation[]): string {
 	return `[sentio] Bundle-size budget exceeded:\n${lines.join('\n')}`;
 }
 
+/**
+ * The virtual module's source: one named export per key, plus a frozen default.
+ *
+ * Values are JSON-serialised rather than interpolated, so a string containing a
+ * quote or a newline cannot terminate the literal it is being written into.
+ */
+function renderVirtualModule(virtualModule: Record<string, unknown>): string {
+	const exports = Object.entries(virtualModule)
+		.map(([key, value]) => `export const ${key} = ${JSON.stringify(value)};`)
+		.join('\n');
+	return `${exports}\nexport default Object.freeze(${JSON.stringify(virtualModule)});\n`;
+}
+
+/**
+ * Fails the build when a declared environment variable is absent or empty.
+ *
+ * Empty counts as missing: an unset variable and one set to `''` are the same
+ * misconfiguration, and the second is the easier one to ship by accident. Raised
+ * in `buildStart` so it surfaces before any work, naming every missing key at
+ * once rather than one per run.
+ */
+function assertRequiredEnv(requiredEnv: readonly string[]): void {
+	const missing = requiredEnv.filter((key) => !process.env[key] || process.env[key] === '');
+	if (missing.length === 0) return;
+	const names = missing.map((k) => `  - ${k}`).join('\n');
+	throw new Error(
+		`[sentio] Missing required environment variables:\n${names}\nCheck your .env file or deployment environment.`,
+	);
+}
+
 export function sentioPlugin(options: SentioPluginOptions = {}): Plugin {
 	const {
 		requiredEnv = [],
@@ -96,11 +126,7 @@ export function sentioPlugin(options: SentioPluginOptions = {}): Plugin {
 
 		load(id) {
 			if (id !== RESOLVED_ID) return undefined;
-			const entries = Object.entries(virtualModule);
-			const exports = entries
-				.map(([key, value]) => `export const ${key} = ${JSON.stringify(value)};`)
-				.join('\n');
-			return `${exports}\nexport default Object.freeze(${JSON.stringify(virtualModule)});\n`;
+			return renderVirtualModule(virtualModule);
 		},
 
 		configResolved(config) {
@@ -114,16 +140,7 @@ export function sentioPlugin(options: SentioPluginOptions = {}): Plugin {
 		},
 
 		buildStart() {
-			const missing = requiredEnv.filter(
-				(key) => !process.env[key] || process.env[key] === '',
-			);
-			if (missing.length > 0) {
-				throw new Error(
-					`[sentio] Missing required environment variables:\n${missing
-						.map((k) => `  - ${k}`)
-						.join('\n')}\nCheck your .env file or deployment environment.`,
-				);
-			}
+			assertRequiredEnv(requiredEnv);
 		},
 
 		generateBundle(_options, bundle) {
