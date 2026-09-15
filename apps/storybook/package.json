@@ -8,7 +8,7 @@
     "@sveltesentio/ui": "workspace:*",
     "storybook": "10.4.6",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vite": "^8.2.2"
   },
   "name": "@sveltesentio/storybook",

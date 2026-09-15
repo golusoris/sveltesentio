@@ -9,7 +9,7 @@
     "jsdom": "^29.1.1",
     "layerchart": "2.0.0-next.65",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
   },
@@ -23,44 +23,44 @@
       "types": "./src/a11y-table.ts"
     },
     "./area": {
-      "default": "./src/AreaChart.svelte",
-      "svelte": "./src/AreaChart.svelte"
+      "svelte": "./src/AreaChart.svelte",
+      "default": "./src/AreaChart.svelte"
     },
     "./bar": {
-      "default": "./src/BarChart.svelte",
-      "svelte": "./src/BarChart.svelte"
+      "svelte": "./src/BarChart.svelte",
+      "default": "./src/BarChart.svelte"
     },
     "./chart": {
-      "default": "./src/Chart.svelte",
-      "svelte": "./src/Chart.svelte"
+      "svelte": "./src/Chart.svelte",
+      "default": "./src/Chart.svelte"
     },
     "./chart-series": {
       "import": "./src/chart-series.ts",
       "types": "./src/chart-series.ts"
     },
     "./figure": {
-      "default": "./src/ChartFigure.svelte",
-      "svelte": "./src/ChartFigure.svelte"
+      "svelte": "./src/ChartFigure.svelte",
+      "default": "./src/ChartFigure.svelte"
     },
     "./line": {
-      "default": "./src/LineChart.svelte",
-      "svelte": "./src/LineChart.svelte"
+      "svelte": "./src/LineChart.svelte",
+      "default": "./src/LineChart.svelte"
     },
     "./palette": {
       "import": "./src/palette.ts",
       "types": "./src/palette.ts"
     },
     "./pie": {
-      "default": "./src/PieChart.svelte",
-      "svelte": "./src/PieChart.svelte"
+      "svelte": "./src/PieChart.svelte",
+      "default": "./src/PieChart.svelte"
     },
     "./preset": {
       "import": "./src/preset.ts",
       "types": "./src/preset.ts"
     },
     "./scatter": {
-      "default": "./src/ScatterChart.svelte",
-      "svelte": "./src/ScatterChart.svelte"
+      "svelte": "./src/ScatterChart.svelte",
+      "default": "./src/ScatterChart.svelte"
     },
     "./uplot": {
       "import": "./src/uplot.ts",
@@ -82,9 +82,9 @@
   ],
   "name": "@sveltesentio/charts",
   "peerDependencies": {
-    "layerchart": "\u003e=2.0.0-next.43",
-    "svelte": "\u003e=5.0.0",
-    "uplot": "\u003e=1.6.0"
+    "layerchart": ">=2.0.0-next.43",
+    "svelte": ">=5.0.0",
+    "uplot": ">=1.6.0"
   },
   "peerDependenciesMeta": {
     "layerchart": {

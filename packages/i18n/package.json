@@ -11,7 +11,7 @@
     "axe-core": "^4.13.0",
     "jsdom": "^29.1.1",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
   "exports": {
@@ -32,16 +32,16 @@
       "types": "./src/intl.ts"
     },
     "./lang-sync": {
-      "default": "./src/LangSync.svelte",
-      "svelte": "./src/LangSync.svelte"
+      "svelte": "./src/LangSync.svelte",
+      "default": "./src/LangSync.svelte"
     },
     "./load-locale-font": {
       "import": "./src/load-locale-font.ts",
       "types": "./src/load-locale-font.ts"
     },
     "./locale-switcher": {
-      "default": "./src/LocaleSwitcher.svelte",
-      "svelte": "./src/LocaleSwitcher.svelte"
+      "svelte": "./src/LocaleSwitcher.svelte",
+      "default": "./src/LocaleSwitcher.svelte"
     }
   },
   "files": [
@@ -59,9 +59,9 @@
   ],
   "name": "@sveltesentio/i18n",
   "peerDependencies": {
-    "@inlang/paraglide-js": "\u003e=2.0.0",
-    "@sveltejs/kit": "\u003e=2.0.0",
-    "svelte": "\u003e=5.0.0"
+    "@inlang/paraglide-js": ">=2.0.0",
+    "@sveltejs/kit": ">=2.0.0",
+    "svelte": ">=5.0.0"
   },
   "private": false,
   "publishConfig": {

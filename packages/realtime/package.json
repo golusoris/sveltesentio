@@ -7,7 +7,7 @@
     "@sveltejs/kit": "^2.70.3",
     "@sveltesentio/core": "workspace:*",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
   "exports": {

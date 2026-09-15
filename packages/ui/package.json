@@ -17,7 +17,7 @@
     "axe-core": "^4.13.0",
     "jsdom": "^29.1.1",
     "svelte": "^5.57.0",
-    "typescript": "^5.7.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
   "exports": {
@@ -30,16 +30,16 @@
       "types": "./src/button/index.ts"
     },
     "./button/component": {
-      "default": "./src/button/Button.svelte",
-      "svelte": "./src/button/Button.svelte"
+      "svelte": "./src/button/Button.svelte",
+      "default": "./src/button/Button.svelte"
     },
     "./cmd": {
       "import": "./src/cmd/index.ts",
       "types": "./src/cmd/index.ts"
     },
     "./cmd/palette": {
-      "default": "./src/cmd/CommandPalette.svelte",
-      "svelte": "./src/cmd/CommandPalette.svelte"
+      "svelte": "./src/cmd/CommandPalette.svelte",
+      "default": "./src/cmd/CommandPalette.svelte"
     },
     "./data": {
       "import": "./src/data/index.ts",
@@ -50,20 +50,20 @@
       "types": "./src/data/createDataTable.svelte.ts"
     },
     "./data/table": {
-      "default": "./src/data/DataTable.svelte",
-      "svelte": "./src/data/DataTable.svelte"
+      "svelte": "./src/data/DataTable.svelte",
+      "default": "./src/data/DataTable.svelte"
     },
     "./data/virtual-list": {
-      "default": "./src/data/VirtualList.svelte",
-      "svelte": "./src/data/VirtualList.svelte"
+      "svelte": "./src/data/VirtualList.svelte",
+      "default": "./src/data/VirtualList.svelte"
     },
     "./dialog": {
       "import": "./src/dialog/index.ts",
       "types": "./src/dialog/index.ts"
     },
     "./dialog/component": {
-      "default": "./src/dialog/Dialog.svelte",
-      "svelte": "./src/dialog/Dialog.svelte"
+      "svelte": "./src/dialog/Dialog.svelte",
+      "default": "./src/dialog/Dialog.svelte"
     },
     "./font-preset": {
       "import": "./src/font/index.ts",
@@ -74,24 +74,24 @@
       "types": "./src/icons/index.ts"
     },
     "./icons/component": {
-      "default": "./src/icons/Icon.svelte",
-      "svelte": "./src/icons/Icon.svelte"
+      "svelte": "./src/icons/Icon.svelte",
+      "default": "./src/icons/Icon.svelte"
     },
     "./input": {
       "import": "./src/input/index.ts",
       "types": "./src/input/index.ts"
     },
     "./input/component": {
-      "default": "./src/input/Input.svelte",
-      "svelte": "./src/input/Input.svelte"
+      "svelte": "./src/input/Input.svelte",
+      "default": "./src/input/Input.svelte"
     },
     "./markdown": {
       "import": "./src/markdown/index.ts",
       "types": "./src/markdown/index.ts"
     },
     "./markdown/component": {
-      "default": "./src/markdown/Markdown.svelte",
-      "svelte": "./src/markdown/Markdown.svelte"
+      "svelte": "./src/markdown/Markdown.svelte",
+      "default": "./src/markdown/Markdown.svelte"
     },
     "./presets": {
       "import": "./src/presets/index.ts",
@@ -102,16 +102,16 @@
       "types": "./src/theme/customizer-export.ts"
     },
     "./theme-customizer/component": {
-      "default": "./src/theme/ThemeCustomizer.svelte",
-      "svelte": "./src/theme/ThemeCustomizer.svelte"
+      "svelte": "./src/theme/ThemeCustomizer.svelte",
+      "default": "./src/theme/ThemeCustomizer.svelte"
     },
     "./theme-toggle": {
       "import": "./src/theme/toggle.ts",
       "types": "./src/theme/toggle.ts"
     },
     "./theme-toggle/component": {
-      "default": "./src/theme/ThemeToggle.svelte",
-      "svelte": "./src/theme/ThemeToggle.svelte"
+      "svelte": "./src/theme/ThemeToggle.svelte",
+      "default": "./src/theme/ThemeToggle.svelte"
     },
     "./toast": {
       "import": "./src/toast/index.ts",
@@ -136,15 +136,15 @@
   ],
   "name": "@sveltesentio/ui",
   "peerDependencies": {
-    "@iconify/svelte": "\u003e=5.0.0",
-    "@lucide/svelte": "\u003e=1.0.0",
-    "@tanstack/svelte-virtual": "\u003e=3.0.0",
-    "bits-ui": "\u003e=2.16.3",
-    "mode-watcher": "\u003e=1.1.0 \u003c2",
-    "svelte": "\u003e=5.0.0",
-    "svelte-sonner": "\u003e=1.0.0 \u003c2",
-    "tailwindcss": "\u003e=4.0.0",
-    "tinykeys": "\u003e=3.0.0"
+    "@iconify/svelte": ">=5.0.0",
+    "@lucide/svelte": ">=1.0.0",
+    "@tanstack/svelte-virtual": ">=3.0.0",
+    "bits-ui": ">=2.16.3",
+    "mode-watcher": ">=1.1.0 <2",
+    "svelte": ">=5.0.0",
+    "svelte-sonner": ">=1.0.0 <2",
+    "tailwindcss": ">=4.0.0",
+    "tinykeys": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "@iconify/svelte": {
