@@ -1,0 +1,214 @@
+# Declared enforcement evidence for the HISS invariants (HISS-20).
+#
+# Every claim here is replayed against .config/hiss/testdata by
+# `praetorctl hiss coverage --verify`, which runs inside verify-all.
+#
+# Almost every claim in this repository carries a `runner`, because nothing here
+# is decided by praetor's HISS scanner: it dispatches on .c/.cpp/.h/.cu/.py/.go/.rs
+# and has no case for .ts, .js or .svelte, so on this tree it reads 3 files out of
+# 875 and reports 0 violations (cordanaLLM/praetor#79). A claim with a runner is
+# verified for *attribution* rather than enforcement — the scanner must report
+# none of its fixtures, and if it reports one, the claim credits the wrong tool.
+#
+# States:
+#   enforced       every shape the corpus describes is reported
+#   partial        some shapes reported; gap/ names the rest
+#   unsupported    nothing reported for this language; gap/ records what goes undetected
+#   not_applicable the axiom does not apply to this language
+#   manual         upheld by review, not by a runnable check -- never report it as a gate
+#
+# Every state below was measured during the 2026-09-15 adoption, not assumed.
+# `eslint --print-config` was used to confirm which rules are actually on rather
+# than reading the config's intent. An absent claim is honest; an unbacked one is
+# the defect this mechanism exists to prevent.
+version: 1
+rules:
+  - id: HISS-01
+    title: Acyclic Control Flow
+    coverage:
+      - language: typescript
+        state: unsupported
+        mechanism: >-
+          none. No import-cycle rule is configured: eslint-plugin-import and
+          eslint-plugin-import-x are both absent from the workspace, and
+          eslint.config.ts enables no equivalent. Nothing checks self-recursion
+          either.
+        rationale: >-
+          positive/ is empty because no mechanism reports either shape. Both gap
+          fixtures are real violations of the rule as written -- a directly
+          self-recursive function, and a two-module import cycle -- and the HISS
+          scanner returns 0 for both because it does not read .ts at all.
+      - language: svelte
+        state: unsupported
+        mechanism: none. No component-graph or import-cycle check runs anywhere.
+        rationale: >-
+          A component that renders itself is the Svelte form of the same defect
+          and nothing reports it; svelte/valid-compile is about compiler
+          diagnostics, not the call graph.
+
+  - id: HISS-02
+    title: Bounded Loops and I/O
+    coverage:
+      - language: typescript
+        state: unsupported
+        mechanism: >-
+          none. No rule requires an AbortSignal on fetch, and no rule bounds a
+          loop. `@typescript-eslint/recommended-type-checked` contains nothing
+          for either.
+        rationale: >-
+          Both gap fixtures are genuine -- an unbounded `while (true)` with no
+          scalar ceiling, and a `fetch` with no signal -- and neither is reported
+          by anything this repository runs.
+
+  - id: HISS-04
+    title: Complexity Bounds
+    coverage:
+      - language: typescript
+        state: partial
+        runner: eslint
+        mechanism: >-
+          eslint.config.ts sets `complexity: ['error', 10]` over
+          packages/*/src/**/*.ts. Confirmed on with `eslint --print-config`,
+          which reports `[2, 10]`.
+        rationale: >-
+          Cyclomatic complexity is enforced and the tree is clean at 10: thirteen
+          functions were over it and all thirteen were refactored, not exempted.
+          Function length is the gap -- `max-lines-per-function` prints as OFF,
+          and six functions in shipped source are over the effective
+          max_func_loc of 60, the longest at 109.
+      - language: svelte
+        state: partial
+        runner: eslint
+        mechanism: >-
+          The same `complexity` entry matches packages/*/src/**/*.svelte, so
+          component script blocks are bounded.
+        rationale: >-
+          One component function was over the cap and was refactored. Length is
+          unbounded here for the same reason as TypeScript.
+
+  - id: HISS-07
+    title: Checked Errors
+    coverage:
+      - language: typescript
+        state: partial
+        runner: eslint
+        mechanism: >-
+          `@typescript-eslint/no-floating-promises` and `no-misused-promises`,
+          both from recommended-type-checked and both confirmed on. Errors route
+          through `@sveltesentio/core/errors` by convention, which nothing checks.
+        rationale: >-
+          An unawaited promise is reported. The gap is the non-null assertion:
+          `@typescript-eslint/no-non-null-assertion` prints as OFF, and five `!`
+          assertions were found in test code once tests were put under a
+          TypeScript project.
+
+  - id: HISS-08
+    title: Static Determinism
+    coverage:
+      - language: typescript
+        state: unsupported
+        mechanism: >-
+          none. `no-eval` and `no-new-func` both print as OFF; neither is in
+          `eslint:recommended` as this config composes it.
+        rationale: >-
+          The gap fixture calls `eval` on a template string and nothing reports
+          it. DOMPurify is used at innerHTML boundaries by convention, and no
+          rule requires it in .ts.
+      - language: svelte
+        state: partial
+        runner: eslint
+        mechanism: svelte/no-at-html-tags, confirmed on via print-config.
+        rationale: >-
+          `{@html}` is the Svelte innerHTML boundary and it is reported, which is
+          the determinism risk that matters in a component. `eval` inside a
+          component script is still unreported, as in TypeScript.
+
+  - id: HISS-10
+    title: Zero-Warning Cascade
+    coverage:
+      - language: typescript
+        state: partial
+        runner: tsc
+        mechanism: >-
+          tsconfig.base.json sets strict, noUncheckedIndexedAccess and
+          exactOptionalPropertyTypes; `turbo typecheck` runs tsc --noEmit per
+          package, and since this adoption every package's tsconfig.test.json
+          covers test/ as well as src/.
+        rationale: >-
+          Type warnings are errors and the tree is clean: putting tests under a
+          project surfaced 32 and all 32 were fixed. The gap is formatting --
+          `prettier --check .` has never run in CI, and reports 574 files.
+
+  - id: HISS-15
+    title: Three-Dimensional Testing
+    coverage:
+      - language: typescript
+        state: partial
+        runner: vitest
+        mechanism: >-
+          All 19 packages declare vitest coverage thresholds; auth and forms
+          carry 85%. `turbo test` runs them and CI gates on the result.
+        rationale: >-
+          Coverage is enforced and measurable. It is partial because a threshold
+          proves lines were executed, not that the negative and boundary
+          dimensions exist -- nothing checks that a public export has all three.
+
+  - id: HISS-16
+    title: Context Integrity
+    coverage:
+      - language: internal
+        state: enforced
+        runner: praetorctl
+        mechanism: >-
+          `praetorctl compile-context --verify` runs in the lefthook pre-commit
+          hook and again in `make verify-all`. AGENTS.md is the single source;
+          the six vendor projections are generated.
+        rationale: >-
+          Hand-editing any projection fails the commit. Measured: an earlier
+          commit in this adoption desynced .cursor/rules/hiss-invariants.mdc when
+          a formatter rewrote it, and the gate caught it before the push.
+
+  - id: HISS-17
+    title: State Ledger Discipline
+    coverage:
+      - language: internal
+        state: enforced
+        runner: praetorctl
+        mechanism: >-
+          The lefthook post-commit hook runs `praetorctl state sync .`, and the
+          commit-msg hook rejects a message when the ledger is stale.
+        rationale: >-
+          Measured during this adoption: a commit was rejected with "state
+          synchronization stale; run praetorctl state sync ." until the ledger
+          was synced, so the gate demonstrably fires.
+
+  - id: HISS-18
+    title: CI Efficiency
+    coverage:
+      - language: internal
+        state: enforced
+        runner: node
+        mechanism: >-
+          scripts/ci-affected.mjs computes the affected set, and ci.yml gates the
+          heavy jobs on `has_code_changes` while the if:always() `CI Gate`
+          aggregator still reports.
+        rationale: >-
+          Measured on a config-only pull request in this adoption: Build, Lint,
+          Test, Type check and Security audit all reported "skipping" while CI
+          Gate passed, which is the behaviour the filter exists for.
+
+  - id: HISS-19
+    title: Reuse Before Writing
+    coverage:
+      - language: typescript
+        state: manual
+        mechanism: >-
+          none runnable. `praetorctl dedupe scan` exists and reports 0 files for
+          this tree, because it reads the same extensions the HISS scanner does
+          and therefore sees no TypeScript.
+        rationale: >-
+          Upheld by review only. Two live examples from this adoption: an
+          identical bounded-history trim duplicated across useSSE and
+          useConnectStream, and a requireAt helper needed by both ui and flow --
+          both found by reading, neither by a tool. Recorded as manual so no gate
+          claims it.

@@ -132,6 +132,12 @@ const config: Linter.Config[] = [
       '**/.turbo/**',
       '**/coverage/**',
       '**/storybook-static/**',
+      // The HISS-20 fixture corpus is input to the rules, not source governed by
+      // them. Its gap fixtures are deliberate violations that must stay
+      // unreported, and its positives are deliberate violations that the
+      // catalog's claims depend on being reportable — linting the corpus would
+      // fail the build on the evidence it exists to preserve.
+      '.config/hiss/testdata/**',
       // Illustrative copy-paste snippets — intentionally reference undeclared
       // identifiers (paths, edges, secret…) the consumer supplies; not compiled.
       'examples/**',

@@ -62,13 +62,20 @@ add-package:
 	echo "Created packages/$$name"
 
 # cordanaLLM/praetor Governance Targets
-.PHONY: verify-all compile-context audit
+.PHONY: verify-all compile-context audit hiss-coverage
 
 verify-all:
 	@pnpm run ci
 	@pnpm audit --audit-level=high
 	@praetorctl audit
 	@praetorctl compile-context --verify
+	@$(MAKE) --no-print-directory hiss-coverage
+
+# HISS-20: every enforcement claim in .config/hiss/coverage.yaml is replayed
+# against its fixture corpus, so a declared state cannot drift from what the
+# tools actually do -- in either direction.
+hiss-coverage:
+	@praetorctl hiss coverage --verify
 
 compile-context:
 	@praetorctl compile-context
