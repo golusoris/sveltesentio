@@ -30,6 +30,11 @@
       "description": "undici 8.x removes internals jsdom 29 requires; stay on patched 7.x"
     },
     {
+      "matchPackageNames": ["cookie"],
+      "allowedVersions": "<1",
+      "description": "cookie 1.x bundles its own types, which take precedence over @types/cookie and drop CookieParseOptions -- the name SvelteKit's own types use; 2.x additionally removes parse/serialize. The pnpm-workspace override keeps the floor at >=0.7.0 for CVE-2024-47764."
+    },
+    {
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "devDependencies (non-major)"
