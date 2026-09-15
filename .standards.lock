@@ -1,11 +1,11 @@
 version: 1
 pinned_version: v1.0.0
-digest: sha256:92bb4592fc5d67bd941b00e692f24edc5eed9bbb461c95c678cc8d4cc103bc2d
+digest: sha256:1088c12c16aaa2b586248de6ba8a01d37178ebb8c86d1c876fd950372f41ddd8
 generated_at: ""
 profiles:
-    - id: app-service
+    - id: web-package
       version: v1.0.0
-      digest: sha256:f9bf5a186f252fc3ed5bd75f4e2167538135e7f2577547b07d7632cde4e224e5
+      digest: sha256:22483af9e97cb2adb4cc024024ee54efb1d223e7f85858da05f05c17099dcae1
 facets:
     - id: security:high
       version: v1.0.0

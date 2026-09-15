@@ -6,8 +6,7 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/go:1": {}
+    "ghcr.io/devcontainers/features/node:1": {}
   },
   "customizations": {
     "praetor": {
@@ -16,10 +15,10 @@
         "state": "source-bundle",
         "builderImage": "docker.io/library/golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125",
         "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04@sha256:d94c97dd9cacf183d0a6fd12a8e87b526e9e928307674ae9c94139139c0c6eae",
-        "sourceSHA256": "sha256:251c5ea24fd617cfbf10be8771752d6cd6c80590c62ae6d27df24dc6098ae0c7",
-        "archiveSHA256": "sha256:46d60e2b0ad4b66aeed0e9826dc6d054f5e66e0a89f8a249d7cbd768d1161de0",
+        "sourceSHA256": "sha256:8fbd3e9c298e948ba1c2cc268293fab7e6e84ad014123284fc16cb869091850a",
+        "archiveSHA256": "sha256:3ab6278d2920fe8060c547c47bab56973d7b2b8a11ce27f411fef375848fab3a",
         "archiveParts": 3,
-        "dockerfileSHA256": "sha256:5f19a57dfbce20db15d76f27b415941cd60ed46465b0655a399e67befcd1801c"
+        "dockerfileSHA256": "sha256:c1554b5cd9a6bf5f1d3c8dd8845e1ebc2cfa9d495ad8039025ff3b822805cfc4"
       }
     },
     "vscode": {
@@ -29,16 +28,11 @@
         "davidanson.vscode-markdownlint",
         "eamodio.gitlens",
         "github.copilot",
-        "golang.go",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml"
       ],
       "settings": {
         "editor.formatOnSave": true,
-        "go.lintOnSave": "package",
-        "go.lintTool": "golangci-lint",
-        "go.toolsManagement.autoUpdate": true,
-        "go.useLanguageServer": true,
         "security.workspace.trust.enabled": true
       }
     }
