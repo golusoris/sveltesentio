@@ -30,6 +30,13 @@ export default defineConfig({
 					environment: 'jsdom',
 					include: ['test/**/*.svelte.test.ts'],
 					setupFiles: ['./test/setup-component.ts'],
+					// The first `renderChart()` pays a one-off cost: compiling the
+					// component and pulling in layerchart's d3 scales. Locally that is
+					// well under the 5s default, but a cold CI runner spends ~30s in
+					// transform and ~32s in import, so whichever test mounts first
+					// times out. Only this lane is affected; the Node unit suites keep
+					// the strict default.
+					testTimeout: 20_000,
 				},
 			},
 		],
