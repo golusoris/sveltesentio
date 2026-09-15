@@ -25,6 +25,16 @@ functional release:
   dynamically imports the OPTIONAL `@huggingface/transformers` peer so the heavy
   models stay out of any bundle that never calls it. `@xenova/transformers` is
   deprecated.
+- **`@sveltesentio/ai/server`** — `createLLMProxy()`, the server-side seam the
+  browser client talks to. Adapters for Anthropic and Ollama plug in behind an
+  `LLMClient` interface, with an injectable clock and audit context so latency
+  and audit records stay testable.
+- **`@sveltesentio/ai/client`** — `useLLMChat()`, the runes-native chat store.
+  Streams through an injected `ChatTransport`, so a test drives it without a
+  network.
+- **`@sveltesentio/ai/client/component`** — `ChatStream.svelte`, the component
+  built on `useLLMChat()`. The store is importable on its own when you want your
+  own markup.
 
 ## Installation
 
