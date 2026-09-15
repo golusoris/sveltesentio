@@ -32,8 +32,9 @@ test-e2e:
 	pnpm test:e2e
 
 # Full CI suite (matches GitHub Actions)
+# NB: `pnpm run ci`, not `pnpm ci` — the latter is pnpm's clean-install alias.
 ci:
-	pnpm ci
+	pnpm run ci
 
 # Format all files
 fmt:
@@ -64,10 +65,13 @@ add-package:
 .PHONY: verify-all compile-context audit
 
 verify-all:
-	@standardsctl audit && standardsctl compile-context --verify
+	@pnpm run ci
+	@pnpm audit --audit-level=high
+	@praetorctl audit
+	@praetorctl compile-context --verify
 
 compile-context:
-	@standardsctl compile-context
+	@praetorctl compile-context
 
 audit:
-	@standardsctl audit
+	@praetorctl audit
