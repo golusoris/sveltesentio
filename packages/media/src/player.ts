@@ -156,6 +156,30 @@ export const initialPlaybackState: PlaybackState = {
 };
 
 /**
+ * The status machine as a table: which statuses each event applies from, and the
+ * status it moves to. An event arriving in any other status is ignored.
+ *
+ * Keyed by `Exclude<PlaybackEvent['type'], 'reset' | 'selectQuality'>` rather than
+ * `string`, so adding a lifecycle event to `PlaybackEvent` fails to compile until
+ * this table describes it — the exhaustiveness the previous `switch` got from
+ * having no `default` branch. `reset` and `selectQuality` stay outside the table
+ * because neither is a status transition: one replaces the whole state, the other
+ * changes a field orthogonal to status.
+ */
+const STATUS_TRANSITIONS: Readonly<
+	Record<
+		Exclude<PlaybackEvent['type'], 'reset' | 'selectQuality'>,
+		{ readonly from: readonly PlaybackStatus[]; readonly to: PlaybackStatus }
+	>
+> = {
+	load: { from: ['idle'], to: 'loading' },
+	ready: { from: ['loading'], to: 'paused' },
+	play: { from: ['paused', 'ended'], to: 'playing' },
+	pause: { from: ['playing'], to: 'paused' },
+	end: { from: ['playing'], to: 'ended' },
+};
+
+/**
  * Pure reducer for the play/pause/quality machine. Invalid transitions (e.g.
  * `play` while `idle`) are no-ops that return the input state unchanged, so the
  * machine never throws on a stray event. Quality selection is orthogonal to the
@@ -165,34 +189,12 @@ export function playbackReducer(
 	state: PlaybackState,
 	event: PlaybackEvent,
 ): PlaybackState {
-	switch (event.type) {
-		case 'load':
-			return state.status === 'idle'
-				? { ...state, status: 'loading' }
-				: state;
-		case 'ready':
-			return state.status === 'loading'
-				? { ...state, status: 'paused' }
-				: state;
-		case 'play':
-			return state.status === 'paused' || state.status === 'ended'
-				? { ...state, status: 'playing' }
-				: state;
-		case 'pause':
-			return state.status === 'playing'
-				? { ...state, status: 'paused' }
-				: state;
-		case 'end':
-			return state.status === 'playing'
-				? { ...state, status: 'ended' }
-				: state;
-		case 'selectQuality':
-			return state.status === 'idle'
-				? state
-				: { ...state, renditionId: event.renditionId };
-		case 'reset':
-			return initialPlaybackState;
+	if (event.type === 'reset') return initialPlaybackState;
+	if (event.type === 'selectQuality') {
+		return state.status === 'idle' ? state : { ...state, renditionId: event.renditionId };
 	}
+	const transition = STATUS_TRANSITIONS[event.type];
+	return transition.from.includes(state.status) ? { ...state, status: transition.to } : state;
 }
 
 /**

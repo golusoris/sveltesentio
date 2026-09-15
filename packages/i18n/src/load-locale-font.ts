@@ -93,6 +93,58 @@ function resolveAssets(
  *
  * SSR / no-DOM safe: returns a no-op cleanup when no document is available.
  */
+/**
+ * Builds the `<link>` for one asset.
+ *
+ * Attributes are set through `setAttribute` rather than IDL properties because
+ * runtimes disagree about reflection — jsdom does not reflect `integrity`, so the
+ * property form would leave the tests unable to observe what the browser gets.
+ */
+function createFontLink(
+	doc: Document,
+	asset: LocaleFontAsset,
+	marker: string,
+	rel: string,
+): HTMLLinkElement {
+	const link = doc.createElement('link');
+	link.setAttribute(marker, '');
+	link.rel = rel;
+	link.href = asset.href;
+	if (rel === 'preload') link.setAttribute('as', 'font');
+	const crossOrigin = asset.crossOrigin ?? (rel === 'preload' ? 'anonymous' : undefined);
+	if (crossOrigin) link.setAttribute('crossorigin', crossOrigin);
+	if (asset.type) link.setAttribute('type', asset.type);
+	if (asset.integrity) link.setAttribute('integrity', asset.integrity);
+	return link;
+}
+
+/**
+ * The `<link>` for one asset, reusing an identical one already in `<head>`.
+ *
+ * Reuse is what makes repeated calls idempotent: switching locale back and forth
+ * must not append a duplicate preload each time. Matching is on marker, rel and
+ * href together, so two locales sharing a font share its link.
+ *
+ * §2.1 direct-DOM exception: font preload/stylesheet `<link>`s must live in
+ * `<head>`, which a body-scoped `use:` action cannot target; `doc` is injected,
+ * keeping this SSR-safe and testable.
+ */
+function resolveFontLink(
+	doc: Document,
+	head: HTMLHeadElement,
+	asset: LocaleFontAsset,
+	marker: string,
+): HTMLLinkElement {
+	const rel = asset.rel ?? 'preload';
+	const existing = head.querySelector<HTMLLinkElement>(
+		`link[${marker}][rel="${rel}"][href="${cssEscape(asset.href)}"]`,
+	);
+	if (existing) return existing;
+	const link = createFontLink(doc, asset, marker, rel);
+	head.appendChild(link);
+	return link;
+}
+
 export function loadLocaleFont(options: LoadLocaleFontOptions): () => void {
 	const doc =
 		options.document ?? (typeof document === 'undefined' ? undefined : document);
@@ -108,32 +160,7 @@ export function loadLocaleFont(options: LoadLocaleFontOptions): () => void {
 	const links: HTMLLinkElement[] = [];
 
 	for (const asset of assets) {
-		const rel = asset.rel ?? 'preload';
-		const existing = head.querySelector<HTMLLinkElement>(
-			`link[${marker}][rel="${rel}"][href="${cssEscape(asset.href)}"]`,
-		);
-		if (existing) {
-			links.push(existing);
-			continue;
-		}
-
-		// §2.1 direct-DOM exception: font preload/stylesheet <link>s must live in <head>,
-		// which a body-scoped use: action cannot target; doc is injected (SSR-safe + tested).
-		const link = doc.createElement('link');
-		link.setAttribute(marker, '');
-		link.rel = rel;
-		link.href = asset.href;
-		if (rel === 'preload') link.setAttribute('as', 'font');
-
-		const crossOrigin = asset.crossOrigin ?? (rel === 'preload' ? 'anonymous' : undefined);
-		// Set via attributes (not IDL props) so they reflect to the DOM
-		// consistently across runtimes — jsdom does not reflect `integrity`.
-		if (crossOrigin) link.setAttribute('crossorigin', crossOrigin);
-		if (asset.type) link.setAttribute('type', asset.type);
-		if (asset.integrity) link.setAttribute('integrity', asset.integrity);
-
-		head.appendChild(link);
-		links.push(link);
+		links.push(resolveFontLink(doc, head, asset, marker));
 	}
 
 	return () => {

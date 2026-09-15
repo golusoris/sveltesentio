@@ -66,6 +66,21 @@ const config: Linter.Config[] = [
       'svelte/valid-compile': 'error',
     },
   },
+  // --- HISS-04 complexity bound on shipped source -------------------------------
+  // Praetor's HISS scanner has no TypeScript dispatch (it reads .c/.py/.go/.rs
+  // only), so on this repository its invariant scan reads 3 files and skips 482.
+  // HISS-04 is therefore enforced here, in the linter the repo actually runs.
+  //
+  // Scoped to `packages/*/src`: test files legitimately carry long `describe`
+  // arrows, and a cap there would measure the suite's shape rather than the
+  // shipped code's.
+  {
+    files: ['packages/*/src/**/*.ts', 'packages/*/src/**/*.svelte'],
+    rules: {
+      complexity: ['error', 10],
+    },
+  },
+
   // --- sveltesentio cross-package invariants (@sveltesentio/core eslint plugin) -
   // Enforced on shipped package source (`packages/*/src`). Loaded from the core
   // package's TypeScript source: ESLint 10 transpiles this `.ts` config — and
@@ -83,6 +98,24 @@ const config: Linter.Config[] = [
     plugins: { '@sveltesentio': sentio },
     rules: {
       '@sveltesentio/chart-a11y-wrapper': 'error',
+    },
+  },
+  // --- root-level config files ---------------------------------------------------
+  // These sit outside every package's tsconfig `include`, and there is no root
+  // tsconfig.json — the shared compiler options live in tsconfig.base.json, which
+  // each package extends — so `project: true` has no project to resolve for them
+  // and type-aware parsing fails outright. They were never linted before because
+  // `turbo lint` runs per package; the pre-commit hook lints staged files, which
+  // reaches them. Lint them syntactically rather than exempting them.
+  {
+    files: ['*.config.ts', '*.config.js', 'eslint.config.ts'],
+    languageOptions: {
+      parserOptions: { project: false },
+    },
+    rules: {
+      // The type-checked rule set throws outright without a program, so it is
+      // turned off here rather than left to fail at load time.
+      ...ts.configs['disable-type-checked'].rules,
     },
   },
   {

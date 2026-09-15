@@ -61,15 +61,24 @@ const BASE_PADDING: ChartPadding = { top: 8, right: 16, bottom: 28, left: 40 };
  * motion. Deterministic and pure — call it in `$derived` and it re-runs only
  * when its inputs change.
  */
-export function dashboardPreset(options: DashboardPresetOptions = {}): DashboardPreset {
-  const padding: ChartPadding = {
-    top: options.padding?.top ?? BASE_PADDING.top,
-    right: options.padding?.right ?? BASE_PADDING.right,
-    bottom: options.padding?.bottom ?? BASE_PADDING.bottom,
-    left: options.padding?.left ?? BASE_PADDING.left,
-  };
+/**
+ * Fills each padding side from the override, falling back to the base per side.
+ *
+ * Per-side rather than whole-object so a caller widening only the left gutter for
+ * long axis labels keeps the tuned defaults on the other three.
+ */
+function resolvePadding(override: Partial<ChartPadding> | undefined): ChartPadding {
   return {
-    padding,
+    top: override?.top ?? BASE_PADDING.top,
+    right: override?.right ?? BASE_PADDING.right,
+    bottom: override?.bottom ?? BASE_PADDING.bottom,
+    left: override?.left ?? BASE_PADDING.left,
+  };
+}
+
+export function dashboardPreset(options: DashboardPresetOptions = {}): DashboardPreset {
+  return {
+    padding: resolvePadding(options.padding),
     grid: { x: true, y: true },
     tooltip: { mode: 'bisect-x', snapToDataX: true, snapToDataY: false },
     motion: options.reducedMotion

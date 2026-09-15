@@ -29,6 +29,32 @@ export type PlayerAction =
  * C captions. Returns `undefined` for unmapped keys or when a modifier is held
  * (so browser/OS chords are never hijacked). Matching is case-insensitive.
  */
+/**
+ * Keyboard shortcuts, lower-cased key to action.
+ *
+ * A table rather than a switch so the shortcut set reads as data: the whole keymap
+ * is visible at once, and adding a binding is one entry instead of a new branch.
+ * `' '` and `'spacebar'` are both present because older engines report the space
+ * key under the legacy name.
+ */
+const KEY_ACTIONS: Readonly<Record<string, PlayerAction>> = {
+	' ': 'toggle-play',
+	spacebar: 'toggle-play',
+	k: 'toggle-play',
+	arrowleft: 'seek-back',
+	arrowright: 'seek-forward',
+	arrowup: 'volume-up',
+	arrowdown: 'volume-down',
+	m: 'toggle-mute',
+	f: 'toggle-fullscreen',
+	c: 'toggle-captions',
+};
+
+/** Seek increment for the arrow-key shortcuts, in seconds. */
+const SEEK_STEP_SECONDS = 5;
+/** Volume increment for the arrow-key shortcuts, as a 0..1 fraction. */
+const VOLUME_STEP = 0.1;
+
 export function actionForKey(event: {
 	readonly key: string;
 	readonly ctrlKey?: boolean;
@@ -36,27 +62,38 @@ export function actionForKey(event: {
 	readonly altKey?: boolean;
 }): PlayerAction | undefined {
 	if (event.ctrlKey || event.metaKey || event.altKey) return undefined;
-	switch (event.key.toLowerCase()) {
-		case ' ':
-		case 'spacebar':
-		case 'k':
-			return 'toggle-play';
-		case 'arrowleft':
-			return 'seek-back';
-		case 'arrowright':
-			return 'seek-forward';
-		case 'arrowup':
-			return 'volume-up';
-		case 'arrowdown':
-			return 'volume-down';
-		case 'm':
-			return 'toggle-mute';
-		case 'f':
-			return 'toggle-fullscreen';
-		case 'c':
-			return 'toggle-captions';
+	return KEY_ACTIONS[event.key.toLowerCase()];
+}
+
+
+/**
+ * Applies the actions that only move the media element: play/pause, seek, volume.
+ *
+ * Returns `false` for actions the component must handle itself because they touch
+ * state outside the element — mute mirrors into reactive component state,
+ * fullscreen needs the browser guard, captions belong to the track menu. Keeping
+ * the element-only half here makes it testable without mounting the component.
+ */
+export function applyTransportAction(el: HTMLMediaElement, action: PlayerAction): boolean {
+	switch (action) {
+		case 'toggle-play':
+			if (el.paused) void el.play();
+			else el.pause();
+			return true;
+		case 'seek-back':
+			el.currentTime = Math.max(0, el.currentTime - SEEK_STEP_SECONDS);
+			return true;
+		case 'seek-forward':
+			el.currentTime = Math.min(el.duration || Infinity, el.currentTime + SEEK_STEP_SECONDS);
+			return true;
+		case 'volume-up':
+			el.volume = clampVolume(el.volume, VOLUME_STEP);
+			return true;
+		case 'volume-down':
+			el.volume = clampVolume(el.volume, -VOLUME_STEP);
+			return true;
 		default:
-			return undefined;
+			return false;
 	}
 }
 

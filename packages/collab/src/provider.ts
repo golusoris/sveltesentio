@@ -111,58 +111,81 @@ export function bindProviderAuth(
 	return () => provider.off('connection-close', rebind);
 }
 
-export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
-	const {
-		url,
-		room,
-		doc,
-		params,
-		protocols,
-		auth,
-		resyncInterval,
-		maxBackoffTime,
-		disableBc,
-		connect,
-		awareness,
-		WebSocketPolyfill,
-		onStatusChange,
-		onSync,
-	} = options;
-
-	const resolved = auth !== undefined ? resolveAuthParams(auth) : undefined;
-	const mergedParams = { ...params, ...resolved?.params };
-	const mergedProtocols = [...(protocols ?? []), ...(resolved?.protocols ?? [])];
-
+/**
+ * Collects the optional `WebsocketProvider` settings into its options bag.
+ *
+ * Every field is assigned only when the caller supplied it: y-websocket derives its
+ * own defaults from an absent key, and under `exactOptionalPropertyTypes` a key set
+ * to `undefined` is not the same as one that was never set.
+ */
+function buildProviderOptions(
+	options: ConnectProviderOptions,
+	mergedParams: Record<string, string>,
+	mergedProtocols: string[],
+): ConstructorParameters<typeof WebsocketProvider>[3] {
+	const { connect, awareness, WebSocketPolyfill, resyncInterval, maxBackoffTime, disableBc } =
+		options;
 	const providerOptions: ConstructorParameters<typeof WebsocketProvider>[3] = {};
 	if (connect !== undefined) providerOptions.connect = connect;
 	if (awareness !== undefined) providerOptions.awareness = awareness;
 	if (Object.keys(mergedParams).length > 0) providerOptions.params = mergedParams;
 	if (mergedProtocols.length > 0) providerOptions.protocols = mergedProtocols;
-	if (WebSocketPolyfill !== undefined)
-		providerOptions.WebSocketPolyfill = WebSocketPolyfill;
+	if (WebSocketPolyfill !== undefined) providerOptions.WebSocketPolyfill = WebSocketPolyfill;
 	if (resyncInterval !== undefined) providerOptions.resyncInterval = resyncInterval;
 	if (maxBackoffTime !== undefined) providerOptions.maxBackoffTime = maxBackoffTime;
 	if (disableBc !== undefined) providerOptions.disableBc = disableBc;
+	return providerOptions;
+}
 
-	const provider = new WebsocketProvider(url, room, doc, providerOptions);
-
-	const unbindAuth =
-		auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
-
+/**
+ * Subscribes the optional status and sync callbacks, returning the matching detach.
+ *
+ * Pairing attach with detach here keeps the two lists from drifting apart:
+ * previously `connectProvider` registered each listener in one place and removed it
+ * in another, so a listener added without a matching `off` would outlive
+ * `disconnect()`.
+ */
+function bindProviderEvents(
+	provider: WebsocketProvider,
+	onStatusChange?: (status: ProviderStatus) => void,
+	onSync?: (synced: boolean) => void,
+): () => void {
 	const handleStatus = onStatusChange
 		? ({ status }: { status: string }) => {
 				onStatusChange(normaliseStatus(status));
 			}
 		: undefined;
 	const handleSync = onSync ? (synced: boolean) => onSync(synced) : undefined;
-
 	if (handleStatus) provider.on('status', handleStatus);
 	if (handleSync) provider.on('sync', handleSync);
+	return () => {
+		if (handleStatus) provider.off('status', handleStatus);
+		if (handleSync) provider.off('sync', handleSync);
+	};
+}
+
+export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
+	const { url, room, doc, params, protocols, auth, onStatusChange, onSync } = options;
+
+	const resolved = auth !== undefined ? resolveAuthParams(auth) : undefined;
+	const mergedParams = { ...params, ...resolved?.params };
+	const mergedProtocols = [...(protocols ?? []), ...(resolved?.protocols ?? [])];
+
+	const provider = new WebsocketProvider(
+		url,
+		room,
+		doc,
+		buildProviderOptions(options, mergedParams, mergedProtocols),
+	);
+
+	const unbindAuth =
+		auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
+
+	const unbindEvents = bindProviderEvents(provider, onStatusChange, onSync);
 
 	const disconnect = (): void => {
 		if (unbindAuth) unbindAuth();
-		if (handleStatus) provider.off('status', handleStatus);
-		if (handleSync) provider.off('sync', handleSync);
+		unbindEvents();
 		provider.disconnect();
 		provider.destroy();
 	};

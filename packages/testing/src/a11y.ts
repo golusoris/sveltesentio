@@ -72,17 +72,27 @@ export function mergeAxeOptions(
 	const out: MutableAxeOptions = {};
 	if (axeDefaults.runOnly !== undefined) out.runOnly = axeDefaults.runOnly;
 	for (const override of overrides) {
-		if (!override) continue;
-		if (override.runOnly !== undefined) out.runOnly = override.runOnly;
-		if (override.rules !== undefined) {
-			out.rules = { ...(out.rules ?? {}), ...override.rules };
-		}
-		if (override.resultTypes !== undefined) out.resultTypes = override.resultTypes;
-		if (override.include !== undefined) out.include = override.include;
-		if (override.exclude !== undefined) out.exclude = override.exclude;
-		if (override.elementRef !== undefined) out.elementRef = override.elementRef;
+		if (override) applyAxeOverride(out, override);
 	}
 	return out;
+}
+
+/**
+ * Applies one override onto the accumulator.
+ *
+ * Every field replaces wholesale except `rules`, which merges: callers layer a
+ * per-test rule tweak over the shared defaults and expect the rest to survive,
+ * whereas a `runOnly` or `include` is a deliberate replacement of scope.
+ */
+function applyAxeOverride(out: MutableAxeOptions, override: AxeRunOptions): void {
+	if (override.runOnly !== undefined) out.runOnly = override.runOnly;
+	if (override.rules !== undefined) {
+		out.rules = { ...(out.rules ?? {}), ...override.rules };
+	}
+	if (override.resultTypes !== undefined) out.resultTypes = override.resultTypes;
+	if (override.include !== undefined) out.include = override.include;
+	if (override.exclude !== undefined) out.exclude = override.exclude;
+	if (override.elementRef !== undefined) out.elementRef = override.elementRef;
 }
 
 export function filterViolationsByImpact(

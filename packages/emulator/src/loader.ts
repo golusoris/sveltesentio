@@ -109,6 +109,31 @@ function withTrailingSlash(path: string): string {
  *
  * @throws {UnknownPlatformError} when `core` resolves to no known EmulatorJS core.
  */
+/**
+ * Layers the optional `EJS_*` globals onto the required ones.
+ *
+ * Each is written only when supplied, because EmulatorJS treats a defined-but-empty
+ * global as an override and a missing one as "use your default".
+ *
+ * `extra` is applied last so a caller can override anything above it, and its keys
+ * are prefixed when the caller omitted `EJS_`, so both spellings work.
+ */
+function applyOptionalGlobals(
+	globals: Record<string, unknown>,
+	options: BuildEmulatorConfigOptions,
+): void {
+	if (options.biosUrl !== undefined) globals.EJS_biosUrl = options.biosUrl;
+	if (options.gameName !== undefined) globals.EJS_gameName = options.gameName;
+	if (options.language !== undefined) globals.EJS_language = options.language;
+	if (options.color !== undefined) globals.EJS_color = options.color;
+	if (options.saveState === false) globals.EJS_defaultOptions = { 'save-state-slot': 'off' };
+	if (options.extra) {
+		for (const [key, value] of Object.entries(options.extra)) {
+			globals[key.startsWith('EJS_') ? key : `EJS_${key}`] = value;
+		}
+	}
+}
+
 export function buildEmulatorConfig(options: BuildEmulatorConfigOptions): EmulatorConfig {
 	const core = resolveCore(options.core);
 	if (!core) throw new UnknownPlatformError(options.core);
@@ -128,17 +153,7 @@ export function buildEmulatorConfig(options: BuildEmulatorConfigOptions): Emulat
 		EJS_disableDatabases: false,
 	};
 
-	if (options.biosUrl !== undefined) globals.EJS_biosUrl = options.biosUrl;
-	if (options.gameName !== undefined) globals.EJS_gameName = options.gameName;
-	if (options.language !== undefined) globals.EJS_language = options.language;
-	if (options.color !== undefined) globals.EJS_color = options.color;
-	if (options.saveState === false) globals.EJS_defaultOptions = { 'save-state-slot': 'off' };
-
-	if (options.extra) {
-		for (const [key, value] of Object.entries(options.extra)) {
-			globals[key.startsWith('EJS_') ? key : `EJS_${key}`] = value;
-		}
-	}
+	applyOptionalGlobals(globals, options);
 
 	return { globals, core, dataPath, loaderUrl, player };
 }

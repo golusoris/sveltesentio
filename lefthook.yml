@@ -12,7 +12,15 @@ pre-commit:
   parallel: true
   commands:
     format:
-      glob: '*.{ts,svelte,js,json,md,yaml,yml,css,html}'
+      # Data and prose only. Much of the .ts/.svelte source here is tab-indented
+      # while prettier.config.js sets useTabs: false, and `prettier --check .` has
+      # never run in CI (the Lint job runs `turbo lint` + check:exports), so the
+      # tree was never normalised. Including source in this hook rewrote every
+      # touched file from tabs to spaces, burying real edits under whole-file
+      # churn — one 20-line change arrived as 1351 insertions. Normalising the
+      # tree is a decision to make deliberately, not a side effect of touching a
+      # file. ESLint --fix below still covers source.
+      glob: '*.{json,md,yaml,yml,css,html}'
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
     lint:
