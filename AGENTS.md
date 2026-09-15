@@ -1,3 +1,77 @@
+<!-- markdownlint-disable MD013 MD025 -->
+
+# sveltesentio Agent Operating Harness
+
+Run verification before concluding any turn:
+
+```bash
+make verify-all
+```
+
+```mermaid
+flowchart LR
+    AGENT["Autonomous Agent"] --> CHECK["make verify-all"]
+    CHECK --> CI["pnpm run ci"]
+    CHECK --> AUDIT["praetorctl audit"]
+    CHECK --> COMPILER["praetorctl compile-context --verify"]
+    CHECK --> GATE{"All checks Pass?"}
+    GATE -- Yes --> RECEIPT["Ed25519 Exit-0 Receipt"]
+    GATE -- No --> DISTILL["SARIF Diagnostic Distillation (<= 1500 tokens)"]
+```
+
+## Core Directives & Invariants (Modernized NASA JPL Power-of-10)
+
+Adapted to TypeScript; HISS-03 (manual heap management) and HISS-09 (pointer arithmetic) have no analogue here.
+
+| Invariant   | Scope             | NASA Rule | Enforcement Mechanism                                                                                                                           | Failure Action       |
+| :---------- | :---------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
+| **HISS-01** | Control Flow      | Rule 1    | Recursion prohibited; call graph must be a DAG. No circular imports between `@sveltesentio/*` packages.                                         | Build failure        |
+| **HISS-02** | Loops & I/O       | Rule 2    | Scalar upper bound on all loops; explicit `AbortSignal` timeout on all I/O.                                                                     | ESLint / review      |
+| **HISS-04** | Complexity        | Rule 4    | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                     | ESLint `complexity`  |
+| **HISS-07** | Error Handling    | Rule 7    | Zero unchecked errors: no non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457). | `@typescript-eslint` |
+| **HISS-08** | Determinism       | Rule 8    | Zero dynamic execution (`eval` / `new Function`); no unsanitised `innerHTML` — DOMPurify at every boundary.                                     | ESLint / CodeQL      |
+| **HISS-10** | Warning Hygiene   | Rule 10   | Zero-warning tolerance across `tsc`, ESLint, and Prettier. No `any`.                                                                            | Exit code 1          |
+| **HISS-15** | 3D Testing        | Rule 5    | Positive, negative, and boundary tests mandatory for every public export.                                                                       | CI coverage gate     |
+| **HISS-16** | Context Integrity | Fleet     | Single canonical `AGENTS.md`; vendor files compiled via `praetorctl compile-context`.                                                           | Pre-commit blocker   |
+
+## Operational Rules
+
+1. **Act on Verified State**:
+   Read source files and run real commands before hypothesising or editing. Never guess flag names, library signatures, or repo configurations from memory.
+
+2. **Lead with Output**:
+   Provide direct answers, diffs, and commands. Avoid filler preambles, restatements, or conversational chatter.
+
+3. **Context Transpiler First**:
+   Never edit `CLAUDE.md`, `.cursor/rules/*.mdc`, `.windsurfrules`, `.gemini/GEMINI.md`, `.codex/rules.md`, or `.github/copilot-instructions.md` manually. Make all agent instruction updates in `AGENTS.md` and execute:
+
+   ```bash
+   praetorctl compile-context
+   ```
+
+4. **SARIF Diagnostic Distillation**:
+   When reporting compiler or linter errors, distil output to $\le 1,500$ tokens ($< 60$ lines). Print the top 3 root-cause failures with file/line pointers and write full logs to ephemeral storage.
+
+5. **No Evasion Tolerated**:
+   Do not attempt `--no-verify`, `LEFTHOOK=0`, or modifying `.git/hooks`. All pull requests are authoritatively re-checked in an ephemeral isolated sandbox by `cordana-standards[bot]`.
+
+6. **Anti-Loop Interception**:
+   If the same AST diff and error category repeats $\ge 3$ times, halt execution immediately. Re-evaluate the underlying design instead of making micro-textual retries.
+
+## Primary Verification Commands
+
+```bash
+pnpm run ci                         # lint, typecheck, test, build, all workspaces
+pnpm audit --audit-level=high       # the supply-chain gate CI enforces
+praetorctl compile-context --verify # regenerate + verify cross-agent context outputs
+praetorctl audit                    # HISS-16 standards
+make verify-all                     # all of the above
+```
+
+<!-- praetor:harness:end -->
+
+---
+
 <!-- markdownlint-disable MD013 -->
 
 # Agent guide — sveltesentio

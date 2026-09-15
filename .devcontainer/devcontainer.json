@@ -1,19 +1,27 @@
 {
-  "name": "sveltesentio",
+  "name": "golusoris/sveltesentio",
   "build": {
-    "dockerfile": "../docker/dev/Dockerfile",
-    "context": ".."
+    "dockerfile": "Dockerfile.praetor",
+    "context": "."
   },
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": false,
-      "upgradePackages": true
-    },
-    "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.27"
-    }
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/go:1": {}
   },
   "customizations": {
+    "praetor": {
+      "bootstrap": {
+        "version": 1,
+        "state": "source-bundle",
+        "builderImage": "docker.io/library/golang:1.27-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125",
+        "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04@sha256:d94c97dd9cacf183d0a6fd12a8e87b526e9e928307674ae9c94139139c0c6eae",
+        "sourceSHA256": "sha256:251c5ea24fd617cfbf10be8771752d6cd6c80590c62ae6d27df24dc6098ae0c7",
+        "archiveSHA256": "sha256:46d60e2b0ad4b66aeed0e9826dc6d054f5e66e0a89f8a249d7cbd768d1161de0",
+        "archiveParts": 3,
+        "dockerfileSHA256": "sha256:5f19a57dfbce20db15d76f27b415941cd60ed46465b0655a399e67befcd1801c"
+      }
+    },
     "vscode": {
       "extensions": [
         "GitHub.vscode-pull-request-github",
@@ -36,5 +44,5 @@
     }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "make verify-all"
+  "postCreateCommand": "export PATH=\"/usr/local/bin:$PATH\"; /usr/local/bin/praetorctl compile-context && /usr/bin/make verify-all"
 }
