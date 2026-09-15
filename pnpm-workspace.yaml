@@ -25,7 +25,9 @@ onlyBuiltDependencies:
 overrides:
   serialize-javascript: '>=7.0.5'
   esbuild: '>=0.28.1'
-  cookie: '>=0.7.0 <2' # 2.x renames parse/serialize -> parseCookie/stringifyCookie; SvelteKit 2.x imports the old names
+  cookie: '>=0.7.0 <1' # >=0.7.0 fixes CVE-2024-47764; <1 because 1.x bundles its own
+  # types, which take precedence over @types/cookie and drop CookieParseOptions,
+  # the name SvelteKit's own types use. 2.x additionally removes parse/serialize.
   undici: '>=7.29.0 <8' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
   fast-uri: '>=3.1.5'
   browserslist: '>=4.28.7'
