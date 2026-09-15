@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const SHARED_SURFACE_PATTERNS = [
   /^package\.json$/,
@@ -170,8 +171,17 @@ export function getGitDiffFiles(baseRef = 'origin/main', headRef = 'HEAD') {
   }
 }
 
-// If invoked as CLI script
-if (process.argv[1] && resolve(process.argv[1]) === resolve(process.argv[1])) {
+// Run the CLI only when this module is the process entry point.
+//
+// The previous guard compared `resolve(process.argv[1])` with itself, which is
+// true for any entry point, so importing the module *ran* the CLI. Under vitest
+// that meant `packages/testing/test/ci-workflow.test.ts` shelled out to
+// `git diff` on import and printed the analysis JSON into the test output — and
+// because every GitHub Actions step sets GITHUB_OUTPUT, the Test job appended
+// `has_code_changes=false` and `turbo_filter=` to its own step outputs. Nothing
+// reads those today, which is the only reason it was invisible: any future step
+// that did would have seen a build-skipping verdict computed by the wrong job.
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2);
   let baseRef = process.env.BASE_REF || 'origin/main';
   let headRef = process.env.HEAD_REF || 'HEAD';
