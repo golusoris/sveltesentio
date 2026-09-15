@@ -14,8 +14,5 @@
       <option name="maxStatements" value="50" />
     </inspection_tool>
     <inspection_tool class="HISS07ZeroUnwrap" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="PyPep8Inspection" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="PyBroadExceptionInspection" enabled="true" level="ERROR" enabled_by_default="true" />
   </profile>
 </component>

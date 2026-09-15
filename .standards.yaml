@@ -1,15 +1,15 @@
 version: 1
 repository:
-    owner: golusoris
-    name: sveltesentio
-    visibility: public
-    description: ""
-    homepage: ""
-    topics: []
+  owner: golusoris
+  name: sveltesentio
+  visibility: public
+  description: ''
+  homepage: ''
+  topics: []
 profiles:
-    - app-service
+  - web-package
 facets:
-    - security:high
-    - api:public-contract
-    - docs:seo-portal
-    - agent:sandboxed
+  - security:high
+  - api:public-contract
+  - docs:seo-portal
+  - agent:sandboxed
