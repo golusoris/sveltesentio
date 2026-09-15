@@ -41,7 +41,7 @@
   "name": "@sveltesentio/testing",
   "peerDependencies": {
     "@sveltesentio/core": "workspace:*",
-    "vitest": "\u003e=4.0.0"
+    "vitest": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "vitest": {
@@ -56,7 +56,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

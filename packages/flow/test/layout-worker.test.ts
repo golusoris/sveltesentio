@@ -1,19 +1,18 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
-import type { ELK, ElkNode } from 'elkjs/lib/elk-api.js';
+import type { ElkNode } from 'elkjs/lib/elk-api.js';
 import type { ElkFactory, ElkLayoutOptions, SizedNode } from '../src/layout.js';
-import { createElkLayout } from '../src/layout.js';
+import { createElkLayout, type ElkLike } from '../src/layout.js';
 import {
 	createLayoutWorker,
 	layoutWorkerHandler,
 	LAYOUT_WORKER_ERROR_TYPE,
 	type LayoutWorkerRequest,
-	type LayoutWorkerResponse,
-} from '../src/layout-worker.js';
+	type LayoutWorkerResponse, type LayoutWorkerMessage } from '../src/layout-worker.js';
 
 // A deterministic ELK double: stacks children top-to-bottom, no real elkjs.
 function fakeElkFactory(): ElkFactory {
-	const elk: ELK = {
+	const elk: ElkLike = {
 		async layout(graph: ElkNode): Promise<ElkNode> {
 			let y = 0;
 			const children = (graph.children ?? []).map((c) => {
@@ -29,16 +28,6 @@ function fakeElkFactory(): ElkFactory {
 			});
 			return { id: graph.id, children, width: 200, height: y };
 		},
-		async knownLayoutAlgorithms() {
-			return [];
-		},
-		async knownLayoutOptions() {
-			return [];
-		},
-		async knownLayoutCategories() {
-			return [];
-		},
-		terminateWorker(): void {},
 	};
 	return async () => elk;
 }
@@ -48,16 +37,6 @@ function throwingElkFactory(message: string): ElkFactory {
 		async layout(): Promise<ElkNode> {
 			throw new Error(message);
 		},
-		async knownLayoutAlgorithms() {
-			return [];
-		},
-		async knownLayoutOptions() {
-			return [];
-		},
-		async knownLayoutCategories() {
-			return [];
-		},
-		terminateWorker(): void {},
 	});
 }
 
@@ -74,7 +53,7 @@ class FakeWorker {
 	postCount = 0;
 	private readonly messageListeners = new Set<Listener>();
 	private readonly errorListeners = new Set<Listener>();
-	private readonly handler: (event: MessageEvent<LayoutWorkerRequest>) => Promise<void>;
+	private readonly handler: (event: LayoutWorkerMessage) => Promise<void>;
 
 	constructor(elkFactory: ElkFactory) {
 		this.handler = layoutWorkerHandler((response: LayoutWorkerResponse) => {
@@ -86,7 +65,7 @@ class FakeWorker {
 	postMessage(request: LayoutWorkerRequest): void {
 		this.postCount += 1;
 		if (this.terminated) throw new Error('posted to a terminated worker');
-		void this.handler({ data: request } as MessageEvent<LayoutWorkerRequest>);
+		void this.handler({ data: request });
 	}
 
 	addEventListener(type: 'message' | 'error', listener: Listener): void {
@@ -200,7 +179,7 @@ describe('createLayoutWorker — worker path', () => {
 	it('rejects with a ProblemError on a worker error event', async () => {
 		stubWorkerGlobal();
 		// A factory whose layout never resolves, so only the error event settles it.
-		const stalled: ElkFactory = () => new Promise<ELK>(() => {});
+		const stalled: ElkFactory = () => new Promise<ElkLike>(() => {});
 		const fake = new FakeWorker(stalled);
 		const handle = createLayoutWorker({ workerFactory: () => fake as unknown as Worker });
 		const pending = handle.layout(NODES, EDGES);
@@ -269,7 +248,7 @@ describe('layoutWorkerHandler', () => {
 		const handle = layoutWorkerHandler((r) => replies.push(r), fakeElkFactory());
 		await handle({
 			data: { id: 7, options: {}, nodes: NODES, edges: EDGES },
-		} as MessageEvent<LayoutWorkerRequest>);
+		});
 		expect(replies).toHaveLength(1);
 		const [reply] = replies;
 		expect(reply).toMatchObject({ id: 7, ok: true });
@@ -281,7 +260,7 @@ describe('layoutWorkerHandler', () => {
 		const handle = layoutWorkerHandler((r) => replies.push(r), throwingElkFactory('nope'));
 		await handle({
 			data: { id: 3, options: {}, nodes: NODES, edges: EDGES },
-		} as MessageEvent<LayoutWorkerRequest>);
+		});
 		expect(replies[0]).toEqual({ id: 3, ok: false, message: 'nope' });
 	});
 
@@ -301,21 +280,11 @@ describe('layoutWorkerHandler', () => {
 			async layout(): Promise<ElkNode> {
 				throw 'raw string failure';
 			},
-			async knownLayoutAlgorithms() {
-				return [];
-			},
-			async knownLayoutOptions() {
-				return [];
-			},
-			async knownLayoutCategories() {
-				return [];
-			},
-			terminateWorker(): void {},
 		});
 		const handle = layoutWorkerHandler((r) => replies.push(r), stringThrower);
 		await handle({
 			data: { id: 1, options: {}, nodes: [], edges: [] },
-		} as MessageEvent<LayoutWorkerRequest>);
+		});
 		expect(replies[0]).toMatchObject({ ok: false, message: 'raw string failure' });
 	});
 });

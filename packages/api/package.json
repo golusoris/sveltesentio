@@ -44,8 +44,8 @@
   ],
   "name": "@sveltesentio/api",
   "peerDependencies": {
-    "openapi-fetch": "\u003e=0.17.0",
-    "openapi-typescript": "\u003e=7.0.0"
+    "openapi-fetch": ">=0.17.0",
+    "openapi-typescript": ">=7.0.0"
   },
   "peerDependenciesMeta": {
     "openapi-typescript": {
@@ -60,7 +60,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

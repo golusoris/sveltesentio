@@ -1,4 +1,4 @@
-import type { ELK, ElkNode, LayoutOptions } from 'elkjs/lib/elk-api.js';
+import type { ElkLayoutArguments, ElkNode, LayoutOptions } from 'elkjs/lib/elk-api.js';
 import type { DagEdgeLike, DagNodeLike } from './dag.js';
 
 export type ElkDirection = 'DOWN' | 'UP' | 'RIGHT' | 'LEFT';
@@ -29,7 +29,23 @@ export interface ElkLayoutResult<E extends DagEdgeLike> {
 	readonly height: number;
 }
 
-export type ElkFactory = () => Promise<ELK>;
+/**
+ * The slice of ELK this module uses: a single layout call.
+ *
+ * Declared structurally rather than as `ELK`, because that interface also
+ * demands `knownLayoutAlgorithms`, `knownLayoutOptions`, `knownLayoutCategories`
+ * and `terminateWorker`, none of which this module calls — a test double had to
+ * stub all four to satisfy the type. `layout` is also generic on `ELK`, over a
+ * graph type this module never varies: it passes a plain `ElkNode` and reads a
+ * plain `ElkNode` back, which is what this states.
+ *
+ * The real `ELK` remains assignable to it, so `defaultElkFactory` is unchanged.
+ */
+export interface ElkLike {
+	layout(graph: ElkNode, args?: ElkLayoutArguments): Promise<ElkNode>;
+}
+
+export type ElkFactory = () => Promise<ElkLike>;
 
 const defaultElkFactory: ElkFactory = async () => {
 	const mod = await import('elkjs/lib/elk.bundled.js');

@@ -1,3 +1,5 @@
+export { requireAt } from './require-at.js';
+
 export type { TestClock } from './clock.js';
 export { testClock } from './clock.js';
 

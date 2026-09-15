@@ -50,7 +50,14 @@ describe('connectProvider', () => {
 		provider.emit('status', [{ status: 'connecting' }]);
 		provider.emit('status', [{ status: 'connected' }]);
 		provider.emit('status', [{ status: 'disconnected' }]);
-		provider.emit('status', [{ status: 'something-else' }]);
+		// Deliberately out of contract. y-websocket's types name only the three
+		// statuses above, but the library emits others in practice, and the whole
+		// point of this case is that anything unrecognised normalises to
+		// 'disconnected'. The assertion is about runtime behaviour the type system
+		// says cannot happen, so the cast is the honest way to express it.
+		provider.emit('status', [
+			{ status: 'something-else' } as unknown as { status: 'connected' },
+		]);
 		expect(received).toEqual([
 			'connecting',
 			'connected',

@@ -3,7 +3,7 @@
     "@sveltesentio/core": "workspace:*",
     "esm-env": "^1.2.2"
   },
-  "description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> — Svelte 5",
+  "description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> \u2014 Svelte 5",
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@storybook/addon-svelte-csf": "5.1.2",
@@ -99,7 +99,7 @@
     "lint": "eslint src/",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

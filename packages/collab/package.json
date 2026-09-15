@@ -62,10 +62,10 @@
   ],
   "name": "@sveltesentio/collab",
   "peerDependencies": {
-    "svelte": "\u003e=5.0.0",
-    "y-protocols": "\u003e=1.0.5",
-    "y-websocket": "\u003e=2.0.0",
-    "yjs": "\u003e=13.6.0"
+    "svelte": ">=5.0.0",
+    "y-protocols": ">=1.0.5",
+    "y-websocket": ">=2.0.0",
+    "yjs": ">=13.6.0"
   },
   "peerDependenciesMeta": {
     "y-protocols": {
@@ -80,7 +80,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",

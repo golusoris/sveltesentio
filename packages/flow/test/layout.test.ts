@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { ELK, ElkNode } from 'elkjs/lib/elk-api.js';
-import { createElkLayout, type ElkFactory } from '../src/layout.js';
+import type { ElkNode } from 'elkjs/lib/elk-api.js';
+import { createElkLayout, type ElkFactory, type ElkLike } from '../src/layout.js';
 
 function fakeElkFactory(): ElkFactory {
-	const elk: ELK = {
+	const elk: ElkLike = {
 		async layout(graph: ElkNode): Promise<ElkNode> {
 			let y = 0;
 			const children = (graph.children ?? []).map((c) => {
@@ -24,16 +24,6 @@ function fakeElkFactory(): ElkFactory {
 				height: y,
 			};
 		},
-		async knownLayoutAlgorithms() {
-			return [];
-		},
-		async knownLayoutOptions() {
-			return [];
-		},
-		async knownLayoutCategories() {
-			return [];
-		},
-		terminateWorker(): void {},
 	};
 	return async () => elk;
 }
@@ -59,16 +49,6 @@ describe('createElkLayout', () => {
 			async layout(graph: ElkNode): Promise<ElkNode> {
 				return { id: graph.id, children: [], width: 0, height: 0 };
 			},
-			async knownLayoutAlgorithms() {
-				return [];
-			},
-			async knownLayoutOptions() {
-				return [];
-			},
-			async knownLayoutCategories() {
-				return [];
-			},
-			terminateWorker(): void {},
 		});
 		const layout = createElkLayout({}, factory);
 		const result = await layout([{ id: 'a', width: 50, height: 20 }], []);
@@ -82,16 +62,6 @@ describe('createElkLayout', () => {
 				captured = graph.layoutOptions;
 				return { id: graph.id, children: [] };
 			},
-			async knownLayoutAlgorithms() {
-				return [];
-			},
-			async knownLayoutOptions() {
-				return [];
-			},
-			async knownLayoutCategories() {
-				return [];
-			},
-			terminateWorker(): void {},
 		});
 		const layout = createElkLayout(
 			{ algorithm: 'force', layoutOptions: { 'elk.spacing.nodeNode': '40' } },

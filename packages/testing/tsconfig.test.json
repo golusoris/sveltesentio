@@ -1,0 +1,20 @@
+{
+  // Type-checks src together with test. The package's own tsconfig.json cannot do
+  // this: it sets `rootDir: "src"` so the emitted dist/ stays flat, and a file
+  // outside rootDir is an error. This one never emits, so the root can widen
+  // without touching the published layout.
+  //
+  // `allowJs` and the widened root pull in scripts/ci-affected.mjs, which
+  // test/ci-workflow.test.ts imports. That script stays plain JavaScript because
+  // ci.yml runs it with node before any build step, and it already carries JSDoc
+  // types — so reading it directly keeps one source of truth rather than a
+  // parallel .d.mts that could drift.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["src/**/*", "test/**/*", "../../scripts/ci-affected.mjs"]
+}

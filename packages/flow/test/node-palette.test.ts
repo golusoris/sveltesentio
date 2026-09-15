@@ -109,7 +109,7 @@ describe('NodePalette.createNode', () => {
 		const palette = new NodePalette({ idFactory: seqIds() });
 		palette.registerNodeType({
 			type: 'process',
-			defaultData: { label: 'ignored' },
+			defaultData: { label: 'ignored', items: [] as string[] },
 			makeData: () => ({ label: 'made', items: [] as string[] }),
 		});
 		const a = palette.createNode('process', { x: 0, y: 0 });

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Code, ConnectError, type Transport } from '@connectrpc/connect';
-import type { DescMethodStreaming, DescService } from '@bufbuild/protobuf';
+import type {
+	DescMessage,
+	DescMethodStreaming,
+	DescService,
+	MessageShape,
+} from '@bufbuild/protobuf';
 import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	createClient,
@@ -43,7 +48,10 @@ describe('createClient', () => {
 		const seen: { hadSignal: boolean } = { hadSignal: false };
 		const transport: Transport = {
 			unary: () => Promise.reject(new Error('unary not used')),
-			stream: (_method, signal) => {
+			stream: <I extends DescMessage, O extends DescMessage>(
+				_method: DescMethodStreaming<I, O>,
+				signal: AbortSignal | undefined,
+			) => {
 				seen.hadSignal = signal instanceof AbortSignal;
 				return Promise.resolve({
 					stream: true as const,
@@ -51,7 +59,14 @@ describe('createClient', () => {
 					method: _method,
 					header: new Headers(),
 					trailer: new Headers(),
-					message: yieldAll([{ body: 'a' }, { body: 'b' }]),
+					// Transport.stream is generic in its response type, so a concrete
+					// message shape can never be assignable to `MessageShape<O>`. This
+					// double deliberately carries `{ body }` messages, and the test body
+					// below asserts that concrete shape, so the assertion is what the
+					// generic slot cannot express rather than a suppressed mismatch.
+					message: yieldAll([{ body: 'a' }, { body: 'b' }]) as unknown as AsyncIterable<
+						MessageShape<O>
+					>,
 				});
 			},
 		};

@@ -61,12 +61,12 @@
   ],
   "name": "@sveltesentio/realtime",
   "peerDependencies": {
-    "@bufbuild/protobuf": "\u003e=2.0.0",
-    "@connectrpc/connect": "\u003e=2.0.0",
-    "@connectrpc/connect-web": "\u003e=2.0.0",
-    "@sveltejs/kit": "\u003e=2.0.0",
+    "@bufbuild/protobuf": ">=2.0.0",
+    "@connectrpc/connect": ">=2.0.0",
+    "@connectrpc/connect-web": ">=2.0.0",
+    "@sveltejs/kit": ">=2.0.0",
     "@sveltesentio/core": "workspace:*",
-    "svelte": "\u003e=5.0.0"
+    "svelte": ">=5.0.0"
   },
   "peerDependenciesMeta": {
     "@bufbuild/protobuf": {
@@ -90,7 +90,7 @@
     "build": "tsc",
     "lint": "eslint src/",
     "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "sideEffects": false,
   "type": "module",
