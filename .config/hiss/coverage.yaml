@@ -143,10 +143,18 @@ rules:
           `@sveltesentio/no-unsanitised-html` was written for this gap after the
           catalog named it, and reports `innerHTML`, `outerHTML` and
           `insertAdjacentHTML` unless the value comes from `sanitizeHtml()` or a
-          `.sanitize()` call. It is partial rather than enforced because the rule
-          recognises sanitisation at the sink: a value sanitised further up the
-          call chain and passed in as a bare identifier is still reported, and a
-          sink reached through a computed member is not.
+          `.sanitize()` call. A sink reached through bracket notation is reported too:
+          the rule resolves a string-literal computed key, because
+          `host['innerHTML']` is as statically known as `host.innerHTML` and
+          skipping it made the bracket form a silent bypass. Measured both ways --
+          against the previous rule the same fixture produced no diagnostic.
+
+          It is partial rather than enforced because the rule still recognises
+          sanitisation only at the sink: a value sanitised further up the call
+          chain and passed in as a bare identifier is reported as though it were
+          raw, which is the remaining gap fixture. A genuinely dynamic
+          `host[name]` stays unresolved by design, since accusing it would flag
+          every computed property assignment.
       - language: svelte
         state: partial
         runner: eslint
