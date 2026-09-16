@@ -1,4 +1,6 @@
 import { ProblemError } from '@sveltesentio/core';
+import type { TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
+import { createTusLauncher } from './tus-launcher.js';
 
 // Resumable upload wrapper over `tus-js-client` (peer dep, ADR-0041). The tus
 // `Upload` constructor is injected so the lifecycle unit-tests with a fake — no
@@ -8,30 +10,7 @@ import { ProblemError } from '@sveltesentio/core';
 const RESUMABLE_PROBLEM_TYPE = 'https://sveltesentio.dev/problems/upload-failed';
 
 /** Minimal structural view of the tus `Upload` options this wrapper drives. */
-export interface TusUploadOptions {
-	endpoint?: string | null;
-	uploadUrl?: string | null;
-	metadata?: Record<string, string>;
-	chunkSize?: number;
-	retryDelays?: number[] | null;
-	headers?: Record<string, string>;
-	onProgress?: ((bytesSent: number, bytesTotal: number) => void) | null;
-	onSuccess?: ((payload: unknown) => void) | null;
-	onError?: ((error: Error) => void) | null;
-}
-
-/** Minimal structural view of the tus `Upload` instance this wrapper drives. */
-export interface TusUpload {
-	readonly url: string | null;
-	start(): void;
-	abort(shouldTerminate?: boolean): Promise<void>;
-}
-
-/**
- * The tus `Upload` constructor shape. Defaults to `tus-js-client`'s `Upload`;
- * inject a fake in tests to drive lifecycle/progress without a server.
- */
-export type TusUploadConstructor = new (file: Blob, options: TusUploadOptions) => TusUpload;
+export type { TusUpload, TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
 
 /** Lifecycle phase of a {@link ResumableUpload}. */
 export type ResumableState = 'idle' | 'uploading' | 'paused' | 'success' | 'error' | 'aborted';
@@ -121,16 +100,6 @@ function toProblem(error: Error): ProblemError {
 	});
 }
 
-let cachedTusUpload: TusUploadConstructor | undefined;
-
-async function loadTusUpload(): Promise<TusUploadConstructor> {
-	if (!cachedTusUpload) {
-		const mod = await import('tus-js-client');
-		cachedTusUpload = mod.Upload;
-	}
-	return cachedTusUpload;
-}
-
 /**
  * Create a resumable upload over tus with start/pause/resume/abort control and
  * progress/success/error callbacks.
@@ -179,6 +148,41 @@ function passthroughTusOptions(options: ResumableUploadOptions): Partial<TusUplo
 	};
 }
 
+/** Narrows an unknown rejection to an Error without losing what it said. */
+function asError(error: unknown): Error {
+	return error instanceof Error ? error : new Error(String(error));
+}
+
+/** Where a running tus upload reports back to. */
+interface UploadSink {
+	onProgress(progress: ResumableProgress): void;
+	onSuccess(): void;
+	onFailure(error: Error): void;
+}
+
+/**
+ * Translates this package's options and callbacks into tus's option shape.
+ *
+ * Separate from the factory because it is a pure mapping — given the options and
+ * somewhere to report to, the result does not depend on upload state — and
+ * because inline it was the largest single block in a 76-line function
+ * (HISS-04).
+ */
+function buildTusOptions(options: ResumableUploadOptions, sink: UploadSink): TusUploadOptions {
+	return {
+		...passthroughTusOptions(options),
+		onProgress: (bytesSent: number, bytesTotal: number): void => {
+			sink.onProgress(toProgress(bytesSent, bytesTotal));
+		},
+		onSuccess: (): void => {
+			sink.onSuccess();
+		},
+		onError: (error: Error): void => {
+			sink.onFailure(asError(error));
+		},
+	};
+}
+
 export function createResumableUpload(
 	file: Blob,
 	options: ResumableUploadOptions,
@@ -187,45 +191,30 @@ export function createResumableUpload(
 
 	let state: ResumableState = 'idle';
 	let progress: ResumableProgress = toProgress(0, Math.max(file.size, 0));
-	let tus: TusUpload | undefined;
-
-	const tusOptions: TusUploadOptions = {
-		...passthroughTusOptions(options),
-		onProgress: (bytesSent: number, bytesTotal: number): void => {
-			progress = toProgress(bytesSent, bytesTotal);
-			options.onProgress?.(progress);
+	const tusOptions = buildTusOptions(options, {
+		onProgress: (next) => {
+			progress = next;
+			options.onProgress?.(next);
 		},
-		onSuccess: (): void => {
+		onSuccess: () => {
 			state = 'success';
 			options.onSuccess?.(handle);
 		},
-		onError: (error: Error): void => {
+		onFailure: (error) => {
 			state = 'error';
 			options.onError?.(toProblem(error));
 		},
-	};
+	});
 
-	function instantiate(Ctor: TusUploadConstructor): TusUpload {
-		const created = new Ctor(file, tusOptions);
-		tus = created;
-		return created;
-	}
+	const launcher = createTusLauncher(file, tusOptions, options.UploadConstructor);
 
 	function begin(): void {
 		state = 'uploading';
-		if (options.UploadConstructor) {
-			instantiate(options.UploadConstructor).start();
-			return;
-		}
-		void loadTusUpload().then(
-			(Ctor) => {
-				// A pause/abort may have raced the dynamic import; honour it.
-				if (state !== 'uploading') return;
-				instantiate(Ctor).start();
-			},
+		launcher.start(
+			() => state === 'uploading',
 			(error: unknown) => {
 				state = 'error';
-				options.onError?.(toProblem(error instanceof Error ? error : new Error(String(error))));
+				options.onError?.(toProblem(asError(error)));
 			},
 		);
 	}
@@ -238,7 +227,7 @@ export function createResumableUpload(
 			return progress;
 		},
 		get url(): string | null {
-			return tus?.url ?? null;
+			return launcher.url;
 		},
 		start(): void {
 			if (state === 'uploading' || state === 'success') return;
@@ -247,7 +236,7 @@ export function createResumableUpload(
 		pause(): void {
 			if (state !== 'uploading') return;
 			state = 'paused';
-			if (tus) void tus.abort(false);
+			void launcher.abort(false);
 		},
 		resume(): void {
 			if (state !== 'paused') return;
@@ -256,7 +245,7 @@ export function createResumableUpload(
 		async abort(terminate = false): Promise<void> {
 			if (state === 'success' || state === 'aborted') return;
 			state = 'aborted';
-			if (tus) await tus.abort(terminate);
+			await launcher.abort(terminate);
 		},
 	};
 
