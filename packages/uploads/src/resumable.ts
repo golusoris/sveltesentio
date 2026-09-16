@@ -191,6 +191,12 @@ export function createResumableUpload(
 
 	let state: ResumableState = 'idle';
 	let progress: ResumableProgress = toProgress(0, Math.max(file.size, 0));
+	/** Enter the terminal error state and report. tus and the loader both land here. */
+	const fail = (error: unknown): void => {
+		state = 'error';
+		options.onError?.(toProblem(asError(error)));
+	};
+
 	const tusOptions = buildTusOptions(options, {
 		onProgress: (next) => {
 			progress = next;
@@ -200,23 +206,14 @@ export function createResumableUpload(
 			state = 'success';
 			options.onSuccess?.(handle);
 		},
-		onFailure: (error) => {
-			state = 'error';
-			options.onError?.(toProblem(error));
-		},
+		onFailure: fail,
 	});
 
 	const launcher = createTusLauncher(file, tusOptions, options.UploadConstructor);
 
 	function begin(): void {
 		state = 'uploading';
-		launcher.start(
-			() => state === 'uploading',
-			(error: unknown) => {
-				state = 'error';
-				options.onError?.(toProblem(asError(error)));
-			},
-		);
+		launcher.start(() => state === 'uploading', fail);
 	}
 
 	const handle: ResumableUpload = {

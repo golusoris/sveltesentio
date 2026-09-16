@@ -85,18 +85,33 @@ rules:
     title: Complexity Bounds
     coverage:
       - language: typescript
-        state: partial
+        state: enforced
         runner: eslint
         mechanism: >-
-          eslint.config.ts sets `complexity: ['error', 10]` over
-          packages/*/src/**/*.ts. Confirmed on with `eslint --print-config`,
-          which reports `[2, 10]`.
+          eslint.config.ts sets `complexity: ['error', 10]` and
+          `max-lines-per-function` at 60 (blank lines and comments skipped) over
+          packages/*/src/**/*.ts. Confirmed on with `eslint --print-config`, and
+          the length cap verified to bite by planting a 66-line function and
+          watching it report.
         rationale: >-
           Cyclomatic complexity is enforced and the tree is clean at 10: thirteen
           functions were over it and all thirteen were refactored, not exempted.
-          Function length is the gap -- `max-lines-per-function` prints as OFF,
-          and six functions in shipped source are over the effective
-          max_func_loc of 60, the longest at 109.
+
+          Length is enforced too, as of BUG-007. Six functions were over the
+          effective max_func_loc of 60 -- useForm 100, createIpcClient 98,
+          createResumableUpload 76, createConnectStream 74, useConnectStream 67,
+          useSSE 66. Five are under it now, and every one came down by removing
+          duplication rather than by shaving: the message buffer and the
+          reconnect scheduler that two transports each carried, the in-flight
+          request queue, and the store-to-rune mirror that useForm had written
+          out nine times.
+
+          One documented exception remains. createConnectStream sits at 66 with
+          an `eslint-disable-next-line` carrying its reason in place: the two
+          separable concerns are already extracted, and every further split
+          measured out at about one line for a parameter object and an extra
+          indirection. It is a recorded exception rather than a rule left off
+          for 875 files, and it is visible at the site rather than only here.
       - language: svelte
         state: partial
         runner: eslint
@@ -104,8 +119,9 @@ rules:
           The same `complexity` entry matches packages/*/src/**/*.svelte, so
           component script blocks are bounded.
         rationale: >-
-          One component function was over the cap and was refactored. Length is
-          unbounded here for the same reason as TypeScript.
+          One component function was over the cap and was refactored. The same
+          `max-lines-per-function` entry matches component script blocks, and no
+          component is over it.
 
   - id: HISS-07
     title: Checked Errors

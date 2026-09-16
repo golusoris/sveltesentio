@@ -81,6 +81,15 @@ async function drainStream<TMessage>(
 	return isCurrent();
 }
 
+// 66 lines against a cap of 60, and the remainder is structural rather than
+// slack. What is left is the reconnect wiring, setState, consume,
+// scheduleReconnect and the returned object; the two genuinely separable
+// concerns were already taken out — createReconnectScheduler, which SseClient
+// shares, and drainStream at module scope. Every further split measured out at
+// roughly one line in exchange for a parameter object and an extra indirection,
+// which trades a readable factory for a smaller number. Recorded in
+// .config/hiss/coverage.yaml under HISS-04.
+// eslint-disable-next-line max-lines-per-function -- structural; see above
 export function createConnectStream<TMessage>(
 	options: ConnectStreamOptions<TMessage>,
 ): ConnectStream {
