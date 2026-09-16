@@ -2,7 +2,7 @@
 	"description": "Test helpers: deterministic testClock, a11y lane harness, Superforms + TanStack Query fixtures",
 	"devDependencies": {
 		"@sveltesentio/core": "workspace:*",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^4.1.11"
 	},
 	"exports": {
