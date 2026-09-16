@@ -8,12 +8,12 @@
 
 ## Sub-exports
 
-| Sub-export | Contents |
-|---|---|
-| `./device-class` | `classifyDevice()` → `desktop` / `handheld` / `10foot`; SSR-safe `readDeviceSignals()` |
-| `./dpad` | `computeNextFocus()` geometry, key/gamepad input mappers, `dpadNavigation` Svelte action |
-| `./safe-area` | `safeAreaInset()`, `cssVars()`, logical-property padding helpers |
-| `./pwa` | `registerSW()` wrapper over the optional `virtual:pwa-register` module |
+| Sub-export       | Contents                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `./device-class` | `classifyDevice()` → `desktop` / `handheld` / `10foot`; SSR-safe `readDeviceSignals()`   |
+| `./dpad`         | `computeNextFocus()` geometry, key/gamepad input mappers, `dpadNavigation` Svelte action |
+| `./safe-area`    | `safeAreaInset()`, `cssVars()`, logical-property padding helpers                         |
+| `./pwa`          | `registerSW()` wrapper over the optional `virtual:pwa-register` module                   |
 
 ## Device classification
 
@@ -24,13 +24,13 @@ const cls = classifyDevice(readDeviceSignals());
 // 'desktop' | 'handheld' | '10foot' — feed straight into the ui interface preset.
 ```
 
-| Signals | Result |
-|---|---|
-| `tv: true` (any) | `10foot` |
+| Signals                      | Result               |
+| ---------------------------- | -------------------- |
+| `tv: true` (any)             | `10foot`             |
 | coarse pointer, width ≥ 1280 | `10foot` (TV remote) |
-| coarse pointer, width < 1280 | `handheld` |
-| fine pointer, width < 1024 | `handheld` |
-| fine pointer, width ≥ 1024 | `desktop` |
+| coarse pointer, width < 1280 | `handheld`           |
+| fine pointer, width < 1024   | `handheld`           |
+| fine pointer, width ≥ 1024   | `desktop`            |
 
 ## D-pad / Gamepad focus graph
 
@@ -42,20 +42,20 @@ hold-to-repeat lives upstream (reduced-motion-friendly).
 
 ```svelte
 <script lang="ts">
-  import { dpadNavigation, type FocusCandidate } from '@sveltesentio/shell/dpad';
+	import { dpadNavigation, type FocusCandidate } from '@sveltesentio/shell/dpad';
 
-  let focused = $state<string | null>('home');
-  const candidates = (): FocusCandidate[] => /* live rects from registered cells */ [];
+	let focused = $state<string | null>('home');
+	const candidates = (): FocusCandidate[] => /* live rects from registered cells */ [];
 </script>
 
 <div
-  use:dpadNavigation={{
-    candidates,
-    current: () => focused,
-    focus: (id) => (focused = id),
-  }}
+	use:dpadNavigation={{
+		candidates,
+		current: () => focused,
+		focus: (id) => (focused = id),
+	}}
 >
-  …
+	…
 </div>
 ```
 
@@ -85,8 +85,8 @@ to a no-op and logs a warning rather than throwing. SSR-safe.
 import { registerSW } from '@sveltesentio/shell/pwa';
 
 const update = await registerSW({
-  immediate: true,
-  onNeedRefresh: () => showUpdatePrompt(),
+	immediate: true,
+	onNeedRefresh: () => showUpdatePrompt(),
 });
 // call update() from the prompt to reload into the new service worker.
 ```

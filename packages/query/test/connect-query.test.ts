@@ -80,9 +80,9 @@ describe('connectErrorToProblem — RFC 9457 default mapper', () => {
 	});
 
 	it('maps ResourceExhausted → 429 (so the retry policy treats it as retryable)', () => {
-		expect(connectErrorToProblem(new ConnectError('slow down', Code.ResourceExhausted)).status).toBe(
-			429,
-		);
+		expect(
+			connectErrorToProblem(new ConnectError('slow down', Code.ResourceExhausted)).status,
+		).toBe(429);
 	});
 
 	it('falls back to status 500 + a generated urn for unmapped codes', () => {
@@ -150,7 +150,10 @@ describe('connectQueryOptions — shaped options (pure, no runes)', () => {
 			call: getUserBy(7),
 		});
 		const signal = new AbortController().signal;
-		const queryFn = opts.queryFn as (ctx: { signal: AbortSignal; queryKey: unknown }) => Promise<User>;
+		const queryFn = opts.queryFn as (ctx: {
+			signal: AbortSignal;
+			queryKey: unknown;
+		}) => Promise<User>;
 		const data = await queryFn({ signal, queryKey: ['user', 7] });
 
 		expect(data).toEqual({ id: 7, name: 'Grace' });

@@ -196,8 +196,7 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 		buildProviderOptions(options, mergedParams, mergedProtocols),
 	);
 
-	const unbindAuth =
-		auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
+	const unbindAuth = auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
 
 	const unbindEvents = bindProviderEvents(provider, onStatusChange, onSync);
 

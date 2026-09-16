@@ -15,17 +15,16 @@ export interface PagedResponse<TItem> {
 	total?: number;
 }
 
-export interface InfiniteItemsOptions<TItem, TKey extends QueryKey = QueryKey>
-	extends Omit<
-		CreateInfiniteQueryOptions<
-			PagedResponse<TItem>,
-			ProblemError,
-			InfiniteData<PagedResponse<TItem>>,
-			TKey,
-			string | null
-		>,
-		'queryFn' | 'initialPageParam' | 'getNextPageParam'
-	> {
+export interface InfiniteItemsOptions<TItem, TKey extends QueryKey = QueryKey> extends Omit<
+	CreateInfiniteQueryOptions<
+		PagedResponse<TItem>,
+		ProblemError,
+		InfiniteData<PagedResponse<TItem>>,
+		TKey,
+		string | null
+	>,
+	'queryFn' | 'initialPageParam' | 'getNextPageParam'
+> {
 	queryKey: TKey;
 	queryFn: (cursor: string | null) => Promise<PagedResponse<TItem>>;
 	/** First page cursor (default `null`). */
@@ -65,8 +64,6 @@ export function createInfiniteItems<TItem, TKey extends QueryKey = QueryKey>(
 }
 
 /** Flatten infinite-query pages into a single item array. */
-export function flattenPages<TItem>(
-	data: InfiniteData<PagedResponse<TItem>> | undefined,
-): TItem[] {
+export function flattenPages<TItem>(data: InfiniteData<PagedResponse<TItem>> | undefined): TItem[] {
 	return data?.pages.flatMap((page) => page.items) ?? [];
 }

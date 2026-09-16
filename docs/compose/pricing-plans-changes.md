@@ -11,7 +11,7 @@
 > RFC 9457 ProblemError envelope, and a webhook-driven reconciliation
 > that **never** trusts the client to declare a change applied.
 
-This recipe covers the *change-flow* on top of
+This recipe covers the _change-flow_ on top of
 [payments.md](payments.md) (Stripe Elements/Checkout setup) and
 [billing-usage-metering.md](billing-usage-metering.md) (usage-based
 metering). All three together describe the full revenue surface.
@@ -38,7 +38,7 @@ metering). All three together describe the full revenue surface.
 - [error-boundaries.md](error-boundaries.md) — `card_declined` surfaces
   via ProblemError envelope
 - [ADR-0019](../adr/0019-server-state-discipline.md) — Idempotency-Key
-  + RFC 9457
+  - RFC 9457
 - [ADR-0023](../adr/0023-observability-uuidv7.md) — UUIDv7 + audit log
 
 ## When to use what
@@ -104,53 +104,53 @@ import { z } from 'zod';
 export const PlanTier = z.enum(['free', 'starter', 'pro', 'enterprise']);
 export type PlanTier = z.infer<typeof PlanTier>;
 
-export const ProrationBehavior = z.enum([
-  'create_prorations',
-  'none',
-  'always_invoice',
-]);
+export const ProrationBehavior = z.enum(['create_prorations', 'none', 'always_invoice']);
 
 export const ChangePlanInput = z.object({
-  // Idempotency from caller (UI button click) — matches RFC 9457 contract.
-  idempotencyKey: z.string().uuid(),
-  targetTier: PlanTier,
-  // Per-seat quantity (1 for non-seat plans).
-  quantity: z.number().int().min(1).max(10000),
-  // Proration choice — explicit, never default.
-  prorationBehavior: ProrationBehavior,
-  // Effective date — `null` means "right now". `'period_end'` defers.
-  effective: z.union([z.literal('now'), z.literal('period_end')]),
-  // Optional coupon to apply at the same time.
-  couponId: z.string().min(1).max(64).nullable(),
+	// Idempotency from caller (UI button click) — matches RFC 9457 contract.
+	idempotencyKey: z.string().uuid(),
+	targetTier: PlanTier,
+	// Per-seat quantity (1 for non-seat plans).
+	quantity: z.number().int().min(1).max(10000),
+	// Proration choice — explicit, never default.
+	prorationBehavior: ProrationBehavior,
+	// Effective date — `null` means "right now". `'period_end'` defers.
+	effective: z.union([z.literal('now'), z.literal('period_end')]),
+	// Optional coupon to apply at the same time.
+	couponId: z.string().min(1).max(64).nullable(),
 });
 export type ChangePlanInput = z.infer<typeof ChangePlanInput>;
 
 export const PreviewInput = ChangePlanInput.omit({ idempotencyKey: true });
 
 export const ChangePreview = z.object({
-  immediateChargeCents: z.number().int(),
-  // Negative = credit; positive = charge.
-  nextInvoiceCents: z.number().int(),
-  effectiveAt: z.string().datetime(),
-  lineItems: z.array(z.object({
-    description: z.string(),
-    amountCents: z.number().int(),
-    period: z.object({ start: z.string().datetime(), end: z.string().datetime() }),
-  })).max(20),
-  currency: z.enum(['usd', 'eur', 'gbp']),
+	immediateChargeCents: z.number().int(),
+	// Negative = credit; positive = charge.
+	nextInvoiceCents: z.number().int(),
+	effectiveAt: z.string().datetime(),
+	lineItems: z
+		.array(
+			z.object({
+				description: z.string(),
+				amountCents: z.number().int(),
+				period: z.object({ start: z.string().datetime(), end: z.string().datetime() }),
+			}),
+		)
+		.max(20),
+	currency: z.enum(['usd', 'eur', 'gbp']),
 });
 
 export const CancelInput = z.object({
-  idempotencyKey: z.string().uuid(),
-  when: z.enum(['period_end', 'immediately']),
-  reason: z.enum([
-    'too_expensive',
-    'missing_features',
-    'switched_competitor',
-    'business_closed',
-    'other',
-  ]),
-  feedback: z.string().max(2000).optional(),
+	idempotencyKey: z.string().uuid(),
+	when: z.enum(['period_end', 'immediately']),
+	reason: z.enum([
+		'too_expensive',
+		'missing_features',
+		'switched_competitor',
+		'business_closed',
+		'other',
+	]),
+	feedback: z.string().max(2000).optional(),
 });
 ```
 
@@ -170,39 +170,50 @@ import { ChangePlanInput } from '@sveltesentio/billing';
 import { recordAudit } from '$lib/server/audit';
 
 export async function POST({ request, locals }) {
-  const parsed = ChangePlanInput.pick({ idempotencyKey: true, quantity: true, prorationBehavior: true })
-    .safeParse(await request.json());
-  if (!parsed.success) {
-    return json({ type: 'about:blank', title: 'Invalid', status: 422 }, { status: 422 });
-  }
+	const parsed = ChangePlanInput.pick({
+		idempotencyKey: true,
+		quantity: true,
+		prorationBehavior: true,
+	}).safeParse(await request.json());
+	if (!parsed.success) {
+		return json({ type: 'about:blank', title: 'Invalid', status: 422 }, { status: 422 });
+	}
 
-  const tenant = await db.query(
-    `SELECT stripe_subscription_id, stripe_subscription_item_id FROM tenants WHERE id = $1`,
-    [locals.tenant.id],
-  ).then(r => r.rows[0]);
+	const tenant = await db
+		.query(
+			`SELECT stripe_subscription_id, stripe_subscription_item_id FROM tenants WHERE id = $1`,
+			[locals.tenant.id],
+		)
+		.then((r) => r.rows[0]);
 
-  // Stripe accepts our idempotency key — *and* we record it so a retry
-  // returns the same applied state.
-  const updated = await stripe.subscriptions.update(
-    tenant.stripe_subscription_id,
-    {
-      items: [{
-        id: tenant.stripe_subscription_item_id,
-        quantity: parsed.data.quantity,
-      }],
-      proration_behavior: parsed.data.prorationBehavior,
-    },
-    { idempotencyKey: parsed.data.idempotencyKey },
-  );
+	// Stripe accepts our idempotency key — *and* we record it so a retry
+	// returns the same applied state.
+	const updated = await stripe.subscriptions.update(
+		tenant.stripe_subscription_id,
+		{
+			items: [
+				{
+					id: tenant.stripe_subscription_item_id,
+					quantity: parsed.data.quantity,
+				},
+			],
+			proration_behavior: parsed.data.prorationBehavior,
+		},
+		{ idempotencyKey: parsed.data.idempotencyKey },
+	);
 
-  await recordAudit({
-    tenantId: locals.tenant.id,
-    actor: locals.user.id,
-    action: 'billing.seats.changed',
-    payload: { newQuantity: parsed.data.quantity, prorationBehavior: parsed.data.prorationBehavior, stripeSubscriptionId: updated.id },
-  });
+	await recordAudit({
+		tenantId: locals.tenant.id,
+		actor: locals.user.id,
+		action: 'billing.seats.changed',
+		payload: {
+			newQuantity: parsed.data.quantity,
+			prorationBehavior: parsed.data.prorationBehavior,
+			stripeSubscriptionId: updated.id,
+		},
+	});
 
-  return json({ ok: true, status: updated.status });
+	return json({ ok: true, status: updated.status });
 }
 ```
 
@@ -222,44 +233,48 @@ import { PreviewInput, ChangePreview } from '@sveltesentio/billing';
 import { tierToPriceId } from '$lib/server/billing/catalog';
 
 export async function POST({ request, locals }) {
-  const parsed = PreviewInput.safeParse(await request.json());
-  if (!parsed.success) {
-    return json({ type: 'about:blank', title: 'Invalid', status: 422 }, { status: 422 });
-  }
+	const parsed = PreviewInput.safeParse(await request.json());
+	if (!parsed.success) {
+		return json({ type: 'about:blank', title: 'Invalid', status: 422 }, { status: 422 });
+	}
 
-  const tenant = await db.query(
-    `SELECT stripe_customer_id, stripe_subscription_id, stripe_subscription_item_id FROM tenants WHERE id = $1`,
-    [locals.tenant.id],
-  ).then(r => r.rows[0]);
+	const tenant = await db
+		.query(
+			`SELECT stripe_customer_id, stripe_subscription_id, stripe_subscription_item_id FROM tenants WHERE id = $1`,
+			[locals.tenant.id],
+		)
+		.then((r) => r.rows[0]);
 
-  const upcoming = await stripe.invoices.retrieveUpcoming({
-    customer: tenant.stripe_customer_id,
-    subscription: tenant.stripe_subscription_id,
-    subscription_items: [{
-      id: tenant.stripe_subscription_item_id,
-      price: tierToPriceId(parsed.data.targetTier),
-      quantity: parsed.data.quantity,
-    }],
-    subscription_proration_behavior: parsed.data.prorationBehavior,
-    coupon: parsed.data.couponId ?? undefined,
-  });
+	const upcoming = await stripe.invoices.retrieveUpcoming({
+		customer: tenant.stripe_customer_id,
+		subscription: tenant.stripe_subscription_id,
+		subscription_items: [
+			{
+				id: tenant.stripe_subscription_item_id,
+				price: tierToPriceId(parsed.data.targetTier),
+				quantity: parsed.data.quantity,
+			},
+		],
+		subscription_proration_behavior: parsed.data.prorationBehavior,
+		coupon: parsed.data.couponId ?? undefined,
+	});
 
-  const preview = ChangePreview.parse({
-    immediateChargeCents: upcoming.amount_due,
-    nextInvoiceCents: upcoming.total,
-    effectiveAt: new Date(upcoming.period_end * 1000).toISOString(),
-    lineItems: upcoming.lines.data.slice(0, 20).map(l => ({
-      description: l.description ?? '',
-      amountCents: l.amount,
-      period: {
-        start: new Date(l.period.start * 1000).toISOString(),
-        end: new Date(l.period.end * 1000).toISOString(),
-      },
-    })),
-    currency: upcoming.currency as 'usd' | 'eur' | 'gbp',
-  });
+	const preview = ChangePreview.parse({
+		immediateChargeCents: upcoming.amount_due,
+		nextInvoiceCents: upcoming.total,
+		effectiveAt: new Date(upcoming.period_end * 1000).toISOString(),
+		lineItems: upcoming.lines.data.slice(0, 20).map((l) => ({
+			description: l.description ?? '',
+			amountCents: l.amount,
+			period: {
+				start: new Date(l.period.start * 1000).toISOString(),
+				end: new Date(l.period.end * 1000).toISOString(),
+			},
+		})),
+		currency: upcoming.currency as 'usd' | 'eur' | 'gbp',
+	});
 
-  return json(preview);
+	return json(preview);
 }
 ```
 
@@ -312,12 +327,16 @@ zero. Always offer "cancel now" too — taking it away feels predatory.
 ### 4. Pause (Stripe `pause_collection`)
 
 ```ts
-await stripe.subscriptions.update(tenant.stripe_subscription_id, {
-  pause_collection: {
-    behavior: 'mark_uncollectible', // 'keep_as_draft' | 'mark_uncollectible' | 'void'
-    resumes_at: Math.floor(resumeDate.getTime() / 1000),
-  },
-}, { idempotencyKey });
+await stripe.subscriptions.update(
+	tenant.stripe_subscription_id,
+	{
+		pause_collection: {
+			behavior: 'mark_uncollectible', // 'keep_as_draft' | 'mark_uncollectible' | 'void'
+			resumes_at: Math.floor(resumeDate.getTime() / 1000),
+		},
+	},
+	{ idempotencyKey },
+);
 ```
 
 Use `mark_uncollectible` for "you won't be charged but please come back"
@@ -326,10 +345,14 @@ seasonal pauses. Use `void` to write off accrued invoices.
 ### 5. Trial extension
 
 ```ts
-await stripe.subscriptions.update(tenant.stripe_subscription_id, {
-  trial_end: Math.floor(newTrialEnd.getTime() / 1000),
-  proration_behavior: 'none', // trials don't prorate
-}, { idempotencyKey });
+await stripe.subscriptions.update(
+	tenant.stripe_subscription_id,
+	{
+		trial_end: Math.floor(newTrialEnd.getTime() / 1000),
+		proration_behavior: 'none', // trials don't prorate
+	},
+	{ idempotencyKey },
+);
 ```
 
 Per Stripe docs `trial_end` extension can only push the trial forward;
@@ -341,20 +364,20 @@ plan-change.
 ```ts
 // src/lib/server/billing/catalog.ts
 export const PRICE_CATALOG = {
-  // current
-  starter: 'price_2026_starter_monthly',
-  pro: 'price_2026_pro_monthly',
-  enterprise: 'price_2026_enterprise_monthly',
-  // grandfathered (still sold to existing tenants on these price ids)
-  starter_2024: 'price_2024_starter_monthly',
-  pro_2024: 'price_2024_pro_monthly',
+	// current
+	starter: 'price_2026_starter_monthly',
+	pro: 'price_2026_pro_monthly',
+	enterprise: 'price_2026_enterprise_monthly',
+	// grandfathered (still sold to existing tenants on these price ids)
+	starter_2024: 'price_2024_starter_monthly',
+	pro_2024: 'price_2024_pro_monthly',
 } as const;
 
 export function tierToPriceId(tier: PlanTier, tenantSignupYear?: number): string {
-  if (tenantSignupYear && tenantSignupYear < 2026 && (tier === 'starter' || tier === 'pro')) {
-    return PRICE_CATALOG[`${tier}_2024` as keyof typeof PRICE_CATALOG];
-  }
-  return PRICE_CATALOG[tier];
+	if (tenantSignupYear && tenantSignupYear < 2026 && (tier === 'starter' || tier === 'pro')) {
+		return PRICE_CATALOG[`${tier}_2024` as keyof typeof PRICE_CATALOG];
+	}
+	return PRICE_CATALOG[tier];
 }
 ```
 
@@ -370,7 +393,7 @@ Rules of grandfathering:
 
 ### 7. Dunning (failed-payment recovery)
 
-Stripe's Smart Retries handle the *attempts*; we own the *comms*:
+Stripe's Smart Retries handle the _attempts_; we own the _comms_:
 
 ```ts
 // src/routes/api/webhooks/stripe/+server.ts (excerpt)
@@ -415,14 +438,22 @@ always arrives the day Stripe actually retried.
 
 ```ts
 // Apply at change-time
-await stripe.subscriptions.update(tenant.stripe_subscription_id, {
-  coupon: 'BLACKFRIDAY2026', // or `discounts: [{ coupon: '...' }]`
-}, { idempotencyKey });
+await stripe.subscriptions.update(
+	tenant.stripe_subscription_id,
+	{
+		coupon: 'BLACKFRIDAY2026', // or `discounts: [{ coupon: '...' }]`
+	},
+	{ idempotencyKey },
+);
 
 // Remove a coupon
-await stripe.subscriptions.update(tenant.stripe_subscription_id, {
-  coupon: '', // empty string = remove
-}, { idempotencyKey });
+await stripe.subscriptions.update(
+	tenant.stripe_subscription_id,
+	{
+		coupon: '', // empty string = remove
+	},
+	{ idempotencyKey },
+);
 ```
 
 Coupon governance:
@@ -440,14 +471,22 @@ Coupon governance:
 import type { PlanTier } from '@sveltesentio/billing';
 
 export const PLAN_FEATURES: Record<PlanTier, ReadonlyArray<string>> = {
-  free:       ['view-dashboard'],
-  starter:    ['view-dashboard', 'export-csv', 'invite-up-to-3'],
-  pro:        ['view-dashboard', 'export-csv', 'invite-up-to-50', 'sso', 'audit-log-90d'],
-  enterprise: ['view-dashboard', 'export-csv', 'invite-unlimited', 'sso', 'audit-log-1y', 'sla', 'dedicated-support'],
+	free: ['view-dashboard'],
+	starter: ['view-dashboard', 'export-csv', 'invite-up-to-3'],
+	pro: ['view-dashboard', 'export-csv', 'invite-up-to-50', 'sso', 'audit-log-90d'],
+	enterprise: [
+		'view-dashboard',
+		'export-csv',
+		'invite-unlimited',
+		'sso',
+		'audit-log-1y',
+		'sla',
+		'dedicated-support',
+	],
 };
 
 export function planAllows(plan: PlanTier, feature: string): boolean {
-  return PLAN_FEATURES[plan].includes(feature);
+	return PLAN_FEATURES[plan].includes(feature);
 }
 ```
 
@@ -459,17 +498,17 @@ revalidation.
 
 ## Customer comms (every plan event)
 
-| Event | Template | Subject |
-|---|---|---|
-| Upgrade applied | `plan-upgraded.mjml` | "You're on Pro — welcome" |
-| Downgrade scheduled | `plan-downgrade-scheduled.mjml` | "Your plan changes on May 15" |
-| Cancel scheduled | `cancel-scheduled.mjml` | "We'll miss you — your access ends May 15" |
-| Cancel immediate | `cancel-immediate.mjml` | "Your subscription is cancelled" |
-| Trial ending in 3d | `trial-ending.mjml` | "3 days left in your trial" |
-| Card expiring | `card-expiring.mjml` | "Update your card before May 31" |
-| Payment failed | `dunning-attempt-1.mjml` | "We couldn't process your payment" |
-| Final notice | `dunning-final.mjml` | "Last chance to update your card" |
-| Refund issued | `refund-issued.mjml` | "Your refund is on its way" |
+| Event               | Template                        | Subject                                    |
+| ------------------- | ------------------------------- | ------------------------------------------ |
+| Upgrade applied     | `plan-upgraded.mjml`            | "You're on Pro — welcome"                  |
+| Downgrade scheduled | `plan-downgrade-scheduled.mjml` | "Your plan changes on May 15"              |
+| Cancel scheduled    | `cancel-scheduled.mjml`         | "We'll miss you — your access ends May 15" |
+| Cancel immediate    | `cancel-immediate.mjml`         | "Your subscription is cancelled"           |
+| Trial ending in 3d  | `trial-ending.mjml`             | "3 days left in your trial"                |
+| Card expiring       | `card-expiring.mjml`            | "Update your card before May 31"           |
+| Payment failed      | `dunning-attempt-1.mjml`        | "We couldn't process your payment"         |
+| Final notice        | `dunning-final.mjml`            | "Last chance to update your card"          |
+| Refund issued       | `refund-issued.mjml`            | "Your refund is on its way"                |
 
 All templates live in [structured-emails.md](structured-emails.md);
 plain-text alternates mandatory.
@@ -477,7 +516,7 @@ plain-text alternates mandatory.
 ## Anti-patterns
 
 - **Trusting the client to declare a plan applied.** The button click
-  is *intent*; the `customer.subscription.updated` webhook is *truth*.
+  is _intent_; the `customer.subscription.updated` webhook is _truth_.
   Update the DB only from the webhook handler.
 - **Calling `subscription.update` without an `idempotencyKey`.** Double-
   click on the upgrade button = double charge. Always pass a UUIDv7

@@ -68,7 +68,7 @@ describe('module_lookup against a synthetic packages/ tree', () => {
 		await mkdir(pkgDir);
 		await writeFile(
 			join(pkgDir, 'package.json'),
-			JSON.stringify({ name: '@sveltesentio/widget', exports: { '.': './src/index.ts' } })
+			JSON.stringify({ name: '@sveltesentio/widget', exports: { '.': './src/index.ts' } }),
 		);
 		await writeFile(join(pkgDir, 'AGENTS.md'), '# widget agents');
 		const { isError, text } = await callTool(client, 'module_lookup', { name: 'widget' });

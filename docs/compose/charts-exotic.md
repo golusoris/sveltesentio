@@ -67,22 +67,22 @@ import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { CandlestickChart, GaugeChart } from 'echarts/charts';
 import {
-  GridComponent,
-  TooltipComponent,
-  TitleComponent,
-  AriaComponent,
-  DataZoomComponent,
+	GridComponent,
+	TooltipComponent,
+	TitleComponent,
+	AriaComponent,
+	DataZoomComponent,
 } from 'echarts/components';
 
 use([
-  CanvasRenderer,
-  CandlestickChart,
-  GaugeChart,
-  GridComponent,
-  TooltipComponent,
-  TitleComponent,
-  AriaComponent,
-  DataZoomComponent,
+	CanvasRenderer,
+	CandlestickChart,
+	GaugeChart,
+	GridComponent,
+	TooltipComponent,
+	TitleComponent,
+	AriaComponent,
+	DataZoomComponent,
 ]);
 
 export { init } from 'echarts/core';
@@ -96,102 +96,102 @@ is a silent no-op.
 ```svelte
 <!-- src/lib/charts/CandlestickChart.svelte -->
 <script lang="ts">
-  import { Chart } from 'svelte-echarts';
-  import { init } from '$lib/charts/echarts';
-  import type { EChartsOption } from 'echarts';
+	import { Chart } from 'svelte-echarts';
+	import { init } from '$lib/charts/echarts';
+	import type { EChartsOption } from 'echarts';
 
-  type OHLC = { t: string; o: number; h: number; l: number; c: number };
-  type Props = {
-    data: OHLC[];
-    title: string;
-    description: string;
-  };
+	type OHLC = { t: string; o: number; h: number; l: number; c: number };
+	type Props = {
+		data: OHLC[];
+		title: string;
+		description: string;
+	};
 
-  let { data, title, description }: Props = $props();
-  const descId = `chart-desc-${crypto.randomUUID()}`;
+	let { data, title, description }: Props = $props();
+	const descId = `chart-desc-${crypto.randomUUID()}`;
 
-  const themed = $state<{ fg: string; up: string; down: string }>({
-    fg: '',
-    up: '',
-    down: '',
-  });
+	const themed = $state<{ fg: string; up: string; down: string }>({
+		fg: '',
+		up: '',
+		down: '',
+	});
 
-  $effect(() => {
-    const css = getComputedStyle(document.documentElement);
-    themed.fg = `oklch(${css.getPropertyValue('--color-fg').trim()})`;
-    themed.up = `oklch(${css.getPropertyValue('--color-success').trim()})`;
-    themed.down = `oklch(${css.getPropertyValue('--color-danger').trim()})`;
+	$effect(() => {
+		const css = getComputedStyle(document.documentElement);
+		themed.fg = `oklch(${css.getPropertyValue('--color-fg').trim()})`;
+		themed.up = `oklch(${css.getPropertyValue('--color-success').trim()})`;
+		themed.down = `oklch(${css.getPropertyValue('--color-danger').trim()})`;
 
-    const mq = matchMedia('(prefers-color-scheme: dark)');
-    const refresh = () => {
-      const c = getComputedStyle(document.documentElement);
-      themed.fg = `oklch(${c.getPropertyValue('--color-fg').trim()})`;
-      themed.up = `oklch(${c.getPropertyValue('--color-success').trim()})`;
-      themed.down = `oklch(${c.getPropertyValue('--color-danger').trim()})`;
-    };
-    mq.addEventListener('change', refresh);
-    return () => mq.removeEventListener('change', refresh);
-  });
+		const mq = matchMedia('(prefers-color-scheme: dark)');
+		const refresh = () => {
+			const c = getComputedStyle(document.documentElement);
+			themed.fg = `oklch(${c.getPropertyValue('--color-fg').trim()})`;
+			themed.up = `oklch(${c.getPropertyValue('--color-success').trim()})`;
+			themed.down = `oklch(${c.getPropertyValue('--color-danger').trim()})`;
+		};
+		mq.addEventListener('change', refresh);
+		return () => mq.removeEventListener('change', refresh);
+	});
 
-  const option = $derived<EChartsOption>({
-    aria: {
-      enabled: true,
-      label: { description: `${title}. ${description}` },
-      decal: { show: true },
-    },
-    title: { text: title, textStyle: { color: themed.fg } },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-    xAxis: {
-      type: 'category',
-      data: data.map((d) => d.t),
-      axisLine: { lineStyle: { color: themed.fg } },
-    },
-    yAxis: {
-      scale: true,
-      axisLine: { lineStyle: { color: themed.fg } },
-      splitLine: { lineStyle: { color: themed.fg, opacity: 0.1 } },
-    },
-    dataZoom: [
-      { type: 'inside', start: 50, end: 100 },
-      { type: 'slider', start: 50, end: 100 },
-    ],
-    series: [
-      {
-        name: 'OHLC',
-        type: 'candlestick',
-        data: data.map((d) => [d.o, d.c, d.l, d.h]),
-        itemStyle: {
-          color: themed.up,
-          color0: themed.down,
-          borderColor: themed.up,
-          borderColor0: themed.down,
-        },
-      },
-    ],
-  });
+	const option = $derived<EChartsOption>({
+		aria: {
+			enabled: true,
+			label: { description: `${title}. ${description}` },
+			decal: { show: true },
+		},
+		title: { text: title, textStyle: { color: themed.fg } },
+		tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+		xAxis: {
+			type: 'category',
+			data: data.map((d) => d.t),
+			axisLine: { lineStyle: { color: themed.fg } },
+		},
+		yAxis: {
+			scale: true,
+			axisLine: { lineStyle: { color: themed.fg } },
+			splitLine: { lineStyle: { color: themed.fg, opacity: 0.1 } },
+		},
+		dataZoom: [
+			{ type: 'inside', start: 50, end: 100 },
+			{ type: 'slider', start: 50, end: 100 },
+		],
+		series: [
+			{
+				name: 'OHLC',
+				type: 'candlestick',
+				data: data.map((d) => [d.o, d.c, d.l, d.h]),
+				itemStyle: {
+					color: themed.up,
+					color0: themed.down,
+					borderColor: themed.up,
+					borderColor0: themed.down,
+				},
+			},
+		],
+	});
 </script>
 
 <figure role="img" aria-labelledby="{descId}-title" aria-describedby={descId}>
-  <figcaption id="{descId}-title" class="sr-only">{title}</figcaption>
-  <p id={descId} class="sr-only">{description}</p>
-  <Chart {init} {option} style="width: 100%; height: 400px;" />
-  <table class="sr-only">
-    <caption>{title} data</caption>
-    <thead>
-      <tr><th>Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th></tr>
-    </thead>
-    <tbody>
-      {#each data as row}
-        <tr>
-          <td>{row.t}</td>
-          <td>{row.o}</td>
-          <td>{row.h}</td>
-          <td>{row.l}</td>
-          <td>{row.c}</td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+	<figcaption id="{descId}-title" class="sr-only">{title}</figcaption>
+	<p id={descId} class="sr-only">{description}</p>
+	<Chart {init} {option} style="width: 100%; height: 400px;" />
+	<table class="sr-only">
+		<caption>{title} data</caption>
+		<thead>
+			<tr><th>Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th></tr>
+		</thead>
+		<tbody>
+			{#each data as row}
+				<tr>
+					<td>{row.t}</td>
+					<td>{row.o}</td>
+					<td>{row.h}</td>
+					<td>{row.l}</td>
+					<td>{row.c}</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
 </figure>
 ```
 
@@ -209,32 +209,35 @@ ignored. Without the table, the chart fails WCAG 1.1.1.
 
 ```svelte
 <script lang="ts">
-  import { Chart } from 'svelte-echarts';
-  import { init } from '$lib/charts/echarts';
-  import type { EChartsOption } from 'echarts';
+	import { Chart } from 'svelte-echarts';
+	import { init } from '$lib/charts/echarts';
+	import type { EChartsOption } from 'echarts';
 
-  type Props = { value: number; max: number; title: string; description: string };
-  let { value, max, title, description }: Props = $props();
+	type Props = { value: number; max: number; title: string; description: string };
+	let { value, max, title, description }: Props = $props();
 
-  const option = $derived<EChartsOption>({
-    aria: { enabled: true, label: { description: `${title}. ${description}. Value ${value} of ${max}.` } },
-    series: [
-      {
-        type: 'gauge',
-        min: 0,
-        max,
-        progress: { show: true, width: 18 },
-        axisLine: { lineStyle: { width: 18 } },
-        detail: { formatter: '{value}', fontSize: 24 },
-        data: [{ value, name: title }],
-      },
-    ],
-  });
+	const option = $derived<EChartsOption>({
+		aria: {
+			enabled: true,
+			label: { description: `${title}. ${description}. Value ${value} of ${max}.` },
+		},
+		series: [
+			{
+				type: 'gauge',
+				min: 0,
+				max,
+				progress: { show: true, width: 18 },
+				axisLine: { lineStyle: { width: 18 } },
+				detail: { formatter: '{value}', fontSize: 24 },
+				data: [{ value, name: title }],
+			},
+		],
+	});
 </script>
 
 <figure role="img" aria-label="{title}: {value} of {max}">
-  <Chart {init} {option} style="width: 300px; height: 300px;" />
-  <p class="sr-only">{description}. Current value: {value} of {max}.</p>
+	<Chart {init} {option} style="width: 300px; height: 300px;" />
+	<p class="sr-only">{description}. Current value: {value} of {max}.</p>
 </figure>
 ```
 
@@ -271,13 +274,13 @@ ECharts has no CSS-variable binding. Read tokens at runtime:
 
 ```ts
 function readTokens() {
-  const css = getComputedStyle(document.documentElement);
-  return {
-    fg: `oklch(${css.getPropertyValue('--color-fg').trim()})`,
-    bg: `oklch(${css.getPropertyValue('--color-bg').trim()})`,
-    chart1: `oklch(${css.getPropertyValue('--color-chart-1').trim()})`,
-    chart2: `oklch(${css.getPropertyValue('--color-chart-2').trim()})`,
-  };
+	const css = getComputedStyle(document.documentElement);
+	return {
+		fg: `oklch(${css.getPropertyValue('--color-fg').trim()})`,
+		bg: `oklch(${css.getPropertyValue('--color-bg').trim()})`,
+		chart1: `oklch(${css.getPropertyValue('--color-chart-1').trim()})`,
+		chart2: `oklch(${css.getPropertyValue('--color-chart-2').trim()})`,
+	};
 }
 ```
 
@@ -296,21 +299,23 @@ gzipped. Full build with all types = ~1 MB. Always dynamic-import:
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 
-  let Candlestick = $state<typeof import('$lib/charts/CandlestickChart.svelte').default | null>(null);
+	let Candlestick = $state<typeof import('$lib/charts/CandlestickChart.svelte').default | null>(
+		null,
+	);
 
-  onMount(async () => {
-    ({ default: Candlestick } = await import('$lib/charts/CandlestickChart.svelte'));
-  });
+	onMount(async () => {
+		({ default: Candlestick } = await import('$lib/charts/CandlestickChart.svelte'));
+	});
 
-  let { data, title, description } = $props();
+	let { data, title, description } = $props();
 </script>
 
 {#if Candlestick}
-  <Candlestick {data} {title} {description} />
+	<Candlestick {data} {title} {description} />
 {:else}
-  <p role="status" aria-live="polite">Loading chart…</p>
+	<p role="status" aria-live="polite">Loading chart…</p>
 {/if}
 ```
 
@@ -327,9 +332,9 @@ ECharts animates series entry by default. Honour
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const option = $derived<EChartsOption>({
-  animation: !reduceMotion,
-  animationDuration: reduceMotion ? 0 : 300,
-  // …
+	animation: !reduceMotion,
+	animationDuration: reduceMotion ? 0 : 300,
+	// …
 });
 ```
 
@@ -343,20 +348,20 @@ import { axe } from 'jest-axe';
 import CandlestickChart from '$lib/charts/CandlestickChart.svelte';
 
 test('candlestick chart is axe-clean', async () => {
-  const data = [{ t: '2026-01-01', o: 100, h: 110, l: 95, c: 105 }];
-  const { container } = render(CandlestickChart, {
-    props: { data, title: 'AAPL', description: 'Daily OHLC, January 2026.' },
-  });
-  expect(await axe(container)).toHaveNoViolations();
+	const data = [{ t: '2026-01-01', o: 100, h: 110, l: 95, c: 105 }];
+	const { container } = render(CandlestickChart, {
+		props: { data, title: 'AAPL', description: 'Daily OHLC, January 2026.' },
+	});
+	expect(await axe(container)).toHaveNoViolations();
 });
 
 test('table fallback is populated', () => {
-  const data = [{ t: '2026-01-01', o: 100, h: 110, l: 95, c: 105 }];
-  const { getByText } = render(CandlestickChart, {
-    props: { data, title: 'AAPL', description: 'Daily OHLC.' },
-  });
-  expect(getByText('2026-01-01')).toBeInTheDocument();
-  expect(getByText('110')).toBeInTheDocument();
+	const data = [{ t: '2026-01-01', o: 100, h: 110, l: 95, c: 105 }];
+	const { getByText } = render(CandlestickChart, {
+		props: { data, title: 'AAPL', description: 'Daily OHLC.' },
+	});
+	expect(getByText('2026-01-01')).toBeInTheDocument();
+	expect(getByText('110')).toBeInTheDocument();
 });
 ```
 

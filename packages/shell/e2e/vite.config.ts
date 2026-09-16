@@ -6,13 +6,13 @@ import { defineConfig } from 'vite';
 // framework-agnostic `dpadNavigation` action directly, sidestepping
 // Playwright-CT-for-Svelte-5 support gaps.
 export default defineConfig({
-  root: new URL('./app', import.meta.url).pathname,
-  server: {
-    port: 4317,
-    strictPort: true,
-  },
-  preview: {
-    port: 4317,
-    strictPort: true,
-  },
+	root: new URL('./app', import.meta.url).pathname,
+	server: {
+		port: 4317,
+		strictPort: true,
+	},
+	preview: {
+		port: 4317,
+		strictPort: true,
+	},
 });

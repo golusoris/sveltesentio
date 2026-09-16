@@ -23,8 +23,10 @@ import type {
 import type { Handle } from '@sveltejs/kit';
 
 /** Inputs the login route supplies beyond the generated PKCE/state secrets. */
-export interface LoginRedirectInit
-	extends Pick<AuthorizationUrlInit, 'clientId' | 'redirectUri' | 'scope'> {
+export interface LoginRedirectInit extends Pick<
+	AuthorizationUrlInit,
+	'clientId' | 'redirectUri' | 'scope'
+> {
 	issuer: string;
 	state: string;
 	nonce: string;

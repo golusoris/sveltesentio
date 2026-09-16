@@ -31,10 +31,9 @@ export const CHART_PALETTE_SIZE = CHART_OKLCH_FALLBACKS.length;
 // from a non-empty constant, so the assertion the type now carries is one the
 // construction already guarantees — which is what lets chartSeriesColor drop
 // its non-null assertions rather than move them.
-export const chartPalette: readonly [string, ...string[]] =
-	CHART_OKLCH_FALLBACKS.map(
-		(fallback, i) => `var(--color-chart-${i + 1}, ${fallback})`,
-	) as [string, ...string[]];
+export const chartPalette: readonly [string, ...string[]] = CHART_OKLCH_FALLBACKS.map(
+	(fallback, i) => `var(--color-chart-${i + 1}, ${fallback})`,
+) as [string, ...string[]];
 
 /**
  * Resolve the semantic color for series `index` (0-based). Wraps around the

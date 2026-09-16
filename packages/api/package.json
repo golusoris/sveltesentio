@@ -1,68 +1,68 @@
 {
-  "bin": {
-    "sveltesentio-codegen": "./src/codegen-bin.ts"
-  },
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "description": "Typed openapi-fetch client wired with core's RFC 9457 problemMiddleware + an openapi-typescript codegen recipe",
-  "devDependencies": {
-    "openapi-fetch": "^0.17.0",
-    "openapi-typescript": "^7.13.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./auth-middleware": {
-      "import": "./src/auth-middleware.ts",
-      "types": "./src/auth-middleware.ts"
-    },
-    "./client": {
-      "import": "./src/client.ts",
-      "types": "./src/client.ts"
-    },
-    "./codegen": {
-      "import": "./src/codegen.ts",
-      "types": "./src/codegen.ts"
-    }
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ],
-  "keywords": [
-    "sveltesentio",
-    "api",
-    "openapi",
-    "openapi-fetch",
-    "rfc9457",
-    "rest"
-  ],
-  "name": "@sveltesentio/api",
-  "peerDependencies": {
-    "openapi-fetch": ">=0.17.0",
-    "openapi-typescript": ">=7.0.0"
-  },
-  "peerDependenciesMeta": {
-    "openapi-typescript": {
-      "optional": true
-    }
-  },
-  "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
-  },
-  "sideEffects": false,
-  "type": "module",
-  "version": "0.3.0"
+	"bin": {
+		"sveltesentio-codegen": "./src/codegen-bin.ts"
+	},
+	"dependencies": {
+		"@sveltesentio/core": "workspace:*"
+	},
+	"description": "Typed openapi-fetch client wired with core's RFC 9457 problemMiddleware + an openapi-typescript codegen recipe",
+	"devDependencies": {
+		"openapi-fetch": "^0.17.0",
+		"openapi-typescript": "^7.13.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.11"
+	},
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		},
+		"./auth-middleware": {
+			"import": "./src/auth-middleware.ts",
+			"types": "./src/auth-middleware.ts"
+		},
+		"./client": {
+			"import": "./src/client.ts",
+			"types": "./src/client.ts"
+		},
+		"./codegen": {
+			"import": "./src/codegen.ts",
+			"types": "./src/codegen.ts"
+		}
+	},
+	"files": [
+		"src",
+		"CHANGELOG.md"
+	],
+	"keywords": [
+		"sveltesentio",
+		"api",
+		"openapi",
+		"openapi-fetch",
+		"rfc9457",
+		"rest"
+	],
+	"name": "@sveltesentio/api",
+	"peerDependencies": {
+		"openapi-fetch": ">=0.17.0",
+		"openapi-typescript": ">=7.0.0"
+	},
+	"peerDependenciesMeta": {
+		"openapi-typescript": {
+			"optional": true
+		}
+	},
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"test": "vitest run --coverage",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"version": "0.3.0"
 }

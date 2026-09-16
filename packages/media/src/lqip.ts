@@ -21,7 +21,9 @@ export interface LqipPlaceholder {
  * a colour-only placeholder becomes a flat fill. Returns `undefined` when no
  * placeholder is supplied, so the caller can omit the layer entirely.
  */
-export function buildPlaceholderStyle(placeholder: LqipPlaceholder | undefined): string | undefined {
+export function buildPlaceholderStyle(
+	placeholder: LqipPlaceholder | undefined,
+): string | undefined {
 	if (placeholder === undefined) return undefined;
 	const { src, color } = placeholder;
 	if (src !== undefined && src !== '') {

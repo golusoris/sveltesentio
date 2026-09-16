@@ -25,9 +25,7 @@ describe('resolveSeriesColors', () => {
 	});
 
 	it('preserves an explicit color', () => {
-		const out = resolveSeriesColors([
-			{ key: 'x', data: [], color: 'tomato' },
-		]);
+		const out = resolveSeriesColors([{ key: 'x', data: [], color: 'tomato' }]);
 		expect(out[0]?.color).toBe('tomato');
 	});
 

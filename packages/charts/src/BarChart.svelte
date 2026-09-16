@@ -9,11 +9,7 @@ the same `series` + `x`/`y` accessors that drive the visual.
 <script lang="ts" generics="TDatum">
 	import { BarChart as LcBarChart } from 'layerchart';
 	import ChartFigure from './ChartFigure.svelte';
-	import {
-		resolveSeriesColors,
-		toFigureSeries,
-		type CartesianSeries,
-	} from './chart-series.js';
+	import { resolveSeriesColors, toFigureSeries, type CartesianSeries } from './chart-series.js';
 	import type { ChartAccessors, BuildTableOptions } from './a11y-table.js';
 	import { dashboardPreset, prefersReducedMotion } from './preset.js';
 

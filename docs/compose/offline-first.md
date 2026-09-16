@@ -69,32 +69,32 @@ queries, or schema migrations across many versions.
 import { z } from 'zod';
 
 export const SyncStatus = z.enum([
-  'pending',   // local only, not yet sent
-  'syncing',   // in flight
-  'synced',    // server ack'd
-  'conflict',  // server rejected or returned divergence
-  'failed',    // permanent failure after retries
+	'pending', // local only, not yet sent
+	'syncing', // in flight
+	'synced', // server ack'd
+	'conflict', // server rejected or returned divergence
+	'failed', // permanent failure after retries
 ]);
 export type SyncStatus = z.infer<typeof SyncStatus>;
 
 export const ConflictStrategy = z.enum([
-  'last_write_wins',
-  'server_wins',
-  'client_wins',
-  'manual_merge',
-  'crdt',
+	'last_write_wins',
+	'server_wins',
+	'client_wins',
+	'manual_merge',
+	'crdt',
 ]);
 export type ConflictStrategy = z.infer<typeof ConflictStrategy>;
 
 export const PendingMutation = z.object({
-  id: z.string().uuid(),            // UUIDv7 — order-preserving
-  resource: z.string(),             // bounded enum in real code
-  op: z.enum(['create', 'update', 'delete']),
-  payload: z.unknown(),
-  baseVersion: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  attemptCount: z.number().int().min(0),
-  lastError: z.string().nullable(),
+	id: z.string().uuid(), // UUIDv7 — order-preserving
+	resource: z.string(), // bounded enum in real code
+	op: z.enum(['create', 'update', 'delete']),
+	payload: z.unknown(),
+	baseVersion: z.string().nullable(),
+	createdAt: z.string().datetime(),
+	attemptCount: z.number().int().min(0),
+	lastError: z.string().nullable(),
 });
 export type PendingMutation = z.infer<typeof PendingMutation>;
 ```
@@ -107,44 +107,44 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { PendingMutation, SyncStatus } from './types';
 
 interface AppDB extends DBSchema {
-  documents: {
-    key: string;
-    value: {
-      id: string;
-      version: string;           // server-assigned ETag/version
-      data: unknown;
-      status: SyncStatus;
-      updatedAt: string;
-    };
-    indexes: { 'by-status': SyncStatus };
-  };
-  mutations: {
-    key: string;
-    value: PendingMutation;
-    indexes: { 'by-created': string };
-  };
-  meta: {
-    key: string;
-    value: { key: string; value: unknown };
-  };
+	documents: {
+		key: string;
+		value: {
+			id: string;
+			version: string; // server-assigned ETag/version
+			data: unknown;
+			status: SyncStatus;
+			updatedAt: string;
+		};
+		indexes: { 'by-status': SyncStatus };
+	};
+	mutations: {
+		key: string;
+		value: PendingMutation;
+		indexes: { 'by-created': string };
+	};
+	meta: {
+		key: string;
+		value: { key: string; value: unknown };
+	};
 }
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<AppDB>> {
-  if (dbPromise) return dbPromise;
-  dbPromise = openDB<AppDB>('sveltesentio', 1, {
-    upgrade(db) {
-      const docs = db.createObjectStore('documents', { keyPath: 'id' });
-      docs.createIndex('by-status', 'status');
+	if (dbPromise) return dbPromise;
+	dbPromise = openDB<AppDB>('sveltesentio', 1, {
+		upgrade(db) {
+			const docs = db.createObjectStore('documents', { keyPath: 'id' });
+			docs.createIndex('by-status', 'status');
 
-      const muts = db.createObjectStore('mutations', { keyPath: 'id' });
-      muts.createIndex('by-created', 'createdAt');
+			const muts = db.createObjectStore('mutations', { keyPath: 'id' });
+			muts.createIndex('by-created', 'createdAt');
 
-      db.createObjectStore('meta', { keyPath: 'key' });
-    },
-  });
-  return dbPromise;
+			db.createObjectStore('meta', { keyPath: 'key' });
+		},
+	});
+	return dbPromise;
 }
 ```
 
@@ -168,38 +168,38 @@ import { getDB } from './db';
 import type { PendingMutation } from './types';
 
 export async function mutateLocal(
-  input: Omit<PendingMutation, 'id' | 'createdAt' | 'attemptCount' | 'lastError'>,
+	input: Omit<PendingMutation, 'id' | 'createdAt' | 'attemptCount' | 'lastError'>,
 ): Promise<string> {
-  const db = await getDB();
-  const tx = db.transaction(['documents', 'mutations'], 'readwrite');
-  const mutId = uuidv7();
+	const db = await getDB();
+	const tx = db.transaction(['documents', 'mutations'], 'readwrite');
+	const mutId = uuidv7();
 
-  const docId = resolveDocId(input);
-  const existing = await tx.objectStore('documents').get(docId);
+	const docId = resolveDocId(input);
+	const existing = await tx.objectStore('documents').get(docId);
 
-  const nextVersion = `local:${mutId}`;
-  await tx.objectStore('documents').put({
-    id: docId,
-    version: nextVersion,
-    data: applyOp(existing?.data, input),
-    status: 'pending',
-    updatedAt: new Date().toISOString(),
-  });
+	const nextVersion = `local:${mutId}`;
+	await tx.objectStore('documents').put({
+		id: docId,
+		version: nextVersion,
+		data: applyOp(existing?.data, input),
+		status: 'pending',
+		updatedAt: new Date().toISOString(),
+	});
 
-  await tx.objectStore('mutations').put({
-    id: mutId,
-    resource: input.resource,
-    op: input.op,
-    payload: input.payload,
-    baseVersion: existing?.version ?? null,
-    createdAt: new Date().toISOString(),
-    attemptCount: 0,
-    lastError: null,
-  });
+	await tx.objectStore('mutations').put({
+		id: mutId,
+		resource: input.resource,
+		op: input.op,
+		payload: input.payload,
+		baseVersion: existing?.version ?? null,
+		createdAt: new Date().toISOString(),
+		attemptCount: 0,
+		lastError: null,
+	});
 
-  await tx.done;
-  queueMicrotask(() => kickSyncWorker());
-  return mutId;
+	await tx.done;
+	queueMicrotask(() => kickSyncWorker());
+	return mutId;
 }
 ```
 
@@ -229,40 +229,40 @@ import { apiFetch } from '$lib/api/client'; // openapi-fetch — see http-client
 let running = false;
 
 export async function runSyncWorker(): Promise<void> {
-  if (running || !navigator.onLine) return;
-  running = true;
-  try {
-    const db = await getDB();
-    const pending = await db.getAllFromIndex('mutations', 'by-created');
-    for (const mut of pending) {
-      await replayOne(mut);
-    }
-  } finally {
-    running = false;
-  }
+	if (running || !navigator.onLine) return;
+	running = true;
+	try {
+		const db = await getDB();
+		const pending = await db.getAllFromIndex('mutations', 'by-created');
+		for (const mut of pending) {
+			await replayOne(mut);
+		}
+	} finally {
+		running = false;
+	}
 }
 
 async function replayOne(mut: PendingMutation): Promise<void> {
-  const db = await getDB();
-  try {
-    const res = await apiFetch(mut.resource, {
-      method: methodFor(mut.op),
-      body: JSON.stringify(mut.payload),
-      headers: {
-        'Idempotency-Key': mut.id,
-        'If-Match': mut.baseVersion ?? '*',
-      },
-    });
-    if (res.status === 409) {
-      await recordConflict(mut, await res.json());
-      return;
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const body = await res.json();
-    await applyServerAck(mut, body);
-  } catch (err) {
-    await recordAttempt(mut, err);
-  }
+	const db = await getDB();
+	try {
+		const res = await apiFetch(mut.resource, {
+			method: methodFor(mut.op),
+			body: JSON.stringify(mut.payload),
+			headers: {
+				'Idempotency-Key': mut.id,
+				'If-Match': mut.baseVersion ?? '*',
+			},
+		});
+		if (res.status === 409) {
+			await recordConflict(mut, await res.json());
+			return;
+		}
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const body = await res.json();
+		await applyServerAck(mut, body);
+	} catch (err) {
+		await recordAttempt(mut, err);
+	}
 }
 ```
 
@@ -291,34 +291,31 @@ Seven sync-worker rules:
 import type { ConflictStrategy } from './types';
 
 export interface ConflictInput {
-  local: unknown;
-  server: unknown;
-  ancestor: unknown | null;
-  mutation: PendingMutation;
+	local: unknown;
+	server: unknown;
+	ancestor: unknown | null;
+	mutation: PendingMutation;
 }
 
 export type ConflictResult =
-  | { action: 'apply_server' }
-  | { action: 'apply_local' }
-  | { action: 'merged'; value: unknown }
-  | { action: 'needs_user' };
+	| { action: 'apply_server' }
+	| { action: 'apply_local' }
+	| { action: 'merged'; value: unknown }
+	| { action: 'needs_user' };
 
-export function resolve(
-  strategy: ConflictStrategy,
-  input: ConflictInput,
-): ConflictResult {
-  switch (strategy) {
-    case 'last_write_wins':
-      return { action: 'apply_server' };
-    case 'server_wins':
-      return { action: 'apply_server' };
-    case 'client_wins':
-      return { action: 'apply_local' };
-    case 'manual_merge':
-      return { action: 'needs_user' };
-    case 'crdt':
-      throw new Error('CRDT conflicts are resolved by Yjs — see collab-persistence.md');
-  }
+export function resolve(strategy: ConflictStrategy, input: ConflictInput): ConflictResult {
+	switch (strategy) {
+		case 'last_write_wins':
+			return { action: 'apply_server' };
+		case 'server_wins':
+			return { action: 'apply_server' };
+		case 'client_wins':
+			return { action: 'apply_local' };
+		case 'manual_merge':
+			return { action: 'needs_user' };
+		case 'crdt':
+			throw new Error('CRDT conflicts are resolved by Yjs — see collab-persistence.md');
+	}
 }
 ```
 
@@ -341,77 +338,75 @@ Five conflict-strategy rules:
 ```svelte
 <!-- src/lib/sync/ConflictDialog.svelte -->
 <script lang="ts">
-  import { Dialog, DialogContent } from '$lib/ui/dialog';
-  import * as m from '$lib/paraglide/messages';
+	import { Dialog, DialogContent } from '$lib/ui/dialog';
+	import * as m from '$lib/paraglide/messages';
 
-  type Props = {
-    open: boolean;
-    local: Record<string, unknown>;
-    server: Record<string, unknown>;
-    ancestor: Record<string, unknown> | null;
-    onResolve: (merged: Record<string, unknown>) => void;
-    onCancel: () => void;
-  };
-  const { open, local, server, ancestor, onResolve, onCancel }: Props = $props();
+	type Props = {
+		open: boolean;
+		local: Record<string, unknown>;
+		server: Record<string, unknown>;
+		ancestor: Record<string, unknown> | null;
+		onResolve: (merged: Record<string, unknown>) => void;
+		onCancel: () => void;
+	};
+	const { open, local, server, ancestor, onResolve, onCancel }: Props = $props();
 
-  const fieldKeys = $derived(
-    Array.from(new Set([...Object.keys(local), ...Object.keys(server)])),
-  );
-  const selections = $state<Record<string, 'local' | 'server'>>({});
+	const fieldKeys = $derived(Array.from(new Set([...Object.keys(local), ...Object.keys(server)])));
+	const selections = $state<Record<string, 'local' | 'server'>>({});
 
-  function applyMerge() {
-    const merged: Record<string, unknown> = {};
-    for (const k of fieldKeys) {
-      merged[k] = selections[k] === 'server' ? server[k] : local[k];
-    }
-    onResolve(merged);
-  }
+	function applyMerge() {
+		const merged: Record<string, unknown> = {};
+		for (const k of fieldKeys) {
+			merged[k] = selections[k] === 'server' ? server[k] : local[k];
+		}
+		onResolve(merged);
+	}
 </script>
 
 <Dialog {open} onClose={onCancel}>
-  <DialogContent aria-label={m.conflict_dialog_title()}>
-    <h2>{m.conflict_dialog_title()}</h2>
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">{m.field()}</th>
-          <th scope="col">{m.local_version()}</th>
-          <th scope="col">{m.server_version()}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each fieldKeys as key (key)}
-          <tr>
-            <th scope="row">{key}</th>
-            <td>
-              <label>
-                <input
-                  type="radio"
-                  name={`field-${key}`}
-                  checked={selections[key] === 'local'}
-                  onchange={() => (selections[key] = 'local')}
-                />
-                {String(local[key])}
-              </label>
-            </td>
-            <td>
-              <label>
-                <input
-                  type="radio"
-                  name={`field-${key}`}
-                  checked={selections[key] === 'server'}
-                  onchange={() => (selections[key] = 'server')}
-                />
-                {String(server[key])}
-              </label>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-    <button onclick={applyMerge}>{m.conflict_dialog_apply()}</button>
-    <button onclick={onCancel}>{m.cancel()}</button>
-  </DialogContent>
+	<DialogContent aria-label={m.conflict_dialog_title()}>
+		<h2>{m.conflict_dialog_title()}</h2>
+		<table>
+			<thead>
+				<tr>
+					<th scope="col">{m.field()}</th>
+					<th scope="col">{m.local_version()}</th>
+					<th scope="col">{m.server_version()}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each fieldKeys as key (key)}
+					<tr>
+						<th scope="row">{key}</th>
+						<td>
+							<label>
+								<input
+									type="radio"
+									name={`field-${key}`}
+									checked={selections[key] === 'local'}
+									onchange={() => (selections[key] = 'local')}
+								/>
+								{String(local[key])}
+							</label>
+						</td>
+						<td>
+							<label>
+								<input
+									type="radio"
+									name={`field-${key}`}
+									checked={selections[key] === 'server'}
+									onchange={() => (selections[key] = 'server')}
+								/>
+								{String(server[key])}
+							</label>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+		<button onclick={applyMerge}>{m.conflict_dialog_apply()}</button>
+		<button onclick={onCancel}>{m.cancel()}</button>
+	</DialogContent>
 </Dialog>
 ```
 
@@ -432,24 +427,25 @@ Five manual-merge UI rules:
 ```svelte
 <!-- src/lib/sync/SyncBadge.svelte -->
 <script lang="ts">
-  import { syncSummary } from '$lib/sync/store.svelte';
-  import * as m from '$lib/paraglide/messages';
+	import { syncSummary } from '$lib/sync/store.svelte';
+	import * as m from '$lib/paraglide/messages';
 
-  const summary = $derived(syncSummary.value);
+	const summary = $derived(syncSummary.value);
 </script>
 
 {#if !summary.online}
-  <div role="status" aria-live="polite" class="badge-offline">
-    {m.offline()} — {summary.pending} {m.pending_mutations()}
-  </div>
+	<div role="status" aria-live="polite" class="badge-offline">
+		{m.offline()} — {summary.pending}
+		{m.pending_mutations()}
+	</div>
 {:else if summary.pending > 0}
-  <div role="status" aria-live="polite" class="badge-syncing">
-    {m.syncing()} ({summary.pending})
-  </div>
+	<div role="status" aria-live="polite" class="badge-syncing">
+		{m.syncing()} ({summary.pending})
+	</div>
 {:else if summary.conflicts > 0}
-  <button class="badge-conflict" onclick={summary.openConflicts}>
-    {m.conflicts_need_review(summary.conflicts)}
-  </button>
+	<button class="badge-conflict" onclick={summary.openConflicts}>
+		{m.conflicts_need_review(summary.conflicts)}
+	</button>
 {/if}
 ```
 
@@ -472,19 +468,19 @@ Six indicator rules:
 ```ts
 // src/lib/sync/quota.ts
 export async function checkStorageQuota(): Promise<{
-  used: number;
-  quota: number;
-  percent: number;
+	used: number;
+	quota: number;
+	percent: number;
 }> {
-  const est = await navigator.storage.estimate();
-  const used = est.usage ?? 0;
-  const quota = est.quota ?? 0;
-  return { used, quota, percent: quota > 0 ? (used / quota) * 100 : 0 };
+	const est = await navigator.storage.estimate();
+	const used = est.usage ?? 0;
+	const quota = est.quota ?? 0;
+	return { used, quota, percent: quota > 0 ? (used / quota) * 100 : 0 };
 }
 
 export async function requestPersistence(): Promise<boolean> {
-  if (!navigator.storage?.persist) return false;
-  return navigator.storage.persist();
+	if (!navigator.storage?.persist) return false;
+	return navigator.storage.persist();
 }
 ```
 
@@ -531,7 +527,8 @@ Bounded attributes (never free-form IDs as labels):
 - `sync.conflict.strategy` — bounded enum
 
 Alert on: `sync.outcome == 'failed'` rate > 1 %/5min, conflict rate
->5 %/hour, queue_size > 100 per user.
+
+> 5 %/hour, queue_size > 100 per user.
 
 ## Testing
 
@@ -542,24 +539,32 @@ import 'fake-indexeddb/auto';
 import { mutateLocal, runSyncWorker } from './index';
 
 beforeEach(() => {
-  indexedDB.deleteDatabase('sveltesentio');
+	indexedDB.deleteDatabase('sveltesentio');
 });
 
 describe('mutateLocal', () => {
-  it('stores doc and mutation atomically', async () => {
-    const id = await mutateLocal({
-      resource: 'notes',
-      op: 'create',
-      payload: { title: 'a' },
-      baseVersion: null,
-    });
-    expect(id).toMatch(/^[0-9a-f-]{36}$/);
-  });
+	it('stores doc and mutation atomically', async () => {
+		const id = await mutateLocal({
+			resource: 'notes',
+			op: 'create',
+			payload: { title: 'a' },
+			baseVersion: null,
+		});
+		expect(id).toMatch(/^[0-9a-f-]{36}$/);
+	});
 
-  it('replays queued mutations in createdAt order', async () => { /* ... */ });
-  it('marks 409 as conflict without retrying', async () => { /* ... */ });
-  it('retries 5xx with backoff', async () => { /* ... */ });
-  it('caps at 10 attempts then marks failed', async () => { /* ... */ });
+	it('replays queued mutations in createdAt order', async () => {
+		/* ... */
+	});
+	it('marks 409 as conflict without retrying', async () => {
+		/* ... */
+	});
+	it('retries 5xx with backoff', async () => {
+		/* ... */
+	});
+	it('caps at 10 attempts then marks failed', async () => {
+		/* ... */
+	});
 });
 ```
 

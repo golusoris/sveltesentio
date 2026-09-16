@@ -34,9 +34,7 @@
 		},
 	];
 
-	const single: CartesianSeries<RegionPoint>[] = [
-		{ key: 'q1', label: 'Q1', data: series[0].data },
-	];
+	const single: CartesianSeries<RegionPoint>[] = [{ key: 'q1', label: 'Q1', data: series[0].data }];
 
 	const { Story } = defineMeta({
 		title: 'charts/BarChart',

@@ -58,36 +58,36 @@ import { WebrtcProvider } from 'y-webrtc';
 import { browser } from '$app/environment';
 
 export function connectFlowP2P(flowId: string, token: string) {
-  if (!browser) throw new Error('collab client-only');
+	if (!browser) throw new Error('collab client-only');
 
-  const doc = new Y.Doc();
-  const provider = new WebrtcProvider(`flow:${flowId}`, doc, {
-    signaling: ['wss://signal.example.com/collab/signal'],
-    password: token,           // PBKDF2-derived key; see "Room auth"
-    maxConns: 20,
-    filterBcConns: true,
-    peerOpts: {
-      config: {
-        iceServers: [
-          { urls: ['stun:stun.example.com:3478'] },
-          {
-            urls: ['turn:turn.example.com:3478'],
-            username: token,
-            credential: token,
-          },
-        ],
-      },
-    },
-  });
+	const doc = new Y.Doc();
+	const provider = new WebrtcProvider(`flow:${flowId}`, doc, {
+		signaling: ['wss://signal.example.com/collab/signal'],
+		password: token, // PBKDF2-derived key; see "Room auth"
+		maxConns: 20,
+		filterBcConns: true,
+		peerOpts: {
+			config: {
+				iceServers: [
+					{ urls: ['stun:stun.example.com:3478'] },
+					{
+						urls: ['turn:turn.example.com:3478'],
+						username: token,
+						credential: token,
+					},
+				],
+			},
+		},
+	});
 
-  return {
-    doc,
-    provider,
-    destroy() {
-      provider.destroy();
-      doc.destroy();
-    },
-  };
+	return {
+		doc,
+		provider,
+		destroy() {
+			provider.destroy();
+			doc.destroy();
+		},
+	};
 }
 ```
 
@@ -112,12 +112,12 @@ server-minted tokens:
 ```ts
 // +layout.server.ts
 export const load = async ({ locals, params }) => {
-  const token = await locals.golusoris.mintCollabToken({
-    roomId: `flow:${params.flowId}`,
-    ttl: 60 * 60,                 // 1 h
-    permissions: ['read', 'write'],
-  });
-  return { flowId: params.flowId, token };
+	const token = await locals.golusoris.mintCollabToken({
+		roomId: `flow:${params.flowId}`,
+		ttl: 60 * 60, // 1 h
+		permissions: ['read', 'write'],
+	});
+	return { flowId: params.flowId, token };
 };
 ```
 
@@ -138,7 +138,7 @@ const { awareness } = provider;
 awareness.setLocalStateField('user', { name, color });
 
 awareness.on('change', () => {
-  peers = Array.from(awareness.getStates().values());
+	peers = Array.from(awareness.getStates().values());
 });
 ```
 
@@ -158,8 +158,8 @@ import { WebrtcProvider } from 'y-webrtc';
 const doc = new Y.Doc();
 const ws = new WebsocketProvider('/collab', flowId, doc);
 const p2p = new WebrtcProvider(`flow:${flowId}`, doc, {
-  signaling: ['wss://signal.example.com/collab/signal'],
-  password: token,
+	signaling: ['wss://signal.example.com/collab/signal'],
+	password: token,
 });
 ```
 
@@ -179,14 +179,14 @@ const p2p = prefersReduced ? null : new WebrtcProvider(...);
 Peer identity is not cryptographically verified beyond the shared
 `password`. Risks:
 
-| Risk | Mitigation |
-|---|---|
-| Anyone with room name + signaling URL joins mesh | Server-minted tokens (above) |
-| Payload eavesdropping in signaling | TLS on signaling endpoint |
-| Payload eavesdropping peer-to-peer | `password` → symmetric crypto on Yjs updates |
-| Malicious peer ships corrupt CRDT | Yjs is merge-robust; corruption rewrites tombstones |
-| Malicious peer floods awareness | Rate-limit server-side per token; revoke |
-| TURN credential reuse | Ephemeral credentials (per-room, short TTL) |
+| Risk                                             | Mitigation                                          |
+| ------------------------------------------------ | --------------------------------------------------- |
+| Anyone with room name + signaling URL joins mesh | Server-minted tokens (above)                        |
+| Payload eavesdropping in signaling               | TLS on signaling endpoint                           |
+| Payload eavesdropping peer-to-peer               | `password` → symmetric crypto on Yjs updates        |
+| Malicious peer ships corrupt CRDT                | Yjs is merge-robust; corruption rewrites tombstones |
+| Malicious peer floods awareness                  | Rate-limit server-side per token; revoke            |
+| TURN credential reuse                            | Ephemeral credentials (per-room, short TTL)         |
 
 The model suits trusted-mesh scenarios (internal team docs); **not**
 suitable for open-room publishing. For public docs, WS + server-side
@@ -198,13 +198,13 @@ WebRTC requires permissive CSP. Add to `hooks.server.ts`:
 
 ```ts
 const cspDirectives = {
-  'connect-src': [
-    "'self'",
-    'wss://signal.example.com',
-    'wss:',                     // WebRTC SDP over signaling
-    'stun:stun.example.com:*',
-    'turn:turn.example.com:*',
-  ],
+	'connect-src': [
+		"'self'",
+		'wss://signal.example.com',
+		'wss:', // WebRTC SDP over signaling
+		'stun:stun.example.com:*',
+		'turn:turn.example.com:*',
+	],
 };
 ```
 
@@ -217,22 +217,22 @@ P2P connect latency is 1–3 s on first peer. Show state:
 
 ```svelte
 <script lang="ts">
-  let status = $state<'connecting' | 'connected' | 'isolated'>('connecting');
+	let status = $state<'connecting' | 'connected' | 'isolated'>('connecting');
 
-  $effect(() => {
-    const onPeers = ({ webrtcPeers }: { webrtcPeers: string[] }) => {
-      status = webrtcPeers.length > 0 ? 'connected' : 'isolated';
-    };
-    provider.on('peers', onPeers);
-    return () => provider.off('peers', onPeers);
-  });
+	$effect(() => {
+		const onPeers = ({ webrtcPeers }: { webrtcPeers: string[] }) => {
+			status = webrtcPeers.length > 0 ? 'connected' : 'isolated';
+		};
+		provider.on('peers', onPeers);
+		return () => provider.off('peers', onPeers);
+	});
 </script>
 
 <span role="status" aria-live="polite" class="text-muted-fg text-xs">
-  {#if status === 'connecting'}Finding peers…
-  {:else if status === 'isolated'}Working alone (no peers)
-  {:else}Connected to {peerCount} peer{peerCount === 1 ? '' : 's'}
-  {/if}
+	{#if status === 'connecting'}Finding peers…
+	{:else if status === 'isolated'}Working alone (no peers)
+	{:else}Connected to {peerCount} peer{peerCount === 1 ? '' : 's'}
+	{/if}
 </span>
 ```
 
@@ -265,25 +265,25 @@ import wrtc from 'wrtc';
 const signaling = spawn('node', ['node_modules/y-webrtc/bin/server.js']);
 
 test('two peers converge', async () => {
-  const a = new Y.Doc();
-  const b = new Y.Doc();
-  const pa = new WebrtcProvider('t', a, {
-    signaling: ['ws://localhost:4444'],
-    peerOpts: { wrtc },
-  });
-  const pb = new WebrtcProvider('t', b, {
-    signaling: ['ws://localhost:4444'],
-    peerOpts: { wrtc },
-  });
+	const a = new Y.Doc();
+	const b = new Y.Doc();
+	const pa = new WebrtcProvider('t', a, {
+		signaling: ['ws://localhost:4444'],
+		peerOpts: { wrtc },
+	});
+	const pb = new WebrtcProvider('t', b, {
+		signaling: ['ws://localhost:4444'],
+		peerOpts: { wrtc },
+	});
 
-  await new Promise((r) => pa.once('peers', r));
-  a.getArray('nodes').push([{ id: 'n-1' }]);
-  await new Promise((r) => setTimeout(r, 200));
-  expect(b.getArray('nodes').toArray()).toHaveLength(1);
+	await new Promise((r) => pa.once('peers', r));
+	a.getArray('nodes').push([{ id: 'n-1' }]);
+	await new Promise((r) => setTimeout(r, 200));
+	expect(b.getArray('nodes').toArray()).toHaveLength(1);
 
-  pa.destroy();
-  pb.destroy();
-  signaling.kill();
+	pa.destroy();
+	pb.destroy();
+	signaling.kill();
 });
 ```
 

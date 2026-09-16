@@ -72,9 +72,9 @@ describe('evaluateCsrf', () => {
 			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
 			headers: { [CSRF_HEADER_NAME]: 'tok' },
 		});
-		expect(
-			await evaluateCsrf(event, { ...deps, verify: alwaysInvalid, context: CONTEXT }),
-		).toBe('token-invalid');
+		expect(await evaluateCsrf(event, { ...deps, verify: alwaysInvalid, context: CONTEXT })).toBe(
+			'token-invalid',
+		);
 	});
 
 	it('accepts a real issued token against the real verifier', async () => {

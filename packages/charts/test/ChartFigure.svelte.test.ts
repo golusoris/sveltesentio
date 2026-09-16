@@ -26,14 +26,7 @@ const series: ChartSeries<Point>[] = [
 ];
 
 // WCAG 2.2 AA tag set (mirrors @sveltesentio/testing's axeDefaults / ADR-0031).
-const WCAG_22_AA_TAGS = [
-	'wcag2a',
-	'wcag2aa',
-	'wcag21a',
-	'wcag21aa',
-	'wcag22aa',
-	'best-practice',
-];
+const WCAG_22_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 async function expectNoAxeViolations(container: HTMLElement): Promise<void> {
 	const results = await axe.run(container, {

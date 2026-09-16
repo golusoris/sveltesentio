@@ -48,10 +48,10 @@ stories — there is **no per-package Storybook config**:
 import type { StorybookConfig } from '@storybook/svelte-vite';
 
 const config: StorybookConfig = {
-  stories: ['../../../packages/*/src/**/*.stories.@(svelte|ts)'],
-  addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
-  framework: { name: '@storybook/svelte-vite', options: { docgen: false } },
-  core: { disableTelemetry: true },
+	stories: ['../../../packages/*/src/**/*.stories.@(svelte|ts)'],
+	addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
+	framework: { name: '@storybook/svelte-vite', options: { docgen: false } },
+	core: { disableTelemetry: true },
 };
 
 export default config;
@@ -67,7 +67,7 @@ Stories are **excluded from the published tarball** in each package's
 
 ```json
 {
-  "files": ["src", "CHANGELOG.md", "!src/**/*.stories.svelte"]
+	"files": ["src", "CHANGELOG.md", "!src/**/*.stories.svelte"]
 }
 ```
 
@@ -101,16 +101,16 @@ Stories use Svelte CSF — a `<script module>` `defineMeta` block plus one
 ```svelte
 <!-- packages/ui/src/button/Button.stories.svelte -->
 <script module lang="ts">
-  import { defineMeta } from '@storybook/addon-svelte-csf';
-  import Button from './Button.svelte';
-  import { Check, Loader2 } from 'lucide-svelte';
+	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import Button from './Button.svelte';
+	import { Check, Loader2 } from 'lucide-svelte';
 
-  const { Story } = defineMeta({
-    title: 'ui/Button',
-    component: Button,
-    tags: ['autodocs'],
-    args: { variant: 'default' },
-  });
+	const { Story } = defineMeta({
+		title: 'ui/Button',
+		component: Button,
+		tags: ['autodocs'],
+		args: { variant: 'default' },
+	});
 </script>
 
 <Story name="Default" args={{ variant: 'default' }} />
@@ -118,27 +118,27 @@ Stories use Svelte CSF — a `<script module>` `defineMeta` block plus one
 <Story name="Destructive" args={{ variant: 'destructive' }} />
 
 <Story name="Sizes">
-  <div class="flex flex-wrap items-center gap-4 p-4">
-    <Button size="sm">Small</Button>
-    <Button size="default">Default</Button>
-    <Button size="lg">Large</Button>
-    <Button size="icon" aria-label="Confirm"><Check /></Button>
-  </div>
+	<div class="flex flex-wrap items-center gap-4 p-4">
+		<Button size="sm">Small</Button>
+		<Button size="default">Default</Button>
+		<Button size="lg">Large</Button>
+		<Button size="icon" aria-label="Confirm"><Check /></Button>
+	</div>
 </Story>
 
 <Story name="States">
-  <div class="flex flex-wrap gap-4 p-4">
-    <Button>Idle</Button>
-    <Button disabled>Disabled</Button>
-    <Button aria-busy="true"><Loader2 class="animate-spin" /> Loading</Button>
-  </div>
+	<div class="flex flex-wrap gap-4 p-4">
+		<Button>Idle</Button>
+		<Button disabled>Disabled</Button>
+		<Button aria-busy="true"><Loader2 class="animate-spin" /> Loading</Button>
+	</div>
 </Story>
 
 <Story name="RTL">
-  <div dir="rtl" class="flex flex-wrap gap-4 p-4">
-    <Button>نشر</Button>
-    <Button variant="destructive">حذف</Button>
-  </div>
+	<div dir="rtl" class="flex flex-wrap gap-4 p-4">
+		<Button>نشر</Button>
+		<Button variant="destructive">حذف</Button>
+	</div>
 </Story>
 ```
 
@@ -162,24 +162,24 @@ story per preset:
 
 ```svelte
 <Story name="Preset: Desktop">
-  <div data-preset="desktop" class="p-4">
-    <Button>Default</Button>
-    <Button size="icon" aria-label="Menu"><Menu /></Button>
-  </div>
+	<div data-preset="desktop" class="p-4">
+		<Button>Default</Button>
+		<Button size="icon" aria-label="Menu"><Menu /></Button>
+	</div>
 </Story>
 
 <Story name="Preset: Handheld">
-  <div data-preset="handheld" class="p-4">
-    <Button>Default</Button>
-    <Button size="icon" aria-label="Menu"><Menu /></Button>
-  </div>
+	<div data-preset="handheld" class="p-4">
+		<Button>Default</Button>
+		<Button size="icon" aria-label="Menu"><Menu /></Button>
+	</div>
 </Story>
 
 <Story name="Preset: 10-foot" exportName="Preset10Foot">
-  <div data-preset="10foot" class="p-4">
-    <Button>Default</Button>
-    <Button size="icon" aria-label="Menu"><Menu /></Button>
-  </div>
+	<div data-preset="10foot" class="p-4">
+		<Button>Default</Button>
+		<Button size="icon" aria-label="Menu"><Menu /></Button>
+	</div>
 </Story>
 ```
 
@@ -214,17 +214,17 @@ import Button from './Button.svelte';
 expect.extend({ toHaveNoViolations });
 
 const cases: Array<{ label: string; props: Record<string, unknown> }> = [
-  { label: 'default', props: {} },
-  { label: 'disabled', props: { disabled: true } },
-  { label: 'loading', props: { 'aria-busy': 'true' } },
-  { label: 'icon', props: { size: 'icon', 'aria-label': 'Confirm' } },
+	{ label: 'default', props: {} },
+	{ label: 'disabled', props: { disabled: true } },
+	{ label: 'loading', props: { 'aria-busy': 'true' } },
+	{ label: 'icon', props: { size: 'icon', 'aria-label': 'Confirm' } },
 ];
 
 for (const c of cases) {
-  test(`Button (${c.label}) is axe-clean`, async () => {
-    const { container } = render(Button, { props: c.props });
-    expect(await axe(container)).toHaveNoViolations();
-  });
+	test(`Button (${c.label}) is axe-clean`, async () => {
+		const { container } = render(Button, { props: c.props });
+		expect(await axe(container)).toHaveNoViolations();
+	});
 }
 ```
 
@@ -265,24 +265,24 @@ Tag a story `autodocs` to generate a docs page from its `args` /
 
 ```svelte
 <script module lang="ts">
-  import { defineMeta } from '@storybook/addon-svelte-csf';
-  import Button from './Button.svelte';
+	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import Button from './Button.svelte';
 
-  const { Story } = defineMeta({
-    title: 'ui/Button',
-    component: Button,
-    tags: ['autodocs'],
-    parameters: {
-      docs: {
-        description: {
-          component:
-            'Use variant="destructive" only for irreversible actions. ' +
-            'size="icon" requires aria-label. aria-busy="true" swaps copy ' +
-            'for a spinner but keeps the width — prevents layout shift.',
-        },
-      },
-    },
-  });
+	const { Story } = defineMeta({
+		title: 'ui/Button',
+		component: Button,
+		tags: ['autodocs'],
+		parameters: {
+			docs: {
+				description: {
+					component:
+						'Use variant="destructive" only for irreversible actions. ' +
+						'size="icon" requires aria-label. aria-busy="true" swaps copy ' +
+						'for a spinner but keeps the width — prevents layout shift.',
+				},
+			},
+		},
+	});
 </script>
 ```
 

@@ -52,9 +52,11 @@ class FakeSocket implements SocketLike {
 	}
 }
 
-const reachable = (paths: readonly string[]): AccessFn => async (path: string) => {
-	if (!paths.includes(path)) throw new Error(`ENOENT: ${path}`);
-};
+const reachable =
+	(paths: readonly string[]): AccessFn =>
+	async (path: string) => {
+		if (!paths.includes(path)) throw new Error(`ENOENT: ${path}`);
+	};
 
 const SOCK = '/run/golusoris/api.sock';
 const MAP = '/sys/fs/bpf/golusoris/sockhash';

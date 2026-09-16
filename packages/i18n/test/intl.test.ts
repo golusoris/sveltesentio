@@ -34,8 +34,6 @@ describe('intl passthroughs', () => {
 	});
 
 	it('formats lists', () => {
-		expect(formatList(['apples', 'pears', 'oranges'], 'en-US')).toBe(
-			'apples, pears, and oranges',
-		);
+		expect(formatList(['apples', 'pears', 'oranges'], 'en-US')).toBe('apples, pears, and oranges');
 	});
 });

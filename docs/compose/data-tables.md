@@ -26,39 +26,39 @@ preset.
 ```svelte
 <!-- src/routes/admin/users/+page.svelte -->
 <script lang="ts" generics="User">
-  import { DataTable, type ColumnDef } from '@sveltesentio/ui/data';
-  import { Button } from '$lib/components/ui/button';
+	import { DataTable, type ColumnDef } from '@sveltesentio/ui/data';
+	import { Button } from '$lib/components/ui/button';
 
-  type User = { id: string; name: string; email: string; role: 'admin' | 'editor' | 'viewer' };
-  let { data } = $props();
+	type User = { id: string; name: string; email: string; role: 'admin' | 'editor' | 'viewer' };
+	let { data } = $props();
 
-  const columns: ColumnDef<User>[] = [
-    {
-      accessor: 'name',
-      header: 'Name',
-      sortable: true,
-      cell: (row) => row.name,
-    },
-    {
-      accessor: 'email',
-      header: 'Email',
-      sortable: true,
-      searchable: true,
-    },
-    {
-      accessor: 'role',
-      header: 'Role',
-      cell: (row) => row.role.toUpperCase(),
-    },
-    {
-      id: 'actions',
-      header: '',
-      cell: (row) => ({
-        component: ActionMenu,
-        props: { userId: row.id },
-      }),
-    },
-  ];
+	const columns: ColumnDef<User>[] = [
+		{
+			accessor: 'name',
+			header: 'Name',
+			sortable: true,
+			cell: (row) => row.name,
+		},
+		{
+			accessor: 'email',
+			header: 'Email',
+			sortable: true,
+			searchable: true,
+		},
+		{
+			accessor: 'role',
+			header: 'Role',
+			cell: (row) => row.role.toUpperCase(),
+		},
+		{
+			id: 'actions',
+			header: '',
+			cell: (row) => ({
+				component: ActionMenu,
+				props: { userId: row.id },
+			}),
+		},
+	];
 </script>
 
 <DataTable data={data.users} {columns} pageSize={25} />
@@ -73,24 +73,24 @@ sortable table.
 
 ```ts
 type ColumnDef<T> = {
-  /** Unique column ID; defaults to `accessor` if provided */
-  id?: string;
-  /** Row property for typed accessors (alternative to `cell`) */
-  accessor?: keyof T;
-  /** Header label (string or component) */
-  header: string | { component: Component; props?: Record<string, unknown> };
-  /** Render a row cell */
-  cell?: (row: T) => unknown | { component: Component; props?: Record<string, unknown> };
-  /** Enable sort on this column */
-  sortable?: boolean;
-  /** Include in full-text search */
-  searchable?: boolean;
-  /** CSS class on the `<td>` */
-  class?: string;
-  /** Width hint (`'100px'` | `'1fr'` | `'minmax(100px, 1fr)'`) */
-  width?: string;
-  /** Accessibility label if the header isn't text */
-  ariaLabel?: string;
+	/** Unique column ID; defaults to `accessor` if provided */
+	id?: string;
+	/** Row property for typed accessors (alternative to `cell`) */
+	accessor?: keyof T;
+	/** Header label (string or component) */
+	header: string | { component: Component; props?: Record<string, unknown> };
+	/** Render a row cell */
+	cell?: (row: T) => unknown | { component: Component; props?: Record<string, unknown> };
+	/** Enable sort on this column */
+	sortable?: boolean;
+	/** Include in full-text search */
+	searchable?: boolean;
+	/** CSS class on the `<td>` */
+	class?: string;
+	/** Width hint (`'100px'` | `'1fr'` | `'minmax(100px, 1fr)'`) */
+	width?: string;
+	/** Accessibility label if the header isn't text */
+	ariaLabel?: string;
 };
 ```
 
@@ -109,10 +109,10 @@ For > ~200 rows, drop in virtualization:
 
 ```ts
 type VirtualizeOptions = {
-  rowHeight: number | ((index: number, row: T) => number); // px
-  overscan?: number;        // default 5
-  estimateRow?: number;     // for dynamic heights
-  scrollingDelay?: number;  // ms, default 150
+	rowHeight: number | ((index: number, row: T) => number); // px
+	overscan?: number; // default 5
+	estimateRow?: number; // for dynamic heights
+	scrollingDelay?: number; // ms, default 150
 };
 ```
 
@@ -128,38 +128,38 @@ configures `@tanstack/svelte-virtual`'s `createVirtualizer`:
 ```svelte
 <!-- inside ui/data/VirtualList.svelte (simplified) -->
 <script lang="ts">
-  import { createVirtualizer } from '@tanstack/svelte-virtual';
-  import { cn } from '$lib/utils';
+	import { createVirtualizer } from '@tanstack/svelte-virtual';
+	import { cn } from '$lib/utils';
 
-  let scrollRef: HTMLDivElement;
-  const virtualizer = $derived(
-    createVirtualizer({
-      count: rows.length,
-      getScrollElement: () => scrollRef,
-      estimateSize: (i) => (typeof rowHeight === 'function' ? rowHeight(i, rows[i]) : rowHeight),
-      overscan,
-    }),
-  );
+	let scrollRef: HTMLDivElement;
+	const virtualizer = $derived(
+		createVirtualizer({
+			count: rows.length,
+			getScrollElement: () => scrollRef,
+			estimateSize: (i) => (typeof rowHeight === 'function' ? rowHeight(i, rows[i]) : rowHeight),
+			overscan,
+		}),
+	);
 </script>
 
 <div
-  bind:this={scrollRef}
-  role="grid"
-  aria-rowcount={rows.length}
-  aria-colcount={columns.length}
-  class="overflow-auto"
+	bind:this={scrollRef}
+	role="grid"
+	aria-rowcount={rows.length}
+	aria-colcount={columns.length}
+	class="overflow-auto"
 >
-  <div style="height: {$virtualizer.getTotalSize()}px; position: relative">
-    {#each $virtualizer.getVirtualItems() as vi (vi.key)}
-      <div
-        role="row"
-        aria-rowindex={vi.index + 1}
-        style="position: absolute; top: 0; transform: translateY({vi.start}px); height: {vi.size}px"
-      >
-        <!-- cells via column defs -->
-      </div>
-    {/each}
-  </div>
+	<div style="height: {$virtualizer.getTotalSize()}px; position: relative">
+		{#each $virtualizer.getVirtualItems() as vi (vi.key)}
+			<div
+				role="row"
+				aria-rowindex={vi.index + 1}
+				style="position: absolute; top: 0; transform: translateY({vi.start}px); height: {vi.size}px"
+			>
+				<!-- cells via column defs -->
+			</div>
+		{/each}
+	</div>
 </div>
 ```
 
@@ -171,13 +171,13 @@ debugging.
 
 The wrapper ships roving tabindex on rows:
 
-| Key | Action |
-|---|---|
-| `↑` / `↓` | Move focus to prev / next row |
-| `Home` / `End` | First / last row |
-| `PageUp` / `PageDown` | ±10 rows |
-| `Enter` | Invokes row's primary action (if wired) |
-| `Tab` / `Shift+Tab` | Escape the grid |
+| Key                   | Action                                  |
+| --------------------- | --------------------------------------- |
+| `↑` / `↓`             | Move focus to prev / next row           |
+| `Home` / `End`        | First / last row                        |
+| `PageUp` / `PageDown` | ±10 rows                                |
+| `Enter`               | Invokes row's primary action (if wired) |
+| `Tab` / `Shift+Tab`   | Escape the grid                         |
 
 For per-cell focus (editable cells), opt in via
 `cellNavigation: true`. Adds `aria-colindex` per cell + arrow keys
@@ -189,34 +189,34 @@ The revenge-style offset-based infinite pagination:
 
 ```svelte
 <script lang="ts">
-  import { DataTable, useInfiniteData } from '@sveltesentio/ui/data';
-  import { api } from '$lib/api';
-  import type { Movie } from '$lib/types';
+	import { DataTable, useInfiniteData } from '@sveltesentio/ui/data';
+	import { api } from '$lib/api';
+	import type { Movie } from '$lib/types';
 
-  const columns = [
-    { accessor: 'title', header: 'Title', sortable: true, searchable: true },
-    { accessor: 'year', header: 'Year' },
-    { accessor: 'rating', header: '★', cell: (r) => '★'.repeat(r.rating) },
-  ] satisfies ColumnDef<Movie>[];
+	const columns = [
+		{ accessor: 'title', header: 'Title', sortable: true, searchable: true },
+		{ accessor: 'year', header: 'Year' },
+		{ accessor: 'rating', header: '★', cell: (r) => '★'.repeat(r.rating) },
+	] satisfies ColumnDef<Movie>[];
 
-  const movies = useInfiniteData({
-    queryKey: ['movies'],
-    pageSize: 50,
-    queryFn: async ({ pageParam }) => {
-      const { data } = await api.GET('/movies', {
-        params: { query: { offset: pageParam, limit: 50 } },
-      });
-      return { items: data.items, nextOffset: data.nextOffset };
-    },
-  });
+	const movies = useInfiniteData({
+		queryKey: ['movies'],
+		pageSize: 50,
+		queryFn: async ({ pageParam }) => {
+			const { data } = await api.GET('/movies', {
+				params: { query: { offset: pageParam, limit: 50 } },
+			});
+			return { items: data.items, nextOffset: data.nextOffset };
+		},
+	});
 </script>
 
 <DataTable
-  data={movies.flat}
-  {columns}
-  virtualize={{ rowHeight: 48 }}
-  onscrollend={() => movies.fetchNextPage()}
-  loading={movies.isFetchingNextPage}
+	data={movies.flat}
+	{columns}
+	virtualize={{ rowHeight: 48 }}
+	onscrollend={() => movies.fetchNextPage()}
+	loading={movies.isFetchingNextPage}
 />
 ```
 
@@ -230,12 +230,7 @@ debounce is baked in (150ms).
 ## Search
 
 ```svelte
-<DataTable
-  data={data.users}
-  {columns}
-  searchable
-  searchPlaceholder="Search users…"
-/>
+<DataTable data={data.users} {columns} searchable searchPlaceholder="Search users…" />
 ```
 
 Search is client-side by default — filters over columns marked
@@ -244,14 +239,14 @@ and pass `data={filtered}`:
 
 ```svelte
 <script lang="ts">
-  let query = $state('');
-  const filtered = $derived.by(() => {
-    const q = query.toLowerCase();
-    if (!q) return data.users;
-    return data.users.filter((u) =>
-      u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
-    );
-  });
+	let query = $state('');
+	const filtered = $derived.by(() => {
+		const q = query.toLowerCase();
+		if (!q) return data.users;
+		return data.users.filter(
+			(u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+		);
+	});
 </script>
 
 <input bind:value={query} placeholder="Search…" />
@@ -267,14 +262,14 @@ Sort is client-side when `data` is small; for server-side sort, pass
 
 ```svelte
 <DataTable
-  data={data.users}
-  {columns}
-  sortBy={sortState.by}
-  sortDir={sortState.dir}
-  onSortChange={(by, dir) => {
-    sortState = { by, dir };
-    // triggers your query refetch via TanStack Query
-  }}
+	data={data.users}
+	{columns}
+	sortBy={sortState.by}
+	sortDir={sortState.dir}
+	onSortChange={(by, dir) => {
+		sortState = { by, dir };
+		// triggers your query refetch via TanStack Query
+	}}
 />
 ```
 
@@ -282,12 +277,12 @@ Sort is client-side when `data` is small; for server-side sort, pass
 
 ```svelte
 <DataTable data={users} {columns} loading={query.isLoading}>
-  {#snippet empty()}
-    <div class="py-12 text-center">
-      <p class="text-muted-fg">No users yet.</p>
-      <Button onclick={inviteUser}>Invite someone</Button>
-    </div>
-  {/snippet}
+	{#snippet empty()}
+		<div class="py-12 text-center">
+			<p class="text-muted-fg">No users yet.</p>
+			<Button onclick={inviteUser}>Invite someone</Button>
+		</div>
+	{/snippet}
 </DataTable>
 ```
 
@@ -312,13 +307,13 @@ For those, use `<VirtualList>` standalone:
 
 ```svelte
 <script lang="ts">
-  import { VirtualList } from '@sveltesentio/ui/data';
+	import { VirtualList } from '@sveltesentio/ui/data';
 </script>
 
 <VirtualList items={messages} itemHeight={80} role="log" aria-label="Conversation">
-  {#snippet item(msg)}
-    <Message {msg} />
-  {/snippet}
+	{#snippet item(msg)}
+		<Message {msg} />
+	{/snippet}
 </VirtualList>
 ```
 
@@ -336,19 +331,19 @@ import { axe } from 'jest-axe';
 import { DataTable } from '@sveltesentio/ui/data';
 
 test('renders rows with aria-rowindex', () => {
-  const { container } = render(DataTable, {
-    props: {
-      data: users,
-      columns: [{ accessor: 'name', header: 'Name' }],
-    },
-  });
-  const rows = container.querySelectorAll('[role="row"]');
-  expect(rows[0].getAttribute('aria-rowindex')).toBe('1');
+	const { container } = render(DataTable, {
+		props: {
+			data: users,
+			columns: [{ accessor: 'name', header: 'Name' }],
+		},
+	});
+	const rows = container.querySelectorAll('[role="row"]');
+	expect(rows[0].getAttribute('aria-rowindex')).toBe('1');
 });
 
 test('axe-clean', async () => {
-  const { container } = render(DataTable, { props: { data: users, columns } });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(DataTable, { props: { data: users, columns } });
+	expect(await axe(container)).toHaveNoViolations();
 });
 ```
 
@@ -356,10 +351,10 @@ Playwright for keyboard navigation:
 
 ```ts
 test('arrow keys move row focus', async ({ page }) => {
-  await page.goto('/admin/users');
-  await page.locator('[role="row"]').first().focus();
-  await page.keyboard.press('ArrowDown');
-  await expect(page.locator('[role="row"][aria-rowindex="2"]')).toBeFocused();
+	await page.goto('/admin/users');
+	await page.locator('[role="row"]').first().focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(page.locator('[role="row"][aria-rowindex="2"]')).toBeFocused();
 });
 ```
 

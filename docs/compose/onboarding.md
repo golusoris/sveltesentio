@@ -75,12 +75,12 @@ Re-onboarding after subscription change         → onboarding.md with different
 
 ### Build-vs-buy
 
-| Option | Use when | Avoid when |
-|---|---|---|
-| **Custom SvelteKit routes** (DEFAULT) | Full control; tight design integration; server-state | — |
-| **Shepherd.js / Intro.js** | Feature tours on existing pages | New-user onboarding (the flow lives in-product-chrome) |
-| **UserGuiding / Appcues SaaS** | Marketing-led tours with analytics | Core onboarding (vendor-controlled UX = brittle) |
-| **Feature-flagged-modal-overlay** | — | NEVER for core onboarding; modals are hostile to a11y + routing |
+| Option                                | Use when                                             | Avoid when                                                      |
+| ------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
+| **Custom SvelteKit routes** (DEFAULT) | Full control; tight design integration; server-state | —                                                               |
+| **Shepherd.js / Intro.js**            | Feature tours on existing pages                      | New-user onboarding (the flow lives in-product-chrome)          |
+| **UserGuiding / Appcues SaaS**        | Marketing-led tours with analytics                   | Core onboarding (vendor-controlled UX = brittle)                |
+| **Feature-flagged-modal-overlay**     | —                                                    | NEVER for core onboarding; modals are hostile to a11y + routing |
 
 **No library for the default path** — onboarding is a SvelteKit +
 Superforms + feature-flags + analytics composition, not a product.
@@ -128,12 +128,12 @@ supabase/migrations/NNN_onboarding.sql
 import { z } from 'zod';
 
 export const OnboardingStep = z.enum([
-  'not_started',
-  'profile',
-  'team',
-  'invite',
-  'complete',
-  'skipped',
+	'not_started',
+	'profile',
+	'team',
+	'invite',
+	'complete',
+	'skipped',
 ]);
 export type OnboardingStep = z.infer<typeof OnboardingStep>;
 
@@ -141,25 +141,22 @@ export const OnboardingFlow = z.enum(['default', 'team_signup', 'solo_signup']);
 export type OnboardingFlow = z.infer<typeof OnboardingFlow>;
 
 const FLOWS: Record<OnboardingFlow, OnboardingStep[]> = {
-  default:      ['profile', 'team', 'invite', 'complete'],
-  team_signup:  ['profile', 'team', 'invite', 'complete'],
-  solo_signup:  ['profile', 'complete'],
+	default: ['profile', 'team', 'invite', 'complete'],
+	team_signup: ['profile', 'team', 'invite', 'complete'],
+	solo_signup: ['profile', 'complete'],
 };
 
-export function resolveNextStep(
-  flow: OnboardingFlow,
-  current: OnboardingStep,
-): OnboardingStep {
-  if (current === 'complete' || current === 'skipped') return current;
-  const sequence = FLOWS[flow];
-  const idx = sequence.indexOf(current);
-  if (idx === -1) return sequence[0];
-  return sequence[idx + 1] ?? 'complete';
+export function resolveNextStep(flow: OnboardingFlow, current: OnboardingStep): OnboardingStep {
+	if (current === 'complete' || current === 'skipped') return current;
+	const sequence = FLOWS[flow];
+	const idx = sequence.indexOf(current);
+	if (idx === -1) return sequence[0];
+	return sequence[idx + 1] ?? 'complete';
 }
 
 export function isStepValid(flow: OnboardingFlow, step: OnboardingStep): boolean {
-  if (step === 'not_started' || step === 'skipped' || step === 'complete') return true;
-  return FLOWS[flow].includes(step);
+	if (step === 'not_started' || step === 'skipped' || step === 'complete') return true;
+	return FLOWS[flow].includes(step);
 }
 ```
 
@@ -233,24 +230,27 @@ import { redirect, error } from '@sveltejs/kit';
 import { resolveNextStep, isStepValid } from '$lib/onboarding/state-machine';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-  const user = locals.session?.user;
-  if (!user) throw redirect(303, `/login?next=${encodeURIComponent(url.pathname)}`);
+	const user = locals.session?.user;
+	if (!user) throw redirect(303, `/login?next=${encodeURIComponent(url.pathname)}`);
 
-  if (user.onboardingState === 'complete' || user.onboardingState === 'skipped') {
-    throw redirect(303, '/app');
-  }
+	if (user.onboardingState === 'complete' || user.onboardingState === 'skipped') {
+		throw redirect(303, '/app');
+	}
 
-  const currentPath = url.pathname.split('/').pop();
-  if (currentPath && currentPath !== 'onboarding' &&
-      !isStepValid(user.onboardingFlow, currentPath as never)) {
-    const next = resolveNextStep(user.onboardingFlow, user.onboardingState);
-    throw redirect(303, `/onboarding/${next}`);
-  }
+	const currentPath = url.pathname.split('/').pop();
+	if (
+		currentPath &&
+		currentPath !== 'onboarding' &&
+		!isStepValid(user.onboardingFlow, currentPath as never)
+	) {
+		const next = resolveNextStep(user.onboardingFlow, user.onboardingState);
+		throw redirect(303, `/onboarding/${next}`);
+	}
 
-  return {
-    flow: user.onboardingFlow,
-    currentStep: user.onboardingState,
-  };
+	return {
+		flow: user.onboardingFlow,
+		currentStep: user.onboardingState,
+	};
 };
 ```
 
@@ -261,11 +261,11 @@ import { redirect } from '@sveltejs/kit';
 import { resolveNextStep } from '$lib/onboarding/state-machine';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const next = resolveNextStep(
-    locals.session.user.onboardingFlow,
-    locals.session.user.onboardingState,
-  );
-  throw redirect(303, `/onboarding/${next}`);
+	const next = resolveNextStep(
+		locals.session.user.onboardingFlow,
+		locals.session.user.onboardingState,
+	);
+	throw redirect(303, `/onboarding/${next}`);
 };
 ```
 
@@ -299,64 +299,69 @@ import { resolveNextStep } from '$lib/onboarding/state-machine';
 import { now } from '$lib/clock';
 
 const ProfileSchema = z.object({
-  displayName: z.string().min(1).max(100),
-  timezone: z.string().max(64),
-  marketingOptIn: z.boolean().default(false),
+	displayName: z.string().min(1).max(100),
+	timezone: z.string().max(64),
+	marketingOptIn: z.boolean().default(false),
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const form = await superValidate(
-    { displayName: locals.session.user.displayName ?? '', timezone: 'UTC', marketingOptIn: false },
-    zod(ProfileSchema),
-  );
+	const form = await superValidate(
+		{ displayName: locals.session.user.displayName ?? '', timezone: 'UTC', marketingOptIn: false },
+		zod(ProfileSchema),
+	);
 
-  if (locals.session.user.onboardingState === 'not_started') {
-    await db.none(
-      `UPDATE users SET onboarding_state = 'profile', onboarding_started_at = $1
+	if (locals.session.user.onboardingState === 'not_started') {
+		await db.none(
+			`UPDATE users SET onboarding_state = 'profile', onboarding_started_at = $1
          WHERE id = $2 AND onboarding_state = 'not_started'`,
-      [now(), locals.session.user.id],
-    );
-    await recordOnboardingEvent({
-      userId: locals.session.user.id,
-      step: 'profile',
-      action: 'started',
-      flow: locals.session.user.onboardingFlow,
-    });
-  }
+			[now(), locals.session.user.id],
+		);
+		await recordOnboardingEvent({
+			userId: locals.session.user.id,
+			step: 'profile',
+			action: 'started',
+			flow: locals.session.user.onboardingFlow,
+		});
+	}
 
-  return { form };
+	return { form };
 };
 
 export const actions: Actions = {
-  default: async ({ request, locals }) => {
-    const form = await superValidate(request, zod(ProfileSchema));
-    if (!form.valid) return fail(400, { form });
+	default: async ({ request, locals }) => {
+		const form = await superValidate(request, zod(ProfileSchema));
+		if (!form.valid) return fail(400, { form });
 
-    await db.tx(async (t) => {
-      await t.none(
-        `UPDATE users
+		await db.tx(async (t) => {
+			await t.none(
+				`UPDATE users
             SET display_name = $1, timezone = $2, marketing_opt_in = $3
           WHERE id = $4`,
-        [form.data.displayName, form.data.timezone, form.data.marketingOptIn, locals.session.user.id],
-      );
+				[
+					form.data.displayName,
+					form.data.timezone,
+					form.data.marketingOptIn,
+					locals.session.user.id,
+				],
+			);
 
-      const next = resolveNextStep(locals.session.user.onboardingFlow, 'profile');
-      await t.none(
-        `UPDATE users SET onboarding_state = $1 WHERE id = $2`,
-        [next, locals.session.user.id],
-      );
-    });
+			const next = resolveNextStep(locals.session.user.onboardingFlow, 'profile');
+			await t.none(`UPDATE users SET onboarding_state = $1 WHERE id = $2`, [
+				next,
+				locals.session.user.id,
+			]);
+		});
 
-    await recordOnboardingEvent({
-      userId: locals.session.user.id,
-      step: 'profile',
-      action: 'completed',
-      flow: locals.session.user.onboardingFlow,
-    });
+		await recordOnboardingEvent({
+			userId: locals.session.user.id,
+			step: 'profile',
+			action: 'completed',
+			flow: locals.session.user.onboardingFlow,
+		});
 
-    const next = resolveNextStep(locals.session.user.onboardingFlow, 'profile');
-    throw redirect(303, `/onboarding/${next}`);
-  },
+		const next = resolveNextStep(locals.session.user.onboardingFlow, 'profile');
+		throw redirect(303, `/onboarding/${next}`);
+	},
 };
 ```
 
@@ -386,43 +391,48 @@ export const actions: Actions = {
 ```svelte
 <!-- src/routes/onboarding/+layout.svelte -->
 <script lang="ts">
-  import { page } from '$app/stores';
-  import * as m from '$paraglide/messages';
-  import type { LayoutData } from './$types';
+	import { page } from '$app/stores';
+	import * as m from '$paraglide/messages';
+	import type { LayoutData } from './$types';
 
-  let { data, children }: { data: LayoutData; children: any } = $props();
+	let { data, children }: { data: LayoutData; children: any } = $props();
 
-  const sequence = $derived(data.flow === 'solo_signup' ? ['profile', 'complete'] : ['profile', 'team', 'invite', 'complete']);
-  const currentIndex = $derived(
-    sequence.indexOf($page.url.pathname.split('/').pop() ?? 'profile'),
-  );
-  const progress = $derived(Math.max(0, (currentIndex / (sequence.length - 1)) * 100));
+	const sequence = $derived(
+		data.flow === 'solo_signup'
+			? ['profile', 'complete']
+			: ['profile', 'team', 'invite', 'complete'],
+	);
+	const currentIndex = $derived(sequence.indexOf($page.url.pathname.split('/').pop() ?? 'profile'));
+	const progress = $derived(Math.max(0, (currentIndex / (sequence.length - 1)) * 100));
 </script>
 
 <div class="onboarding-shell">
-  <nav aria-label={m.onboarding_progress_label()}>
-    <ol class="onboarding-steps">
-      {#each sequence as step, i}
-        <li
-          aria-current={i === currentIndex ? 'step' : undefined}
-          data-status={i < currentIndex ? 'done' : i === currentIndex ? 'current' : 'upcoming'}
-        >
-          {m[`onboarding_step_${step}_label`]()}
-        </li>
-      {/each}
-    </ol>
-    <div
-      role="progressbar"
-      aria-valuenow={Math.round(progress)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuetext={m.onboarding_progress_text({ step: currentIndex + 1, total: sequence.length })}
-    />
-  </nav>
+	<nav aria-label={m.onboarding_progress_label()}>
+		<ol class="onboarding-steps">
+			{#each sequence as step, i}
+				<li
+					aria-current={i === currentIndex ? 'step' : undefined}
+					data-status={i < currentIndex ? 'done' : i === currentIndex ? 'current' : 'upcoming'}
+				>
+					{m[`onboarding_step_${step}_label`]()}
+				</li>
+			{/each}
+		</ol>
+		<div
+			role="progressbar"
+			aria-valuenow={Math.round(progress)}
+			aria-valuemin={0}
+			aria-valuemax={100}
+			aria-valuetext={m.onboarding_progress_text({
+				step: currentIndex + 1,
+				total: sequence.length,
+			})}
+		/>
+	</nav>
 
-  <main tabindex="-1">
-    {@render children()}
-  </main>
+	<main tabindex="-1">
+		{@render children()}
+	</main>
 </div>
 ```
 
@@ -451,25 +461,25 @@ export const actions: Actions = {
 import { openfeature } from '$lib/flags';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  if (event.locals.session?.user) {
-    const user = event.locals.session.user;
-    if (user.onboardingFlow === 'default' && user.createdAt > ONBOARDING_V2_START) {
-      const variant = await openfeature
-        .getClient()
-        .getStringValue('onboarding_flow_variant', 'default', {
-          targetingKey: user.id,
-          attributes: { plan: user.plan, createdAt: user.createdAt.toISOString() },
-        });
-      if (variant !== 'default') {
-        await db.none(
-          `UPDATE users SET onboarding_flow = $1
+	if (event.locals.session?.user) {
+		const user = event.locals.session.user;
+		if (user.onboardingFlow === 'default' && user.createdAt > ONBOARDING_V2_START) {
+			const variant = await openfeature
+				.getClient()
+				.getStringValue('onboarding_flow_variant', 'default', {
+					targetingKey: user.id,
+					attributes: { plan: user.plan, createdAt: user.createdAt.toISOString() },
+				});
+			if (variant !== 'default') {
+				await db.none(
+					`UPDATE users SET onboarding_flow = $1
              WHERE id = $2 AND onboarding_state = 'not_started'`,
-          [variant, user.id],
-        );
-      }
-    }
-  }
-  return resolve(event);
+					[variant, user.id],
+				);
+			}
+		}
+	}
+	return resolve(event);
 };
 ```
 
@@ -495,24 +505,24 @@ import { uuidv7 } from '$lib/observability';
 import { now } from '$lib/clock';
 
 interface OnboardingEventInput {
-  userId: string;
-  step: 'profile' | 'team' | 'invite' | 'complete';
-  action: 'started' | 'completed' | 'skipped' | 'abandoned';
-  flow: 'default' | 'team_signup' | 'solo_signup';
-  durationMs?: number;
+	userId: string;
+	step: 'profile' | 'team' | 'invite' | 'complete';
+	action: 'started' | 'completed' | 'skipped' | 'abandoned';
+	flow: 'default' | 'team_signup' | 'solo_signup';
+	durationMs?: number;
 }
 
 export async function recordOnboardingEvent(input: OnboardingEventInput): Promise<void> {
-  await db.none(
-    `INSERT INTO onboarding_events (id, user_id, step, action, flow, duration_ms, created_at)
+	await db.none(
+		`INSERT INTO onboarding_events (id, user_id, step, action, flow, duration_ms, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [uuidv7(), input.userId, input.step, input.action, input.flow, input.durationMs ?? null, now()],
-  );
+		[uuidv7(), input.userId, input.step, input.action, input.flow, input.durationMs ?? null, now()],
+	);
 
-  track(`onboarding_${input.action}`, {
-    step: input.step,
-    flow: input.flow,
-  });
+	track(`onboarding_${input.action}`, {
+		step: input.step,
+		flow: input.flow,
+	});
 }
 ```
 
@@ -541,29 +551,29 @@ import { subHours } from 'date-fns';
 import { now } from '$lib/clock';
 
 export const POST: RequestHandler = async ({ request }) => {
-  verifyCronRequest(request);
+	verifyCronRequest(request);
 
-  return withCronRun('onboarding-abandon', async () => {
-    const cutoff = subHours(now(), 48);
-    const stuck = await db.manyOrNone<{ id: string; state: string; flow: string }>(
-      `SELECT id, onboarding_state AS state, onboarding_flow AS flow
+	return withCronRun('onboarding-abandon', async () => {
+		const cutoff = subHours(now(), 48);
+		const stuck = await db.manyOrNone<{ id: string; state: string; flow: string }>(
+			`SELECT id, onboarding_state AS state, onboarding_flow AS flow
          FROM users
         WHERE onboarding_state NOT IN ('not_started','complete','skipped')
           AND onboarding_started_at < $1`,
-      [cutoff],
-    );
+			[cutoff],
+		);
 
-    for (const u of stuck) {
-      await recordOnboardingEvent({
-        userId: u.id,
-        step: u.state as never,
-        action: 'abandoned',
-        flow: u.flow as never,
-      });
-    }
+		for (const u of stuck) {
+			await recordOnboardingEvent({
+				userId: u.id,
+				step: u.state as never,
+				action: 'abandoned',
+				flow: u.flow as never,
+			});
+		}
 
-    return { processed: stuck.length, skipped: 0 };
-  });
+		return { processed: stuck.length, skipped: 0 };
+	});
 };
 ```
 
@@ -610,29 +620,29 @@ Metrics:         onboarding.step.duration        histogram, labels: step, flow
 ```typescript
 // unit: state-machine
 it('resolves next step for each flow', () => {
-  expect(resolveNextStep('default', 'profile')).toBe('team');
-  expect(resolveNextStep('solo_signup', 'profile')).toBe('complete');
-  expect(resolveNextStep('default', 'complete')).toBe('complete');
+	expect(resolveNextStep('default', 'profile')).toBe('team');
+	expect(resolveNextStep('solo_signup', 'profile')).toBe('complete');
+	expect(resolveNextStep('default', 'complete')).toBe('complete');
 });
 
 // integration: guard redirects stale state
 it('bookmark to invalid step for flow redirects to valid step', async () => {
-  const user = seedUser({ onboardingFlow: 'solo_signup', onboardingState: 'profile' });
-  const res = await app.request('/onboarding/invite', { cookies: authCookie(user) });
-  expect(res.status).toBe(303);
-  expect(res.headers.get('location')).toBe('/onboarding/complete');
+	const user = seedUser({ onboardingFlow: 'solo_signup', onboardingState: 'profile' });
+	const res = await app.request('/onboarding/invite', { cookies: authCookie(user) });
+	expect(res.status).toBe(303);
+	expect(res.headers.get('location')).toBe('/onboarding/complete');
 });
 
 // e2e: Playwright full happy path + a11y
 test('onboarding happy path is axe-clean', async ({ page }) => {
-  await signUp(page);
-  await expect(page).toHaveURL(/\/onboarding\/profile/);
-  await page.fill('input[name="displayName"]', 'Test User');
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/onboarding\/team/);
+	await signUp(page);
+	await expect(page).toHaveURL(/\/onboarding\/profile/);
+	await page.fill('input[name="displayName"]', 'Test User');
+	await page.click('button[type="submit"]');
+	await expect(page).toHaveURL(/\/onboarding\/team/);
 
-  const axe = await axeAnalyze(page);
-  expect(axe.violations).toHaveLength(0);
+	const axe = await axeAnalyze(page);
+	expect(axe.violations).toHaveLength(0);
 });
 ```
 
@@ -685,8 +695,8 @@ test('onboarding happy path is axe-clean', async ({ page }) => {
     users hit the app without onboarding and get confused. The
     flag variants are between flows, never "on/off."
 14. **Onboarding as a long form on one page.** Cognitive overload
-    + validation-error stampede + no progress feedback.
-    Progressive disclosure across routes.
+    - validation-error stampede + no progress feedback.
+      Progressive disclosure across routes.
 15. **Reset-onboarding toggle in the user settings.** Sounds
     helpful, breaks analytics, reopens legal-consent questions.
     If a flow change needs re-onboarding, run a migration with

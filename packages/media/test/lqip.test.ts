@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	buildPlaceholderStyle,
-	resolveAspectRatio,
-	imageLoadingAttrs,
-} from '../src/lqip';
+import { buildPlaceholderStyle, resolveAspectRatio, imageLoadingAttrs } from '../src/lqip';
 
 describe('buildPlaceholderStyle', () => {
 	it('returns undefined when no placeholder is supplied', () => {

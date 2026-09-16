@@ -58,10 +58,7 @@ export interface LLMClient {
  * `model`/`output`/`latencyMs` itself; everything here is the consumer's
  * traceability metadata (EU AI Act Art. 12 — see {@link AuditLog}).
  */
-export type AuditContext = Omit<
-	AiAuditEntry,
-	'model' | 'output' | 'outputHash' | 'latencyMs'
->;
+export type AuditContext = Omit<AiAuditEntry, 'model' | 'output' | 'outputHash' | 'latencyMs'>;
 
 /** Minimal clock seam so latency is deterministic under test (ADR-0052). */
 export interface ProxyClock {
@@ -85,10 +82,7 @@ export interface CreateLLMProxyOptions {
 
 export interface LLMProxy {
 	/** Complete a request, optionally writing an audit record on success. */
-	complete(
-		params: LLMChatParams,
-		audit?: AuditContext,
-	): Promise<LLMCompletion>;
+	complete(params: LLMChatParams, audit?: AuditContext): Promise<LLMCompletion>;
 	/**
 	 * Stream a request as text deltas. The full text is assembled internally so a
 	 * single audit record can be written once the stream completes.
@@ -133,10 +127,7 @@ export function createLLMProxy(options: CreateLLMProxyOptions): LLMProxy {
 	}
 
 	return {
-		async complete(
-			params: LLMChatParams,
-			audit?: AuditContext,
-		): Promise<LLMCompletion> {
+		async complete(params: LLMChatParams, audit?: AuditContext): Promise<LLMCompletion> {
 			const start = clock.now();
 			let result: LLMCompletion;
 			try {
@@ -148,10 +139,7 @@ export function createLLMProxy(options: CreateLLMProxyOptions): LLMProxy {
 			return result;
 		},
 
-		async *stream(
-			params: LLMChatParams,
-			audit?: AuditContext,
-		): AsyncIterable<LLMChunk> {
+		async *stream(params: LLMChatParams, audit?: AuditContext): AsyncIterable<LLMChunk> {
 			const start = clock.now();
 			let assembled = '';
 			try {
@@ -219,9 +207,7 @@ function toAnthropicMessages(
 }
 
 /** Pull a leading system turn out of `messages`, preferring an explicit `system`. */
-function resolveSystem(
-	params: LLMChatParams,
-): string | undefined {
+function resolveSystem(params: LLMChatParams): string | undefined {
 	if (params.system !== undefined) return params.system;
 	const sys = params.messages.find((m) => m.role === 'system');
 	return sys?.content;
@@ -243,9 +229,7 @@ export function anthropicAdapter(
 			const response = await sdk.messages.create({
 				model: params.model,
 				max_tokens: params.maxTokens ?? fallbackMax,
-				...(resolveSystem(params) !== undefined
-					? { system: resolveSystem(params) }
-					: {}),
+				...(resolveSystem(params) !== undefined ? { system: resolveSystem(params) } : {}),
 				messages: toAnthropicMessages(params.messages),
 			});
 			const text = response.content
@@ -259,9 +243,7 @@ export function anthropicAdapter(
 			const events = sdk.messages.stream({
 				model: params.model,
 				max_tokens: params.maxTokens ?? fallbackMax,
-				...(resolveSystem(params) !== undefined
-					? { system: resolveSystem(params) }
-					: {}),
+				...(resolveSystem(params) !== undefined ? { system: resolveSystem(params) } : {}),
 				messages: toAnthropicMessages(params.messages),
 			});
 			for await (const event of events) {

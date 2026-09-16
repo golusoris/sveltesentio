@@ -11,7 +11,6 @@ release-please cannot infer them from Conventional Commits.
 
 ## [Unreleased]
 
-
 ## [v0.3.0] - 2026-09-10
 
 ### Changed
@@ -45,18 +44,18 @@ release-please cannot infer them from Conventional Commits.
 
 ### Deprecated
 
-- *(none)*
+- _(none)_
 
 ### Removed
 
-- *(none)*
+- _(none)_
 
 ### Fixed
 
-- *(none)*
+- _(none)_
 
 ### Security
 
-- *(none yet — first release will ship SBOM via Syft + SLSA L3 provenance + keyless cosign signing.)*
+- _(none yet — first release will ship SBOM via Syft + SLSA L3 provenance + keyless cosign signing.)_
 
 [Unreleased]: https://github.com/lusoris/sveltesentio/compare/HEAD...HEAD

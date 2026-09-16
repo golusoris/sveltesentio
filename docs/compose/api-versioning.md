@@ -31,9 +31,9 @@ double-maintenance.
   dashboards.
 - [feature-flags.md](feature-flags.md) — gradual v2 rollout via
   flag; dark-launch the new route before announcing.
-- [webhooks.md](webhooks.md) — webhook *payload* versioning is a
+- [webhooks.md](webhooks.md) — webhook _payload_ versioning is a
   different problem (provider-controlled); this recipe covers
-  *receiver/sender* API versioning only.
+  _receiver/sender_ API versioning only.
 - [monorepo-releases.md](monorepo-releases.md) — `BREAKING CHANGE:`
   commits that bump API major always carry a `Migration:` footer.
 - [principles.md §2.7](../principles.md) — SemVer + release discipline.
@@ -53,12 +53,14 @@ what we want — a major bump is visible.
 
 Reach for **header-based** (`Accept: application/vnd.acme.v2+json`)
 when:
+
 - You operate a true hypermedia API (HAL / JSON:API with navigation
   links), where clients follow `Link:` headers and the version
   decoration fits the content-negotiation model. This is rare — we
   don't build hypermedia APIs by default.
 
 Reach for **date-based** (`Accept-Version: 2026-04-18`) when:
+
 - You ship breaking changes often enough that integer majors become
   meaningless (Stripe/Shopify-scale). Not our scale; the surface
   cost of the date-matrix is real (Stripe's "version rollup"
@@ -145,26 +147,23 @@ for `GET`s while `POST`/`PUT`/`DELETE` are already 410.
 ```ts
 // src/routes/api/_shared/deprecation.ts
 export type DeprecationInfo = {
-  deprecated: true;                  // RFC 7234 Deprecation header
-  sunsetAt: Date;                    // RFC 8594 Sunset header
-  successorVersion: string;          // e.g. 'v2'
-  migrationDoc: string;              // https URL
+	deprecated: true; // RFC 7234 Deprecation header
+	sunsetAt: Date; // RFC 8594 Sunset header
+	successorVersion: string; // e.g. 'v2'
+	migrationDoc: string; // https URL
 };
 
-export function applyDeprecationHeaders(
-  response: Response,
-  info: DeprecationInfo,
-): Response {
-  response.headers.set('Deprecation', 'true');
-  response.headers.set('Sunset', info.sunsetAt.toUTCString());
-  response.headers.set(
-    'Link',
-    [
-      `<${info.migrationDoc}>; rel="deprecation"; type="text/html"`,
-      `</api/${info.successorVersion}/openapi.json>; rel="successor-version"`,
-    ].join(', '),
-  );
-  return response;
+export function applyDeprecationHeaders(response: Response, info: DeprecationInfo): Response {
+	response.headers.set('Deprecation', 'true');
+	response.headers.set('Sunset', info.sunsetAt.toUTCString());
+	response.headers.set(
+		'Link',
+		[
+			`<${info.migrationDoc}>; rel="deprecation"; type="text/html"`,
+			`</api/${info.successorVersion}/openapi.json>; rel="successor-version"`,
+		].join(', '),
+	);
+	return response;
 }
 ```
 
@@ -184,14 +183,14 @@ instead of a bare HTTP status.
 import { error } from '@sveltejs/kit';
 
 export async function GET() {
-  throw error(410, {
-    type: 'urn:sveltesentio:api:sunset',
-    title: 'API v1 has been removed',
-    status: 410,
-    detail: 'API v1 was sunset on 2026-12-31. Use v2.',
-    migrationDoc: 'https://docs.acme.example/migrate-v1-to-v2',
-    successorVersion: 'v2',
-  });
+	throw error(410, {
+		type: 'urn:sveltesentio:api:sunset',
+		title: 'API v1 has been removed',
+		status: 410,
+		detail: 'API v1 was sunset on 2026-12-31. Use v2.',
+		migrationDoc: 'https://docs.acme.example/migrate-v1-to-v2',
+		successorVersion: 'v2',
+	});
 }
 ```
 
@@ -206,19 +205,19 @@ remove v1.**
 import { trace } from '@opentelemetry/api';
 
 export function withApiVersion<T extends (event: unknown) => unknown>(
-  version: string,
-  deprecated: boolean,
-  handler: T,
+	version: string,
+	deprecated: boolean,
+	handler: T,
 ): T {
-  return (async (event) => {
-    const span = trace.getActiveSpan();
-    span?.setAttributes({
-      'api.version': version,              // 'v1' | 'v2' | 'v3'
-      'api.deprecated': deprecated,
-      'api.route': new URL(event.request.url).pathname.replace(/\d+/g, ':id'),
-    });
-    return handler(event);
-  }) as T;
+	return (async (event) => {
+		const span = trace.getActiveSpan();
+		span?.setAttributes({
+			'api.version': version, // 'v1' | 'v2' | 'v3'
+			'api.deprecated': deprecated,
+			'api.route': new URL(event.request.url).pathname.replace(/\d+/g, ':id'),
+		});
+		return handler(event);
+	}) as T;
 }
 ```
 
@@ -230,8 +229,8 @@ export function withApiVersion<T extends (event: unknown) => unknown>(
    so per-route cardinality is bounded by route count, not by
    per-request id.
 3. **Track per-client-application, not per-user.** Add `api.client`
-   from API-key metadata (not userId) — you need to know *which
-   integration* is on v1, so you can email them before sunset. User-
+   from API-key metadata (not userId) — you need to know _which
+   integration_ is on v1, so you can email them before sunset. User-
    level is too granular.
 
 Dashboard pattern: top-10 API-key-on-deprecated-version by request
@@ -245,7 +244,7 @@ Clients consuming your API via `openapi-fetch` per
 ```ts
 // packages/my-app/src/lib/api-client.ts
 import createClient from 'openapi-fetch';
-import type { paths } from './api-types.v2';   // regenerated from /api/v2/openapi.json
+import type { paths } from './api-types.v2'; // regenerated from /api/v2/openapi.json
 
 export const api = createClient<paths>({ baseUrl: '/api/v2' });
 ```
@@ -264,10 +263,10 @@ deprecation clock starts.
 ```ts
 // src/routes/api/v2/orders/+server.ts
 export async function GET({ locals, url }) {
-  if (!(await locals.flags.getBooleanValue('api.v2.orders.enabled', false))) {
-    throw error(404);   // NOT 503 — the endpoint doesn't exist yet for this caller
-  }
-  // … v2 handler
+	if (!(await locals.flags.getBooleanValue('api.v2.orders.enabled', false))) {
+		throw error(404); // NOT 503 — the endpoint doesn't exist yet for this caller
+	}
+	// … v2 handler
 }
 ```
 
@@ -282,7 +281,7 @@ break clients by moving it:
 1. **Create `/api/v1/orders`** that re-exports the existing handler
    1:1. Clients can opt in.
 2. **Leave `/api/orders` as alias to v1** with a `Deprecation: true`
-   + `Sunset` header pointing to `/api/v1/orders`.
+   - `Sunset` header pointing to `/api/v1/orders`.
 3. **Monitor unversioned-path usage.** When it drops below 1%
    across all API keys, remove the alias.
 4. **Never introduce `/api/v2` before the unversioned path is
@@ -309,9 +308,9 @@ import frozen from './fixtures/openapi.v1.frozen.json';
 import current from '../src/routes/api/v1/openapi.snapshot.json';
 
 describe('v1 contract is frozen', () => {
-  test('OpenAPI diff matches frozen baseline', () => {
-    expect(current).toEqual(frozen);
-  });
+	test('OpenAPI diff matches frozen baseline', () => {
+		expect(current).toEqual(frozen);
+	});
 });
 ```
 
@@ -330,7 +329,7 @@ ADR — otherwise it's an accidental break.
   doubles.
 - **Don't remove v1 without Phase B headers.** A surprise 410 is
   how integrations break at 03:00. Sunset + Deprecation headers
-  exist so clients can monitor deprecation *before* it's terminal.
+  exist so clients can monitor deprecation _before_ it's terminal.
 - **Don't double-maintain forever.** Every live version is a
   surface-area tax. Set a sunset date at Phase A announcement; hold
   it unless a named customer formally requests extension.
@@ -359,7 +358,7 @@ ADR — otherwise it's an accidental break.
 - **Don't ship breaking changes in `v1.x` "just this once".** Every
   exception becomes the rule. If it's breaking, it's `v2`.
 - **Don't announce sunset without observability.** "v1 sunset in 90
-  days" requires "I know who's on v1" — without `api.version` + 
+  days" requires "I know who's on v1" — without `api.version` +
   `api.client` telemetry, you're guessing.
 
 ## References

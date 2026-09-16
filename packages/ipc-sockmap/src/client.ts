@@ -112,9 +112,7 @@ export async function createIpcClient(options: IpcClientOptions): Promise<IpcCli
 		access: options.access,
 	});
 	if (tier === 'none') {
-		throw connectError(
-			`No colocated-IPC transport reachable at socket ${options.socketPath}`,
-		);
+		throw connectError(`No colocated-IPC transport reachable at socket ${options.socketPath}`);
 	}
 
 	const connect = await resolveConnect(options.connect);
@@ -161,9 +159,7 @@ export async function createIpcClient(options: IpcClientOptions): Promise<IpcCli
 			result = decoder.push(chunk);
 		} catch (error) {
 			failAll(
-				error instanceof ProblemError
-					? error
-					: requestError('Frame decode error', 422, error),
+				error instanceof ProblemError ? error : requestError('Frame decode error', 422, error),
 			);
 			socket.destroy();
 			return;
@@ -189,12 +185,7 @@ export async function createIpcClient(options: IpcClientOptions): Promise<IpcCli
 					pending.timer = setTimeout(() => {
 						const index = queue.indexOf(pending);
 						if (index >= 0) queue.splice(index, 1);
-						reject(
-							requestError(
-								`Request timed out after ${options.requestTimeoutMs}ms`,
-								504,
-							),
-						);
+						reject(requestError(`Request timed out after ${options.requestTimeoutMs}ms`, 504));
 					}, options.requestTimeoutMs);
 				}
 				queue.push(pending);
@@ -205,9 +196,7 @@ export async function createIpcClient(options: IpcClientOptions): Promise<IpcCli
 					if (index >= 0) queue.splice(index, 1);
 					if (pending.timer !== undefined) clearTimeout(pending.timer);
 					reject(
-						error instanceof ProblemError
-							? error
-							: requestError('Socket write failed', 502, error),
+						error instanceof ProblemError ? error : requestError('Socket write failed', 502, error),
 					);
 				}
 			});

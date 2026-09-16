@@ -51,13 +51,13 @@ custom SW snippet.
 ```ts
 // src/sw-custom.ts — imported by the SW per pwa.md customFile option
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? { title: 'Update', body: '' };
-  event.waitUntil(showNotification(data));
+	const data = event.data?.json() ?? { title: 'Update', body: '' };
+	event.waitUntil(showNotification(data));
 });
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(routeClick(event.notification.data));
+	event.notification.close();
+	event.waitUntil(routeClick(event.notification.data));
 });
 ```
 
@@ -90,102 +90,92 @@ via a `/api/push/vapid-public` endpoint.
 ```svelte
 <!-- src/lib/push/PushToggle.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 
-  const state = $state<{
-    supported: boolean;
-    permission: NotificationPermission;
-    subscribed: boolean;
-    working: boolean;
-  }>({ supported: false, permission: 'default', subscribed: false, working: false });
+	const state = $state<{
+		supported: boolean;
+		permission: NotificationPermission;
+		subscribed: boolean;
+		working: boolean;
+	}>({ supported: false, permission: 'default', subscribed: false, working: false });
 
-  onMount(async () => {
-    if (!browser) return;
-    const supported =
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window;
-    if (!supported) return;
+	onMount(async () => {
+		if (!browser) return;
+		const supported =
+			'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+		if (!supported) return;
 
-    state.supported = true;
-    state.permission = Notification.permission;
+		state.supported = true;
+		state.permission = Notification.permission;
 
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    state.subscribed = !!sub;
-  });
+		const reg = await navigator.serviceWorker.ready;
+		const sub = await reg.pushManager.getSubscription();
+		state.subscribed = !!sub;
+	});
 
-  async function subscribe() {
-    state.working = true;
-    try {
-      const perm = await Notification.requestPermission();
-      state.permission = perm;
-      if (perm !== 'granted') return;
+	async function subscribe() {
+		state.working = true;
+		try {
+			const perm = await Notification.requestPermission();
+			state.permission = perm;
+			if (perm !== 'granted') return;
 
-      const { publicKey } = await fetch('/api/push/vapid-public').then((r) =>
-        r.json(),
-      );
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+			const { publicKey } = await fetch('/api/push/vapid-public').then((r) => r.json());
+			const reg = await navigator.serviceWorker.ready;
+			const sub = await reg.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: urlBase64ToUint8Array(publicKey),
+			});
 
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      });
-      if (!res.ok) throw new Error('subscribe failed');
-      state.subscribed = true;
-    } finally {
-      state.working = false;
-    }
-  }
+			const res = await fetch('/api/push/subscribe', {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(sub.toJSON()),
+			});
+			if (!res.ok) throw new Error('subscribe failed');
+			state.subscribed = true;
+		} finally {
+			state.working = false;
+		}
+	}
 
-  async function unsubscribe() {
-    state.working = true;
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) return;
-      await fetch('/api/push/unsubscribe', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: sub.endpoint }),
-      });
-      await sub.unsubscribe();
-      state.subscribed = false;
-    } finally {
-      state.working = false;
-    }
-  }
+	async function unsubscribe() {
+		state.working = true;
+		try {
+			const reg = await navigator.serviceWorker.ready;
+			const sub = await reg.pushManager.getSubscription();
+			if (!sub) return;
+			await fetch('/api/push/unsubscribe', {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ endpoint: sub.endpoint }),
+			});
+			await sub.unsubscribe();
+			state.subscribed = false;
+		} finally {
+			state.working = false;
+		}
+	}
 
-  function urlBase64ToUint8Array(b64: string): Uint8Array {
-    const padding = '='.repeat((4 - (b64.length % 4)) % 4);
-    const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-  }
+	function urlBase64ToUint8Array(b64: string): Uint8Array {
+		const padding = '='.repeat((4 - (b64.length % 4)) % 4);
+		const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const raw = atob(base64);
+		return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+	}
 </script>
 
 {#if !state.supported}
-  <p role="note">Push notifications aren't supported on this browser.</p>
+	<p role="note">Push notifications aren't supported on this browser.</p>
 {:else if state.permission === 'denied'}
-  <p role="note">
-    Notifications are blocked. Enable them in your browser site settings.
-  </p>
+	<p role="note">Notifications are blocked. Enable them in your browser site settings.</p>
 {:else if state.subscribed}
-  <button onclick={unsubscribe} disabled={state.working}>
-    Turn off notifications
-  </button>
+	<button onclick={unsubscribe} disabled={state.working}> Turn off notifications </button>
 {:else}
-  <button onclick={subscribe} disabled={state.working}>
-    Enable notifications
-  </button>
+	<button onclick={subscribe} disabled={state.working}> Enable notifications </button>
 {/if}
 ```
 
@@ -211,33 +201,33 @@ import { z } from 'zod';
 import type { RequestHandler } from './$types';
 
 const SubscriptionSchema = z.object({
-  endpoint: z.string().url(),
-  expirationTime: z.number().nullable().optional(),
-  keys: z.object({
-    p256dh: z.string().min(1),
-    auth: z.string().min(1),
-  }),
+	endpoint: z.string().url(),
+	expirationTime: z.number().nullable().optional(),
+	keys: z.object({
+		p256dh: z.string().min(1),
+		auth: z.string().min(1),
+	}),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const user = locals.session?.user;
-  if (!user) return json({ error: 'unauthorized' }, { status: 401 });
+	const user = locals.session?.user;
+	if (!user) return json({ error: 'unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const parsed = SubscriptionSchema.safeParse(body);
-  if (!parsed.success) {
-    return json({ error: 'invalid' }, { status: 400 });
-  }
+	const body = await request.json();
+	const parsed = SubscriptionSchema.safeParse(body);
+	if (!parsed.success) {
+		return json({ error: 'invalid' }, { status: 400 });
+	}
 
-  await locals.db.push.upsert(user.id, {
-    endpoint: parsed.data.endpoint,
-    p256dh: parsed.data.keys.p256dh,
-    auth: parsed.data.keys.auth,
-    userAgent: request.headers.get('user-agent') ?? '',
-    createdAt: new Date(),
-  });
+	await locals.db.push.upsert(user.id, {
+		endpoint: parsed.data.endpoint,
+		p256dh: parsed.data.keys.p256dh,
+		auth: parsed.data.keys.auth,
+		userAgent: request.headers.get('user-agent') ?? '',
+		createdAt: new Date(),
+	});
 
-  return json({ ok: true });
+	return json({ ok: true });
 };
 ```
 
@@ -252,39 +242,35 @@ active subscription per user. Store the `userAgent` for the user-facing
 import webpush from 'web-push';
 import { env } from '$env/dynamic/private';
 
-webpush.setVapidDetails(
-  'mailto:ops@example.com',
-  env.VAPID_PUBLIC_KEY,
-  env.VAPID_PRIVATE_KEY,
-);
+webpush.setVapidDetails('mailto:ops@example.com', env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
 
 export type PushPayload = {
-  title: string;
-  body: string;
-  url: string;
-  tag?: string;
-  correlationId: string;
+	title: string;
+	body: string;
+	url: string;
+	tag?: string;
+	correlationId: string;
 };
 
 export async function sendPush(
-  sub: { endpoint: string; p256dh: string; auth: string },
-  payload: PushPayload,
+	sub: { endpoint: string; p256dh: string; auth: string },
+	payload: PushPayload,
 ): Promise<'ok' | 'gone' | 'error'> {
-  try {
-    await webpush.sendNotification(
-      {
-        endpoint: sub.endpoint,
-        keys: { p256dh: sub.p256dh, auth: sub.auth },
-      },
-      JSON.stringify(payload),
-      { TTL: 3600, urgency: 'high' },
-    );
-    return 'ok';
-  } catch (err) {
-    const status = (err as { statusCode?: number }).statusCode;
-    if (status === 404 || status === 410) return 'gone';
-    return 'error';
-  }
+	try {
+		await webpush.sendNotification(
+			{
+				endpoint: sub.endpoint,
+				keys: { p256dh: sub.p256dh, auth: sub.auth },
+			},
+			JSON.stringify(payload),
+			{ TTL: 3600, urgency: 'high' },
+		);
+		return 'ok';
+	} catch (err) {
+		const status = (err as { statusCode?: number }).statusCode;
+		if (status === 404 || status === 410) return 'gone';
+		return 'error';
+	}
 }
 ```
 
@@ -299,44 +285,44 @@ site data, revoked permission). Never retry `410`.
 import { z } from 'zod';
 
 const PayloadSchema = z.object({
-  title: z.string(),
-  body: z.string(),
-  url: z.string(),
-  tag: z.string().optional(),
-  correlationId: z.string().uuid(),
+	title: z.string(),
+	body: z.string(),
+	url: z.string(),
+	tag: z.string().optional(),
+	correlationId: z.string().uuid(),
 });
 
 async function showNotification(raw: unknown) {
-  const parsed = PayloadSchema.safeParse(raw);
-  if (!parsed.success) return;
-  const { title, body, url, tag, correlationId } = parsed.data;
+	const parsed = PayloadSchema.safeParse(raw);
+	if (!parsed.success) return;
+	const { title, body, url, tag, correlationId } = parsed.data;
 
-  await self.registration.showNotification(title, {
-    body,
-    tag,
-    icon: '/icons/pwa-192.png',
-    badge: '/icons/badge-72.png',
-    data: { url, correlationId },
-    requireInteraction: false,
-    silent: false,
-  });
+	await self.registration.showNotification(title, {
+		body,
+		tag,
+		icon: '/icons/pwa-192.png',
+		badge: '/icons/badge-72.png',
+		data: { url, correlationId },
+		requireInteraction: false,
+		silent: false,
+	});
 }
 
 async function routeClick(data: { url?: string; correlationId?: string } | undefined) {
-  const target = data?.url ?? '/';
-  const all = await self.clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true,
-  });
+	const target = data?.url ?? '/';
+	const all = await self.clients.matchAll({
+		type: 'window',
+		includeUncontrolled: true,
+	});
 
-  for (const client of all) {
-    const cu = new URL(client.url);
-    const tu = new URL(target, cu.origin);
-    if (cu.pathname === tu.pathname && 'focus' in client) {
-      return client.focus();
-    }
-  }
-  if (self.clients.openWindow) await self.clients.openWindow(target);
+	for (const client of all) {
+		const cu = new URL(client.url);
+		const tu = new URL(target, cu.origin);
+		if (cu.pathname === tu.pathname && 'focus' in client) {
+			return client.focus();
+		}
+	}
+	if (self.clients.openWindow) await self.clients.openWindow(target);
 }
 ```
 
@@ -422,12 +408,12 @@ import nock from 'nock';
 import { sendPush } from '$lib/server/push';
 
 test('sendPush returns "gone" on 410', async () => {
-  nock('https://fcm.googleapis.com').post(/.*/).reply(410, 'Gone');
-  const result = await sendPush(
-    { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', p256dh: '…', auth: '…' },
-    { title: 'T', body: 'B', url: '/', correlationId: crypto.randomUUID() },
-  );
-  expect(result).toBe('gone');
+	nock('https://fcm.googleapis.com').post(/.*/).reply(410, 'Gone');
+	const result = await sendPush(
+		{ endpoint: 'https://fcm.googleapis.com/fcm/send/abc', p256dh: '…', auth: '…' },
+		{ title: 'T', body: 'B', url: '/', correlationId: crypto.randomUUID() },
+	);
+	expect(result).toBe('gone');
 });
 ```
 
@@ -435,10 +421,10 @@ Integration: Playwright with Chromium's `grantPermissions`:
 
 ```ts
 test('subscribe round-trip', async ({ context, page }) => {
-  await context.grantPermissions(['notifications']);
-  await page.goto('/settings/notifications');
-  await page.click('button:has-text("Enable notifications")');
-  await expect(page.getByText('Turn off notifications')).toBeVisible();
+	await context.grantPermissions(['notifications']);
+	await page.goto('/settings/notifications');
+	await page.click('button:has-text("Enable notifications")');
+	await expect(page.getByText('Turn off notifications')).toBeVisible();
 });
 ```
 

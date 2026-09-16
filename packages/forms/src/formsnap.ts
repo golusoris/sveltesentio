@@ -20,7 +20,4 @@ export {
 	getFormControl,
 } from 'formsnap';
 
-export type {
-	UseFormFieldProps,
-	UseFormControlProps,
-} from 'formsnap';
+export type { UseFormFieldProps, UseFormControlProps } from 'formsnap';

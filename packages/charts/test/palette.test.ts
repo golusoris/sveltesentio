@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	chartPalette,
-	chartSeriesColor,
-	CHART_PALETTE_SIZE,
-} from '../src/palette.js';
+import { chartPalette, chartSeriesColor, CHART_PALETTE_SIZE } from '../src/palette.js';
 
 describe('chartPalette', () => {
 	it('has CHART_PALETTE_SIZE entries', () => {
@@ -13,9 +9,7 @@ describe('chartPalette', () => {
 
 	it('maps each slot to its 1-based --color-chart-N variable with an oklch fallback', () => {
 		chartPalette.forEach((color, i) => {
-			expect(color).toMatch(
-				new RegExp(`^var\\(--color-chart-${i + 1}, oklch\\([^)]+\\)\\)$`),
-			);
+			expect(color).toMatch(new RegExp(`^var\\(--color-chart-${i + 1}, oklch\\([^)]+\\)\\)$`));
 		});
 	});
 

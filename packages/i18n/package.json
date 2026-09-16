@@ -1,79 +1,79 @@
 {
-  "description": "Paraglide-js v2 wrappers \u2014 locale detection, Intl formatters, a11y announcer, RTL direction",
-  "devDependencies": {
-    "@inlang/paraglide-js": "^2.25.1",
-    "@storybook/addon-svelte-csf": "5.1.3",
-    "@sveltejs/kit": "^2.70.3",
-    "@sveltejs/vite-plugin-svelte": "^7.3.0",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.10.0",
-    "@testing-library/svelte": "^5.4.2",
-    "axe-core": "^4.13.0",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.57.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./announcer": {
-      "import": "./src/announcer.ts",
-      "types": "./src/announcer.ts"
-    },
-    "./direction": {
-      "import": "./src/direction.ts",
-      "types": "./src/direction.ts"
-    },
-    "./intl": {
-      "import": "./src/intl.ts",
-      "types": "./src/intl.ts"
-    },
-    "./lang-sync": {
-      "svelte": "./src/LangSync.svelte",
-      "default": "./src/LangSync.svelte"
-    },
-    "./load-locale-font": {
-      "import": "./src/load-locale-font.ts",
-      "types": "./src/load-locale-font.ts"
-    },
-    "./locale-switcher": {
-      "svelte": "./src/LocaleSwitcher.svelte",
-      "default": "./src/LocaleSwitcher.svelte"
-    }
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ],
-  "keywords": [
-    "sveltesentio",
-    "i18n",
-    "paraglide",
-    "localization",
-    "rtl",
-    "a11y"
-  ],
-  "name": "@sveltesentio/i18n",
-  "peerDependencies": {
-    "@inlang/paraglide-js": ">=2.0.0",
-    "@sveltejs/kit": ">=2.0.0",
-    "svelte": ">=5.0.0"
-  },
-  "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
-  },
-  "sideEffects": false,
-  "type": "module",
-  "version": "0.3.0"
+	"description": "Paraglide-js v2 wrappers \u2014 locale detection, Intl formatters, a11y announcer, RTL direction",
+	"devDependencies": {
+		"@inlang/paraglide-js": "^2.25.1",
+		"@storybook/addon-svelte-csf": "5.1.3",
+		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@sveltesentio/testing": "workspace:*",
+		"@testing-library/jest-dom": "^6.10.0",
+		"@testing-library/svelte": "^5.4.2",
+		"axe-core": "^4.13.0",
+		"jsdom": "^29.1.1",
+		"svelte": "^5.57.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.11"
+	},
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		},
+		"./announcer": {
+			"import": "./src/announcer.ts",
+			"types": "./src/announcer.ts"
+		},
+		"./direction": {
+			"import": "./src/direction.ts",
+			"types": "./src/direction.ts"
+		},
+		"./intl": {
+			"import": "./src/intl.ts",
+			"types": "./src/intl.ts"
+		},
+		"./lang-sync": {
+			"svelte": "./src/LangSync.svelte",
+			"default": "./src/LangSync.svelte"
+		},
+		"./load-locale-font": {
+			"import": "./src/load-locale-font.ts",
+			"types": "./src/load-locale-font.ts"
+		},
+		"./locale-switcher": {
+			"svelte": "./src/LocaleSwitcher.svelte",
+			"default": "./src/LocaleSwitcher.svelte"
+		}
+	},
+	"files": [
+		"src",
+		"CHANGELOG.md",
+		"!src/**/*.stories.svelte"
+	],
+	"keywords": [
+		"sveltesentio",
+		"i18n",
+		"paraglide",
+		"localization",
+		"rtl",
+		"a11y"
+	],
+	"name": "@sveltesentio/i18n",
+	"peerDependencies": {
+		"@inlang/paraglide-js": ">=2.0.0",
+		"@sveltejs/kit": ">=2.0.0",
+		"svelte": ">=5.0.0"
+	},
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"test": "vitest run --coverage",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"version": "0.3.0"
 }

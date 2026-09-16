@@ -87,46 +87,46 @@ export const ThreadStatus = z.enum(['open', 'resolved', 'deleted']);
 export type ThreadStatus = z.infer<typeof ThreadStatus>;
 
 export const Mention = z.object({
-  kind: z.enum(['user', 'team']),
-  id: z.string().uuid(),
-  displayName: z.string().min(1).max(120),
+	kind: z.enum(['user', 'team']),
+	id: z.string().uuid(),
+	displayName: z.string().min(1).max(120),
 });
 
 export const CommentBody = z.object({
-  // Comment bodies are markdown-lite. See markdown.md.
-  // Raw text is stored; HTML is rendered at read time with DOMPurify.
-  text: z.string().trim().min(1).max(10_000),
-  mentions: z.array(Mention).max(25),
+	// Comment bodies are markdown-lite. See markdown.md.
+	// Raw text is stored; HTML is rendered at read time with DOMPurify.
+	text: z.string().trim().min(1).max(10_000),
+	mentions: z.array(Mention).max(25),
 });
 export type CommentBody = z.infer<typeof CommentBody>;
 
 export const Comment = z.object({
-  id: z.string().uuid(),
-  body: CommentBody,
-  authorId: z.string().uuid(),
-  authorDisplayName: z.string().min(1).max(120),
-  createdAt: z.string().datetime({ offset: true }),
-  editedAt: z.string().datetime({ offset: true }).nullable(),
+	id: z.string().uuid(),
+	body: CommentBody,
+	authorId: z.string().uuid(),
+	authorDisplayName: z.string().min(1).max(120),
+	createdAt: z.string().datetime({ offset: true }),
+	editedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export const ThreadAnchor = z.object({
-  kind: z.enum(['text-range', 'image-region', 'pdf-range', 'video-timecode']),
-  // `position` is an opaque Uint8Array, base64-encoded at the DB boundary.
-  // For text-range it's two RelativePositions (start, end).
-  position: z.string().regex(/^[A-Za-z0-9+/=]{1,4096}$/),
+	kind: z.enum(['text-range', 'image-region', 'pdf-range', 'video-timecode']),
+	// `position` is an opaque Uint8Array, base64-encoded at the DB boundary.
+	// For text-range it's two RelativePositions (start, end).
+	position: z.string().regex(/^[A-Za-z0-9+/=]{1,4096}$/),
 });
 
 export const Thread = z.object({
-  id: z.string().uuid(),
-  docId: z.string().uuid(),
-  anchor: ThreadAnchor,
-  status: ThreadStatus,
-  createdBy: z.string().uuid(),
-  createdAt: z.string().datetime({ offset: true }),
-  resolvedBy: z.string().uuid().nullable(),
-  resolvedAt: z.string().datetime({ offset: true }).nullable(),
-  firstComment: Comment,
-  replies: z.array(Comment).max(500),         // hard cap per thread
+	id: z.string().uuid(),
+	docId: z.string().uuid(),
+	anchor: ThreadAnchor,
+	status: ThreadStatus,
+	createdBy: z.string().uuid(),
+	createdAt: z.string().datetime({ offset: true }),
+	resolvedBy: z.string().uuid().nullable(),
+	resolvedAt: z.string().datetime({ offset: true }).nullable(),
+	firstComment: Comment,
+	replies: z.array(Comment).max(500), // hard cap per thread
 });
 export type Thread = z.infer<typeof Thread>;
 ```
@@ -147,119 +147,125 @@ import type { EditorView } from 'prosemirror-view';
 import { Thread, Comment, type ThreadAnchor } from './types';
 
 export function createCommentStore(opts: {
-  docId: string;
-  mainDoc: Y.Doc;                  // the document's own Y.Doc (for anchors)
-  wsUrl: string;
-  user: { id: string; displayName: string };
-  getAuthToken: () => Promise<string>;
+	docId: string;
+	mainDoc: Y.Doc; // the document's own Y.Doc (for anchors)
+	wsUrl: string;
+	user: { id: string; displayName: string };
+	getAuthToken: () => Promise<string>;
 }) {
-  const commentDoc = new Y.Doc();
-  const indexed = new IndexeddbPersistence(`doc:${opts.docId}:comments`, commentDoc);
-  const ws = new WebsocketProvider(opts.wsUrl, `doc:${opts.docId}:comments`, commentDoc, {
-    params: { token: '' },
-  });
-  opts.getAuthToken().then((t) => {
-    ws.disconnect();
-    (ws as any).roomnameParams = { token: t };
-    ws.connect();
-  });
+	const commentDoc = new Y.Doc();
+	const indexed = new IndexeddbPersistence(`doc:${opts.docId}:comments`, commentDoc);
+	const ws = new WebsocketProvider(opts.wsUrl, `doc:${opts.docId}:comments`, commentDoc, {
+		params: { token: '' },
+	});
+	opts.getAuthToken().then((t) => {
+		ws.disconnect();
+		(ws as any).roomnameParams = { token: t };
+		ws.connect();
+	});
 
-  const threads = commentDoc.getMap<Y.Map<unknown>>('threads');
+	const threads = commentDoc.getMap<Y.Map<unknown>>('threads');
 
-  const list = $state<Thread[]>([]);
+	const list = $state<Thread[]>([]);
 
-  const refresh = () => {
-    const out: Thread[] = [];
-    threads.forEach((yThread) => {
-      const raw = yThread.toJSON();
-      const parsed = Thread.safeParse(raw);
-      if (parsed.success) out.push(parsed.data);
-    });
-    list.length = 0;
-    list.push(...out);
-  };
+	const refresh = () => {
+		const out: Thread[] = [];
+		threads.forEach((yThread) => {
+			const raw = yThread.toJSON();
+			const parsed = Thread.safeParse(raw);
+			if (parsed.success) out.push(parsed.data);
+		});
+		list.length = 0;
+		list.push(...out);
+	};
 
-  threads.observeDeep(refresh);
-  indexed.whenSynced.then(refresh);
+	threads.observeDeep(refresh);
+	indexed.whenSynced.then(refresh);
 
-  const createThread = (anchor: ThreadAnchor, bodyText: string, mentions: Array<{ kind: 'user' | 'team'; id: string; displayName: string }>) => {
-    const threadId = crypto.randomUUID();
-    const commentId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    const yThread = new Y.Map();
-    yThread.set('id', threadId);
-    yThread.set('docId', opts.docId);
-    yThread.set('anchor', anchor);
-    yThread.set('status', 'open');
-    yThread.set('createdBy', opts.user.id);
-    yThread.set('createdAt', now);
-    yThread.set('resolvedBy', null);
-    yThread.set('resolvedAt', null);
-    yThread.set('firstComment', {
-      id: commentId,
-      body: { text: bodyText, mentions },
-      authorId: opts.user.id,
-      authorDisplayName: opts.user.displayName,
-      createdAt: now,
-      editedAt: null,
-    });
-    yThread.set('replies', []);
-    threads.set(threadId, yThread);
-    return threadId;
-  };
+	const createThread = (
+		anchor: ThreadAnchor,
+		bodyText: string,
+		mentions: Array<{ kind: 'user' | 'team'; id: string; displayName: string }>,
+	) => {
+		const threadId = crypto.randomUUID();
+		const commentId = crypto.randomUUID();
+		const now = new Date().toISOString();
+		const yThread = new Y.Map();
+		yThread.set('id', threadId);
+		yThread.set('docId', opts.docId);
+		yThread.set('anchor', anchor);
+		yThread.set('status', 'open');
+		yThread.set('createdBy', opts.user.id);
+		yThread.set('createdAt', now);
+		yThread.set('resolvedBy', null);
+		yThread.set('resolvedAt', null);
+		yThread.set('firstComment', {
+			id: commentId,
+			body: { text: bodyText, mentions },
+			authorId: opts.user.id,
+			authorDisplayName: opts.user.displayName,
+			createdAt: now,
+			editedAt: null,
+		});
+		yThread.set('replies', []);
+		threads.set(threadId, yThread);
+		return threadId;
+	};
 
-  const reply = (threadId: string, bodyText: string, mentions: Mention[] = []) => {
-    const yThread = threads.get(threadId);
-    if (!yThread) return;
-    const replies = (yThread.get('replies') as Comment[]) ?? [];
-    if (replies.length >= 500) throw new Error('thread_capped');
-    const c: Comment = {
-      id: crypto.randomUUID(),
-      body: { text: bodyText, mentions },
-      authorId: opts.user.id,
-      authorDisplayName: opts.user.displayName,
-      createdAt: new Date().toISOString(),
-      editedAt: null,
-    };
-    yThread.set('replies', [...replies, c]);
-  };
+	const reply = (threadId: string, bodyText: string, mentions: Mention[] = []) => {
+		const yThread = threads.get(threadId);
+		if (!yThread) return;
+		const replies = (yThread.get('replies') as Comment[]) ?? [];
+		if (replies.length >= 500) throw new Error('thread_capped');
+		const c: Comment = {
+			id: crypto.randomUUID(),
+			body: { text: bodyText, mentions },
+			authorId: opts.user.id,
+			authorDisplayName: opts.user.displayName,
+			createdAt: new Date().toISOString(),
+			editedAt: null,
+		};
+		yThread.set('replies', [...replies, c]);
+	};
 
-  const resolve = (threadId: string) => {
-    const yThread = threads.get(threadId);
-    if (!yThread) return;
-    yThread.set('status', 'resolved');
-    yThread.set('resolvedBy', opts.user.id);
-    yThread.set('resolvedAt', new Date().toISOString());
-    // Server mirrors to audit-log via the websocket relay.
-  };
+	const resolve = (threadId: string) => {
+		const yThread = threads.get(threadId);
+		if (!yThread) return;
+		yThread.set('status', 'resolved');
+		yThread.set('resolvedBy', opts.user.id);
+		yThread.set('resolvedAt', new Date().toISOString());
+		// Server mirrors to audit-log via the websocket relay.
+	};
 
-  const reopen = (threadId: string) => {
-    const yThread = threads.get(threadId);
-    if (!yThread) return;
-    yThread.set('status', 'open');
-    yThread.set('resolvedBy', null);
-    yThread.set('resolvedAt', null);
-  };
+	const reopen = (threadId: string) => {
+		const yThread = threads.get(threadId);
+		if (!yThread) return;
+		yThread.set('status', 'open');
+		yThread.set('resolvedBy', null);
+		yThread.set('resolvedAt', null);
+	};
 
-  const softDelete = (threadId: string) => {
-    const yThread = threads.get(threadId);
-    if (!yThread) return;
-    yThread.set('status', 'deleted');   // tombstone; GC separate
-  };
+	const softDelete = (threadId: string) => {
+		const yThread = threads.get(threadId);
+		if (!yThread) return;
+		yThread.set('status', 'deleted'); // tombstone; GC separate
+	};
 
-  return {
-    get threads() { return list; },
-    createThread,
-    reply,
-    resolve,
-    reopen,
-    softDelete,
-    destroy: () => {
-      ws.disconnect();
-      indexed.destroy();
-      commentDoc.destroy();
-    },
-  };
+	return {
+		get threads() {
+			return list;
+		},
+		createThread,
+		reply,
+		resolve,
+		reopen,
+		softDelete,
+		destroy: () => {
+			ws.disconnect();
+			indexed.destroy();
+			commentDoc.destroy();
+		},
+	};
 }
 ```
 
@@ -269,39 +275,44 @@ export function createCommentStore(opts: {
 // packages/collab/src/comments/text-anchor.ts
 import * as Y from 'yjs';
 
-export function encodeTextAnchor(mainDoc: Y.Doc, typeName: string, startAbs: number, endAbs: number): string {
-  const yText = mainDoc.getText(typeName);
-  const start = Y.createRelativePositionFromTypeIndex(yText, startAbs);
-  const end = Y.createRelativePositionFromTypeIndex(yText, endAbs);
-  const encoded = Y.encodeRelativePosition;
-  const buf = new Uint8Array(
-    encoded(start).length + encoded(end).length + 4,
-  );
-  const view = new DataView(buf.buffer);
-  const startBytes = encoded(start);
-  const endBytes = encoded(end);
-  view.setUint16(0, startBytes.length, true);
-  buf.set(startBytes, 2);
-  view.setUint16(2 + startBytes.length, endBytes.length, true);
-  buf.set(endBytes, 4 + startBytes.length);
-  return btoa(String.fromCharCode(...buf));
+export function encodeTextAnchor(
+	mainDoc: Y.Doc,
+	typeName: string,
+	startAbs: number,
+	endAbs: number,
+): string {
+	const yText = mainDoc.getText(typeName);
+	const start = Y.createRelativePositionFromTypeIndex(yText, startAbs);
+	const end = Y.createRelativePositionFromTypeIndex(yText, endAbs);
+	const encoded = Y.encodeRelativePosition;
+	const buf = new Uint8Array(encoded(start).length + encoded(end).length + 4);
+	const view = new DataView(buf.buffer);
+	const startBytes = encoded(start);
+	const endBytes = encoded(end);
+	view.setUint16(0, startBytes.length, true);
+	buf.set(startBytes, 2);
+	view.setUint16(2 + startBytes.length, endBytes.length, true);
+	buf.set(endBytes, 4 + startBytes.length);
+	return btoa(String.fromCharCode(...buf));
 }
 
-export function decodeTextAnchor(mainDoc: Y.Doc, typeName: string, encoded: string):
-  | { start: number; end: number; orphaned: false }
-  | { orphaned: true } {
-  const buf = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
-  const view = new DataView(buf.buffer);
-  const startLen = view.getUint16(0, true);
-  const endLen = view.getUint16(2 + startLen, true);
-  const startBytes = buf.slice(2, 2 + startLen);
-  const endBytes = buf.slice(4 + startLen, 4 + startLen + endLen);
-  const startRel = Y.decodeRelativePosition(startBytes);
-  const endRel = Y.decodeRelativePosition(endBytes);
-  const startAbs = Y.createAbsolutePositionFromRelativePosition(startRel, mainDoc);
-  const endAbs = Y.createAbsolutePositionFromRelativePosition(endRel, mainDoc);
-  if (!startAbs || !endAbs) return { orphaned: true };
-  return { start: startAbs.index, end: endAbs.index, orphaned: false };
+export function decodeTextAnchor(
+	mainDoc: Y.Doc,
+	typeName: string,
+	encoded: string,
+): { start: number; end: number; orphaned: false } | { orphaned: true } {
+	const buf = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
+	const view = new DataView(buf.buffer);
+	const startLen = view.getUint16(0, true);
+	const endLen = view.getUint16(2 + startLen, true);
+	const startBytes = buf.slice(2, 2 + startLen);
+	const endBytes = buf.slice(4 + startLen, 4 + startLen + endLen);
+	const startRel = Y.decodeRelativePosition(startBytes);
+	const endRel = Y.decodeRelativePosition(endBytes);
+	const startAbs = Y.createAbsolutePositionFromRelativePosition(startRel, mainDoc);
+	const endAbs = Y.createAbsolutePositionFromRelativePosition(endRel, mainDoc);
+	if (!startAbs || !endAbs) return { orphaned: true };
+	return { start: startAbs.index, end: endAbs.index, orphaned: false };
 }
 ```
 
@@ -314,65 +325,71 @@ the user can see what they were about.
 ```svelte
 <!-- packages/ui/src/comments/CommentSidebar.svelte -->
 <script lang="ts">
-  import type { Thread } from '@sveltesentio/collab/comments';
-  let { threads, onResolve, onReply }: {
-    threads: Thread[];
-    onResolve: (id: string) => void;
-    onReply: (id: string, text: string) => void;
-  } = $props();
+	import type { Thread } from '@sveltesentio/collab/comments';
+	let {
+		threads,
+		onResolve,
+		onReply,
+	}: {
+		threads: Thread[];
+		onResolve: (id: string) => void;
+		onReply: (id: string, text: string) => void;
+	} = $props();
 
-  const openThreads = $derived(threads.filter((t) => t.status === 'open'));
-  let filter = $state<'open' | 'resolved' | 'all'>('open');
+	const openThreads = $derived(threads.filter((t) => t.status === 'open'));
+	let filter = $state<'open' | 'resolved' | 'all'>('open');
 </script>
 
 <aside aria-label="Comments" class="comment-sidebar">
-  <header>
-    <h2>Comments</h2>
-    <fieldset>
-      <label><input type="radio" bind:group={filter} value="open" /> Open</label>
-      <label><input type="radio" bind:group={filter} value="resolved" /> Resolved</label>
-      <label><input type="radio" bind:group={filter} value="all" /> All</label>
-    </fieldset>
-  </header>
-  <ul>
-    {#each threads.filter((t) => filter === 'all' || t.status === filter) as thread (thread.id)}
-      <li class="thread" class:resolved={thread.status === 'resolved'}>
-        <article aria-labelledby={`thread-${thread.id}-head`}>
-          <header id={`thread-${thread.id}-head`}>
-            <span class="author">{thread.firstComment.authorDisplayName}</span>
-            <time datetime={thread.firstComment.createdAt}>
-              {new Date(thread.firstComment.createdAt).toLocaleString()}
-            </time>
-          </header>
-          <p>{thread.firstComment.body.text}</p>
-          {#each thread.replies as reply (reply.id)}
-            <article class="reply">
-              <header>
-                <span class="author">{reply.authorDisplayName}</span>
-                <time datetime={reply.createdAt}>
-                  {new Date(reply.createdAt).toLocaleString()}
-                </time>
-              </header>
-              <p>{reply.body.text}</p>
-            </article>
-          {/each}
-          {#if thread.status === 'open'}
-            <form on:submit|preventDefault={(e) => {
-              const input = (e.target as HTMLFormElement).querySelector('textarea');
-              if (input && input.value.trim()) {
-                onReply(thread.id, input.value);
-                input.value = '';
-              }
-            }}>
-              <textarea required maxlength="10000" aria-label="Reply"></textarea>
-              <button>Reply</button>
-              <button type="button" onclick={() => onResolve(thread.id)}>Resolve</button>
-            </form>
-          {/if}
-        </article>
-      </li>
-    {/each}
-  </ul>
+	<header>
+		<h2>Comments</h2>
+		<fieldset>
+			<label><input type="radio" bind:group={filter} value="open" /> Open</label>
+			<label><input type="radio" bind:group={filter} value="resolved" /> Resolved</label>
+			<label><input type="radio" bind:group={filter} value="all" /> All</label>
+		</fieldset>
+	</header>
+	<ul>
+		{#each threads.filter((t) => filter === 'all' || t.status === filter) as thread (thread.id)}
+			<li class="thread" class:resolved={thread.status === 'resolved'}>
+				<article aria-labelledby={`thread-${thread.id}-head`}>
+					<header id={`thread-${thread.id}-head`}>
+						<span class="author">{thread.firstComment.authorDisplayName}</span>
+						<time datetime={thread.firstComment.createdAt}>
+							{new Date(thread.firstComment.createdAt).toLocaleString()}
+						</time>
+					</header>
+					<p>{thread.firstComment.body.text}</p>
+					{#each thread.replies as reply (reply.id)}
+						<article class="reply">
+							<header>
+								<span class="author">{reply.authorDisplayName}</span>
+								<time datetime={reply.createdAt}>
+									{new Date(reply.createdAt).toLocaleString()}
+								</time>
+							</header>
+							<p>{reply.body.text}</p>
+						</article>
+					{/each}
+					{#if thread.status === 'open'}
+						<form
+							on:submit|preventDefault={(e) => {
+								const input = (e.target as HTMLFormElement).querySelector('textarea');
+								if (input && input.value.trim()) {
+									onReply(thread.id, input.value);
+									input.value = '';
+								}
+							}}
+						>
+							<textarea required maxlength="10000" aria-label="Reply"></textarea>
+							<button>Reply</button>
+							<button type="button" onclick={() => onResolve(thread.id)}>Resolve</button>
+						</form>
+					{/if}
+				</article>
+			</li>
+		{/each}
+	</ul>
 </aside>
 ```
 
@@ -381,34 +398,40 @@ the user can see what they were about.
 ```svelte
 <!-- packages/ui/src/comments/MentionPicker.svelte — excerpt -->
 <script lang="ts">
-  import { searchUsers } from '$lib/api/search';
-  let { onPick }: { onPick: (m: Mention) => void } = $props();
+	import { searchUsers } from '$lib/api/search';
+	let { onPick }: { onPick: (m: Mention) => void } = $props();
 
-  let query = $state('');
-  let results = $state<Array<{ id: string; displayName: string; kind: 'user' | 'team' }>>([]);
-  let open = $state(false);
-  let seq = 0;
+	let query = $state('');
+	let results = $state<Array<{ id: string; displayName: string; kind: 'user' | 'team' }>>([]);
+	let open = $state(false);
+	let seq = 0;
 
-  $effect(() => {
-    const currentSeq = ++seq;
-    if (query.trim().length < 1) { results = []; return; }
-    searchUsers({ q: query, limit: 10 }).then((r) => {
-      if (currentSeq === seq) results = r;
-    });
-  });
+	$effect(() => {
+		const currentSeq = ++seq;
+		if (query.trim().length < 1) {
+			results = [];
+			return;
+		}
+		searchUsers({ q: query, limit: 10 }).then((r) => {
+			if (currentSeq === seq) results = r;
+		});
+	});
 </script>
 
 <div class="mention-combobox" role="combobox" aria-expanded={open} aria-haspopup="listbox">
-  <input bind:value={query} aria-autocomplete="list" aria-controls="mention-listbox" />
-  {#if open && results.length > 0}
-    <ul id="mention-listbox" role="listbox">
-      {#each results as r (r.id)}
-        <li role="option" onclick={() => onPick({ kind: r.kind, id: r.id, displayName: r.displayName })}>
-          @{r.displayName}
-        </li>
-      {/each}
-    </ul>
-  {/if}
+	<input bind:value={query} aria-autocomplete="list" aria-controls="mention-listbox" />
+	{#if open && results.length > 0}
+		<ul id="mention-listbox" role="listbox">
+			{#each results as r (r.id)}
+				<li
+					role="option"
+					onclick={() => onPick({ kind: r.kind, id: r.id, displayName: r.displayName })}
+				>
+					@{r.displayName}
+				</li>
+			{/each}
+		</ul>
+	{/if}
 </div>
 ```
 
@@ -427,34 +450,54 @@ import { writeAuditEvent } from '@sveltesentio/audit';
 import { enqueueNotification } from '@sveltesentio/notifications';
 
 export function attachCommentsRelay(provider: YWebsocketRoom) {
-  provider.doc.on('update', async (_update, origin, doc) => {
-    if (origin === 'server-echo') return;
-    // Diff threads map for status transitions + new replies + mentions.
-    const threads = doc.getMap('threads');
-    for (const [threadId, yThread] of threads as any) {
-      const snap = yThread.toJSON();
-      const prev = provider.lastSnapshot.get(threadId);
-      if (!prev && snap.firstComment) {
-        await writeAuditEvent({ kind: 'comment.thread.created', subjectId: snap.createdBy, payload: { threadId, docId: snap.docId } });
-        for (const m of snap.firstComment.body.mentions ?? []) {
-          await enqueueNotification({ toUserId: m.id, kind: 'mention', payload: { threadId, docId: snap.docId, excerpt: snap.firstComment.body.text.slice(0, 280) } });
-        }
-      }
-      if (prev?.status === 'open' && snap.status === 'resolved') {
-        await writeAuditEvent({ kind: 'comment.thread.resolved', subjectId: snap.resolvedBy, payload: { threadId, docId: snap.docId } });
-      }
-      // replies delta — by length change
-      if ((snap.replies?.length ?? 0) > (prev?.replies?.length ?? 0)) {
-        const newReplies = (snap.replies ?? []).slice(prev?.replies?.length ?? 0);
-        for (const reply of newReplies) {
-          for (const m of reply.body.mentions ?? []) {
-            await enqueueNotification({ toUserId: m.id, kind: 'mention-reply', payload: { threadId, excerpt: reply.body.text.slice(0, 280) } });
-          }
-        }
-      }
-      provider.lastSnapshot.set(threadId, snap);
-    }
-  });
+	provider.doc.on('update', async (_update, origin, doc) => {
+		if (origin === 'server-echo') return;
+		// Diff threads map for status transitions + new replies + mentions.
+		const threads = doc.getMap('threads');
+		for (const [threadId, yThread] of threads as any) {
+			const snap = yThread.toJSON();
+			const prev = provider.lastSnapshot.get(threadId);
+			if (!prev && snap.firstComment) {
+				await writeAuditEvent({
+					kind: 'comment.thread.created',
+					subjectId: snap.createdBy,
+					payload: { threadId, docId: snap.docId },
+				});
+				for (const m of snap.firstComment.body.mentions ?? []) {
+					await enqueueNotification({
+						toUserId: m.id,
+						kind: 'mention',
+						payload: {
+							threadId,
+							docId: snap.docId,
+							excerpt: snap.firstComment.body.text.slice(0, 280),
+						},
+					});
+				}
+			}
+			if (prev?.status === 'open' && snap.status === 'resolved') {
+				await writeAuditEvent({
+					kind: 'comment.thread.resolved',
+					subjectId: snap.resolvedBy,
+					payload: { threadId, docId: snap.docId },
+				});
+			}
+			// replies delta — by length change
+			if ((snap.replies?.length ?? 0) > (prev?.replies?.length ?? 0)) {
+				const newReplies = (snap.replies ?? []).slice(prev?.replies?.length ?? 0);
+				for (const reply of newReplies) {
+					for (const m of reply.body.mentions ?? []) {
+						await enqueueNotification({
+							toUserId: m.id,
+							kind: 'mention-reply',
+							payload: { threadId, excerpt: reply.body.text.slice(0, 280) },
+						});
+					}
+				}
+			}
+			provider.lastSnapshot.set(threadId, snap);
+		}
+	});
 }
 ```
 
@@ -466,18 +509,18 @@ path continues. Audit + notifications have their own retry queue.
 ```ts
 // packages/collab/src/comments/authz.ts
 export function canResolve(user: { id: string; permissions: string[] }, thread: Thread): boolean {
-  // Thread author can resolve own thread.
-  if (user.id === thread.createdBy) return true;
-  // Document-editor role can resolve anyone's thread.
-  if (user.permissions.includes('doc:edit')) return true;
-  return false;
+	// Thread author can resolve own thread.
+	if (user.id === thread.createdBy) return true;
+	// Document-editor role can resolve anyone's thread.
+	if (user.permissions.includes('doc:edit')) return true;
+	return false;
 }
 
 export function canDelete(user: { id: string; permissions: string[] }, thread: Thread): boolean {
-  // Only: comment author OR doc:admin. Never doc:edit.
-  if (user.id === thread.createdBy) return true;
-  if (user.permissions.includes('doc:admin')) return true;
-  return false;
+	// Only: comment author OR doc:admin. Never doc:edit.
+	if (user.id === thread.createdBy) return true;
+	if (user.permissions.includes('doc:admin')) return true;
+	return false;
 }
 ```
 
@@ -490,13 +533,13 @@ UI already hides the button via `canResolve`.
 
 ```svelte
 {#each orphanedThreads as thread (thread.id)}
-  <li class="thread orphaned" aria-label="Context deleted">
-    <p class="quote">
-      "{thread.originalQuote.slice(0, 180)}"
-    </p>
-    <p class="muted">The highlighted text was deleted.</p>
-    <!-- resolve / reply controls still available -->
-  </li>
+	<li class="thread orphaned" aria-label="Context deleted">
+		<p class="quote">
+			"{thread.originalQuote.slice(0, 180)}"
+		</p>
+		<p class="muted">The highlighted text was deleted.</p>
+		<!-- resolve / reply controls still available -->
+	</li>
 {/each}
 ```
 
@@ -544,23 +587,23 @@ import * as Y from 'yjs';
 import { encodeTextAnchor, decodeTextAnchor } from '@sveltesentio/collab/comments';
 
 test('anchor survives an insertion before it', () => {
-  const doc = new Y.Doc();
-  const text = doc.getText('body');
-  text.insert(0, 'Hello world');
-  const anchor = encodeTextAnchor(doc, 'body', 6, 11); // "world"
-  text.insert(0, 'Greetings, ');                        // shift by 11
-  const resolved = decodeTextAnchor(doc, 'body', anchor);
-  expect(resolved).toEqual({ start: 17, end: 22, orphaned: false });
+	const doc = new Y.Doc();
+	const text = doc.getText('body');
+	text.insert(0, 'Hello world');
+	const anchor = encodeTextAnchor(doc, 'body', 6, 11); // "world"
+	text.insert(0, 'Greetings, '); // shift by 11
+	const resolved = decodeTextAnchor(doc, 'body', anchor);
+	expect(resolved).toEqual({ start: 17, end: 22, orphaned: false });
 });
 
 test('anchor orphans when target is deleted', () => {
-  const doc = new Y.Doc();
-  const text = doc.getText('body');
-  text.insert(0, 'Hello world');
-  const anchor = encodeTextAnchor(doc, 'body', 6, 11);
-  text.delete(6, 5);
-  const resolved = decodeTextAnchor(doc, 'body', anchor);
-  expect(resolved.orphaned).toBe(true);
+	const doc = new Y.Doc();
+	const text = doc.getText('body');
+	text.insert(0, 'Hello world');
+	const anchor = encodeTextAnchor(doc, 'body', 6, 11);
+	text.delete(6, 5);
+	const resolved = decodeTextAnchor(doc, 'body', anchor);
+	expect(resolved.orphaned).toBe(true);
 });
 ```
 
@@ -592,8 +635,7 @@ test('anchor orphans when target is deleted', () => {
     drift.
 15. **Avatars via `<img src="untrusted">`** — SSRF through
     image-loader; proxy through signed URL.
-16. **Mentioning >100 users per comment** — notification DoS; cap at
-    25.
+16. **Mentioning >100 users per comment** — notification DoS; cap at 25.
 17. **Using comments for chat** — no retention policy, grows
     unbounded. Chat is a different product.
 18. **Server parsing RelativePosition** — fragile, expensive. Treat

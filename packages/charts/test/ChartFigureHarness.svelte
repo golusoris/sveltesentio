@@ -6,11 +6,7 @@ content (`data-testid="viz-content"`) the tests assert against.
 -->
 <script lang="ts" generics="TDatum">
 	import ChartFigure from '../src/ChartFigure.svelte';
-	import type {
-		ChartSeries,
-		ChartAccessors,
-		BuildTableOptions,
-	} from '../src/a11y-table.js';
+	import type { ChartSeries, ChartAccessors, BuildTableOptions } from '../src/a11y-table.js';
 
 	interface Props<T> {
 		title: string;
@@ -33,15 +29,7 @@ content (`data-testid="viz-content"`) the tests assert against.
 	}: Props<TDatum> = $props();
 </script>
 
-<ChartFigure
-	{title}
-	{description}
-	{series}
-	{accessors}
-	{tableOptions}
-	{showDataTable}
-	{idBase}
->
+<ChartFigure {title} {description} {series} {accessors} {tableOptions} {showDataTable} {idBase}>
 	{#snippet chart()}
 		<div data-testid="viz-content">rendered visual</div>
 	{/snippet}

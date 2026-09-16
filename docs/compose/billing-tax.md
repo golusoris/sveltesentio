@@ -90,55 +90,59 @@ export const CountryCode = z.string().regex(/^[A-Z]{2}$/);
 
 // Tax-ID kinds supported by Stripe Tax. Not exhaustive; extend as needed.
 export const TaxIdKind = z.enum([
-  'eu_vat',     // EU VAT: DE123456789
-  'gb_vat',     // UK VAT: GB123456789
-  'us_ein',     // US EIN (B2B): 12-3456789
-  'au_abn',     // Australian Business Number
-  'ca_gst_hst', // Canadian GST/HST
-  'ch_vat',     // Swiss VAT
-  'jp_cn',      // Japan Corporate Number
-  'br_cnpj',    // Brazilian CNPJ
-  'in_gst',     // India GST
+	'eu_vat', // EU VAT: DE123456789
+	'gb_vat', // UK VAT: GB123456789
+	'us_ein', // US EIN (B2B): 12-3456789
+	'au_abn', // Australian Business Number
+	'ca_gst_hst', // Canadian GST/HST
+	'ch_vat', // Swiss VAT
+	'jp_cn', // Japan Corporate Number
+	'br_cnpj', // Brazilian CNPJ
+	'in_gst', // India GST
 ]);
 export type TaxIdKind = z.infer<typeof TaxIdKind>;
 
 export const TaxId = z.object({
-  kind: TaxIdKind,
-  value: z.string().trim().min(3).max(30),
-  // Validation status from Stripe Tax ID verification endpoint.
-  status: z.enum(['unverified', 'verified', 'unavailable', 'unrecognized']).default('unverified'),
-  verifiedAt: z.string().datetime({ offset: true }).nullable(),
+	kind: TaxIdKind,
+	value: z.string().trim().min(3).max(30),
+	// Validation status from Stripe Tax ID verification endpoint.
+	status: z.enum(['unverified', 'verified', 'unavailable', 'unrecognized']).default('unverified'),
+	verifiedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export const BillingAddress = z.object({
-  line1: z.string().min(1).max(200),
-  line2: z.string().max(200).optional(),
-  city: z.string().min(1).max(120),
-  postalCode: z.string().min(1).max(20),
-  state: z.string().max(40).optional(),   // required for US/CA/AU
-  country: CountryCode,
+	line1: z.string().min(1).max(200),
+	line2: z.string().max(200).optional(),
+	city: z.string().min(1).max(120),
+	postalCode: z.string().min(1).max(20),
+	state: z.string().max(40).optional(), // required for US/CA/AU
+	country: CountryCode,
 });
 
 export const TaxableCustomer = z.object({
-  customerId: z.string().min(1),                     // Stripe customer id
-  address: BillingAddress,
-  taxIds: z.array(TaxId).max(10).default([]),
-  // "B2C" or "B2B"; inferred from presence of verified business tax-id.
-  kind: z.enum(['B2C', 'B2B']),
+	customerId: z.string().min(1), // Stripe customer id
+	address: BillingAddress,
+	taxIds: z.array(TaxId).max(10).default([]),
+	// "B2C" or "B2B"; inferred from presence of verified business tax-id.
+	kind: z.enum(['B2C', 'B2B']),
 });
 
 export const TaxQuote = z.object({
-  amountMinor: z.number().int().min(0),              // total tax in minor units
-  currency: z.string().regex(/^[a-z]{3}$/),
-  inclusive: z.boolean(),                             // tax-inclusive or exclusive pricing
-  breakdown: z.array(z.object({
-    jurisdiction: z.string().max(100),               // "US-CA", "DE", "EU-OSS"
-    taxTypeLabel: z.string().max(40),                // "VAT", "Sales tax", "GST"
-    ratePercent: z.number().min(0).max(100),
-    amountMinor: z.number().int().min(0),
-    reverseCharge: z.boolean().default(false),
-  })).max(20),
-  resolvedAt: z.string().datetime({ offset: true }),
+	amountMinor: z.number().int().min(0), // total tax in minor units
+	currency: z.string().regex(/^[a-z]{3}$/),
+	inclusive: z.boolean(), // tax-inclusive or exclusive pricing
+	breakdown: z
+		.array(
+			z.object({
+				jurisdiction: z.string().max(100), // "US-CA", "DE", "EU-OSS"
+				taxTypeLabel: z.string().max(40), // "VAT", "Sales tax", "GST"
+				ratePercent: z.number().min(0).max(100),
+				amountMinor: z.number().int().min(0),
+				reverseCharge: z.boolean().default(false),
+			}),
+		)
+		.max(20),
+	resolvedAt: z.string().datetime({ offset: true }),
 });
 ```
 
@@ -149,36 +153,36 @@ export const TaxQuote = z.object({
 ```svelte
 <!-- src/routes/checkout/+page.svelte — partial -->
 <script lang="ts">
-  import { CountryCode, TaxIdKind } from '@sveltesentio/billing/tax';
-  // Stripe Elements <AddressElement mode="billing" /> collects structured address.
+	import { CountryCode, TaxIdKind } from '@sveltesentio/billing/tax';
+	// Stripe Elements <AddressElement mode="billing" /> collects structured address.
 </script>
 
 <form method="POST" use:enhance>
-  <fieldset>
-    <legend>Billing address</legend>
-    <!-- Stripe AddressElement -->
-    <div id="address-element"></div>
-  </fieldset>
+	<fieldset>
+		<legend>Billing address</legend>
+		<!-- Stripe AddressElement -->
+		<div id="address-element"></div>
+	</fieldset>
 
-  <fieldset>
-    <legend>Business information (optional)</legend>
-    <label>
-      Tax ID type
-      <select name="taxIdKind">
-        <option value="">Individual / not applicable</option>
-        <option value="eu_vat">EU VAT</option>
-        <option value="gb_vat">UK VAT</option>
-        <option value="us_ein">US EIN</option>
-        <option value="au_abn">AU ABN</option>
-        <option value="ca_gst_hst">CA GST/HST</option>
-      </select>
-    </label>
-    <label>
-      Tax ID value
-      <input name="taxIdValue" placeholder="DE123456789" />
-    </label>
-  </fieldset>
-  <!-- ... -->
+	<fieldset>
+		<legend>Business information (optional)</legend>
+		<label>
+			Tax ID type
+			<select name="taxIdKind">
+				<option value="">Individual / not applicable</option>
+				<option value="eu_vat">EU VAT</option>
+				<option value="gb_vat">UK VAT</option>
+				<option value="us_ein">US EIN</option>
+				<option value="au_abn">AU ABN</option>
+				<option value="ca_gst_hst">CA GST/HST</option>
+			</select>
+		</label>
+		<label>
+			Tax ID value
+			<input name="taxIdValue" placeholder="DE123456789" />
+		</label>
+	</fieldset>
+	<!-- ... -->
 </form>
 ```
 
@@ -196,40 +200,40 @@ import { TaxQuote } from './types';
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
 
 export async function calculateTax(input: {
-  customerId: string;
-  currency: string;
-  lineItems: Array<{ amount: number; quantity: number; reference: string; taxCode?: string }>;
+	customerId: string;
+	currency: string;
+	lineItems: Array<{ amount: number; quantity: number; reference: string; taxCode?: string }>;
 }): Promise<TaxQuote> {
-  const calc = await stripe.tax.calculations.create({
-    currency: input.currency,
-    customer: input.customerId,
-    line_items: input.lineItems.map((l) => ({
-      amount: l.amount,
-      quantity: l.quantity,
-      reference: l.reference,
-      tax_code: l.taxCode ?? 'txcd_10000000', // general SaaS
-      tax_behavior: 'exclusive',
-    })),
-    expand: ['line_items.data.tax_breakdown'],
-  });
+	const calc = await stripe.tax.calculations.create({
+		currency: input.currency,
+		customer: input.customerId,
+		line_items: input.lineItems.map((l) => ({
+			amount: l.amount,
+			quantity: l.quantity,
+			reference: l.reference,
+			tax_code: l.taxCode ?? 'txcd_10000000', // general SaaS
+			tax_behavior: 'exclusive',
+		})),
+		expand: ['line_items.data.tax_breakdown'],
+	});
 
-  const breakdown = (calc.line_items?.data ?? []).flatMap((li) =>
-    (li.tax_breakdown ?? []).map((b) => ({
-      jurisdiction: `${b.jurisdiction.country}${b.jurisdiction.state ? '-' + b.jurisdiction.state : ''}`,
-      taxTypeLabel: b.jurisdiction.display_name ?? b.tax_rate_details?.tax_type ?? 'Tax',
-      ratePercent: Number(b.tax_rate_details?.percentage_decimal ?? 0),
-      amountMinor: b.amount,
-      reverseCharge: b.taxability_reason === 'reverse_charge',
-    })),
-  );
+	const breakdown = (calc.line_items?.data ?? []).flatMap((li) =>
+		(li.tax_breakdown ?? []).map((b) => ({
+			jurisdiction: `${b.jurisdiction.country}${b.jurisdiction.state ? '-' + b.jurisdiction.state : ''}`,
+			taxTypeLabel: b.jurisdiction.display_name ?? b.tax_rate_details?.tax_type ?? 'Tax',
+			ratePercent: Number(b.tax_rate_details?.percentage_decimal ?? 0),
+			amountMinor: b.amount,
+			reverseCharge: b.taxability_reason === 'reverse_charge',
+		})),
+	);
 
-  return TaxQuote.parse({
-    amountMinor: calc.tax_amount_exclusive,
-    currency: calc.currency,
-    inclusive: false,
-    breakdown,
-    resolvedAt: new Date().toISOString(),
-  });
+	return TaxQuote.parse({
+		amountMinor: calc.tax_amount_exclusive,
+		currency: calc.currency,
+		inclusive: false,
+		breakdown,
+		resolvedAt: new Date().toISOString(),
+	});
 }
 ```
 
@@ -243,24 +247,28 @@ tax-code catalog; the wrong code yields the wrong rate.
 ```ts
 // packages/billing/src/tax/verify-id.ts
 export async function attachAndVerifyTaxId(customerId: string, kind: TaxIdKind, value: string) {
-  // Map our enum → Stripe's tax-id kind.
-  const stripeKind = mapToStripeKind(kind);
-  const taxId = await stripe.customers.createTaxId(customerId, { type: stripeKind, value });
+	// Map our enum → Stripe's tax-id kind.
+	const stripeKind = mapToStripeKind(kind);
+	const taxId = await stripe.customers.createTaxId(customerId, { type: stripeKind, value });
 
-  // Wait for verification status (async, usually < 10s).
-  return { stripeId: taxId.id, initialStatus: taxId.verification?.status ?? 'unverified' };
+	// Wait for verification status (async, usually < 10s).
+	return { stripeId: taxId.id, initialStatus: taxId.verification?.status ?? 'unverified' };
 }
 
 // Webhook handler updates the local record.
 export async function handleTaxIdVerificationWebhook(event: Stripe.Event) {
-  if (event.type !== 'customer.tax_id.updated') return;
-  const ti = event.data.object as Stripe.TaxId;
-  await updateLocalTaxIdStatus(ti.customer as string, ti.value, ti.verification?.status ?? 'unverified');
-  await writeAuditEvent({
-    kind: 'tax.id.verified',
-    subjectId: ti.customer as string,
-    payload: { value: maskTaxId(ti.value), status: ti.verification?.status },
-  });
+	if (event.type !== 'customer.tax_id.updated') return;
+	const ti = event.data.object as Stripe.TaxId;
+	await updateLocalTaxIdStatus(
+		ti.customer as string,
+		ti.value,
+		ti.verification?.status ?? 'unverified',
+	);
+	await writeAuditEvent({
+		kind: 'tax.id.verified',
+		subjectId: ti.customer as string,
+		payload: { value: maskTaxId(ti.value), status: ti.verification?.status },
+	});
 }
 ```
 
@@ -274,13 +282,13 @@ normally until verification completes.
 ```ts
 // packages/billing/src/tax/reverse-charge.ts
 export function shouldApplyReverseCharge(buyer: TaxableCustomer, sellerCountry: string): boolean {
-  // EU reverse-charge: seller in one EU country, B2B buyer in another EU country
-  // with verified EU VAT id.
-  if (!EU_COUNTRIES.includes(sellerCountry)) return false;
-  if (!EU_COUNTRIES.includes(buyer.address.country)) return false;
-  if (buyer.address.country === sellerCountry) return false;
-  const euVat = buyer.taxIds.find((t) => t.kind === 'eu_vat' && t.status === 'verified');
-  return Boolean(euVat);
+	// EU reverse-charge: seller in one EU country, B2B buyer in another EU country
+	// with verified EU VAT id.
+	if (!EU_COUNTRIES.includes(sellerCountry)) return false;
+	if (!EU_COUNTRIES.includes(buyer.address.country)) return false;
+	if (buyer.address.country === sellerCountry) return false;
+	const euVat = buyer.taxIds.find((t) => t.kind === 'eu_vat' && t.status === 'verified');
+	return Boolean(euVat);
 }
 ```
 
@@ -301,24 +309,26 @@ what to expect on the invoice:
 // packages/billing/src/tax/snapshot.ts
 // Called on `invoice.finalized` webhook.
 export async function snapshotTaxAtFinalization(invoice: Stripe.Invoice) {
-  const lineTaxRows = (invoice.lines?.data ?? []).flatMap((line) =>
-    (line.tax_amounts ?? []).map((ta) => ({
-      invoiceId: invoice.id,
-      invoiceLineId: line.id,
-      taxRateId: (ta.tax_rate as any).id,
-      ratePercent: Number((ta.tax_rate as any).percentage ?? 0),
-      jurisdiction: [(ta.tax_rate as any).country, (ta.tax_rate as any).state].filter(Boolean).join('-'),
-      amountMinor: ta.amount,
-      reverseCharge: (ta as any).taxability_reason === 'reverse_charge',
-    })),
-  );
+	const lineTaxRows = (invoice.lines?.data ?? []).flatMap((line) =>
+		(line.tax_amounts ?? []).map((ta) => ({
+			invoiceId: invoice.id,
+			invoiceLineId: line.id,
+			taxRateId: (ta.tax_rate as any).id,
+			ratePercent: Number((ta.tax_rate as any).percentage ?? 0),
+			jurisdiction: [(ta.tax_rate as any).country, (ta.tax_rate as any).state]
+				.filter(Boolean)
+				.join('-'),
+			amountMinor: ta.amount,
+			reverseCharge: (ta as any).taxability_reason === 'reverse_charge',
+		})),
+	);
 
-  await db.insert(invoiceTaxSnapshot).values(lineTaxRows);
-  await writeAuditEvent({
-    kind: 'tax.invoice.snapshot',
-    subjectId: invoice.customer as string,
-    payload: { invoiceId: invoice.id, totalTaxMinor: invoice.tax ?? 0, lines: lineTaxRows.length },
-  });
+	await db.insert(invoiceTaxSnapshot).values(lineTaxRows);
+	await writeAuditEvent({
+		kind: 'tax.invoice.snapshot',
+		subjectId: invoice.customer as string,
+		payload: { invoiceId: invoice.id, totalTaxMinor: invoice.tax ?? 0, lines: lineTaxRows.length },
+	});
 }
 ```
 
@@ -330,23 +340,23 @@ Corrections require a credit note + new invoice, not an edit.
 ```ts
 // packages/billing/src/tax/taxable-income.ts
 export async function emitTaxableIncomeEvent(input: {
-  accountId: string;
-  amountMinor: number;
-  currency: string;
-  category: 'referral_reward' | 'marketplace_payout' | 'contest_prize';
-  occurredAt: string;
+	accountId: string;
+	amountMinor: number;
+	currency: string;
+	category: 'referral_reward' | 'marketplace_payout' | 'contest_prize';
+	occurredAt: string;
 }) {
-  await db.insert(taxableIncomeEvent).values({
-    id: crypto.randomUUID(),
-    ...input,
-    reportedToAuthority: false,
-    reportingYear: new Date(input.occurredAt).getUTCFullYear(),
-  });
-  await writeAuditEvent({
-    kind: 'tax.income_event',
-    subjectId: input.accountId,
-    payload: input,
-  });
+	await db.insert(taxableIncomeEvent).values({
+		id: crypto.randomUUID(),
+		...input,
+		reportedToAuthority: false,
+		reportingYear: new Date(input.occurredAt).getUTCFullYear(),
+	});
+	await writeAuditEvent({
+		kind: 'tax.income_event',
+		subjectId: input.accountId,
+		payload: input,
+	});
 }
 ```
 
@@ -363,15 +373,15 @@ government), collect the exemption certificate:
 ```ts
 // packages/billing/src/tax/exemption.ts
 export const ExemptionCertificate = z.object({
-  id: z.string().uuid(),
-  customerId: z.string(),
-  kind: z.enum(['nonprofit', 'resale', 'government', 'educational']),
-  // Certificate file stored via signed-urls.md
-  fileKey: z.string(),
-  effectiveFrom: z.string().datetime({ offset: true }),
-  expiresAt: z.string().datetime({ offset: true }),   // certs expire
-  states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1),  // US states where valid
-  status: z.enum(['pending_review', 'active', 'expired', 'rejected']),
+	id: z.string().uuid(),
+	customerId: z.string(),
+	kind: z.enum(['nonprofit', 'resale', 'government', 'educational']),
+	// Certificate file stored via signed-urls.md
+	fileKey: z.string(),
+	effectiveFrom: z.string().datetime({ offset: true }),
+	expiresAt: z.string().datetime({ offset: true }), // certs expire
+	states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1), // US states where valid
+	status: z.enum(['pending_review', 'active', 'expired', 'rejected']),
 });
 ```
 
@@ -389,23 +399,26 @@ skip tax calc; otherwise charge normally.
 <!-- src/routes/admin/tax/reports/+page.svelte -->
 <h1>Tax reports</h1>
 <p>
-  These reports pull from Stripe Tax registration reports; always
-  reconcile against our local <code>invoiceTaxSnapshot</code> table
-  before filing.
+	These reports pull from Stripe Tax registration reports; always reconcile against our local <code
+		>invoiceTaxSnapshot</code
+	> table before filing.
 </p>
 <table>
-  <thead><tr><th>Period</th><th>Jurisdiction</th><th>Gross</th><th>Tax</th><th>Stripe report</th></tr></thead>
-  <tbody>
-    {#each data.periods as p}
-      <tr>
-        <td>{p.period}</td>
-        <td>{p.jurisdiction}</td>
-        <td>{(p.grossMinor / 100).toLocaleString()}</td>
-        <td>{(p.taxMinor / 100).toLocaleString()}</td>
-        <td><a href={p.stripeReportUrl} target="_blank" rel="noopener">Stripe</a></td>
-      </tr>
-    {/each}
-  </tbody>
+	<thead
+		><tr><th>Period</th><th>Jurisdiction</th><th>Gross</th><th>Tax</th><th>Stripe report</th></tr
+		></thead
+	>
+	<tbody>
+		{#each data.periods as p}
+			<tr>
+				<td>{p.period}</td>
+				<td>{p.jurisdiction}</td>
+				<td>{(p.grossMinor / 100).toLocaleString()}</td>
+				<td>{(p.taxMinor / 100).toLocaleString()}</td>
+				<td><a href={p.stripeReportUrl} target="_blank" rel="noopener">Stripe</a></td>
+			</tr>
+		{/each}
+	</tbody>
 </table>
 ```
 
@@ -442,23 +455,23 @@ skip tax calc; otherwise charge normally.
 ```ts
 // tests/billing/tax/calculation.test.ts
 test('EU reverse-charge zeroes VAT with verified VAT id', async () => {
-  const quote = await calculateTax({
-    customerId: 'cus_eu_verified',
-    currency: 'eur',
-    lineItems: [{ amount: 10_000, quantity: 1, reference: 'plan_pro' }],
-  });
-  expect(quote.amountMinor).toBe(0);
-  expect(quote.breakdown.some((b) => b.reverseCharge)).toBe(true);
+	const quote = await calculateTax({
+		customerId: 'cus_eu_verified',
+		currency: 'eur',
+		lineItems: [{ amount: 10_000, quantity: 1, reference: 'plan_pro' }],
+	});
+	expect(quote.amountMinor).toBe(0);
+	expect(quote.breakdown.some((b) => b.reverseCharge)).toBe(true);
 });
 
 test('US sales tax applied to non-exempt customer', async () => {
-  const quote = await calculateTax({
-    customerId: 'cus_us_ca',
-    currency: 'usd',
-    lineItems: [{ amount: 10_000, quantity: 1, reference: 'plan_pro' }],
-  });
-  expect(quote.amountMinor).toBeGreaterThan(0);
-  expect(quote.breakdown.some((b) => b.jurisdiction.startsWith('US-'))).toBe(true);
+	const quote = await calculateTax({
+		customerId: 'cus_us_ca',
+		currency: 'usd',
+		lineItems: [{ amount: 10_000, quantity: 1, reference: 'plan_pro' }],
+	});
+	expect(quote.amountMinor).toBeGreaterThan(0);
+	expect(quote.breakdown.some((b) => b.jurisdiction.startsWith('US-'))).toBe(true);
 });
 ```
 

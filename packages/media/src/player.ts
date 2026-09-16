@@ -120,9 +120,7 @@ export interface MediaSessionMetadata {
  * media keys. Empty `artist` / `album` default to `""` (the API's own
  * defaults) so the result can be passed straight to `new MediaMetadata(...)`.
  */
-export function buildMediaSessionMetadata(
-	init: MediaSessionMetadataInit,
-): MediaSessionMetadata {
+export function buildMediaSessionMetadata(init: MediaSessionMetadataInit): MediaSessionMetadata {
 	return {
 		title: init.title,
 		artist: init.artist ?? '',
@@ -185,10 +183,7 @@ const STATUS_TRANSITIONS: Readonly<
  * machine never throws on a stray event. Quality selection is orthogonal to the
  * play/pause lifecycle and is accepted in any non-terminal state.
  */
-export function playbackReducer(
-	state: PlaybackState,
-	event: PlaybackEvent,
-): PlaybackState {
+export function playbackReducer(state: PlaybackState, event: PlaybackEvent): PlaybackState {
 	if (event.type === 'reset') return initialPlaybackState;
 	if (event.type === 'selectQuality') {
 		return state.status === 'idle' ? state : { ...state, renditionId: event.renditionId };
@@ -241,10 +236,7 @@ export function createHlsAttachment(
 ): HlsAttachment {
 	return {
 		attach(media, source) {
-			const instance =
-				options.config === undefined
-					? new HlsCtor()
-					: new HlsCtor(options.config);
+			const instance = options.config === undefined ? new HlsCtor() : new HlsCtor(options.config);
 			instance.attachMedia(media);
 			instance.loadSource(source);
 			return {

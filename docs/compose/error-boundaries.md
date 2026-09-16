@@ -2,8 +2,8 @@
 
 When something throws server-side, SvelteKit walks up the route tree
 looking for `+error.svelte`. When something throws client-side, the
-same boundary handles the render-time error. When something *breaks
-inside an error boundary*, you get a white screen. When neither is
+same boundary handles the render-time error. When something _breaks
+inside an error boundary_, you get a white screen. When neither is
 reached — a thrown promise in an `$effect`, a syntax error in a
 lazy-loaded chunk, a network drop mid-hydrate — the browser shows a
 console error and the user stares at a partially-painted page.
@@ -79,28 +79,30 @@ when an inline toast would do.
 // packages/core/src/errors/problem.ts
 import { z } from 'zod';
 
-export const ProblemDetail = z.object({
-  type: z.string().url().or(z.string().startsWith('urn:')),
-  title: z.string(),
-  status: z.number().int().min(100).max(599),
-  detail: z.string().optional(),
-  instance: z.string().optional(),
-  correlationId: z.string().uuid().optional(),
-}).passthrough();   // RFC 9457 allows additional member fields
+export const ProblemDetail = z
+	.object({
+		type: z.string().url().or(z.string().startsWith('urn:')),
+		title: z.string(),
+		status: z.number().int().min(100).max(599),
+		detail: z.string().optional(),
+		instance: z.string().optional(),
+		correlationId: z.string().uuid().optional(),
+	})
+	.passthrough(); // RFC 9457 allows additional member fields
 
 export type ProblemDetail = z.infer<typeof ProblemDetail>;
 
 export class ProblemError extends Error {
-  readonly problem: ProblemDetail;
-  constructor(problem: ProblemDetail) {
-    super(problem.title);
-    this.problem = problem;
-    this.name = 'ProblemError';
-  }
+	readonly problem: ProblemDetail;
+	constructor(problem: ProblemDetail) {
+		super(problem.title);
+		this.problem = problem;
+		this.name = 'ProblemError';
+	}
 }
 
 export function isProblemError(err: unknown): err is ProblemError {
-  return err instanceof ProblemError;
+	return err instanceof ProblemError;
 }
 ```
 
@@ -127,11 +129,11 @@ Server throws via SvelteKit's `error()`:
 import { error } from '@sveltejs/kit';
 
 throw error(400, {
-  type: 'urn:sveltesentio:validation:invalid',
-  title: 'Invalid input',
-  status: 400,
-  detail: 'priceCents must be positive.',
-  correlationId: locals.correlationId,
+	type: 'urn:sveltesentio:validation:invalid',
+	title: 'Invalid input',
+	status: 400,
+	detail: 'priceCents must be positive.',
+	correlationId: locals.correlationId,
 });
 ```
 
@@ -148,44 +150,44 @@ import { uuidv7 } from '@sveltesentio/core';
 import { isProblemError } from '@sveltesentio/core/errors';
 
 export const handleError: HandleServerError = ({ error: err, event, status, message }) => {
-  const correlationId = event.locals.correlationId ?? uuidv7();
+	const correlationId = event.locals.correlationId ?? uuidv7();
 
-  // Normalize to a ProblemError shape for the response.
-  const problem = isProblemError(err)
-    ? err.problem
-    : {
-        type: 'urn:sveltesentio:unexpected',
-        title: 'Unexpected error',
-        status,
-        detail: undefined,   // never leak err.message — it may contain secrets
-        correlationId,
-      };
+	// Normalize to a ProblemError shape for the response.
+	const problem = isProblemError(err)
+		? err.problem
+		: {
+				type: 'urn:sveltesentio:unexpected',
+				title: 'Unexpected error',
+				status,
+				detail: undefined, // never leak err.message — it may contain secrets
+				correlationId,
+			};
 
-  // 4xx are expected; 5xx page oncall.
-  if (status >= 500) {
-    Sentry.captureException(err, {
-      tags: { 'problem.type': problem.type, 'problem.status': String(problem.status) },
-      contexts: { problem },
-      extra: { correlationId, path: event.url.pathname, method: event.request.method },
-    });
-  }
+	// 4xx are expected; 5xx page oncall.
+	if (status >= 500) {
+		Sentry.captureException(err, {
+			tags: { 'problem.type': problem.type, 'problem.status': String(problem.status) },
+			contexts: { problem },
+			extra: { correlationId, path: event.url.pathname, method: event.request.method },
+		});
+	}
 
-  console.error('server_error', {
-    correlationId,
-    path: event.url.pathname,
-    method: event.request.method,
-    status,
-    problemType: problem.type,
-    message: err instanceof Error ? err.message : String(err),
-  });
+	console.error('server_error', {
+		correlationId,
+		path: event.url.pathname,
+		method: event.request.method,
+		status,
+		problemType: problem.type,
+		message: err instanceof Error ? err.message : String(err),
+	});
 
-  // Return value is what SvelteKit sends to +error.svelte as `$page.error`.
-  return {
-    message: problem.title,
-    type: problem.type,
-    status: problem.status,
-    correlationId,
-  };
+	// Return value is what SvelteKit sends to +error.svelte as `$page.error`.
+	return {
+		message: problem.title,
+		type: problem.type,
+		status: problem.status,
+		correlationId,
+	};
 };
 ```
 
@@ -196,22 +198,22 @@ import * as Sentry from '@sentry/sveltekit';
 import { uuidv7 } from '@sveltesentio/core';
 
 export const handleError: HandleClientError = ({ error: err, status }) => {
-  const correlationId = uuidv7();
+	const correlationId = uuidv7();
 
-  // Don't re-report errors Sentry already captures (unhandled rejections).
-  if (status >= 500) {
-    Sentry.captureException(err, {
-      tags: { source: 'handleError.client', status: String(status) },
-      extra: { correlationId },
-    });
-  }
+	// Don't re-report errors Sentry already captures (unhandled rejections).
+	if (status >= 500) {
+		Sentry.captureException(err, {
+			tags: { source: 'handleError.client', status: String(status) },
+			extra: { correlationId },
+		});
+	}
 
-  return {
-    message: err instanceof Error ? err.message : 'Client error',
-    type: 'urn:sveltesentio:client:unexpected',
-    status,
-    correlationId,
-  };
+	return {
+		message: err instanceof Error ? err.message : 'Client error',
+		type: 'urn:sveltesentio:client:unexpected',
+		status,
+		correlationId,
+	};
 };
 ```
 
@@ -234,7 +236,7 @@ export const handleError: HandleClientError = ({ error: err, status }) => {
    bug — catch it here.
 6. **Log with structured attributes, not string-interpolated
    messages.** `console.error('server_error', {...})` is grep-able
-   + OTel-parseable; `console.error(\`error in ${path}\`)` isn't.
+   - OTel-parseable; `console.error(\`error in ${path}\`)` isn't.
 7. **Server + client hooks in parallel.** Both must exist. Only
    client-side `handleError` catches client-thrown errors; only
    server-side catches SSR errors.
@@ -244,58 +246,58 @@ export const handleError: HandleClientError = ({ error: err, status }) => {
 ```svelte
 <!-- src/routes/+error.svelte — root boundary (always required) -->
 <script lang="ts">
-  import { page } from '$app/state';
-  import * as m from '$lib/paraglide/messages';
-  import { onMount } from 'svelte';
+	import { page } from '$app/state';
+	import * as m from '$lib/paraglide/messages';
+	import { onMount } from 'svelte';
 
-  let heading: HTMLHeadingElement | undefined;
+	let heading: HTMLHeadingElement | undefined;
 
-  onMount(() => {
-    heading?.focus();
-  });
+	onMount(() => {
+		heading?.focus();
+	});
 </script>
 
 <svelte:head>
-  <title>{page.status} — {m.error_page_title()}</title>
+	<title>{page.status} — {m.error_page_title()}</title>
 </svelte:head>
 
 <main role="alert" aria-live="assertive">
-  <h1 bind:this={heading} tabindex="-1">
-    {#if page.status === 404}
-      {m.error_not_found_title()}
-    {:else if page.status === 403}
-      {m.error_forbidden_title()}
-    {:else if page.status >= 500}
-      {m.error_server_title()}
-    {:else}
-      {m.error_generic_title()}
-    {/if}
-  </h1>
+	<h1 bind:this={heading} tabindex="-1">
+		{#if page.status === 404}
+			{m.error_not_found_title()}
+		{:else if page.status === 403}
+			{m.error_forbidden_title()}
+		{:else if page.status >= 500}
+			{m.error_server_title()}
+		{:else}
+			{m.error_generic_title()}
+		{/if}
+	</h1>
 
-  <p>
-    {#if page.status === 404}
-      {m.error_not_found_body()}
-    {:else if page.status >= 500}
-      {m.error_server_body()}
-    {:else}
-      {page.error?.message ?? m.error_generic_body()}
-    {/if}
-  </p>
+	<p>
+		{#if page.status === 404}
+			{m.error_not_found_body()}
+		{:else if page.status >= 500}
+			{m.error_server_body()}
+		{:else}
+			{page.error?.message ?? m.error_generic_body()}
+		{/if}
+	</p>
 
-  {#if page.error?.correlationId}
-    <p class="text-muted">
-      {m.error_reference({ id: page.error.correlationId })}
-    </p>
-  {/if}
+	{#if page.error?.correlationId}
+		<p class="text-muted">
+			{m.error_reference({ id: page.error.correlationId })}
+		</p>
+	{/if}
 
-  <div class="actions">
-    <a href="/" class="btn btn-primary">{m.error_action_home()}</a>
-    {#if page.status >= 500}
-      <button onclick={() => location.reload()} class="btn">
-        {m.error_action_retry()}
-      </button>
-    {/if}
-  </div>
+	<div class="actions">
+		<a href="/" class="btn btn-primary">{m.error_action_home()}</a>
+		{#if page.status >= 500}
+			<button onclick={() => location.reload()} class="btn">
+				{m.error_action_retry()}
+			</button>
+		{/if}
+	</div>
 </main>
 ```
 
@@ -354,30 +356,31 @@ import { error } from '@sveltejs/kit';
 import { ProblemError } from '@sveltesentio/core/errors';
 
 export async function load({ params, locals }) {
-  const report = await db.selectFrom('reports')
-    .where('id', '=', params.id)
-    .selectAll()
-    .executeTakeFirst();
+	const report = await db
+		.selectFrom('reports')
+		.where('id', '=', params.id)
+		.selectAll()
+		.executeTakeFirst();
 
-  if (!report) {
-    throw error(404, {
-      type: 'urn:sveltesentio:report:not-found',
-      title: 'Report not found',
-      status: 404,
-      correlationId: locals.correlationId,
-    });
-  }
+	if (!report) {
+		throw error(404, {
+			type: 'urn:sveltesentio:report:not-found',
+			title: 'Report not found',
+			status: 404,
+			correlationId: locals.correlationId,
+		});
+	}
 
-  // Transient downstream failure — graceful degrade, not an error.
-  let enrichment = null;
-  try {
-    enrichment = await enrichmentApi.fetch(report.id);
-  } catch (err) {
-    console.warn('enrichment_failed', { correlationId: locals.correlationId, err });
-    // Page still renders without enrichment.
-  }
+	// Transient downstream failure — graceful degrade, not an error.
+	let enrichment = null;
+	try {
+		enrichment = await enrichmentApi.fetch(report.id);
+	} catch (err) {
+		console.warn('enrichment_failed', { correlationId: locals.correlationId, err });
+		// Page still renders without enrichment.
+	}
 
-  return { report, enrichment };
+	return { report, enrichment };
 }
 ```
 
@@ -400,36 +403,36 @@ export async function load({ params, locals }) {
 ```svelte
 <!-- src/routes/checkout/+page.svelte -->
 <script lang="ts">
-  import { toast } from '@sveltesentio/ui/toast';
-  import { isProblemError } from '@sveltesentio/core/errors';
+	import { toast } from '@sveltesentio/ui/toast';
+	import { isProblemError } from '@sveltesentio/core/errors';
 
-  let loading = $state(false);
+	let loading = $state(false);
 
-  async function submit() {
-    loading = true;
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST' });
-      if (!res.ok) {
-        const problem = await res.json();
-        throw new ProblemError(problem);
-      }
-      const { url } = await res.json();
-      location.href = url;
-    } catch (err) {
-      if (isProblemError(err) && err.problem.status === 429) {
-        toast.warning(m.checkout_rate_limited(), {
-          action: { label: m.retry(), onClick: submit },
-        });
-      } else if (isProblemError(err) && err.problem.status === 400) {
-        toast.error(err.problem.detail ?? m.checkout_invalid());
-      } else {
-        toast.error(m.checkout_unexpected());
-        Sentry.captureException(err);
-      }
-    } finally {
-      loading = false;
-    }
-  }
+	async function submit() {
+		loading = true;
+		try {
+			const res = await fetch('/api/checkout', { method: 'POST' });
+			if (!res.ok) {
+				const problem = await res.json();
+				throw new ProblemError(problem);
+			}
+			const { url } = await res.json();
+			location.href = url;
+		} catch (err) {
+			if (isProblemError(err) && err.problem.status === 429) {
+				toast.warning(m.checkout_rate_limited(), {
+					action: { label: m.retry(), onClick: submit },
+				});
+			} else if (isProblemError(err) && err.problem.status === 400) {
+				toast.error(err.problem.detail ?? m.checkout_invalid());
+			} else {
+				toast.error(m.checkout_unexpected());
+				Sentry.captureException(err);
+			}
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 ```
 
@@ -459,10 +462,10 @@ export async function load({ params, locals }) {
 
 ```svelte
 <script lang="ts">
-  $effect(() => {
-    // If this throws, you won't see it — $effect is sync-typed.
-    loadSomething();
-  });
+	$effect(() => {
+		// If this throws, you won't see it — $effect is sync-typed.
+		loadSomething();
+	});
 </script>
 ```
 
@@ -470,18 +473,18 @@ The fix:
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 
-  $effect(() => {
-    (async () => {
-      try {
-        await loadSomething();
-      } catch (err) {
-        Sentry.captureException(err);
-        toast.error(m.load_failed());
-      }
-    })();
-  });
+	$effect(() => {
+		(async () => {
+			try {
+				await loadSomething();
+			} catch (err) {
+				Sentry.captureException(err);
+				toast.error(m.load_failed());
+			}
+		})();
+	});
 </script>
 ```
 
@@ -494,14 +497,14 @@ retry, and cache invalidation.
 ```ts
 // src/hooks.client.ts — alongside handleError
 if (typeof window !== 'undefined') {
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('unhandled_rejection', { reason: event.reason });
-    Sentry.captureException(event.reason);
-  });
-  window.addEventListener('error', (event) => {
-    console.error('uncaught_error', { error: event.error, message: event.message });
-    Sentry.captureException(event.error ?? event.message);
-  });
+	window.addEventListener('unhandledrejection', (event) => {
+		console.error('unhandled_rejection', { reason: event.reason });
+		Sentry.captureException(event.reason);
+	});
+	window.addEventListener('error', (event) => {
+		console.error('uncaught_error', { error: event.error, message: event.message });
+		Sentry.captureException(event.error ?? event.message);
+	});
 }
 ```
 
@@ -522,19 +525,19 @@ import { describe, expect, test } from 'vitest';
 import { ProblemError, isProblemError } from '../src/errors/problem';
 
 describe('ProblemError', () => {
-  test('isProblemError narrows correctly', () => {
-    const err = new ProblemError({ type: 'urn:x', title: 't', status: 400 });
-    expect(isProblemError(err)).toBe(true);
-    expect(isProblemError(new Error('nope'))).toBe(false);
-  });
+	test('isProblemError narrows correctly', () => {
+		const err = new ProblemError({ type: 'urn:x', title: 't', status: 400 });
+		expect(isProblemError(err)).toBe(true);
+		expect(isProblemError(new Error('nope'))).toBe(false);
+	});
 
-  test('extends Error so it flows through try/catch', () => {
-    try {
-      throw new ProblemError({ type: 'urn:x', title: 't', status: 400 });
-    } catch (err) {
-      expect(err).toBeInstanceOf(Error);
-    }
-  });
+	test('extends Error so it flows through try/catch', () => {
+		try {
+			throw new ProblemError({ type: 'urn:x', title: 't', status: 400 });
+		} catch (err) {
+			expect(err).toBeInstanceOf(Error);
+		}
+	});
 });
 ```
 

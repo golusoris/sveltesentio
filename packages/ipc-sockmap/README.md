@@ -33,9 +33,9 @@ See also [docs/compose/colocated-ipc.md](../../docs/compose/colocated-ipc.md).
 import { createIpcClient } from '@sveltesentio/ipc-sockmap';
 
 const client = await createIpcClient({
-  socketPath: '/run/golusoris/api.sock',
-  bpfMapPath: '/sys/fs/bpf/golusoris/sockhash', // Tier-3 detection (optional)
-  requestTimeoutMs: 5_000,
+	socketPath: '/run/golusoris/api.sock',
+	bpfMapPath: '/sys/fs/bpf/golusoris/sockhash', // Tier-3 detection (optional)
+	requestTimeoutMs: 5_000,
 });
 
 console.warn('[ipc] resolved tier:', client.tier); // 'af_unix' | 'sockmap'
@@ -54,8 +54,8 @@ import { encodeFrame, FrameDecoder } from '@sveltesentio/ipc-sockmap/transport';
 
 const decoder = new FrameDecoder();
 for (const chunk of stream) {
-  const { frames } = decoder.push(chunk); // drains every complete frame
-  for (const payload of frames) handle(payload);
+	const { frames } = decoder.push(chunk); // drains every complete frame
+	for (const payload of frames) handle(payload);
 }
 ```
 

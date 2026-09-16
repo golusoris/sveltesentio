@@ -50,10 +50,7 @@
 <Story name="German selected" args={{ locales, current: 'de-AT', onChange: noop }} />
 
 <!-- A localised accessible name; authors source this from their catalogue. -->
-<Story
-	name="Custom label"
-	args={{ locales, current: 'fr-FR', onChange: noop, label: 'Sprache' }}
-/>
+<Story name="Custom label" args={{ locales, current: 'fr-FR', onChange: noop, label: 'Sprache' }} />
 
 <!-- An RTL locale selected; the inherited document `dir` flips the control. -->
 <Story name="RTL selected" args={{ locales, current: 'ar', onChange: noop }} />

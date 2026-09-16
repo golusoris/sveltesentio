@@ -13,12 +13,7 @@ export default defineConfig({
 			// (`export {}`) with nothing to cover. The DOM/timer-bound D-pad action,
 			// its sub-barrel, and the lazy PWA wrapper ARE now covered (see the
 			// dpad-action / dpad-index / pwa test files).
-			exclude: [
-				'src/index.ts',
-				'src/layout/index.ts',
-				'src/pwa/index.ts',
-				'src/**/*.d.ts',
-			],
+			exclude: ['src/index.ts', 'src/layout/index.ts', 'src/pwa/index.ts', 'src/**/*.d.ts'],
 			thresholds: {
 				statements: 85,
 				branches: 85,

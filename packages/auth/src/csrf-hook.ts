@@ -42,11 +42,7 @@ export interface HandleCsrfOptions {
 }
 
 export type CsrfRejectionReason =
-	| 'no-session'
-	| 'cookie-missing'
-	| 'header-missing'
-	| 'token-mismatch'
-	| 'token-invalid';
+	'no-session' | 'cookie-missing' | 'header-missing' | 'token-mismatch' | 'token-invalid';
 
 const CSRF_PROBLEM_TYPE = 'urn:sveltesentio:auth:csrf_failed';
 

@@ -10,11 +10,7 @@ drive the visual, so the two cannot drift.
 <script lang="ts" generics="TDatum">
 	import { PieChart as LcPieChart } from 'layerchart';
 	import ChartFigure from './ChartFigure.svelte';
-	import {
-		categoricalToFigure,
-		type KeyAccessor,
-		type ValueAccessor,
-	} from './chart-series.js';
+	import { categoricalToFigure, type KeyAccessor, type ValueAccessor } from './chart-series.js';
 	import { chartPalette } from './palette.js';
 	import type { BuildTableOptions } from './a11y-table.js';
 

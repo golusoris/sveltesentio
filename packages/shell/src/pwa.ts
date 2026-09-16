@@ -42,16 +42,12 @@ interface PwaRegisterModule {
  * dependency; if the PWA plugin is not configured, the import rejects and a
  * warning is logged rather than throwing at module load.
  */
-export async function registerSW(
-	options: RegisterSWOptions = {},
-): Promise<UpdateServiceWorker> {
+export async function registerSW(options: RegisterSWOptions = {}): Promise<UpdateServiceWorker> {
 	const noop: UpdateServiceWorker = async () => {};
 	if (typeof window === 'undefined') return noop;
 
 	try {
-		const mod = (await import(
-			/* @vite-ignore */ 'virtual:pwa-register'
-		)) as PwaRegisterModule;
+		const mod = (await import(/* @vite-ignore */ 'virtual:pwa-register')) as PwaRegisterModule;
 		return mod.registerSW(options);
 	} catch (error) {
 		console.warn(

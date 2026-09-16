@@ -1,8 +1,8 @@
 {
-  "recommendations": [
-    "cordanaLLM.standards-vscode",
-    "github.copilot",
-    "eamodio.gitlens",
-    "golang.go"
-  ]
+	"recommendations": [
+		"cordanaLLM.standards-vscode",
+		"github.copilot",
+		"eamodio.gitlens",
+		"golang.go"
+	]
 }

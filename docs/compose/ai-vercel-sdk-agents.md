@@ -78,92 +78,92 @@ import { requireSession } from '$lib/server/auth';
 import { rateLimit } from '$lib/server/rate-limit';
 
 const RequestBody = z.object({
-  prompt: z.string().min(1).max(4000),
-  scope: z.enum(['customer', 'internal']).default('customer'),
+	prompt: z.string().min(1).max(4000),
+	scope: z.enum(['customer', 'internal']).default('customer'),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = requireSession(locals);
-  await rateLimit.agents.check(session.user.id);
+	const session = requireSession(locals);
+	await rateLimit.agents.check(session.user.id);
 
-  const parsed = RequestBody.safeParse(await request.json());
-  if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'invalid' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/problem+json' },
-    });
-  }
+	const parsed = RequestBody.safeParse(await request.json());
+	if (!parsed.success) {
+		return new Response(JSON.stringify({ error: 'invalid' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/problem+json' },
+		});
+	}
 
-  const correlationId = uuid();
-  const conversationId = uuid();
+	const correlationId = uuid();
+	const conversationId = uuid();
 
-  return tracer.startActiveSpan('agent.research', async (span) => {
-    span.setAttributes({
-      'agent.scope': parsed.data.scope,
-      'correlation.id': correlationId,
-      'conversation.id': conversationId,
-      'user.id.hashed': session.user.hashedId,
-    });
+	return tracer.startActiveSpan('agent.research', async (span) => {
+		span.setAttributes({
+			'agent.scope': parsed.data.scope,
+			'correlation.id': correlationId,
+			'conversation.id': conversationId,
+			'user.id.hashed': session.user.hashedId,
+		});
 
-    auditPrompt({
-      correlationId,
-      userId: session.user.id,
-      provider: 'anthropic',
-      model: 'claude-opus-4-7',
-      input: { prompt: parsed.data.prompt, scope: parsed.data.scope },
-      retain: 'hash',
-      reason: 'agent-conversation-root',
-    });
+		auditPrompt({
+			correlationId,
+			userId: session.user.id,
+			provider: 'anthropic',
+			model: 'claude-opus-4-7',
+			input: { prompt: parsed.data.prompt, scope: parsed.data.scope },
+			retain: 'hash',
+			reason: 'agent-conversation-root',
+		});
 
-    const result = streamText({
-      model: anthropic('claude-opus-4-7'),
-      abortSignal: request.signal,
-      maxSteps: 8,
-      system: systemPrompt(parsed.data.scope),
-      prompt: parsed.data.prompt,
-      tools: agentTools(session, correlationId),
-      onStepFinish: ({ text, toolCalls, toolResults, finishReason, usage, stepType }) => {
-        auditStep({
-          correlationId,
-          conversationId,
-          stepType,
-          finishReason,
-          usage,
-          toolCalls: toolCalls.map((c) => ({
-            name: c.toolName,
-            id: c.toolCallId,
-            args: c.args,
-          })),
-          toolResults: toolResults.map((r) => ({
-            id: r.toolCallId,
-            name: r.toolName,
-            resultHash: hash(JSON.stringify(r.result)),
-          })),
-        });
-      },
-      onFinish: ({ text, finishReason, usage }) => {
-        span.setAttributes({
-          'agent.finishReason': finishReason,
-          'agent.tokens.prompt': usage.promptTokens,
-          'agent.tokens.completion': usage.completionTokens,
-        });
-      },
-      onError: ({ error }) => {
-        auditError({ correlationId, conversationId, error });
-        span.recordException(error as Error);
-        span.setStatus({ code: 2, message: (error as Error).message });
-      },
-    });
+		const result = streamText({
+			model: anthropic('claude-opus-4-7'),
+			abortSignal: request.signal,
+			maxSteps: 8,
+			system: systemPrompt(parsed.data.scope),
+			prompt: parsed.data.prompt,
+			tools: agentTools(session, correlationId),
+			onStepFinish: ({ text, toolCalls, toolResults, finishReason, usage, stepType }) => {
+				auditStep({
+					correlationId,
+					conversationId,
+					stepType,
+					finishReason,
+					usage,
+					toolCalls: toolCalls.map((c) => ({
+						name: c.toolName,
+						id: c.toolCallId,
+						args: c.args,
+					})),
+					toolResults: toolResults.map((r) => ({
+						id: r.toolCallId,
+						name: r.toolName,
+						resultHash: hash(JSON.stringify(r.result)),
+					})),
+				});
+			},
+			onFinish: ({ text, finishReason, usage }) => {
+				span.setAttributes({
+					'agent.finishReason': finishReason,
+					'agent.tokens.prompt': usage.promptTokens,
+					'agent.tokens.completion': usage.completionTokens,
+				});
+			},
+			onError: ({ error }) => {
+				auditError({ correlationId, conversationId, error });
+				span.recordException(error as Error);
+				span.setStatus({ code: 2, message: (error as Error).message });
+			},
+		});
 
-    span.end();
+		span.end();
 
-    return result.toDataStreamResponse({
-      headers: {
-        'X-Correlation-Id': correlationId,
-        'X-Conversation-Id': conversationId,
-      },
-    });
-  });
+		return result.toDataStreamResponse({
+			headers: {
+				'X-Correlation-Id': correlationId,
+				'X-Conversation-Id': conversationId,
+			},
+		});
+	});
 };
 ```
 
@@ -196,63 +196,63 @@ import { z } from 'zod';
 import type { Session } from '$lib/server/auth';
 
 export function agentTools(session: Session, correlationId: string) {
-  return {
-    findCustomer: tool({
-      description: 'Look up a customer by email or customer ID. Returns null if not found.',
-      parameters: z.object({
-        query: z.string().min(1).describe('Email or customer ID'),
-      }),
-      execute: async ({ query }) => {
-        const result = await locals.db.customers.find(query, {
-          userId: session.user.id,
-          correlationId,
-        });
-        if (!result) return { found: false };
-        return {
-          found: true,
-          id: result.id,
-          email: result.email,
-          tier: result.tier,
-          lastSeen: result.lastSeen.toISOString(),
-        };
-      },
-    }),
+	return {
+		findCustomer: tool({
+			description: 'Look up a customer by email or customer ID. Returns null if not found.',
+			parameters: z.object({
+				query: z.string().min(1).describe('Email or customer ID'),
+			}),
+			execute: async ({ query }) => {
+				const result = await locals.db.customers.find(query, {
+					userId: session.user.id,
+					correlationId,
+				});
+				if (!result) return { found: false };
+				return {
+					found: true,
+					id: result.id,
+					email: result.email,
+					tier: result.tier,
+					lastSeen: result.lastSeen.toISOString(),
+				};
+			},
+		}),
 
-    listRecentOrders: tool({
-      description: 'List up to 10 recent orders for a customer.',
-      parameters: z.object({
-        customerId: z.string().uuid(),
-        limit: z.number().int().min(1).max(10).default(5),
-      }),
-      execute: async ({ customerId, limit }) => {
-        const orders = await locals.db.orders.recent(customerId, limit, {
-          userId: session.user.id,
-          correlationId,
-        });
-        return { orders: orders.map(sanitiseOrder) };
-      },
-    }),
+		listRecentOrders: tool({
+			description: 'List up to 10 recent orders for a customer.',
+			parameters: z.object({
+				customerId: z.string().uuid(),
+				limit: z.number().int().min(1).max(10).default(5),
+			}),
+			execute: async ({ customerId, limit }) => {
+				const orders = await locals.db.orders.recent(customerId, limit, {
+					userId: session.user.id,
+					correlationId,
+				});
+				return { orders: orders.map(sanitiseOrder) };
+			},
+		}),
 
-    refundOrder: tool({
-      description: 'Issue a refund for an order. REQUIRES explicit Idempotency-Key. Irreversible.',
-      parameters: z.object({
-        orderId: z.string().uuid(),
-        amount: z.number().positive(),
-        reason: z.enum(['customer_request', 'duplicate', 'fraud']),
-        idempotencyKey: z.string().uuid(),
-      }),
-      execute: async ({ orderId, amount, reason, idempotencyKey }) => {
-        return await locals.payments.refund({
-          orderId,
-          amount,
-          reason,
-          idempotencyKey,
-          actorUserId: session.user.id,
-          correlationId,
-        });
-      },
-    }),
-  };
+		refundOrder: tool({
+			description: 'Issue a refund for an order. REQUIRES explicit Idempotency-Key. Irreversible.',
+			parameters: z.object({
+				orderId: z.string().uuid(),
+				amount: z.number().positive(),
+				reason: z.enum(['customer_request', 'duplicate', 'fraud']),
+				idempotencyKey: z.string().uuid(),
+			}),
+			execute: async ({ orderId, amount, reason, idempotencyKey }) => {
+				return await locals.payments.refund({
+					orderId,
+					amount,
+					reason,
+					idempotencyKey,
+					actorUserId: session.user.id,
+					correlationId,
+				});
+			},
+		}),
+	};
 }
 ```
 
@@ -280,14 +280,14 @@ Tool-definition rules:
 
 ```ts
 function systemPrompt(scope: 'customer' | 'internal'): string {
-  if (scope === 'customer') {
-    return `You are a customer support assistant for Sveltesentio.
+	if (scope === 'customer') {
+		return `You are a customer support assistant for Sveltesentio.
       You have access to findCustomer and listRecentOrders.
       You MAY NOT issue refunds; escalate by saying so.
       Never reveal internal fields (audit IDs, compliance flags).
       Keep answers under 200 words.`;
-  }
-  return `You are an internal support agent assistant for Sveltesentio.
+	}
+	return `You are an internal support agent assistant for Sveltesentio.
       You have access to findCustomer, listRecentOrders, and refundOrder.
       Refunds require explicit amount and reason; confirm before executing.
       Always include the orderId in your reply.`;
@@ -303,54 +303,54 @@ registry is enforcing.
 ```svelte
 <!-- src/lib/ai/AgentChat.svelte -->
 <script lang="ts">
-  import { useChat } from '@ai-sdk/svelte';
-  import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
+	import { useChat } from '@ai-sdk/svelte';
+	import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
 
-  const { messages, input, handleSubmit, isLoading, stop } = useChat({
-    api: '/api/agents/research',
-    streamProtocol: 'data',
-    onFinish: (msg) => {
-      if (!msg.content) {
-        // Model stopped at maxSteps without final text.
-        notify('The assistant stopped before reaching an answer. Try a narrower prompt.');
-      }
-    },
-  });
+	const { messages, input, handleSubmit, isLoading, stop } = useChat({
+		api: '/api/agents/research',
+		streamProtocol: 'data',
+		onFinish: (msg) => {
+			if (!msg.content) {
+				// Model stopped at maxSteps without final text.
+				notify('The assistant stopped before reaching an answer. Try a narrower prompt.');
+			}
+		},
+	});
 </script>
 
 <div role="log" aria-live="polite" aria-relevant="additions" class="flex flex-col gap-4">
-  {#each $messages as message (message.id)}
-    <article class="rounded border p-3">
-      <header class="text-sm text-muted-fg">
-        {message.role === 'assistant' ? 'Assistant' : 'You'}
-      </header>
+	{#each $messages as message (message.id)}
+		<article class="rounded border p-3">
+			<header class="text-sm text-muted-fg">
+				{message.role === 'assistant' ? 'Assistant' : 'You'}
+			</header>
 
-      {#if message.toolInvocations?.length}
-        <details class="my-2 text-sm">
-          <summary>Tool calls ({message.toolInvocations.length})</summary>
-          <ul class="mt-1 space-y-1">
-            {#each message.toolInvocations as inv}
-              <li>
-                <code>{inv.toolName}</code>
-                {#if inv.state === 'call'}<span aria-busy="true">running…</span>{/if}
-                {#if inv.state === 'result'}<span class="text-success">done</span>{/if}
-              </li>
-            {/each}
-          </ul>
-        </details>
-      {/if}
+			{#if message.toolInvocations?.length}
+				<details class="my-2 text-sm">
+					<summary>Tool calls ({message.toolInvocations.length})</summary>
+					<ul class="mt-1 space-y-1">
+						{#each message.toolInvocations as inv}
+							<li>
+								<code>{inv.toolName}</code>
+								{#if inv.state === 'call'}<span aria-busy="true">running…</span>{/if}
+								{#if inv.state === 'result'}<span class="text-success">done</span>{/if}
+							</li>
+						{/each}
+					</ul>
+				</details>
+			{/if}
 
-      {#if message.content}
-        {@html sanitizeMarkdown(message.content)}
-      {/if}
-    </article>
-  {/each}
+			{#if message.content}
+				{@html sanitizeMarkdown(message.content)}
+			{/if}
+		</article>
+	{/each}
 </div>
 
 <form onsubmit={handleSubmit} class="mt-4 flex gap-2">
-  <input bind:value={$input} name="prompt" class="flex-1 rounded border px-3 py-2" />
-  <button type="submit" disabled={$isLoading}>Ask</button>
-  {#if $isLoading}<button type="button" onclick={stop}>Stop</button>{/if}
+	<input bind:value={$input} name="prompt" class="flex-1 rounded border px-3 py-2" />
+	<button type="submit" disabled={$isLoading}>Ask</button>
+	{#if $isLoading}<button type="button" onclick={stop}>Stop</button>{/if}
 </form>
 ```
 
@@ -371,22 +371,22 @@ import { experimental_createMCPClient as createMCPClient } from 'ai';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const mcpClient = await createMCPClient({
-  transport: new StdioClientTransport({
-    command: 'node',
-    args: ['/opt/sveltesentio/mcp-servers/docs.js'],
-  }),
+	transport: new StdioClientTransport({
+		command: 'node',
+		args: ['/opt/sveltesentio/mcp-servers/docs.js'],
+	}),
 });
 
 const mcpTools = await mcpClient.tools();
 
 const result = streamText({
-  model: anthropic('claude-opus-4-7'),
-  maxSteps: 10,
-  tools: { ...agentTools(session, correlationId), ...mcpTools },
-  prompt,
-  onStepFinish: ({ toolCalls, toolResults }) => {
-    // Same audit hook — MCP tools are auditable the same way.
-  },
+	model: anthropic('claude-opus-4-7'),
+	maxSteps: 10,
+	tools: { ...agentTools(session, correlationId), ...mcpTools },
+	prompt,
+	onStepFinish: ({ toolCalls, toolResults }) => {
+		// Same audit hook — MCP tools are auditable the same way.
+	},
 });
 
 await mcpClient.close();
@@ -414,19 +414,21 @@ use `streamObject` with a step-aware schema:
 import { streamObject } from 'ai';
 
 const result = streamObject({
-  model: anthropic('claude-opus-4-7'),
-  maxSteps: 6,
-  tools: agentTools(session, correlationId),
-  schema: z.object({
-    summary: z.string(),
-    findings: z.array(z.object({
-      customerId: z.string().uuid(),
-      issue: z.string(),
-      severity: z.enum(['low', 'medium', 'high']),
-    })),
-    nextActions: z.array(z.string()),
-  }),
-  prompt,
+	model: anthropic('claude-opus-4-7'),
+	maxSteps: 6,
+	tools: agentTools(session, correlationId),
+	schema: z.object({
+		summary: z.string(),
+		findings: z.array(
+			z.object({
+				customerId: z.string().uuid(),
+				issue: z.string(),
+				severity: z.enum(['low', 'medium', 'high']),
+			}),
+		),
+		nextActions: z.array(z.string()),
+	}),
+	prompt,
 });
 ```
 
@@ -472,37 +474,46 @@ import { MockLanguageModelV1 } from 'ai/test';
 import { simulateReadableStream } from 'ai/test';
 
 test('agent calls findCustomer then refundOrder', async () => {
-  const model = new MockLanguageModelV1({
-    doStream: async () => ({
-      stream: simulateReadableStream({
-        chunks: [
-          { type: 'tool-call', toolCallId: '1', toolName: 'findCustomer',
-            args: JSON.stringify({ query: 'jane@example.com' }) },
-          { type: 'finish', finishReason: 'tool-calls',
-            usage: { promptTokens: 50, completionTokens: 20 } },
-        ],
-      }),
-    }),
-  });
+	const model = new MockLanguageModelV1({
+		doStream: async () => ({
+			stream: simulateReadableStream({
+				chunks: [
+					{
+						type: 'tool-call',
+						toolCallId: '1',
+						toolName: 'findCustomer',
+						args: JSON.stringify({ query: 'jane@example.com' }),
+					},
+					{
+						type: 'finish',
+						finishReason: 'tool-calls',
+						usage: { promptTokens: 50, completionTokens: 20 },
+					},
+				],
+			}),
+		}),
+	});
 
-  const steps: string[] = [];
-  const result = streamText({
-    model,
-    maxSteps: 3,
-    tools: {
-      findCustomer: tool({
-        description: 'find',
-        parameters: z.object({ query: z.string() }),
-        execute: async () => ({ found: true, id: 'c1' }),
-      }),
-    },
-    prompt: 'find jane',
-    onStepFinish: ({ stepType }) => steps.push(stepType),
-  });
+	const steps: string[] = [];
+	const result = streamText({
+		model,
+		maxSteps: 3,
+		tools: {
+			findCustomer: tool({
+				description: 'find',
+				parameters: z.object({ query: z.string() }),
+				execute: async () => ({ found: true, id: 'c1' }),
+			}),
+		},
+		prompt: 'find jane',
+		onStepFinish: ({ stepType }) => steps.push(stepType),
+	});
 
-  for await (const _ of result.textStream) { /* drain */ }
+	for await (const _ of result.textStream) {
+		/* drain */
+	}
 
-  expect(steps).toContain('tool-result');
+	expect(steps).toContain('tool-result');
 });
 ```
 

@@ -11,11 +11,7 @@ export {
 	formatRelativeTime,
 } from './intl.js';
 
-export {
-	announceNavigation,
-	ensureAnnouncerRegion,
-	restoreFocus,
-} from './announcer.js';
+export { announceNavigation, ensureAnnouncerRegion, restoreFocus } from './announcer.js';
 export type { AnnouncerOptions, AnnouncerPoliteness } from './announcer.js';
 
 // Component layer (v0.2.0). The `.svelte` components — <LangSync>,
@@ -24,8 +20,4 @@ export type { AnnouncerOptions, AnnouncerPoliteness } from './announcer.js';
 // The type-checked, unit-tested pure core (per-locale font loader) is re-exported
 // here.
 export { loadLocaleFont } from './load-locale-font.js';
-export type {
-	LoadLocaleFontOptions,
-	LocaleFontAsset,
-	LocaleFontMap,
-} from './load-locale-font.js';
+export type { LoadLocaleFontOptions, LocaleFontAsset, LocaleFontMap } from './load-locale-font.js';

@@ -6,11 +6,10 @@ import {
 	type ConnectStreamState,
 } from './connect-stream.js';
 
-export interface UseConnectStreamOptions<TMessage>
-	extends Omit<
-		ConnectStreamOptions<TMessage>,
-		'onMessage' | 'onStateChange' | 'onError' | 'onClose'
-	> {
+export interface UseConnectStreamOptions<TMessage> extends Omit<
+	ConnectStreamOptions<TMessage>,
+	'onMessage' | 'onStateChange' | 'onError' | 'onClose'
+> {
 	/** Start consuming from inside an `$effect` on mount (default `true`). */
 	autoStart?: boolean;
 	/**

@@ -12,9 +12,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 
 describe('createLlmProxy', () => {
 	it('POSTs a chat request to the app-owned endpoint and returns the parsed body', async () => {
-		const fetchImpl: FetchLike = vi.fn(async () =>
-			jsonResponse({ reply: 'hello there' }),
-		);
+		const fetchImpl: FetchLike = vi.fn(async () => jsonResponse({ reply: 'hello there' }));
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
 		const result = await proxy.chat<{ reply: string }>({
@@ -23,8 +21,8 @@ describe('createLlmProxy', () => {
 
 		expect(result).toEqual({ reply: 'hello there' });
 		expect(fetchImpl).toHaveBeenCalledTimes(1);
-		const [url, init] = (fetchImpl as unknown as { mock: { calls: [string, RequestInit][] } })
-			.mock.calls[0]!;
+		const [url, init] = (fetchImpl as unknown as { mock: { calls: [string, RequestInit][] } }).mock
+			.calls[0]!;
 		expect(url).toBe('/api/ai/chat');
 		expect(init.method).toBe('POST');
 		expect(JSON.parse(init.body as string)).toEqual({
@@ -64,9 +62,7 @@ describe('createLlmProxy', () => {
 			);
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
-		await expect(
-			proxy.chat({ messages: [{ role: 'user', content: 'x' }] }),
-		).rejects.toMatchObject({
+		await expect(proxy.chat({ messages: [{ role: 'user', content: 'x' }] })).rejects.toMatchObject({
 			name: 'ProblemError',
 			type: 'https://errors.example/rate-limited',
 			status: 429,

@@ -38,17 +38,20 @@ Accepting this ADR does **not** include a formal bundle-size measurement; that's
 ## Consequences
 
 **Positive**:
+
 - Matches upstream xyflow recommendation; integration examples and community patterns are directly applicable.
 - Worker-based execution keeps layout off the main thread; no jank on large graphs.
 - Dynamic import keeps the main-bundle cost at zero until a consumer actually calls `createElkLayout()`.
 - Preset knobs (layered / force / mrtree) cover the cases downstream apps need without requiring per-app layout code.
 
 **Negative / trade-offs**:
+
 - `elkjs` adds ~1.5 MB minified (≈ 400 KB after gzip) to any page that triggers a layout call. Pages that never call it pay zero, but pages that do pay the full cost once. Phase 9 scaffold work must measure the hit on handheld / 10-foot presets and document the budget.
 - Worker overhead (postMessage serialisation of the graph) is noticeable on very small graphs (<10 nodes); the wrapper falls back to synchronous execution below that threshold to avoid the overhead.
 - Sugiyama layouts are deterministic but not stable across edits — adding one node can cause large reflow. Consumers that need stability between edits should call `createElkLayout()` only on explicit "Arrange" user actions, not on every graph mutation. Documented in the compose recipe.
 
 **Documentation obligations**:
+
 - `packages/flow/AGENTS.md` — document `createElkLayout()` signature + worker fallback threshold + dynamic-import loader.
 - [docs/compose/flow-basics.md](../compose/flow-basics.md) — recipe for the explicit "Arrange" button pattern, plus preset selection guide.
 - Phase 9 acceptance criterion: bundle-size measurement on the three interface-type presets; results recorded in the Phase 9 issue ([#22](https://github.com/golusoris/sveltesentio/issues/22)).

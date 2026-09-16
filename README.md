@@ -65,8 +65,8 @@ MIT © lusoris
 This repository conforms to High-Integrity Systems Standards (HISS-16)
 and modernized NASA JPL Power-of-10 rules.
 
-| Gate | Command | Description |
-| :--- | :--- | :--- |
-| **Verification** | `make verify-all` | Runs full audit, test suite, and context integrity check |
-| **HISS Audit** | `standardsctl audit` | Enforces zero technical debt regression against baseline |
-| **Context Sync** | `standardsctl compile-context` | Transpiles canonical `AGENTS.md` to all AI targets |
+| Gate             | Command                        | Description                                              |
+| :--------------- | :----------------------------- | :------------------------------------------------------- |
+| **Verification** | `make verify-all`              | Runs full audit, test suite, and context integrity check |
+| **HISS Audit**   | `standardsctl audit`           | Enforces zero technical debt regression against baseline |
+| **Context Sync** | `standardsctl compile-context` | Transpiles canonical `AGENTS.md` to all AI targets       |

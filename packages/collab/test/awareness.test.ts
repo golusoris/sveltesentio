@@ -18,9 +18,7 @@ type Listener = (change: AwarenessChange, origin: unknown) => void;
  * Minimal in-memory fake of `y-protocols` Awareness exercising the structural
  * interface. Tracks per-client state and listeners by event name.
  */
-class FakeAwareness<S extends PresenceState = PresenceState>
-	implements AwarenessLike<S>
-{
+class FakeAwareness<S extends PresenceState = PresenceState> implements AwarenessLike<S> {
 	readonly clientID: number;
 	private readonly states = new Map<number, S>();
 	private readonly listeners = new Map<AwarenessEvent, Set<Listener>>();

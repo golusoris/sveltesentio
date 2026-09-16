@@ -65,11 +65,7 @@ A11y (WAI-ARIA dialog pattern):
 			return;
 		}
 		if (event.key !== 'Tab' || !panel) return;
-		const target = nextTrapTarget(
-			focusableElements(panel),
-			document.activeElement,
-			event.shiftKey,
-		);
+		const target = nextTrapTarget(focusableElements(panel), document.activeElement, event.shiftKey);
 		event.preventDefault();
 		(target ?? panel).focus();
 	}
@@ -79,7 +75,8 @@ A11y (WAI-ARIA dialog pattern):
 	// microtask guards against the panel having unmounted before it runs.
 	$effect(() => {
 		if (open) {
-			returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+			returnFocus =
+				document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
 			queueMicrotask(() => {
 				if (!panel) return;
 				const [firstFocusable] = focusableElements(panel);

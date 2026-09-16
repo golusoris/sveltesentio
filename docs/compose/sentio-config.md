@@ -13,12 +13,12 @@ API lives in `@sveltesentio/core`; ambient types in `@sveltesentio/core/sentio`.
 fills defaults, and throws `SentioConfigError` with a readable summary on bad
 input — so misconfiguration fails the build instead of reaching the client.
 
-| Field | Type | Default | Purpose |
-|---|---|---|---|
-| `version` | `string` (min 1) | `'0.0.0'` | Build-time app version surfaced to client code. |
+| Field           | Type                                   | Default     | Purpose                                                            |
+| --------------- | -------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| `version`       | `string` (min 1)                       | `'0.0.0'`   | Build-time app version surfaced to client code.                    |
 | `interfaceType` | `'desktop' \| 'tenfoot' \| 'handheld'` | `'desktop'` | Default interface-type preset (§2.6) before client classification. |
-| `features` | `Record<string, boolean>` | `{}` | Static feature flags resolved at build time. |
-| `theme` | `string` (min 1) | `'default'` | Active theme preset name. |
+| `features`      | `Record<string, boolean>`              | `{}`        | Static feature flags resolved at build time.                       |
+| `theme`         | `string` (min 1)                       | `'default'` | Active theme preset name.                                          |
 
 ## 1. Wire it into Vite
 

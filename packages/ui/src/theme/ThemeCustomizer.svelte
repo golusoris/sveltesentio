@@ -90,7 +90,7 @@ sets `aria-invalid` on the field so assistive tech announces the error.
 					autocomplete="off"
 					placeholder={placeholderFor(token)}
 					aria-invalid={invalid ? 'true' : undefined}
-					value={value}
+					{value}
 					oninput={(event) => setToken(token, event.currentTarget.value)}
 				/>
 			</div>

@@ -46,15 +46,15 @@ import createClient from 'openapi-fetch';
 import type { paths } from './golusoris-openapi'; // generated via openapi-typescript
 
 const agent = new Agent({
-  connect: {
-    socketPath: '/tmp/golusoris-api.sock',
-  },
+	connect: {
+		socketPath: '/tmp/golusoris-api.sock',
+	},
 });
 
 // openapi-fetch accepts a custom fetch; wire the Unix-socket agent in
 export const golusoris = createClient<paths>({
-  baseUrl: 'http://unix', // arbitrary; undici routes via the agent
-  fetch: (url, init) => fetch(url, { ...init, dispatcher: agent }),
+	baseUrl: 'http://unix', // arbitrary; undici routes via the agent
+	fetch: (url, init) => fetch(url, { ...init, dispatcher: agent }),
 });
 ```
 
@@ -186,11 +186,11 @@ import { createServer } from 'node:net';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
-  probeSockmap,
-  activationListeners,
-  readSockmapStats,
-  parsePrometheusMetrics,
-  bpftoolKeyCount,
+	probeSockmap,
+	activationListeners,
+	readSockmapStats,
+	parsePrometheusMetrics,
+	bpftoolKeyCount,
 } from '@sveltesentio/ipc-sockmap/sockmap';
 
 const exec = promisify(execFile);
@@ -199,7 +199,7 @@ const exec = promisify(execFile);
 //    (non-Linux, cgroup v1, kernel <5.10, or the pin is absent).
 const probe = await probeSockmap(); // defaults: process.platform, os.release(), DEFAULT_PIN_PATH
 if (!probe.available) {
-  console.warn('[ipc-sockmap] Tier 3 off:', probe.reason); // use the AF_UNIX dispatcher above
+	console.warn('[ipc-sockmap] Tier 3 off:', probe.reason); // use the AF_UNIX dispatcher above
 }
 
 // 2. Adopt systemd socket-activation FDs. golusoris's SOCK_OPS program registers
@@ -207,20 +207,20 @@ if (!probe.available) {
 //    the handed-off FDs (numbered from 3). PID-guarded; throws on a bad LISTEN_FDS.
 const server = createServer(/* … your framed request handler … */);
 for (const { fd, name } of activationListeners()) {
-  console.warn(`[ipc-sockmap] adopting activated listener ${name} (fd ${fd})`);
-  server.listen({ fd });
+	console.warn(`[ipc-sockmap] adopting activated listener ${name} (fd ${fd})`);
+	server.listen({ fd });
 }
 
 // 3. Observe: active sockets = sockhash key count (values are kernel-only, so we
 //    iterate keys); redirected-bytes / errors come from golusoris's Prometheus.
 const stats = await readSockmapStats({
-  pinPath: probe.available ? probe.pinPath : undefined,
-  countKeys: async (pin) => {
-    const { stdout } = await exec('bpftool', ['map', 'dump', 'pinned', pin, '--json']);
-    return bpftoolKeyCount(stdout);
-  },
-  readMetrics: async () =>
-    parsePrometheusMetrics(await fetch('http://localhost:9090/metrics').then((r) => r.text())),
+	pinPath: probe.available ? probe.pinPath : undefined,
+	countKeys: async (pin) => {
+		const { stdout } = await exec('bpftool', ['map', 'dump', 'pinned', pin, '--json']);
+		return bpftoolKeyCount(stdout);
+	},
+	readMetrics: async () =>
+		parsePrometheusMetrics(await fetch('http://localhost:9090/metrics').then((r) => r.text())),
 });
 console.warn('[ipc-sockmap] stats', stats);
 ```

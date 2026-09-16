@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	buildSrcSet,
-	buildSrcSetCandidates,
-	buildSizes,
-	buildResponsiveImage,
-} from '../src/image';
+import { buildSrcSet, buildSrcSetCandidates, buildSizes, buildResponsiveImage } from '../src/image';
 
 describe('buildSrcSetCandidates', () => {
 	it('normalises widths: de-dupes, drops invalid, rounds, sorts ascending', () => {
@@ -47,9 +42,7 @@ describe('buildSrcSetCandidates', () => {
 
 describe('buildSrcSet', () => {
 	it('formats candidates with w descriptors', () => {
-		expect(buildSrcSet('/img', [320, 640])).toBe(
-			'/img?w=320 320w, /img?w=640 640w',
-		);
+		expect(buildSrcSet('/img', [320, 640])).toBe('/img?w=320 320w, /img?w=640 640w');
 	});
 
 	it('returns empty string for no widths', () => {
@@ -82,9 +75,7 @@ describe('buildResponsiveImage', () => {
 			sizes: [{ condition: '(min-width: 768px)', size: '50vw' }],
 		});
 		expect(attrs.src).toBe('/poster?w=1280');
-		expect(attrs.srcset).toBe(
-			'/poster?w=320 320w, /poster?w=640 640w, /poster?w=1280 1280w',
-		);
+		expect(attrs.srcset).toBe('/poster?w=320 320w, /poster?w=640 640w, /poster?w=1280 1280w');
 		expect(attrs.sizes).toBe('(min-width: 768px) 50vw, 100vw');
 	});
 

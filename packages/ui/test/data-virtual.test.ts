@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	computeVirtualWindow,
-	nextFocusIndex,
-	offsetForIndex,
-} from '../src/data/virtual.js';
+import { computeVirtualWindow, nextFocusIndex, offsetForIndex } from '../src/data/virtual.js';
 
 describe('computeVirtualWindow', () => {
 	it('renders the visible window plus overscan', () => {
@@ -60,24 +56,44 @@ describe('computeVirtualWindow', () => {
 	});
 
 	it('returns an empty window for zero rows', () => {
-		const win = computeVirtualWindow({ rowCount: 0, rowHeight: 40, viewportHeight: 400, scrollTop: 0 });
+		const win = computeVirtualWindow({
+			rowCount: 0,
+			rowHeight: 40,
+			viewportHeight: 400,
+			scrollTop: 0,
+		});
 		expect(win.items).toHaveLength(0);
 		expect(win.endIndex).toBe(-1);
 		expect(win.totalSize).toBe(0);
 	});
 
 	it('guards against non-positive row/viewport heights', () => {
-		expect(computeVirtualWindow({ rowCount: 5, rowHeight: 0, viewportHeight: 100, scrollTop: 0 }).items).toHaveLength(0);
-		expect(computeVirtualWindow({ rowCount: 5, rowHeight: 40, viewportHeight: 0, scrollTop: 0 }).items).toHaveLength(0);
+		expect(
+			computeVirtualWindow({ rowCount: 5, rowHeight: 0, viewportHeight: 100, scrollTop: 0 }).items,
+		).toHaveLength(0);
+		expect(
+			computeVirtualWindow({ rowCount: 5, rowHeight: 40, viewportHeight: 0, scrollTop: 0 }).items,
+		).toHaveLength(0);
 	});
 
 	it('defaults overscan to 3', () => {
-		const win = computeVirtualWindow({ rowCount: 100, rowHeight: 10, viewportHeight: 100, scrollTop: 500 });
+		const win = computeVirtualWindow({
+			rowCount: 100,
+			rowHeight: 10,
+			viewportHeight: 100,
+			scrollTop: 500,
+		});
 		expect(win.startIndex).toBe(50 - 3);
 	});
 
 	it('clamps negative scrollTop to 0', () => {
-		const win = computeVirtualWindow({ rowCount: 100, rowHeight: 10, viewportHeight: 100, scrollTop: -50, overscan: 0 });
+		const win = computeVirtualWindow({
+			rowCount: 100,
+			rowHeight: 10,
+			viewportHeight: 100,
+			scrollTop: -50,
+			overscan: 0,
+		});
 		expect(win.startIndex).toBe(0);
 	});
 });

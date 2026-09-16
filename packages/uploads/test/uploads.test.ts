@@ -4,16 +4,41 @@ import { stripExif, readExif } from '../src/exif.js';
 
 // Magic-byte fixtures: PNG signature + IHDR chunk (1x1), and a GIF89a header.
 const PNG = new Uint8Array([
-	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // signature
-	0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR length + "IHDR"
-	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, // IHDR data
+	0x89,
+	0x50,
+	0x4e,
+	0x47,
+	0x0d,
+	0x0a,
+	0x1a,
+	0x0a, // signature
+	0x00,
+	0x00,
+	0x00,
+	0x0d,
+	0x49,
+	0x48,
+	0x44,
+	0x52, // IHDR length + "IHDR"
+	0x00,
+	0x00,
+	0x00,
+	0x01,
+	0x00,
+	0x00,
+	0x00,
+	0x01,
+	0x08,
+	0x06,
+	0x00,
+	0x00,
+	0x00, // IHDR data
 ]);
 const GIF = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0]);
 // Minimal JPEG: SOI + APP1(Exif, one IFD0 ASCII tag Make="SVELTESENTIO") + EOI.
 const JPEG_WITH_EXIF = new Uint8Array([
-	255, 216, 255, 225, 0, 47, 69, 120, 105, 102, 0, 0, 73, 73, 42, 0, 8, 0, 0, 0, 1, 0, 15, 1,
-	2, 0, 13, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 83, 86, 69, 76, 84, 69, 83, 69, 78, 84, 73, 79,
-	0, 255, 217,
+	255, 216, 255, 225, 0, 47, 69, 120, 105, 102, 0, 0, 73, 73, 42, 0, 8, 0, 0, 0, 1, 0, 15, 1, 2, 0,
+	13, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 83, 86, 69, 76, 84, 69, 83, 69, 78, 84, 73, 79, 0, 255, 217,
 ]);
 
 describe('detectFileType (magic-byte sniff)', () => {

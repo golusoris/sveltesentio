@@ -95,85 +95,105 @@ pnpm add -F @sveltesentio/marketplace zod jose
 import { z } from 'zod';
 
 export const AppStatus = z.enum([
-  'draft', 'pending_review', 'approved', 'rejected',
-  'listed', 'deprecated', 'deleted',
+	'draft',
+	'pending_review',
+	'approved',
+	'rejected',
+	'listed',
+	'deprecated',
+	'deleted',
 ]);
 
 export const AppCategory = z.enum([
-  'analytics', 'communication', 'crm', 'developer-tools',
-  'finance', 'marketing', 'productivity', 'security', 'other',
+	'analytics',
+	'communication',
+	'crm',
+	'developer-tools',
+	'finance',
+	'marketing',
+	'productivity',
+	'security',
+	'other',
 ]);
 
 // Scope catalog — must match what permissions.md exposes.
 export const Scope = z.enum([
-  'read:profile', 'read:tenant',
-  'read:contacts', 'write:contacts',
-  'read:messages', 'write:messages',
-  'read:files', 'write:files',
-  'webhook:events',
-  // NEVER: 'admin:*' — admin scopes are not grantable to third parties.
+	'read:profile',
+	'read:tenant',
+	'read:contacts',
+	'write:contacts',
+	'read:messages',
+	'write:messages',
+	'read:files',
+	'write:files',
+	'webhook:events',
+	// NEVER: 'admin:*' — admin scopes are not grantable to third parties.
 ]);
 export type Scope = z.infer<typeof Scope>;
 
 export const AppManifest = z.object({
-  schemaVersion: z.literal(1),
-  name: z.string().min(3).max(80),
-  slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
-  description: z.string().min(20).max(2000),
-  category: AppCategory,
-  homepageUrl: z.string().url(),
-  privacyUrl: z.string().url(),
-  termsUrl: z.string().url(),
-  iconUrl: z.string().url(), // 256×256 PNG, must be CDN-hosted
-  // OAuth client config — Hydra-issued client_id stored separately.
-  redirectUris: z.array(z.string().url()).min(1).max(10),
-  // Allowed redirect URIs — strict-equality match per RFC 6819.
-  postLogoutRedirectUris: z.array(z.string().url()).max(10).optional(),
-  scopes: z.array(Scope).min(1).max(20),
-  // Webhook config — only present if 'webhook:events' scope requested.
-  webhook: z.object({
-    url: z.string().url(),
-    eventTypes: z.array(z.string().min(1).max(64)).min(1).max(50),
-  }).nullable(),
-  // Per-app rate-limit — defaults if absent.
-  rateLimit: z.object({
-    requestsPerMinute: z.number().int().min(1).max(6000).default(120),
-    requestsPerDay: z.number().int().min(1).max(1_000_000).default(10_000),
-  }).default({}),
+	schemaVersion: z.literal(1),
+	name: z.string().min(3).max(80),
+	slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
+	description: z.string().min(20).max(2000),
+	category: AppCategory,
+	homepageUrl: z.string().url(),
+	privacyUrl: z.string().url(),
+	termsUrl: z.string().url(),
+	iconUrl: z.string().url(), // 256×256 PNG, must be CDN-hosted
+	// OAuth client config — Hydra-issued client_id stored separately.
+	redirectUris: z.array(z.string().url()).min(1).max(10),
+	// Allowed redirect URIs — strict-equality match per RFC 6819.
+	postLogoutRedirectUris: z.array(z.string().url()).max(10).optional(),
+	scopes: z.array(Scope).min(1).max(20),
+	// Webhook config — only present if 'webhook:events' scope requested.
+	webhook: z
+		.object({
+			url: z.string().url(),
+			eventTypes: z.array(z.string().min(1).max(64)).min(1).max(50),
+		})
+		.nullable(),
+	// Per-app rate-limit — defaults if absent.
+	rateLimit: z
+		.object({
+			requestsPerMinute: z.number().int().min(1).max(6000).default(120),
+			requestsPerDay: z.number().int().min(1).max(1_000_000).default(10_000),
+		})
+		.default({}),
 });
 export type AppManifest = z.infer<typeof AppManifest>;
 
 export const App = z.object({
-  id: z.string().uuid(),
-  developerId: z.string().uuid(),
-  status: AppStatus,
-  manifest: AppManifest,
-  manifestVersion: z.number().int().min(1),
-  hydraClientId: z.string().min(1).max(128),
-  // Visibility flags
-  isPublic: z.boolean(),
-  isFeatured: z.boolean(),
-  // Counters denormalized from app_installations
-  installCount: z.number().int().min(0),
-  createdAt: z.string().datetime(),
-  approvedAt: z.string().datetime().nullable(),
-  deprecatedAt: z.string().datetime().nullable(),
+	id: z.string().uuid(),
+	developerId: z.string().uuid(),
+	status: AppStatus,
+	manifest: AppManifest,
+	manifestVersion: z.number().int().min(1),
+	hydraClientId: z.string().min(1).max(128),
+	// Visibility flags
+	isPublic: z.boolean(),
+	isFeatured: z.boolean(),
+	// Counters denormalized from app_installations
+	installCount: z.number().int().min(0),
+	createdAt: z.string().datetime(),
+	approvedAt: z.string().datetime().nullable(),
+	deprecatedAt: z.string().datetime().nullable(),
 });
 
 export const AppInstallation = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  appId: z.string().uuid(),
-  installedBy: z.string().uuid(), // user who clicked Install
-  installedAt: z.string().datetime(),
-  // Scopes granted at install — may be a subset of manifest scopes if
-  // tenant admin opts to deny optional ones (future enhancement).
-  grantedScopes: z.array(Scope).min(1).max(20),
-  // Pinned manifest version — re-consent required if app's current
-  // manifest_version > pinned and scopes changed.
-  manifestVersionPinned: z.number().int().min(1),
-  status: z.enum(['active', 'reauth_required', 'revoked']),
-  revokedAt: z.string().datetime().nullable(),
+	id: z.string().uuid(),
+	tenantId: z.string().uuid(),
+	appId: z.string().uuid(),
+	installedBy: z.string().uuid(), // user who clicked Install
+	installedAt: z.string().datetime(),
+	// Scopes granted at install — may be a subset of manifest scopes if
+	// tenant admin opts to deny optional ones (future enhancement).
+	grantedScopes: z.array(Scope).min(1).max(20),
+	// Pinned manifest version — re-consent required if app's current
+	// manifest_version > pinned and scopes changed.
+	manifestVersionPinned: z.number().int().min(1),
+	status: z.enum(['active', 'reauth_required', 'revoked']),
+	revokedAt: z.string().datetime().nullable(),
 });
 ```
 
@@ -191,46 +211,57 @@ import { db } from '$lib/server/db';
 import { recordAudit } from '$lib/server/audit';
 
 export async function POST({ request, locals }) {
-  const parsed = AppManifest.safeParse(await request.json());
-  if (!parsed.success) {
-    return json({ type: 'about:blank', title: 'Invalid manifest', status: 422, errors: parsed.error.issues }, { status: 422 });
-  }
+	const parsed = AppManifest.safeParse(await request.json());
+	if (!parsed.success) {
+		return json(
+			{ type: 'about:blank', title: 'Invalid manifest', status: 422, errors: parsed.error.issues },
+			{ status: 422 },
+		);
+	}
 
-  const appId = uuidv7();
+	const appId = uuidv7();
 
-  // Provision an OAuth client in Hydra — confidential client w/ PKCE
-  // required (per ADR-0032, even confidential clients use PKCE).
-  const hydraClient = await hydraAdmin.adminCreateOAuth2Client({
-    body: {
-      client_name: parsed.data.name,
-      grant_types: ['authorization_code', 'refresh_token'],
-      response_types: ['code'],
-      redirect_uris: parsed.data.redirectUris,
-      post_logout_redirect_uris: parsed.data.postLogoutRedirectUris,
-      scope: parsed.data.scopes.join(' '),
-      token_endpoint_auth_method: 'client_secret_post',
-      // PKCE-S256 required even with client_secret — see oauth-provider.md
-    },
-  });
+	// Provision an OAuth client in Hydra — confidential client w/ PKCE
+	// required (per ADR-0032, even confidential clients use PKCE).
+	const hydraClient = await hydraAdmin.adminCreateOAuth2Client({
+		body: {
+			client_name: parsed.data.name,
+			grant_types: ['authorization_code', 'refresh_token'],
+			response_types: ['code'],
+			redirect_uris: parsed.data.redirectUris,
+			post_logout_redirect_uris: parsed.data.postLogoutRedirectUris,
+			scope: parsed.data.scopes.join(' '),
+			token_endpoint_auth_method: 'client_secret_post',
+			// PKCE-S256 required even with client_secret — see oauth-provider.md
+		},
+	});
 
-  await db.query(
-    `INSERT INTO marketplace_apps
+	await db.query(
+		`INSERT INTO marketplace_apps
        (id, developer_id, status, manifest, manifest_version,
         hydra_client_id, hydra_client_secret_encrypted, is_public,
         is_featured, install_count, created_at)
      VALUES ($1,$2,'draft',$3,1,$4,$5,false,false,0,NOW())`,
-    [appId, locals.user.id, parsed.data, hydraClient.client_id,
-     await encryptSecret(hydraClient.client_secret)],
-  );
+		[
+			appId,
+			locals.user.id,
+			parsed.data,
+			hydraClient.client_id,
+			await encryptSecret(hydraClient.client_secret),
+		],
+	);
 
-  await recordAudit({
-    actor: locals.user.id,
-    action: 'marketplace.app.created',
-    payload: { appId, name: parsed.data.name, slug: parsed.data.slug },
-  });
+	await recordAudit({
+		actor: locals.user.id,
+		action: 'marketplace.app.created',
+		payload: { appId, name: parsed.data.name, slug: parsed.data.slug },
+	});
 
-  // Return the client_secret ONCE — developer must store it.
-  return json({ appId, clientId: hydraClient.client_id, clientSecret: hydraClient.client_secret }, { status: 201 });
+	// Return the client_secret ONCE — developer must store it.
+	return json(
+		{ appId, clientId: hydraClient.client_id, clientSecret: hydraClient.client_secret },
+		{ status: 201 },
+	);
 }
 ```
 
@@ -246,34 +277,45 @@ Critical contract:
 
 ```ts
 export async function submitForReview(appId: string) {
-  const app = await db.query(`SELECT * FROM marketplace_apps WHERE id = $1 AND developer_id = $2 AND status = 'draft'`, [appId, locals.user.id]).then(r => r.rows[0]);
-  if (!app) throw new Error('app not in draft');
+	const app = await db
+		.query(
+			`SELECT * FROM marketplace_apps WHERE id = $1 AND developer_id = $2 AND status = 'draft'`,
+			[appId, locals.user.id],
+		)
+		.then((r) => r.rows[0]);
+	if (!app) throw new Error('app not in draft');
 
-  // Auto-checks before queueing for human review.
-  const checks = await runAutomatedChecks(app.manifest);
-  if (!checks.passed) {
-    await db.query(`UPDATE marketplace_apps SET status = 'rejected' WHERE id = $1`, [appId]);
-    return { status: 'rejected', reasons: checks.failedReasons };
-  }
+	// Auto-checks before queueing for human review.
+	const checks = await runAutomatedChecks(app.manifest);
+	if (!checks.passed) {
+		await db.query(`UPDATE marketplace_apps SET status = 'rejected' WHERE id = $1`, [appId]);
+		return { status: 'rejected', reasons: checks.failedReasons };
+	}
 
-  await db.query(`UPDATE marketplace_apps SET status = 'pending_review' WHERE id = $1`, [appId]);
-  // Push into the moderation queue from content-moderation.md
-  await moderationQueue.add({ kind: 'marketplace_app', subjectId: appId, priority: 'normal' });
-  await recordAudit({ actor: locals.user.id, action: 'marketplace.app.submitted', payload: { appId } });
-  return { status: 'pending_review' };
+	await db.query(`UPDATE marketplace_apps SET status = 'pending_review' WHERE id = $1`, [appId]);
+	// Push into the moderation queue from content-moderation.md
+	await moderationQueue.add({ kind: 'marketplace_app', subjectId: appId, priority: 'normal' });
+	await recordAudit({
+		actor: locals.user.id,
+		action: 'marketplace.app.submitted',
+		payload: { appId },
+	});
+	return { status: 'pending_review' };
 }
 
 async function runAutomatedChecks(manifest: AppManifest) {
-  const failedReasons: string[] = [];
-  // Privacy URL must resolve.
-  if (!(await urlResolves(manifest.privacyUrl))) failedReasons.push('privacy_url_unreachable');
-  // No admin-* scopes (already enforced by Zod, but defense-in-depth).
-  if (manifest.scopes.some(s => s.startsWith('admin:'))) failedReasons.push('admin_scopes_forbidden');
-  // Webhook URL must be HTTPS + non-loopback.
-  if (manifest.webhook && !isPublicHttps(manifest.webhook.url)) failedReasons.push('webhook_must_be_public_https');
-  // Icon must be on approved CDN.
-  if (!isApprovedCdn(manifest.iconUrl)) failedReasons.push('icon_must_be_on_approved_cdn');
-  return { passed: failedReasons.length === 0, failedReasons };
+	const failedReasons: string[] = [];
+	// Privacy URL must resolve.
+	if (!(await urlResolves(manifest.privacyUrl))) failedReasons.push('privacy_url_unreachable');
+	// No admin-* scopes (already enforced by Zod, but defense-in-depth).
+	if (manifest.scopes.some((s) => s.startsWith('admin:')))
+		failedReasons.push('admin_scopes_forbidden');
+	// Webhook URL must be HTTPS + non-loopback.
+	if (manifest.webhook && !isPublicHttps(manifest.webhook.url))
+		failedReasons.push('webhook_must_be_public_https');
+	// Icon must be on approved CDN.
+	if (!isApprovedCdn(manifest.iconUrl)) failedReasons.push('icon_must_be_on_approved_cdn');
+	return { passed: failedReasons.length === 0, failedReasons };
 }
 ```
 
@@ -290,28 +332,30 @@ import { redirect } from '@sveltejs/kit';
 import { requirePermission } from '$lib/server/auth';
 
 export async function load({ params, locals, url }) {
-  await requirePermission(locals.user, 'tenant.apps.install');
+	await requirePermission(locals.user, 'tenant.apps.install');
 
-  const app = await db.query(
-    `SELECT id, manifest, manifest_version, hydra_client_id, status
+	const app = await db
+		.query(
+			`SELECT id, manifest, manifest_version, hydra_client_id, status
      FROM marketplace_apps WHERE manifest->>'slug' = $1 AND status IN ('approved','listed')`,
-    [params.slug],
-  ).then(r => r.rows[0]);
-  if (!app) throw redirect(302, '/marketplace?error=not_found');
+			[params.slug],
+		)
+		.then((r) => r.rows[0]);
+	if (!app) throw redirect(302, '/marketplace?error=not_found');
 
-  // Show install consent screen — render the full scope list with
-  // human-readable descriptions (NOT raw `read:contacts`).
-  return {
-    app: {
-      id: app.id,
-      name: app.manifest.name,
-      iconUrl: app.manifest.icon_url,
-      scopes: app.manifest.scopes.map(humanizeScope),
-      privacyUrl: app.manifest.privacy_url,
-      termsUrl: app.manifest.terms_url,
-    },
-    installToken: signInstallIntent({ tenantId: locals.tenant.id, appId: app.id, ttlSec: 600 }),
-  };
+	// Show install consent screen — render the full scope list with
+	// human-readable descriptions (NOT raw `read:contacts`).
+	return {
+		app: {
+			id: app.id,
+			name: app.manifest.name,
+			iconUrl: app.manifest.icon_url,
+			scopes: app.manifest.scopes.map(humanizeScope),
+			privacyUrl: app.manifest.privacy_url,
+			termsUrl: app.manifest.terms_url,
+		},
+		installToken: signInstallIntent({ tenantId: locals.tenant.id, appId: app.id, ttlSec: 600 }),
+	};
 }
 ```
 
@@ -369,31 +413,30 @@ hook that maps the issued token → installation row:
 import { hydraAdmin } from '$lib/server/hydra';
 
 export async function POST({ request }) {
-  const body = await request.formData();
-  const token = body.get('token');
+	const body = await request.formData();
+	const token = body.get('token');
 
-  const intro = await hydraAdmin.adminIntrospectOAuth2Token({
-    body: new URLSearchParams({ token: String(token) }) as never,
-  });
+	const intro = await hydraAdmin.adminIntrospectOAuth2Token({
+		body: new URLSearchParams({ token: String(token) }) as never,
+	});
 
-  if (!intro.active) return json({ active: false });
+	if (!intro.active) return json({ active: false });
 
-  // Hydra's `sub` is our app installation id (we set it during consent).
-  const installation = await db.query(
-    `SELECT * FROM app_installations WHERE id = $1 AND status = 'active'`,
-    [intro.sub],
-  ).then(r => r.rows[0]);
+	// Hydra's `sub` is our app installation id (we set it during consent).
+	const installation = await db
+		.query(`SELECT * FROM app_installations WHERE id = $1 AND status = 'active'`, [intro.sub])
+		.then((r) => r.rows[0]);
 
-  if (!installation) return json({ active: false });
+	if (!installation) return json({ active: false });
 
-  return json({
-    active: true,
-    scope: intro.scope,
-    sub: installation.id,
-    tenant_id: installation.tenant_id,
-    app_id: installation.app_id,
-    exp: intro.exp,
-  });
+	return json({
+		active: true,
+		scope: intro.scope,
+		sub: installation.id,
+		tenant_id: installation.tenant_id,
+		app_id: installation.app_id,
+		exp: intro.exp,
+	});
 }
 ```
 
@@ -404,18 +447,24 @@ export async function POST({ request }) {
 import { rateLimiter } from '$lib/server/rate-limiter';
 
 export async function enforceAppRateLimit(installationId: string) {
-  const inst = await getInstallation(installationId);
-  const app = await getApp(inst.appId);
-  const { requestsPerMinute, requestsPerDay } = app.manifest.rateLimit;
+	const inst = await getInstallation(installationId);
+	const app = await getApp(inst.appId);
+	const { requestsPerMinute, requestsPerDay } = app.manifest.rateLimit;
 
-  const minute = await rateLimiter.consume(`app:${app.id}:tenant:${inst.tenantId}:m`, 1, { capacity: requestsPerMinute, refillPerSec: requestsPerMinute / 60 });
-  const day = await rateLimiter.consume(`app:${app.id}:tenant:${inst.tenantId}:d`, 1, { capacity: requestsPerDay, refillPerSec: requestsPerDay / 86400 });
+	const minute = await rateLimiter.consume(`app:${app.id}:tenant:${inst.tenantId}:m`, 1, {
+		capacity: requestsPerMinute,
+		refillPerSec: requestsPerMinute / 60,
+	});
+	const day = await rateLimiter.consume(`app:${app.id}:tenant:${inst.tenantId}:d`, 1, {
+		capacity: requestsPerDay,
+		refillPerSec: requestsPerDay / 86400,
+	});
 
-  if (!minute.allowed || !day.allowed) {
-    throw new RfcProblem(429, 'Too many requests', {
-      retryAfter: Math.max(minute.retryAfterSec, day.retryAfterSec),
-    });
-  }
+	if (!minute.allowed || !day.allowed) {
+		throw new RfcProblem(429, 'Too many requests', {
+			retryAfter: Math.max(minute.retryAfterSec, day.retryAfterSec),
+		});
+	}
 }
 ```
 
@@ -429,24 +478,30 @@ RFC 9530, `Retry-After` per RFC 7231.
 import { signHmac } from '$lib/server/webhooks';
 
 export async function emitMarketplaceEvent(eventType: string, payload: unknown, tenantId: string) {
-  const installations = await db.query(
-    `SELECT i.id, a.manifest->'webhook' AS webhook
+	const installations = await db
+		.query(
+			`SELECT i.id, a.manifest->'webhook' AS webhook
      FROM app_installations i
      JOIN marketplace_apps a ON a.id = i.app_id
      WHERE i.tenant_id = $1 AND i.status = 'active'
        AND a.manifest->'webhook'->>'url' IS NOT NULL
        AND a.manifest->'webhook'->'eventTypes' ? $2`,
-    [tenantId, eventType],
-  ).then(r => r.rows);
+			[tenantId, eventType],
+		)
+		.then((r) => r.rows);
 
-  for (const inst of installations) {
-    await webhookQueue.add('deliver', {
-      url: inst.webhook.url,
-      eventType,
-      payload,
-      installationId: inst.id,
-    }, { jobId: `${inst.id}:${eventType}:${uuidv7()}` });
-  }
+	for (const inst of installations) {
+		await webhookQueue.add(
+			'deliver',
+			{
+				url: inst.webhook.url,
+				eventType,
+				payload,
+				installationId: inst.id,
+			},
+			{ jobId: `${inst.id}:${eventType}:${uuidv7()}` },
+		);
+	}
 }
 ```
 
@@ -461,28 +516,28 @@ When a developer publishes a new `manifest_version` with **added** or
 
 ```ts
 export async function publishNewManifest(appId: string, newManifest: AppManifest) {
-  const current = await getApp(appId);
-  const oldScopes = new Set(current.manifest.scopes);
-  const newScopes = new Set(newManifest.scopes);
+	const current = await getApp(appId);
+	const oldScopes = new Set(current.manifest.scopes);
+	const newScopes = new Set(newManifest.scopes);
 
-  const scopesAdded = [...newScopes].filter(s => !oldScopes.has(s));
-  const requiresReConsent = scopesAdded.length > 0;
+	const scopesAdded = [...newScopes].filter((s) => !oldScopes.has(s));
+	const requiresReConsent = scopesAdded.length > 0;
 
-  await db.query(
-    `UPDATE marketplace_apps SET manifest = $1, manifest_version = manifest_version + 1 WHERE id = $2`,
-    [newManifest, appId],
-  );
+	await db.query(
+		`UPDATE marketplace_apps SET manifest = $1, manifest_version = manifest_version + 1 WHERE id = $2`,
+		[newManifest, appId],
+	);
 
-  if (requiresReConsent) {
-    // Mark all installs as reauth_required. Their tokens still work
-    // until they hit a scope check; admin sees a banner + click-to-reauth.
-    await db.query(
-      `UPDATE app_installations SET status = 'reauth_required'
+	if (requiresReConsent) {
+		// Mark all installs as reauth_required. Their tokens still work
+		// until they hit a scope check; admin sees a banner + click-to-reauth.
+		await db.query(
+			`UPDATE app_installations SET status = 'reauth_required'
        WHERE app_id = $1 AND status = 'active'`,
-      [appId],
-    );
-    await emitTenantNotification('marketplace.app.reauth_required', { appId });
-  }
+			[appId],
+		);
+		await emitTenantNotification('marketplace.app.reauth_required', { appId });
+	}
 }
 ```
 
@@ -493,32 +548,36 @@ backwards-compatible.
 
 ```ts
 export async function uninstallApp(installationId: string, actor: string) {
-  const inst = await getInstallation(installationId);
+	const inst = await getInstallation(installationId);
 
-  // 1. Revoke active tokens via Hydra RFC 7009.
-  await hydraAdmin.revokeOAuth2LoginSessions({ subject: installationId });
-  await hydraAdmin.revokeOAuth2ConsentSessions({ subject: installationId });
+	// 1. Revoke active tokens via Hydra RFC 7009.
+	await hydraAdmin.revokeOAuth2LoginSessions({ subject: installationId });
+	await hydraAdmin.revokeOAuth2ConsentSessions({ subject: installationId });
 
-  // 2. Mark installation revoked.
-  await db.query(
-    `UPDATE app_installations SET status = 'revoked', revoked_at = NOW() WHERE id = $1`,
-    [installationId],
-  );
-  await db.query(`UPDATE marketplace_apps SET install_count = GREATEST(0, install_count - 1) WHERE id = $1`, [inst.appId]);
+	// 2. Mark installation revoked.
+	await db.query(
+		`UPDATE app_installations SET status = 'revoked', revoked_at = NOW() WHERE id = $1`,
+		[installationId],
+	);
+	await db.query(
+		`UPDATE marketplace_apps SET install_count = GREATEST(0, install_count - 1) WHERE id = $1`,
+		[inst.appId],
+	);
 
-  // 3. Notify the app — they MUST purge tenant data per their TOS.
-  await webhookQueue.add('deliver', {
-    url: inst.webhook?.url,
-    eventType: 'app.uninstalled',
-    payload: { installationId, tenantId: inst.tenantId, deadline: addDays(30) },
-  });
+	// 3. Notify the app — they MUST purge tenant data per their TOS.
+	await webhookQueue.add('deliver', {
+		url: inst.webhook?.url,
+		eventType: 'app.uninstalled',
+		payload: { installationId, tenantId: inst.tenantId, deadline: addDays(30) },
+	});
 
-  // 4. Audit.
-  await recordAudit({
-    tenantId: inst.tenantId, actor,
-    action: 'marketplace.app.uninstalled',
-    payload: { installationId, appId: inst.appId },
-  });
+	// 4. Audit.
+	await recordAudit({
+		tenantId: inst.tenantId,
+		actor,
+		action: 'marketplace.app.uninstalled',
+		payload: { installationId, appId: inst.appId },
+	});
 }
 ```
 
@@ -558,7 +617,7 @@ endpoint.
   `https://app.example.com/cb?stuff` per RFC 6819 §5.2.3.5.
 - **Returning `client_secret` more than once.** First-class lost-secret
   vector. Force rotation; never re-display.
-- **No PKCE on confidential clients.** PKCE is required for *all*
+- **No PKCE on confidential clients.** PKCE is required for _all_
   clients per OAuth 2.1, even with `client_secret`. Defense in depth.
 - **Storing `client_secret` plaintext in DB.** Encrypt at rest with
   envelope encryption (KMS DEK + tenant CMK). Treat like a password.
@@ -586,7 +645,7 @@ endpoint.
 - **No human review before public listing.** Allows phishing apps in
   the directory. Trust & Safety review is non-negotiable.
 - **Auto-rejecting submissions for trivial reasons without feedback.**
-  Tell the developer *which* check failed. They cannot fix what they
+  Tell the developer _which_ check failed. They cannot fix what they
   cannot see.
 - **Pinning `manifest_version` only on install but never re-checking
   on token use.** Stale installs against deprecated manifests.
@@ -610,7 +669,7 @@ endpoint.
   otherwise an app subscribes to 10k events and the fanout queue
   collapses.
 - **Not auditing every install / uninstall / scope-grant.** Auditors
-  + customers expect a paper trail. See [audit-log.md](audit-log.md).
+  - customers expect a paper trail. See [audit-log.md](audit-log.md).
 - **Allowing third-party app branding to mimic first-party UI.** Apps
   must show the developer name + a "Third-party app" badge in any
   embedded surface (iframe, OAuth consent screen).

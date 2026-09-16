@@ -49,9 +49,7 @@ export interface EdgePipeline<Input = unknown, Output = unknown> {
 
 const defaultFactory: TransformersFactory = async () => {
 	// Dynamic, optional: the module is a peer dependency and may be absent.
-	const mod: unknown = await import(
-		/* @vite-ignore */ '@huggingface/transformers'
-	);
+	const mod: unknown = await import(/* @vite-ignore */ '@huggingface/transformers');
 	return mod as TransformersModule;
 };
 

@@ -1,10 +1,5 @@
 import type { Middleware } from 'openapi-fetch';
-import {
-	ProblemError,
-	isProblemResponse,
-	parseProblem,
-	problemFromDocument,
-} from './problem.js';
+import { ProblemError, isProblemResponse, parseProblem, problemFromDocument } from './problem.js';
 
 export { ProblemError } from './problem.js';
 export type { ProblemDocument, ProblemErrorInit, InvalidParam } from './problem.js';

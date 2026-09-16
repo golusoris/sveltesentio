@@ -76,34 +76,31 @@ import { rpId, rpName, originAllowlist } from '$lib/auth/webauthn/config';
 import { requireSession } from '$lib/auth/session';
 
 const Body = z.object({
-  flow: z.enum(['standard', 'admin', 'workforce']),
+	flow: z.enum(['standard', 'admin', 'workforce']),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = await requireSession(locals);
-  const { flow } = Body.parse(await request.json());
+	const session = await requireSession(locals);
+	const { flow } = Body.parse(await request.json());
 
-  const attestation =
-    flow === 'admin'     ? 'direct' :
-    flow === 'workforce' ? 'enterprise' :
-                           'none';
+	const attestation = flow === 'admin' ? 'direct' : flow === 'workforce' ? 'enterprise' : 'none';
 
-  const options = await generateRegistrationOptions({
-    rpName,
-    rpID: rpId,
-    userID: new TextEncoder().encode(session.userId),
-    userName: session.email,
-    attestationType: attestation,
-    authenticatorSelection: {
-      residentKey: 'required',
-      userVerification: 'required',
-      authenticatorAttachment: flow === 'workforce' ? 'cross-platform' : undefined,
-    },
-    excludeCredentials: await listExistingCredentials(session.userId),
-  });
+	const options = await generateRegistrationOptions({
+		rpName,
+		rpID: rpId,
+		userID: new TextEncoder().encode(session.userId),
+		userName: session.email,
+		attestationType: attestation,
+		authenticatorSelection: {
+			residentKey: 'required',
+			userVerification: 'required',
+			authenticatorAttachment: flow === 'workforce' ? 'cross-platform' : undefined,
+		},
+		excludeCredentials: await listExistingCredentials(session.userId),
+	});
 
-  await stashChallenge(session.userId, options.challenge, { flow, ttl: 5 * 60 });
-  return json(options);
+	await stashChallenge(session.userId, options.challenge, { flow, ttl: 5 * 60 });
+	return json(options);
 };
 ```
 
@@ -130,62 +127,66 @@ import { mdsLookup } from '$lib/auth/webauthn/mds';
 import { requireSession } from '$lib/auth/session';
 
 const RegistrationResponse = z.object({
-  id: z.string(),
-  rawId: z.string(),
-  response: z.object({
-    clientDataJSON: z.string(),
-    attestationObject: z.string(),
-    transports: z.array(z.string()).optional(),
-  }),
-  type: z.literal('public-key'),
-  clientExtensionResults: z.record(z.unknown()),
+	id: z.string(),
+	rawId: z.string(),
+	response: z.object({
+		clientDataJSON: z.string(),
+		attestationObject: z.string(),
+		transports: z.array(z.string()).optional(),
+	}),
+	type: z.literal('public-key'),
+	clientExtensionResults: z.record(z.unknown()),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = await requireSession(locals);
-  const body = RegistrationResponse.parse(await request.json());
-  const stash = await consumeChallenge(session.userId);
-  if (!stash) throw error(400, 'challenge_expired');
+	const session = await requireSession(locals);
+	const body = RegistrationResponse.parse(await request.json());
+	const stash = await consumeChallenge(session.userId);
+	if (!stash) throw error(400, 'challenge_expired');
 
-  const verification = await verifyRegistrationResponse({
-    response: body,
-    expectedChallenge: stash.challenge,
-    expectedOrigin: originAllowlist,
-    expectedRPID: rpId,
-    requireUserVerification: true,
-  });
+	const verification = await verifyRegistrationResponse({
+		response: body,
+		expectedChallenge: stash.challenge,
+		expectedOrigin: originAllowlist,
+		expectedRPID: rpId,
+		requireUserVerification: true,
+	});
 
-  if (!verification.verified || !verification.registrationInfo) {
-    throw error(400, 'attestation_invalid');
-  }
+	if (!verification.verified || !verification.registrationInfo) {
+		throw error(400, 'attestation_invalid');
+	}
 
-  const { aaguid, fmt, attestationObject } = verification.registrationInfo;
-  const attested = stash.flow !== 'standard';
+	const { aaguid, fmt, attestationObject } = verification.registrationInfo;
+	const attested = stash.flow !== 'standard';
 
-  if (attested) {
-    const mds = await mdsLookup(aaguid);
-    if (!mds) throw error(400, 'authenticator_unknown');
-    if (!mds.statusReports.some((r) => r.status === 'FIDO_CERTIFIED_L1' || r.status === 'FIDO_CERTIFIED_L2')) {
-      throw error(400, 'authenticator_uncertified');
-    }
-    if (stash.flow === 'workforce' && !workforceAaguidAllowlist.includes(aaguid)) {
-      throw error(400, 'authenticator_not_in_fleet');
-    }
-  }
+	if (attested) {
+		const mds = await mdsLookup(aaguid);
+		if (!mds) throw error(400, 'authenticator_unknown');
+		if (
+			!mds.statusReports.some(
+				(r) => r.status === 'FIDO_CERTIFIED_L1' || r.status === 'FIDO_CERTIFIED_L2',
+			)
+		) {
+			throw error(400, 'authenticator_uncertified');
+		}
+		if (stash.flow === 'workforce' && !workforceAaguidAllowlist.includes(aaguid)) {
+			throw error(400, 'authenticator_not_in_fleet');
+		}
+	}
 
-  await persistCredential(session.userId, {
-    credentialId: verification.registrationInfo.credentialID,
-    publicKey: verification.registrationInfo.credentialPublicKey,
-    counter: verification.registrationInfo.counter,
-    transports: body.response.transports,
-    aaguid,
-    attestationFmt: fmt,
-    attestationVerified: attested,
-    flow: stash.flow,
-    createdAt: new Date(),
-  });
+	await persistCredential(session.userId, {
+		credentialId: verification.registrationInfo.credentialID,
+		publicKey: verification.registrationInfo.credentialPublicKey,
+		counter: verification.registrationInfo.counter,
+		transports: body.response.transports,
+		aaguid,
+		attestationFmt: fmt,
+		attestationVerified: attested,
+		flow: stash.flow,
+		createdAt: new Date(),
+	});
 
-  return json({ verified: true, aaguid, fmt, attested });
+	return json({ verified: true, aaguid, fmt, attested });
 };
 ```
 
@@ -221,37 +222,39 @@ const MDS_CACHE_TTL = 24 * 60 * 60 * 1000;
 let cache: { entries: Map<string, MdsEntry>; fetchedAt: number } | null = null;
 
 const StatusReport = z.object({
-  status: z.string(),
-  effectiveDate: z.string().optional(),
+	status: z.string(),
+	effectiveDate: z.string().optional(),
 });
 
 const MdsEntry = z.object({
-  aaguid: z.string(),
-  metadataStatement: z.object({
-    description: z.string(),
-    authenticatorVersion: z.number(),
-    attestationTypes: z.array(z.string()),
-  }),
-  statusReports: z.array(StatusReport),
-  timeOfLastStatusChange: z.string(),
+	aaguid: z.string(),
+	metadataStatement: z.object({
+		description: z.string(),
+		authenticatorVersion: z.number(),
+		attestationTypes: z.array(z.string()),
+	}),
+	statusReports: z.array(StatusReport),
+	timeOfLastStatusChange: z.string(),
 });
 
 export async function mdsLookup(aaguid: string): Promise<MdsEntry | null> {
-  if (!cache || Date.now() - cache.fetchedAt > MDS_CACHE_TTL) {
-    await refreshMds();
-  }
-  return cache!.entries.get(aaguid) ?? null;
+	if (!cache || Date.now() - cache.fetchedAt > MDS_CACHE_TTL) {
+		await refreshMds();
+	}
+	return cache!.entries.get(aaguid) ?? null;
 }
 
 async function refreshMds(): Promise<void> {
-  const blob = await fetch(MDS_URL, { headers: { accept: 'application/jose' } }).then((r) => r.text());
-  const payload = await verifyJwsAgainstFidoRoot(blob);
-  const entries = new Map<string, MdsEntry>();
-  for (const raw of payload.entries) {
-    const parsed = MdsEntry.safeParse(raw);
-    if (parsed.success) entries.set(parsed.data.aaguid, parsed.data);
-  }
-  cache = { entries, fetchedAt: Date.now() };
+	const blob = await fetch(MDS_URL, { headers: { accept: 'application/jose' } }).then((r) =>
+		r.text(),
+	);
+	const payload = await verifyJwsAgainstFidoRoot(blob);
+	const entries = new Map<string, MdsEntry>();
+	for (const raw of payload.entries) {
+		const parsed = MdsEntry.safeParse(raw);
+		if (parsed.success) entries.set(parsed.data.aaguid, parsed.data);
+	}
+	cache = { entries, fetchedAt: Date.now() };
 }
 ```
 
@@ -294,18 +297,18 @@ import { trace } from '@opentelemetry/api';
 const tracer = trace.getTracer('webauthn');
 
 const span = tracer.startSpan('webauthn.attestation.verify', {
-  attributes: {
-    'webauthn.flow': stash.flow,
-    'webauthn.fmt': fmt,
-    'webauthn.aaguid': aaguid,
-    'webauthn.mds_found': !!mds,
-  },
+	attributes: {
+		'webauthn.flow': stash.flow,
+		'webauthn.fmt': fmt,
+		'webauthn.aaguid': aaguid,
+		'webauthn.mds_found': !!mds,
+	},
 });
 try {
-  // ... verification ...
-  span.setAttribute('webauthn.verified', verification.verified);
+	// ... verification ...
+	span.setAttribute('webauthn.verified', verification.verified);
 } finally {
-  span.end();
+	span.end();
 }
 ```
 
@@ -318,23 +321,23 @@ Never include the `credentialId` (PII — per-user identifier).
 ```ts
 // src/lib/auth/session.ts
 export type Session = {
-  userId: string;
-  email: string;
-  attestationVerified: boolean;
-  attestationFmt: string | null;
-  authMethod: 'password' | 'passkey' | 'oidc';
-  elevatedAt: Date | null;
+	userId: string;
+	email: string;
+	attestationVerified: boolean;
+	attestationFmt: string | null;
+	authMethod: 'password' | 'passkey' | 'oidc';
+	elevatedAt: Date | null;
 };
 
 export function requireAttestedSession(locals: App.Locals): Session {
-  const session = requireSession(locals);
-  if (!session.attestationVerified) {
-    throw error(403, 'attestation_required');
-  }
-  if (!session.elevatedAt || Date.now() - session.elevatedAt.getTime() > 5 * 60 * 1000) {
-    throw error(403, 'elevation_expired');
-  }
-  return session;
+	const session = requireSession(locals);
+	if (!session.attestationVerified) {
+		throw error(403, 'attestation_required');
+	}
+	if (!session.elevatedAt || Date.now() - session.elevatedAt.getTime() > 5 * 60 * 1000) {
+		throw error(403, 'elevation_expired');
+	}
+	return session;
 }
 ```
 
@@ -356,24 +359,24 @@ import { describe, it, expect, vi } from 'vitest';
 import { mdsLookup } from '$lib/auth/webauthn/mds';
 
 vi.mock('$lib/auth/webauthn/mds', () => ({
-  mdsLookup: vi.fn(),
+	mdsLookup: vi.fn(),
 }));
 
 describe('attestation verify', () => {
-  it('rejects uncertified authenticator for admin flow', async () => {
-    vi.mocked(mdsLookup).mockResolvedValueOnce({
-      aaguid: 'test-aaguid',
-      metadataStatement: { /* ... */ },
-      statusReports: [{ status: 'NOT_FIDO_CERTIFIED' }],
-      timeOfLastStatusChange: '2026-01-01',
-    });
-    await expect(verifyAttestation(/* ... */)).rejects.toThrow('authenticator_uncertified');
-  });
+	it('rejects uncertified authenticator for admin flow', async () => {
+		vi.mocked(mdsLookup).mockResolvedValueOnce({
+			aaguid: 'test-aaguid',
+			metadataStatement: {/* ... */},
+			statusReports: [{ status: 'NOT_FIDO_CERTIFIED' }],
+			timeOfLastStatusChange: '2026-01-01',
+		});
+		await expect(verifyAttestation(/* ... */)).rejects.toThrow('authenticator_uncertified');
+	});
 
-  it('falls back to none when Apple platform authenticator emits no attestation', async () => {
-    const result = await verifyAttestation({ flow: 'standard', fmt: 'none' });
-    expect(result.attested).toBe(false);
-  });
+	it('falls back to none when Apple platform authenticator emits no attestation', async () => {
+		const result = await verifyAttestation({ flow: 'standard', fmt: 'none' });
+		expect(result.attested).toBe(false);
+	});
 });
 ```
 

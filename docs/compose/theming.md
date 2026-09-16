@@ -33,17 +33,17 @@ properties under `@theme`. Channels in order: `L C H` (`0..1`, `0..0.4+`,
 ```css
 /* packages/ui/src/tokens/base.css — framework default */
 @theme {
-  --color-bg: oklch(0.98 0.002 250);
-  --color-fg: oklch(0.18 0.015 250);
-  --color-accent: oklch(0.7 0.15 250);
-  --color-accent-fg: oklch(0.99 0 0);
-  --color-muted: oklch(0.94 0.005 250);
-  --color-muted-fg: oklch(0.48 0.01 250);
-  --color-border: oklch(0.88 0.008 250);
-  --color-ring: oklch(0.7 0.15 250 / 0.5);
-  --color-success: oklch(0.72 0.16 155);
-  --color-warning: oklch(0.8 0.16 85);
-  --color-danger: oklch(0.66 0.22 28);
+	--color-bg: oklch(0.98 0.002 250);
+	--color-fg: oklch(0.18 0.015 250);
+	--color-accent: oklch(0.7 0.15 250);
+	--color-accent-fg: oklch(0.99 0 0);
+	--color-muted: oklch(0.94 0.005 250);
+	--color-muted-fg: oklch(0.48 0.01 250);
+	--color-border: oklch(0.88 0.008 250);
+	--color-ring: oklch(0.7 0.15 250 / 0.5);
+	--color-success: oklch(0.72 0.16 155);
+	--color-warning: oklch(0.8 0.16 85);
+	--color-danger: oklch(0.66 0.22 28);
 }
 ```
 
@@ -80,14 +80,14 @@ Cookie-backed, SSR-injected, flash-free. One root `data-theme` attribute on
 ```css
 /* base.css continued */
 :root[data-theme='dark'] {
-  --color-bg: oklch(0.16 0.015 250);
-  --color-fg: oklch(0.96 0.005 250);
-  --color-accent: oklch(0.78 0.14 250);
-  --color-accent-fg: oklch(0.12 0.01 250);
-  --color-muted: oklch(0.24 0.01 250);
-  --color-muted-fg: oklch(0.7 0.008 250);
-  --color-border: oklch(0.3 0.012 250);
-  /* …etc */
+	--color-bg: oklch(0.16 0.015 250);
+	--color-fg: oklch(0.96 0.005 250);
+	--color-accent: oklch(0.78 0.14 250);
+	--color-accent-fg: oklch(0.12 0.01 250);
+	--color-muted: oklch(0.24 0.01 250);
+	--color-muted-fg: oklch(0.7 0.008 250);
+	--color-border: oklch(0.3 0.012 250);
+	/* …etc */
 }
 ```
 
@@ -112,12 +112,12 @@ tenant. Each tier is a separate CSS layer so specificity is predictable.
 ```css
 /* app/src/tokens/brand.css — app-level override */
 @theme {
-  --color-accent: oklch(0.7 0.19 28); /* brand red */
+	--color-accent: oklch(0.7 0.19 28); /* brand red */
 }
 
 /* tenant-resolved at runtime via @sveltesentio/ui/tenant */
 :root[data-tenant='acme'] {
-  --color-accent: oklch(0.7 0.14 200); /* acme cyan */
+	--color-accent: oklch(0.7 0.14 200); /* acme cyan */
 }
 ```
 
@@ -139,8 +139,8 @@ For cases where you need the raw CSS value (rare — prefer utilities):
 
 ```css
 .custom {
-  background: var(--color-accent);
-  outline: 2px solid var(--color-ring);
+	background: var(--color-accent);
+	outline: 2px solid var(--color-ring);
 }
 ```
 
@@ -157,8 +157,8 @@ brand, one palette, across every interface. See
 ```css
 /* 10-foot adds bolder ring + higher min contrast */
 :root[data-preset='10foot'] {
-  --ring-width: 3px; /* default 2px */
-  --color-ring: oklch(0.7 0.15 250 / 0.75); /* higher opacity */
+	--ring-width: 3px; /* default 2px */
+	--color-ring: oklch(0.7 0.15 250 / 0.75); /* higher opacity */
 }
 ```
 

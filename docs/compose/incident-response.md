@@ -100,62 +100,64 @@ import { z } from 'zod';
 export const Severity = z.enum(['SEV0', 'SEV1', 'SEV2', 'SEV3', 'SEV4']);
 export type Severity = z.infer<typeof Severity>;
 
-export const IncidentStatus = z.enum([
-  'investigating',
-  'identified',
-  'monitoring',
-  'resolved',
-]);
+export const IncidentStatus = z.enum(['investigating', 'identified', 'monitoring', 'resolved']);
 
 export const Incident = z.object({
-  id: z.string().uuid(), // UUIDv7 — see ADR-0023
-  severity: Severity,
-  title: z.string().min(8).max(120),
-  summary: z.string().min(20).max(2000),
-  status: IncidentStatus,
-  declaredAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().nullable(),
-  declaredBy: z.string().uuid(),
-  commander: z.string().uuid(),
-  affectedServices: z.array(z.string().min(1).max(64)).min(1).max(20),
-  affectedTenants: z.array(z.string().uuid()).max(10000).nullable(),
-  // null = all tenants; capped to keep the JSON small.
-  publicStatusPage: z.boolean(),
-  customerCommsSent: z.boolean(),
-  postMortemUrl: z.string().url().nullable(),
+	id: z.string().uuid(), // UUIDv7 — see ADR-0023
+	severity: Severity,
+	title: z.string().min(8).max(120),
+	summary: z.string().min(20).max(2000),
+	status: IncidentStatus,
+	declaredAt: z.string().datetime(),
+	resolvedAt: z.string().datetime().nullable(),
+	declaredBy: z.string().uuid(),
+	commander: z.string().uuid(),
+	affectedServices: z.array(z.string().min(1).max(64)).min(1).max(20),
+	affectedTenants: z.array(z.string().uuid()).max(10000).nullable(),
+	// null = all tenants; capped to keep the JSON small.
+	publicStatusPage: z.boolean(),
+	customerCommsSent: z.boolean(),
+	postMortemUrl: z.string().url().nullable(),
 });
 export type Incident = z.infer<typeof Incident>;
 
 export const TimelineEntry = z.object({
-  id: z.string().uuid(),
-  incidentId: z.string().uuid(),
-  at: z.string().datetime(),
-  actor: z.string().uuid(),
-  kind: z.enum([
-    'declared', 'severity-changed', 'commander-assigned',
-    'status-changed', 'mitigation-applied', 'comms-sent',
-    'note', 'resolved',
-  ]),
-  message: z.string().min(1).max(4000),
-  // Free-text but bounded — no HTML, no markdown rendering on input.
-  references: z
-    .array(z.object({
-      kind: z.enum(['log-query', 'trace', 'pr', 'runbook', 'dashboard']),
-      url: z.string().url(),
-    }))
-    .max(20)
-    .optional(),
+	id: z.string().uuid(),
+	incidentId: z.string().uuid(),
+	at: z.string().datetime(),
+	actor: z.string().uuid(),
+	kind: z.enum([
+		'declared',
+		'severity-changed',
+		'commander-assigned',
+		'status-changed',
+		'mitigation-applied',
+		'comms-sent',
+		'note',
+		'resolved',
+	]),
+	message: z.string().min(1).max(4000),
+	// Free-text but bounded — no HTML, no markdown rendering on input.
+	references: z
+		.array(
+			z.object({
+				kind: z.enum(['log-query', 'trace', 'pr', 'runbook', 'dashboard']),
+				url: z.string().url(),
+			}),
+		)
+		.max(20)
+		.optional(),
 });
 export type TimelineEntry = z.infer<typeof TimelineEntry>;
 
 export const DeclareInput = Incident.pick({
-  severity: true,
-  title: true,
-  summary: true,
-  affectedServices: true,
-  affectedTenants: true,
+	severity: true,
+	title: true,
+	summary: true,
+	affectedServices: true,
+	affectedTenants: true,
 }).extend({
-  publicStatusPage: z.boolean().default(true),
+	publicStatusPage: z.boolean().default(true),
 });
 ```
 
@@ -176,33 +178,45 @@ import { recordIncident, paginCommander, postStatusPage } from '$lib/server/inci
 import { requirePermission } from '$lib/server/auth';
 
 export async function POST({ request, locals }) {
-  await requirePermission(locals.user, 'incidents.declare');
-  const parsed = DeclareInput.safeParse(await request.json());
-  if (!parsed.success) {
-    return json({ type: 'about:blank', title: 'Invalid declaration', status: 422, errors: parsed.error.issues }, { status: 422 });
-  }
+	await requirePermission(locals.user, 'incidents.declare');
+	const parsed = DeclareInput.safeParse(await request.json());
+	if (!parsed.success) {
+		return json(
+			{
+				type: 'about:blank',
+				title: 'Invalid declaration',
+				status: 422,
+				errors: parsed.error.issues,
+			},
+			{ status: 422 },
+		);
+	}
 
-  const id = uuidv7();
-  const declaredAt = new Date().toISOString();
-  const commander = await paginCommander(parsed.data.severity);
+	const id = uuidv7();
+	const declaredAt = new Date().toISOString();
+	const commander = await paginCommander(parsed.data.severity);
 
-  const incident = await recordIncident({
-    id,
-    declaredAt,
-    declaredBy: locals.user.id,
-    commander: commander.userId,
-    status: 'investigating',
-    resolvedAt: null,
-    customerCommsSent: false,
-    postMortemUrl: null,
-    ...parsed.data,
-  });
+	const incident = await recordIncident({
+		id,
+		declaredAt,
+		declaredBy: locals.user.id,
+		commander: commander.userId,
+		status: 'investigating',
+		resolvedAt: null,
+		customerCommsSent: false,
+		postMortemUrl: null,
+		...parsed.data,
+	});
 
-  if (parsed.data.publicStatusPage && parsed.data.severity !== 'SEV3' && parsed.data.severity !== 'SEV4') {
-    await postStatusPage(incident); // status-page vendor REST call
-  }
+	if (
+		parsed.data.publicStatusPage &&
+		parsed.data.severity !== 'SEV3' &&
+		parsed.data.severity !== 'SEV4'
+	) {
+		await postStatusPage(incident); // status-page vendor REST call
+	}
 
-  return json(incident, { status: 201 });
+	return json(incident, { status: 201 });
 }
 ```
 
@@ -214,7 +228,7 @@ Notes on this contract:
   can declare. Avoids declarations by accident.
 - **Pager call returns a real human** (`commander.userId`), not a
   team alias. The commander is accountable.
-- **Status page is fired *before* mitigation begins** — communicate
+- **Status page is fired _before_ mitigation begins** — communicate
   early; you can always update with `monitoring` → `resolved`.
 
 ### Pager + commander assignment
@@ -225,36 +239,36 @@ import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 
 const PagerResponse = z.object({
-  incidentKey: z.string().min(1),
-  acknowledgedBy: z.object({ userId: z.string().uuid(), name: z.string() }),
+	incidentKey: z.string().min(1),
+	acknowledgedBy: z.object({ userId: z.string().uuid(), name: z.string() }),
 });
 
 export async function paginCommander(severity: string) {
-  const res = await fetch('https://api.pagerduty.com/incidents', {
-    method: 'POST',
-    headers: {
-      Authorization: `Token token=${env.PAGERDUTY_TOKEN}`,
-      Accept: 'application/vnd.pagerduty+json;version=2',
-      'Content-Type': 'application/json',
-      From: env.PAGERDUTY_FROM_EMAIL,
-    },
-    body: JSON.stringify({
-      incident: {
-        type: 'incident',
-        title: `[${severity}] sveltesentio incident`,
-        service: { id: env.PAGERDUTY_SERVICE_ID, type: 'service_reference' },
-        urgency: severity === 'SEV0' || severity === 'SEV1' ? 'high' : 'low',
-      },
-    }),
-  });
-  if (!res.ok) {
-    // Pager outage during incident is itself an incident — fall back to
-    // SMS via Twilio with the same recipient list, do NOT silently drop.
-    await fallbackSms(severity);
-    throw new Error(`Pager unavailable: ${res.status}`);
-  }
-  const json = await res.json();
-  return PagerResponse.parse(json.incident);
+	const res = await fetch('https://api.pagerduty.com/incidents', {
+		method: 'POST',
+		headers: {
+			Authorization: `Token token=${env.PAGERDUTY_TOKEN}`,
+			Accept: 'application/vnd.pagerduty+json;version=2',
+			'Content-Type': 'application/json',
+			From: env.PAGERDUTY_FROM_EMAIL,
+		},
+		body: JSON.stringify({
+			incident: {
+				type: 'incident',
+				title: `[${severity}] sveltesentio incident`,
+				service: { id: env.PAGERDUTY_SERVICE_ID, type: 'service_reference' },
+				urgency: severity === 'SEV0' || severity === 'SEV1' ? 'high' : 'low',
+			},
+		}),
+	});
+	if (!res.ok) {
+		// Pager outage during incident is itself an incident — fall back to
+		// SMS via Twilio with the same recipient list, do NOT silently drop.
+		await fallbackSms(severity);
+		throw new Error(`Pager unavailable: ${res.status}`);
+	}
+	const json = await res.json();
+	return PagerResponse.parse(json.incident);
 }
 ```
 
@@ -267,19 +281,27 @@ import { TimelineEntry } from '@sveltesentio/incidents';
 import { db } from '$lib/server/db';
 
 export async function appendTimeline(input: Omit<TimelineEntry, 'id' | 'at'>) {
-  const entry = TimelineEntry.parse({
-    ...input,
-    id: uuidv7(),
-    at: new Date().toISOString(),
-  });
-  // Append-only — no UPDATE, no DELETE. The integrity is the point.
-  await db.query(
-    `INSERT INTO incident_timeline
+	const entry = TimelineEntry.parse({
+		...input,
+		id: uuidv7(),
+		at: new Date().toISOString(),
+	});
+	// Append-only — no UPDATE, no DELETE. The integrity is the point.
+	await db.query(
+		`INSERT INTO incident_timeline
        (id, incident_id, at, actor, kind, message, references)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [entry.id, entry.incidentId, entry.at, entry.actor, entry.kind, entry.message, JSON.stringify(entry.references ?? [])],
-  );
-  return entry;
+		[
+			entry.id,
+			entry.incidentId,
+			entry.at,
+			entry.actor,
+			entry.kind,
+			entry.message,
+			JSON.stringify(entry.references ?? []),
+		],
+	);
+	return entry;
 }
 ```
 
@@ -300,37 +322,46 @@ this template:
   unavailable, data lost (yes/no), GDPR-reportable (yes/no)>
 
 ## Summary
+
 One paragraph for the executive reader. No engineering jargon.
 
 ## Timeline
+
 Verbatim copy of `incident_timeline` for this id. Times in UTC.
 
 ## Root cause
+
 What chain of events made the failure possible. Name systems, not
 people. "The deploy pipeline applied a migration with a missing
 index" — not "Alice forgot the index".
 
 ## Detection
+
 How did we find out? Who/what alerted? Was the alert timely?
 If detection was slow, this is its own action item.
 
 ## Response
+
 Decisions made, mitigations attempted, what worked and what did not.
 
 ## Recovery
+
 Final mitigation. Time-to-resolve. Verification steps that confirmed
 recovery.
 
 ## What went well
+
 At least three things. Always.
 
 ## What did not go well
+
 At least three things. Always.
 
 ## Action items
-| ID | Owner | Description | Due | Status |
-|---|---|---|---|---|
-| AI-001 | <name> | <action> | <date> | open |
+
+| ID     | Owner  | Description | Due    | Status |
+| ------ | ------ | ----------- | ------ | ------ |
+| AI-001 | <name> | <action>    | <date> | open   |
 
 Action items become Linear/Jira tickets within 24h. Track to
 completion in a recurring monthly post-mortem review.
@@ -342,19 +373,33 @@ completion in a recurring monthly post-mortem review.
 
 ```ts
 // initial-notification.ts
-export const initialNotification = ({ severity, title, services }: {
-  severity: string; title: string; services: string[];
+export const initialNotification = ({
+	severity,
+	title,
+	services,
+}: {
+	severity: string;
+	title: string;
+	services: string[];
 }) => ({
-  subject: `[Status] We're investigating an issue with ${services.join(', ')}`,
-  body: `Hi,\n\nWe're currently investigating an issue affecting ${services.join(', ')}. Some users may experience ${title.toLowerCase()}.\n\nFollow live updates: https://status.example.com\nWe'll send another update within 60 minutes (or sooner if resolved).\n\n— sveltesentio operations`,
+	subject: `[Status] We're investigating an issue with ${services.join(', ')}`,
+	body: `Hi,\n\nWe're currently investigating an issue affecting ${services.join(', ')}. Some users may experience ${title.toLowerCase()}.\n\nFollow live updates: https://status.example.com\nWe'll send another update within 60 minutes (or sooner if resolved).\n\n— sveltesentio operations`,
 });
 
 // resolution-notification.ts
-export const resolutionNotification = ({ id, services, durationMinutes, postMortemUrl }: {
-  id: string; services: string[]; durationMinutes: number; postMortemUrl: string | null;
+export const resolutionNotification = ({
+	id,
+	services,
+	durationMinutes,
+	postMortemUrl,
+}: {
+	id: string;
+	services: string[];
+	durationMinutes: number;
+	postMortemUrl: string | null;
 }) => ({
-  subject: `[Resolved] Issue with ${services.join(', ')} is fixed`,
-  body: `The incident affecting ${services.join(', ')} is resolved (duration: ${durationMinutes} min).\n\nWe'll publish a post-mortem within 5 business days${postMortemUrl ? ` here: ${postMortemUrl}` : ''}.\n\nIncident id: ${id}\n\n— sveltesentio operations`,
+	subject: `[Resolved] Issue with ${services.join(', ')} is fixed`,
+	body: `The incident affecting ${services.join(', ')} is resolved (duration: ${durationMinutes} min).\n\nWe'll publish a post-mortem within 5 business days${postMortemUrl ? ` here: ${postMortemUrl}` : ''}.\n\nIncident id: ${id}\n\n— sveltesentio operations`,
 });
 ```
 
@@ -374,29 +419,35 @@ Comms rules:
 // src/lib/server/incidents/status-page.ts
 import { env } from '$env/dynamic/private';
 
-export async function postStatusPage(incident: { id: string; title: string; summary: string; affectedServices: string[]; status: string }) {
-  // Cachet API shape; instatus is similar — keep this small and replaceable.
-  const res = await fetch(`${env.CACHET_BASE_URL}/api/v1/incidents`, {
-    method: 'POST',
-    headers: {
-      'X-Cachet-Token': env.CACHET_API_TOKEN,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: incident.title,
-      message: incident.summary,
-      status: 1, // 1=investigating, 2=identified, 3=watching, 4=fixed
-      visible: 1,
-      stickied: false,
-      notify: true,
-      component_ids: incident.affectedServices,
-      template_vars: { incident_id: incident.id },
-    }),
-  });
-  if (!res.ok) {
-    // Status page failure is its own Sev-2 — page secondary on-call.
-    throw new Error(`Status page failed: ${res.status}`);
-  }
+export async function postStatusPage(incident: {
+	id: string;
+	title: string;
+	summary: string;
+	affectedServices: string[];
+	status: string;
+}) {
+	// Cachet API shape; instatus is similar — keep this small and replaceable.
+	const res = await fetch(`${env.CACHET_BASE_URL}/api/v1/incidents`, {
+		method: 'POST',
+		headers: {
+			'X-Cachet-Token': env.CACHET_API_TOKEN,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			name: incident.title,
+			message: incident.summary,
+			status: 1, // 1=investigating, 2=identified, 3=watching, 4=fixed
+			visible: 1,
+			stickied: false,
+			notify: true,
+			component_ids: incident.affectedServices,
+			template_vars: { incident_id: incident.id },
+		}),
+	});
+	if (!res.ok) {
+		// Status page failure is its own Sev-2 — page secondary on-call.
+		throw new Error(`Status page failed: ${res.status}`);
+	}
 }
 ```
 
@@ -405,31 +456,38 @@ export async function postStatusPage(incident: { id: string; title: string; summ
 ```svelte
 <!-- src/lib/components/IncidentBanner.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { z } from 'zod';
+	import { onMount } from 'svelte';
+	import { z } from 'zod';
 
-  const ActiveIncident = z.object({
-    id: z.string().uuid(),
-    severity: z.enum(['SEV0', 'SEV1', 'SEV2', 'SEV3', 'SEV4']),
-    title: z.string(),
-    statusUrl: z.string().url(),
-  }).nullable();
+	const ActiveIncident = z
+		.object({
+			id: z.string().uuid(),
+			severity: z.enum(['SEV0', 'SEV1', 'SEV2', 'SEV3', 'SEV4']),
+			title: z.string(),
+			statusUrl: z.string().url(),
+		})
+		.nullable();
 
-  let active = $state<z.infer<typeof ActiveIncident>>(null);
+	let active = $state<z.infer<typeof ActiveIncident>>(null);
 
-  onMount(async () => {
-    const res = await fetch('/api/incidents/active', { headers: { Accept: 'application/json' } });
-    if (!res.ok) return;
-    const parsed = ActiveIncident.safeParse(await res.json());
-    if (parsed.success) active = parsed.data;
-  });
+	onMount(async () => {
+		const res = await fetch('/api/incidents/active', { headers: { Accept: 'application/json' } });
+		if (!res.ok) return;
+		const parsed = ActiveIncident.safeParse(await res.json());
+		if (parsed.success) active = parsed.data;
+	});
 </script>
 
 {#if active && (active.severity === 'SEV0' || active.severity === 'SEV1' || active.severity === 'SEV2')}
-  <div role="status" aria-live="polite" class="bg-amber-100 dark:bg-amber-900 text-amber-950 dark:text-amber-50 px-4 py-2 text-sm">
-    <span class="font-medium">Service incident:</span> {active.title}.
-    <a href={active.statusUrl} class="underline">Live status</a>
-  </div>
+	<div
+		role="status"
+		aria-live="polite"
+		class="bg-amber-100 dark:bg-amber-900 text-amber-950 dark:text-amber-50 px-4 py-2 text-sm"
+	>
+		<span class="font-medium">Service incident:</span>
+		{active.title}.
+		<a href={active.statusUrl} class="underline">Live status</a>
+	</div>
 {/if}
 ```
 
@@ -442,19 +500,19 @@ incident. `polite` is announced at the next SR pause.
 ```ts
 // src/lib/server/incidents/escalation.ts
 export const ESCALATION = {
-  SEV0: ['oncall-primary', 'oncall-secondary', 'cto', 'dpo'],
-  SEV1: ['oncall-primary', 'oncall-secondary', 'engineering-manager'],
-  SEV2: ['oncall-primary', 'engineering-manager'],
-  SEV3: ['oncall-primary'],
-  SEV4: [],
+	SEV0: ['oncall-primary', 'oncall-secondary', 'cto', 'dpo'],
+	SEV1: ['oncall-primary', 'oncall-secondary', 'engineering-manager'],
+	SEV2: ['oncall-primary', 'engineering-manager'],
+	SEV3: ['oncall-primary'],
+	SEV4: [],
 } as const;
 
 export const COMMS_AUTHORITY = {
-  SEV0: 'cto',           // CTO signs off on all customer comms
-  SEV1: 'engineering-manager',
-  SEV2: 'oncall-primary',
-  SEV3: 'oncall-primary',
-  SEV4: null,
+	SEV0: 'cto', // CTO signs off on all customer comms
+	SEV1: 'engineering-manager',
+	SEV2: 'oncall-primary',
+	SEV3: 'oncall-primary',
+	SEV4: null,
 } as const;
 ```
 
@@ -476,7 +534,7 @@ Three signals graduate to a declaration:
    for > 60s in two regions = Sev-1 auto-declare.
 
 Auto-declares fire the same `recordIncident()` path as manual ones —
-they are *not* a separate code path. The commander is paged
+they are _not_ a separate code path. The commander is paged
 immediately and can downgrade or close as needed.
 
 ## Practice: GameDay drills
@@ -496,7 +554,7 @@ immediately and can downgrade or close as needed.
   pattern.** A spike of internal-only Sev-3s often signals a Sev-1
   brewing — track them anyway.
 - **Naming a person as "responsible" in the post-mortem.** Blameless
-  means *systems* fail, not people. Replace "Alice forgot to update
+  means _systems_ fail, not people. Replace "Alice forgot to update
   the index" with "the deploy pipeline did not enforce migration
   validation".
 - **Letting the commander also be the engineer fixing the issue.** The

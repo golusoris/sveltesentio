@@ -17,14 +17,14 @@ Snapshots are **hand-curated**, not full doc dumps. Length target: 50–100 line
 
 ## Index
 
-| Library | Pinned version | Snapshot | Consumed by |
-|---|---|---|---|
-| Svelte 5 runes | 5.55.4 | [svelte-runes/](svelte-runes/) | every package |
-| SvelteKit | 2.x | [sveltekit/](sveltekit/) | `@sveltesentio/{core,realtime,auth,...}` |
-| Tailwind CSS | 4.x | [tailwind/](tailwind/) | `@sveltesentio/ui` |
-| Zod | 4.x | [zod/](zod/) | `@sveltesentio/{forms,core}` |
-| TanStack Svelte Query | 5.x | [tanstack-query/](tanstack-query/) | `@sveltesentio/query` |
-| Paraglide | 2.x | [paraglide/](paraglide/) | `@sveltesentio/i18n` |
+| Library               | Pinned version | Snapshot                           | Consumed by                              |
+| --------------------- | -------------- | ---------------------------------- | ---------------------------------------- |
+| Svelte 5 runes        | 5.55.4         | [svelte-runes/](svelte-runes/)     | every package                            |
+| SvelteKit             | 2.x            | [sveltekit/](sveltekit/)           | `@sveltesentio/{core,realtime,auth,...}` |
+| Tailwind CSS          | 4.x            | [tailwind/](tailwind/)             | `@sveltesentio/ui`                       |
+| Zod                   | 4.x            | [zod/](zod/)                       | `@sveltesentio/{forms,core}`             |
+| TanStack Svelte Query | 5.x            | [tanstack-query/](tanstack-query/) | `@sveltesentio/query`                    |
+| Paraglide             | 2.x            | [paraglide/](paraglide/)           | `@sveltesentio/i18n`                     |
 
 Additional snapshots are added as packages reach the wiring stage; see the [PLAN.md](../../.workingdir/PLAN.md) milestone schedule.
 

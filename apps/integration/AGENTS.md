@@ -13,13 +13,13 @@ typechecked — only transpiled by vitest).
 
 ## Modules (`src/`)
 
-| Module | Composes | Proves |
-|---|---|---|
-| `server-prefetch.ts` | openapi-fetch + `core/http` `problemMiddleware` + `query` `serverPrefetch` | SSR prefetch dehydrates a typed `GET` result; problem+json throws `ProblemError` |
-| `signup-form.ts` | `forms` `superValidate` + zod v4 + `forms` `problemToFieldErrors` + `core` `ProblemError` | a real zod/v4 schema validates; server `ProblemError` maps to field errors |
-| `client-dashboard.ts` | `query` `createSentioQuery`/`useOptimistic` + `ui/tokens` + `ui/presets` + `ui/cmd` | typed query/mutation factories compose; theme+preset CSS emits; command registry search works |
-| `auth-flow.ts` | `auth` `buildAuthorizationUrl` + `handleCsrf`/`evaluateCsrf` | PKCE authorization URL assembles; CSRF double-submit policy decides correctly |
-| `live-feed.ts` | `realtime` `SseClient` + `computeBackoff` | SSE client connects via an injected transport; backoff curve grows within bounds |
+| Module                | Composes                                                                                  | Proves                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `server-prefetch.ts`  | openapi-fetch + `core/http` `problemMiddleware` + `query` `serverPrefetch`                | SSR prefetch dehydrates a typed `GET` result; problem+json throws `ProblemError`              |
+| `signup-form.ts`      | `forms` `superValidate` + zod v4 + `forms` `problemToFieldErrors` + `core` `ProblemError` | a real zod/v4 schema validates; server `ProblemError` maps to field errors                    |
+| `client-dashboard.ts` | `query` `createSentioQuery`/`useOptimistic` + `ui/tokens` + `ui/presets` + `ui/cmd`       | typed query/mutation factories compose; theme+preset CSS emits; command registry search works |
+| `auth-flow.ts`        | `auth` `buildAuthorizationUrl` + `handleCsrf`/`evaluateCsrf`                              | PKCE authorization URL assembles; CSRF double-submit policy decides correctly                 |
+| `live-feed.ts`        | `realtime` `SseClient` + `computeBackoff`                                                 | SSE client connects via an injected transport; backoff curve grows within bounds              |
 
 ## Tests (`test/`)
 

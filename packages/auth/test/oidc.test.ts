@@ -140,16 +140,17 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('throws a ProblemError carrying the RFC 9457 body on non-2xx', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () =>
-			new Response(
-				JSON.stringify({
-					type: 'urn:golusoris:auth:invalid_grant',
-					title: 'Invalid grant',
-					status: 400,
-					detail: 'The authorization code expired.',
-				}),
-				{ status: 400, headers: { 'content-type': 'application/problem+json' } },
-			),
+		const fetchMock = vi.fn<FetchLike>(
+			async () =>
+				new Response(
+					JSON.stringify({
+						type: 'urn:golusoris:auth:invalid_grant',
+						title: 'Invalid grant',
+						status: 400,
+						detail: 'The authorization code expired.',
+					}),
+					{ status: 400, headers: { 'content-type': 'application/problem+json' } },
+				),
 		);
 		await expect(exchangeAuthorizationCode({ ...base, fetch: fetchMock })).rejects.toMatchObject({
 			type: 'urn:golusoris:auth:invalid_grant',
@@ -159,8 +160,8 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('throws a ProblemError on a plain non-2xx without a problem body', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () =>
-			new Response('nope', { status: 500, statusText: 'Server Error' }),
+		const fetchMock = vi.fn<FetchLike>(
+			async () => new Response('nope', { status: 500, statusText: 'Server Error' }),
 		);
 		const error = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch((e) => e);
 		expect(error).toBeInstanceOf(ProblemError);

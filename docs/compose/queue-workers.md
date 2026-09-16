@@ -48,15 +48,15 @@ Email send                                           → BullMQ via structured-e
 
 ## Build-vs-buy matrix
 
-| Option | Fit | Cost shape | Notes |
-|---|---|---|---|
-| **BullMQ** | DEFAULT self-host | Redis compute + ops | Full control, strong Redis story, proven |
-| **Inngest** | Workflow abstraction | Per-run cloud | Great DX for multi-step; steps are durable |
-| **Trigger.dev** | Long-running resumable | Per-run cloud | Best for >15 min jobs, resume-after-deploy |
-| pg-boss | Postgres-only, small scale | DB compute | Fine when ≤1k jobs/hr, avoids Redis |
-| Temporal | Workflow-native, enterprise | Self-host cluster | Overkill for most apps |
-| AWS SQS + Lambda | Cloud-native fanout | Per-request | Fine when already on AWS; poor local DX |
-| `node-cron` + `setInterval` | NEVER | — | No durability, no retry, no observability |
+| Option                      | Fit                         | Cost shape          | Notes                                      |
+| --------------------------- | --------------------------- | ------------------- | ------------------------------------------ |
+| **BullMQ**                  | DEFAULT self-host           | Redis compute + ops | Full control, strong Redis story, proven   |
+| **Inngest**                 | Workflow abstraction        | Per-run cloud       | Great DX for multi-step; steps are durable |
+| **Trigger.dev**             | Long-running resumable      | Per-run cloud       | Best for >15 min jobs, resume-after-deploy |
+| pg-boss                     | Postgres-only, small scale  | DB compute          | Fine when ≤1k jobs/hr, avoids Redis        |
+| Temporal                    | Workflow-native, enterprise | Self-host cluster   | Overkill for most apps                     |
+| AWS SQS + Lambda            | Cloud-native fanout         | Per-request         | Fine when already on AWS; poor local DX    |
+| `node-cron` + `setInterval` | NEVER                       | —                   | No durability, no retry, no observability  |
 
 ## Install
 
@@ -83,30 +83,30 @@ pnpm add inngest
 import { z } from 'zod';
 
 export const JobName = z.enum([
-  'email.transactional.send',
-  'email.bounce.process',
-  'image.variant.generate',
-  'webhook.outbound.deliver',
-  'user.welcome.sequence',
-  'export.csv.build',
-  'notification.push.send',
+	'email.transactional.send',
+	'email.bounce.process',
+	'image.variant.generate',
+	'webhook.outbound.deliver',
+	'user.welcome.sequence',
+	'export.csv.build',
+	'notification.push.send',
 ]);
 export type JobName = z.infer<typeof JobName>;
 
 export const JobPayloads = {
-  'email.transactional.send': z.object({
-    to: z.string().email(),
-    template: z.string(),
-    locale: z.enum(['en', 'de', 'fr']),
-    vars: z.record(z.string(), z.unknown()),
-    correlationId: z.string().uuid(),
-  }),
-  'image.variant.generate': z.object({
-    originalId: z.string().uuid(),
-    width: z.number().int().min(16).max(3840),
-    format: z.enum(['avif', 'webp', 'jpeg']),
-  }),
-  // ...
+	'email.transactional.send': z.object({
+		to: z.string().email(),
+		template: z.string(),
+		locale: z.enum(['en', 'de', 'fr']),
+		vars: z.record(z.string(), z.unknown()),
+		correlationId: z.string().uuid(),
+	}),
+	'image.variant.generate': z.object({
+		originalId: z.string().uuid(),
+		width: z.number().int().min(16).max(3840),
+		format: z.enum(['avif', 'webp', 'jpeg']),
+	}),
+	// ...
 } as const;
 
 export type JobPayload<N extends JobName> = z.infer<(typeof JobPayloads)[N]>;
@@ -134,17 +134,17 @@ import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { env } from '$env/dynamic/private';
 
 export const redisConnection: ConnectionOptions = {
-  host: env.REDIS_HOST,
-  port: Number(env.REDIS_PORT),
-  password: env.REDIS_PASSWORD,
-  maxRetriesPerRequest: null, // required by BullMQ workers
-  enableReadyCheck: false,
+	host: env.REDIS_HOST,
+	port: Number(env.REDIS_PORT),
+	password: env.REDIS_PASSWORD,
+	maxRetriesPerRequest: null, // required by BullMQ workers
+	enableReadyCheck: false,
 };
 
 export const queues = {
-  default: new Queue('default', { connection: redisConnection }),
-  emails: new Queue('emails', { connection: redisConnection }),
-  images: new Queue('images', { connection: redisConnection }),
+	default: new Queue('default', { connection: redisConnection }),
+	emails: new Queue('emails', { connection: redisConnection }),
+	images: new Queue('images', { connection: redisConnection }),
 } as const;
 ```
 
@@ -174,31 +174,31 @@ import { queues } from './connection';
 import { JobName, JobPayloads, type JobPayload } from './types';
 
 type EnqueueOpts = {
-  delayMs?: number;
-  priority?: 1 | 5 | 10;
-  dedupeKey?: string;
+	delayMs?: number;
+	priority?: 1 | 5 | 10;
+	dedupeKey?: string;
 };
 
 export async function enqueue<N extends (typeof JobName.options)[number]>(
-  name: N,
-  payload: JobPayload<N>,
-  opts: EnqueueOpts = {},
+	name: N,
+	payload: JobPayload<N>,
+	opts: EnqueueOpts = {},
 ): Promise<string> {
-  const validated = JobPayloads[name].parse(payload);
-  const jobId = opts.dedupeKey ?? uuidv7();
-  const queueName = routeToQueue(name);
+	const validated = JobPayloads[name].parse(payload);
+	const jobId = opts.dedupeKey ?? uuidv7();
+	const queueName = routeToQueue(name);
 
-  await queues[queueName].add(name, validated, {
-    jobId,
-    delay: opts.delayMs,
-    priority: opts.priority ?? 5,
-    attempts: 10,
-    backoff: { type: 'exponential', delay: 1000 },
-    removeOnComplete: { age: 3600, count: 1000 },
-    removeOnFail: { age: 604800 },
-  });
+	await queues[queueName].add(name, validated, {
+		jobId,
+		delay: opts.delayMs,
+		priority: opts.priority ?? 5,
+		attempts: 10,
+		backoff: { type: 'exponential', delay: 1000 },
+		removeOnComplete: { age: 3600, count: 1000 },
+		removeOnFail: { age: 604800 },
+	});
 
-  return jobId;
+	return jobId;
 }
 ```
 
@@ -235,58 +235,58 @@ import { audit } from '$lib/audit';
 const tracer = trace.getTracer('queue');
 
 export function makeWorker(
-  queueName: string,
-  handlers: { [N in JobName]?: (payload: JobPayload<N>) => Promise<void> },
-  concurrency = 10,
+	queueName: string,
+	handlers: { [N in JobName]?: (payload: JobPayload<N>) => Promise<void> },
+	concurrency = 10,
 ) {
-  return new Worker(
-    queueName,
-    async (job: Job) => {
-      const parsedName = JobName.safeParse(job.name);
-      if (!parsedName.success) throw new Error(`unknown job name: ${job.name}`);
-      const name = parsedName.data;
-      const handler = handlers[name];
-      if (!handler) throw new Error(`no handler for ${name}`);
+	return new Worker(
+		queueName,
+		async (job: Job) => {
+			const parsedName = JobName.safeParse(job.name);
+			if (!parsedName.success) throw new Error(`unknown job name: ${job.name}`);
+			const name = parsedName.data;
+			const handler = handlers[name];
+			if (!handler) throw new Error(`no handler for ${name}`);
 
-      const payload = JobPayloads[name].parse(job.data);
+			const payload = JobPayloads[name].parse(job.data);
 
-      await tracer.startActiveSpan(
-        `queue.${name}`,
-        {
-          attributes: {
-            'queue.job.name': name,
-            'queue.job.id': job.id ?? '',
-            'queue.attempt': job.attemptsMade,
-          },
-        },
-        async (span) => {
-          try {
-            await handler(payload as never);
-            span.setStatus({ code: SpanStatusCode.OK });
-            await audit('job_succeeded', {
-              actor: 'system:queue',
-              subject: name,
-              correlationId: (payload as { correlationId?: string }).correlationId,
-            });
-          } catch (err) {
-            span.recordException(err as Error);
-            span.setStatus({ code: SpanStatusCode.ERROR });
-            throw err; // BullMQ increments attempts + retries
-          } finally {
-            span.end();
-          }
-        },
-      );
-    },
-    {
-      connection: redisConnection,
-      concurrency,
-      limiter: { max: 100, duration: 1000 },
-      lockDuration: 30_000,
-      stalledInterval: 30_000,
-      maxStalledCount: 1,
-    },
-  );
+			await tracer.startActiveSpan(
+				`queue.${name}`,
+				{
+					attributes: {
+						'queue.job.name': name,
+						'queue.job.id': job.id ?? '',
+						'queue.attempt': job.attemptsMade,
+					},
+				},
+				async (span) => {
+					try {
+						await handler(payload as never);
+						span.setStatus({ code: SpanStatusCode.OK });
+						await audit('job_succeeded', {
+							actor: 'system:queue',
+							subject: name,
+							correlationId: (payload as { correlationId?: string }).correlationId,
+						});
+					} catch (err) {
+						span.recordException(err as Error);
+						span.setStatus({ code: SpanStatusCode.ERROR });
+						throw err; // BullMQ increments attempts + retries
+					} finally {
+						span.end();
+					}
+				},
+			);
+		},
+		{
+			connection: redisConnection,
+			concurrency,
+			limiter: { max: 100, duration: 1000 },
+			lockDuration: 30_000,
+			stalledInterval: 30_000,
+			maxStalledCount: 1,
+		},
+	);
 }
 ```
 
@@ -338,16 +338,16 @@ import { redisConnection } from './connection';
 import { notifyOpsChannel } from '$lib/ops';
 
 export function attachDLQ(queueName: string) {
-  const events = new QueueEvents(queueName, { connection: redisConnection });
-  events.on('failed', async ({ jobId, failedReason, prev }) => {
-    if (prev !== 'active') return; // only count terminal failures
-    await notifyOpsChannel({
-      severity: 'warn',
-      summary: `job ${queueName}/${jobId} permanently failed`,
-      failedReason,
-    });
-    await recordDLQEntry(queueName, jobId, failedReason);
-  });
+	const events = new QueueEvents(queueName, { connection: redisConnection });
+	events.on('failed', async ({ jobId, failedReason, prev }) => {
+		if (prev !== 'active') return; // only count terminal failures
+		await notifyOpsChannel({
+			severity: 'warn',
+			summary: `job ${queueName}/${jobId} permanently failed`,
+			failedReason,
+		});
+		await recordDLQEntry(queueName, jobId, failedReason);
+	});
 }
 ```
 
@@ -371,7 +371,7 @@ Six DLQ rules:
 Five retry rules:
 
 1. **Exponential backoff with full jitter** — `random(0, base *
-   2^attempt)` — avoids thundering-herd after an upstream recovers.
+2^attempt)` — avoids thundering-herd after an upstream recovers.
 2. **Cap at 10 attempts or 24 h** (whichever first) — otherwise jobs
    linger forever.
 3. **4xx external responses are permanent failures**; 5xx and network
@@ -387,12 +387,12 @@ Five retry rules:
 ```ts
 // src/lib/queue/shutdown.ts
 export async function shutdownWorker(worker: Worker): Promise<void> {
-  await worker.close(true); // true = wait for in-flight jobs
+	await worker.close(true); // true = wait for in-flight jobs
 }
 
 process.on('SIGTERM', async () => {
-  await Promise.all(Object.values(workers).map(shutdownWorker));
-  process.exit(0);
+	await Promise.all(Object.values(workers).map(shutdownWorker));
+	process.exit(0);
 });
 ```
 
@@ -415,19 +415,17 @@ Five shutdown rules:
 import { inngest } from '$lib/inngest/client';
 
 export const welcome = inngest.createFunction(
-  { id: 'user.welcome', retries: 3 },
-  { event: 'user/signed_up' },
-  async ({ event, step }) => {
-    await step.run('send-welcome', () => sendEmail(event.data.userId, 'welcome'));
-    await step.sleep('wait-2-days', '2d');
-    await step.run('send-tips', () => sendEmail(event.data.userId, 'tips'));
-    const engaged = await step.run('check-engagement', () =>
-      checkEngagement(event.data.userId),
-    );
-    if (!engaged) {
-      await step.run('send-nudge', () => sendEmail(event.data.userId, 'nudge'));
-    }
-  },
+	{ id: 'user.welcome', retries: 3 },
+	{ event: 'user/signed_up' },
+	async ({ event, step }) => {
+		await step.run('send-welcome', () => sendEmail(event.data.userId, 'welcome'));
+		await step.sleep('wait-2-days', '2d');
+		await step.run('send-tips', () => sendEmail(event.data.userId, 'tips'));
+		const engaged = await step.run('check-engagement', () => checkEngagement(event.data.userId));
+		if (!engaged) {
+			await step.run('send-nudge', () => sendEmail(event.data.userId, 'nudge'));
+		}
+	},
 );
 ```
 
@@ -476,15 +474,27 @@ import { describe, it, expect } from 'vitest';
 import { sendEmailHandler } from './handlers/email';
 
 describe('sendEmailHandler', () => {
-  it('is idempotent on replay', async () => {
-    const payload = { to: 'a@b.c', template: 'welcome', locale: 'en', vars: {}, correlationId: 'x' };
-    await sendEmailHandler(payload);
-    await sendEmailHandler(payload);
-    expect(outboundSpy.calls).toHaveLength(1);
-  });
-  it('rejects unknown template', async () => { /* ... */ });
-  it('retries on 5xx', async () => { /* ... */ });
-  it('permanently fails on 4xx', async () => { /* ... */ });
+	it('is idempotent on replay', async () => {
+		const payload = {
+			to: 'a@b.c',
+			template: 'welcome',
+			locale: 'en',
+			vars: {},
+			correlationId: 'x',
+		};
+		await sendEmailHandler(payload);
+		await sendEmailHandler(payload);
+		expect(outboundSpy.calls).toHaveLength(1);
+	});
+	it('rejects unknown template', async () => {
+		/* ... */
+	});
+	it('retries on 5xx', async () => {
+		/* ... */
+	});
+	it('permanently fails on 4xx', async () => {
+		/* ... */
+	});
 });
 ```
 

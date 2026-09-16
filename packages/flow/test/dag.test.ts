@@ -75,10 +75,11 @@ describe('findCycles + hasCycle', () => {
 	});
 
 	it('detects a 3-node cycle', () => {
-		const cycles = findCycles(
-			nodes('a', 'b', 'c'),
-			[edge('a', 'b'), edge('b', 'c'), edge('c', 'a')],
-		);
+		const cycles = findCycles(nodes('a', 'b', 'c'), [
+			edge('a', 'b'),
+			edge('b', 'c'),
+			edge('c', 'a'),
+		]);
 		expect(cycles.length).toBeGreaterThan(0);
 	});
 });

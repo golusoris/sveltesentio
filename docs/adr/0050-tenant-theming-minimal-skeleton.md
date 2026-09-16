@@ -19,8 +19,8 @@ Ship a minimal tenant-theming skeleton in v0.1:
 - Consumer contract:
   ```ts
   export const tenantResolver: TenantResolver = async (event) => ({
-    id: '...',
-    tokens: { accent: 'oklch(0.7 0.15 240)', brand: 'oklch(...)' },
+  	id: '...',
+  	tokens: { accent: 'oklch(0.7 0.15 240)', brand: 'oklch(...)' },
   });
   ```
 - Swap-in target: when Golusoris `tenancy/` lands, replace the consumer resolver with a shipped `golusorisTenancyResolver()` that reads from the tenancy API.

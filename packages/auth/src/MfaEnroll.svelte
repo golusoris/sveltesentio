@@ -87,13 +87,25 @@ Plain `tsc` does not type-check `.svelte`; the typed helpers live in `./mfa-view
 		<label class="ssentio-mfa-enroll__label" for={secretId}>
 			Secret key (enter manually if you cannot scan)
 		</label>
-		<input id={secretId} class="ssentio-mfa-enroll__secret-input" type="text" value={secret} readonly />
+		<input
+			id={secretId}
+			class="ssentio-mfa-enroll__secret-input"
+			type="text"
+			value={secret}
+			readonly
+		/>
 	</div>
 
 	{#if otpauthUri}
 		<div class="ssentio-mfa-enroll__secret">
 			<label class="ssentio-mfa-enroll__label" for={uriId}>Provisioning URI</label>
-			<input id={uriId} class="ssentio-mfa-enroll__secret-input" type="text" value={otpauthUri} readonly />
+			<input
+				id={uriId}
+				class="ssentio-mfa-enroll__secret-input"
+				type="text"
+				value={otpauthUri}
+				readonly
+			/>
 		</div>
 	{/if}
 

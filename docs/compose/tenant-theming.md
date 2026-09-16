@@ -41,24 +41,24 @@ overrides:
 import type { TenantResolver } from '@sveltesentio/shell/tenancy';
 
 export const resolveTenant: TenantResolver = async (event) => {
-  // Choose your signal — cookie, subdomain, JWT claim, path prefix.
-  const host = event.url.hostname;
-  const subdomain = host.split('.')[0];
-  if (!subdomain || subdomain === 'www') return null; // no tenant
+	// Choose your signal — cookie, subdomain, JWT claim, path prefix.
+	const host = event.url.hostname;
+	const subdomain = host.split('.')[0];
+	if (!subdomain || subdomain === 'www') return null; // no tenant
 
-  const tenant = await fetchTenant(subdomain); // your backend
-  if (!tenant) return null;
+	const tenant = await fetchTenant(subdomain); // your backend
+	if (!tenant) return null;
 
-  return {
-    id: tenant.id,
-    name: tenant.name,
-    tokens: {
-      '--color-accent': tenant.accentOklch,
-      '--color-accent-fg': tenant.accentFgOklch,
-      '--color-brand': tenant.brandOklch,
-      // Any --color-* or sizing/typography token can go here.
-    },
-  };
+	return {
+		id: tenant.id,
+		name: tenant.name,
+		tokens: {
+			'--color-accent': tenant.accentOklch,
+			'--color-accent-fg': tenant.accentFgOklch,
+			'--color-brand': tenant.brandOklch,
+			// Any --color-* or sizing/typography token can go here.
+		},
+	};
 };
 ```
 
@@ -69,9 +69,9 @@ LRU (tenant data changes rarely; the request path must stay fast).
 
 ```ts
 type Tenant = {
-  id: string;
-  name?: string;
-  tokens: Record<`--${string}`, string>;
+	id: string;
+	name?: string;
+	tokens: Record<`--${string}`, string>;
 };
 type TenantResolver = (event: RequestEvent) => Promise<Tenant | null>;
 ```
@@ -89,8 +89,8 @@ import { withTenant } from '@sveltesentio/shell/tenancy';
 import { resolveTenant } from '$lib/tenancy';
 
 export const handle = sequence(
-  withTheme({ cookie: 'sv_theme', default: 'system' }),
-  withTenant({ resolve: resolveTenant }),
+	withTheme({ cookie: 'sv_theme', default: 'system' }),
+	withTenant({ resolve: resolveTenant }),
 );
 ```
 
@@ -114,12 +114,14 @@ No extra markers needed beyond the `data-theme` one from
 ```html
 <!DOCTYPE html>
 <html lang="en" data-theme="%sveltekit.theme%" data-tenant="%sveltekit.tenant%">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="color-scheme" content="light dark" />
-    %sveltekit.head%
-  </head>
-  <body>%sveltekit.body%</body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="color-scheme" content="light dark" />
+		%sveltekit.head%
+	</head>
+	<body>
+		%sveltekit.body%
+	</body>
 </html>
 ```
 
@@ -143,9 +145,9 @@ name/logo without re-running the resolver:
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-  return {
-    tenant: locals.tenant ? { id: locals.tenant.id, name: locals.tenant.name } : null,
-  };
+	return {
+		tenant: locals.tenant ? { id: locals.tenant.id, name: locals.tenant.name } : null,
+	};
 };
 ```
 
@@ -160,10 +162,10 @@ admin console):
 
 ```ts
 export const resolveTenant: TenantResolver = async (event) => {
-  const tenantId = event.cookies.get('tenant_id');
-  if (!tenantId) return null;
-  const tenant = await fetchTenant(tenantId);
-  return tenant ? { id: tenant.id, name: tenant.name, tokens: tenant.tokens } : null;
+	const tenantId = event.cookies.get('tenant_id');
+	if (!tenantId) return null;
+	const tenant = await fetchTenant(tenantId);
+	return tenant ? { id: tenant.id, name: tenant.name, tokens: tenant.tokens } : null;
 };
 ```
 
@@ -177,10 +179,10 @@ For apps where the session carries a `tenant` claim:
 
 ```ts
 export const resolveTenant: TenantResolver = async (event) => {
-  const session = await readSession(event); // from auth-oidc.md
-  if (!session?.tenantId) return null;
-  const tenant = await fetchTenant(session.tenantId);
-  return tenant ? { /* … */ } : null;
+	const session = await readSession(event); // from auth-oidc.md
+	if (!session?.tenantId) return null;
+	const tenant = await fetchTenant(session.tenantId);
+	return tenant ? {/* … */} : null;
 };
 ```
 
@@ -204,9 +206,12 @@ Unit-test the resolver with a mocked `RequestEvent`:
 import { resolveTenant } from '$lib/tenancy';
 
 test('resolves by subdomain', async () => {
-  const event = { url: new URL('https://acme.example.com/'), cookies: { get: () => undefined } } as any;
-  const t = await resolveTenant(event);
-  expect(t?.id).toBe('acme');
+	const event = {
+		url: new URL('https://acme.example.com/'),
+		cookies: { get: () => undefined },
+	} as any;
+	const t = await resolveTenant(event);
+	expect(t?.id).toBe('acme');
 });
 ```
 
@@ -214,11 +219,11 @@ Playwright for end-to-end flash-free verification:
 
 ```ts
 test('acme tenant paints with cyan accent on first render', async ({ page, context }) => {
-  await page.goto('https://acme.localhost/');
-  const accent = await page.evaluate(() => {
-    return getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
-  });
-  expect(accent).toMatch(/oklch\(0\.70 0\.14 200\)/); // acme cyan
+	await page.goto('https://acme.localhost/');
+	const accent = await page.evaluate(() => {
+		return getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+	});
+	expect(accent).toMatch(/oklch\(0\.70 0\.14 200\)/); // acme cyan
 });
 ```
 

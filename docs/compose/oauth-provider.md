@@ -96,13 +96,13 @@ directly. It owns only the two HTML surfaces Hydra redirects to:
 import { z } from 'zod';
 
 export const Scope = z.enum([
-  'openid',
-  'profile',
-  'email',
-  'offline_access',
-  'read:projects',
-  'write:projects',
-  'read:billing',
+	'openid',
+	'profile',
+	'email',
+	'offline_access',
+	'read:projects',
+	'write:projects',
+	'read:billing',
 ]);
 export type Scope = z.infer<typeof Scope>;
 
@@ -113,31 +113,60 @@ export const LoginChallenge = z.string().regex(/^[a-f0-9]{32}$/);
 export const ConsentChallenge = z.string().regex(/^[a-f0-9]{32}$/);
 
 export const ConsentDecision = z.object({
-  challenge: ConsentChallenge,
-  grantedScopes: z.array(Scope).min(1),
-  remember: z.boolean().default(false),
-  rememberFor: z.number().int().min(0).max(86400 * 30).default(0),
+	challenge: ConsentChallenge,
+	grantedScopes: z.array(Scope).min(1),
+	remember: z.boolean().default(false),
+	rememberFor: z
+		.number()
+		.int()
+		.min(0)
+		.max(86400 * 30)
+		.default(0),
 });
 export type ConsentDecision = z.infer<typeof ConsentDecision>;
 
 export const LoginDecision = z.object({
-  challenge: LoginChallenge,
-  subject: z.string().uuid(),
-  remember: z.boolean().default(false),
-  rememberFor: z.number().int().min(0).max(86400 * 30).default(0),
-  acr: z.enum(['0', '1', '2']).default('1'), // Authentication Context Class Reference
+	challenge: LoginChallenge,
+	subject: z.string().uuid(),
+	remember: z.boolean().default(false),
+	rememberFor: z
+		.number()
+		.int()
+		.min(0)
+		.max(86400 * 30)
+		.default(0),
+	acr: z.enum(['0', '1', '2']).default('1'), // Authentication Context Class Reference
 });
 export type LoginDecision = z.infer<typeof LoginDecision>;
 
 // Per-scope human-readable metadata for the consent screen.
-export const SCOPE_META: Record<Scope, { title: string; description: string; sensitivity: 'low' | 'medium' | 'high' }> = {
-  openid:            { title: 'Sign in',              description: 'Use your identity to sign in', sensitivity: 'low' },
-  profile:           { title: 'Profile',              description: 'Name, avatar, username',        sensitivity: 'low' },
-  email:             { title: 'Email address',        description: 'Your primary email',            sensitivity: 'medium' },
-  offline_access:    { title: 'Offline access',       description: 'Stay signed in when you are away', sensitivity: 'medium' },
-  'read:projects':   { title: 'Read your projects',   description: 'View project metadata',         sensitivity: 'low' },
-  'write:projects':  { title: 'Modify your projects', description: 'Create and edit projects',      sensitivity: 'high' },
-  'read:billing':    { title: 'View billing info',    description: 'Access billing state',          sensitivity: 'high' },
+export const SCOPE_META: Record<
+	Scope,
+	{ title: string; description: string; sensitivity: 'low' | 'medium' | 'high' }
+> = {
+	openid: { title: 'Sign in', description: 'Use your identity to sign in', sensitivity: 'low' },
+	profile: { title: 'Profile', description: 'Name, avatar, username', sensitivity: 'low' },
+	email: { title: 'Email address', description: 'Your primary email', sensitivity: 'medium' },
+	offline_access: {
+		title: 'Offline access',
+		description: 'Stay signed in when you are away',
+		sensitivity: 'medium',
+	},
+	'read:projects': {
+		title: 'Read your projects',
+		description: 'View project metadata',
+		sensitivity: 'low',
+	},
+	'write:projects': {
+		title: 'Modify your projects',
+		description: 'Create and edit projects',
+		sensitivity: 'high',
+	},
+	'read:billing': {
+		title: 'View billing info',
+		description: 'Access billing state',
+		sensitivity: 'high',
+	},
 };
 ```
 
@@ -151,26 +180,28 @@ import { hydraAdmin } from '$lib/server/hydra';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
-  const parsed = LoginChallenge.safeParse(url.searchParams.get('login_challenge'));
-  if (!parsed.success) throw error(400, { type: 'invalid_request' });
+	const parsed = LoginChallenge.safeParse(url.searchParams.get('login_challenge'));
+	if (!parsed.success) throw error(400, { type: 'invalid_request' });
 
-  const challenge = parsed.data;
-  const { data: req } = await hydraAdmin.getOAuth2LoginRequest({ loginChallenge: challenge });
+	const challenge = parsed.data;
+	const { data: req } = await hydraAdmin.getOAuth2LoginRequest({ loginChallenge: challenge });
 
-  // Silent re-auth: user already authenticated + Hydra remembers them.
-  if (req.skip) {
-    const { data: { redirect_to } } = await hydraAdmin.acceptOAuth2LoginRequest({
-      loginChallenge: challenge,
-      acceptOAuth2LoginRequest: { subject: req.subject! },
-    });
-    throw redirect(303, redirect_to);
-  }
+	// Silent re-auth: user already authenticated + Hydra remembers them.
+	if (req.skip) {
+		const {
+			data: { redirect_to },
+		} = await hydraAdmin.acceptOAuth2LoginRequest({
+			loginChallenge: challenge,
+			acceptOAuth2LoginRequest: { subject: req.subject! },
+		});
+		throw redirect(303, redirect_to);
+	}
 
-  return {
-    challenge,
-    clientName: req.client?.client_name ?? 'Unknown app',
-    requestedScopes: (req.requested_scope ?? []) as string[],
-  };
+	return {
+		challenge,
+		clientName: req.client?.client_name ?? 'Unknown app',
+		requestedScopes: (req.requested_scope ?? []) as string[],
+	};
 };
 ```
 
@@ -185,43 +216,45 @@ import { rateLimit } from '$lib/server/rate-limit';
 import { auditLog } from '$lib/server/audit';
 
 const LoginForm = LoginDecision.omit({ subject: true, challenge: true }).extend({
-  email: z.string().email().max(254),
-  password: z.string().min(1).max(200),
+	email: z.string().email().max(254),
+	password: z.string().min(1).max(200),
 });
 
 export const actions: Actions = {
-  submit: async ({ request, url, getClientAddress }) => {
-    const form = await superValidate(request, zod(LoginForm));
-    if (!form.valid) return fail(400, { form });
+	submit: async ({ request, url, getClientAddress }) => {
+		const form = await superValidate(request, zod(LoginForm));
+		if (!form.valid) return fail(400, { form });
 
-    const challengeParsed = LoginChallenge.safeParse(url.searchParams.get('login_challenge'));
-    if (!challengeParsed.success) throw error(400, { type: 'invalid_request' });
+		const challengeParsed = LoginChallenge.safeParse(url.searchParams.get('login_challenge'));
+		if (!challengeParsed.success) throw error(400, { type: 'invalid_request' });
 
-    await rateLimit({
-      key: `oauth-login:${getClientAddress()}`,
-      limit: 5,
-      windowMs: 60_000,
-    });
+		await rateLimit({
+			key: `oauth-login:${getClientAddress()}`,
+			limit: 5,
+			windowMs: 60_000,
+		});
 
-    const user = await verifyPassword(form.data.email, form.data.password);
-    if (!user) {
-      await auditLog('oauth.login.failed', { email: form.data.email, ip: getClientAddress() });
-      return fail(401, { form: { ...form, errors: { _form: 'Invalid credentials' } } });
-    }
+		const user = await verifyPassword(form.data.email, form.data.password);
+		if (!user) {
+			await auditLog('oauth.login.failed', { email: form.data.email, ip: getClientAddress() });
+			return fail(401, { form: { ...form, errors: { _form: 'Invalid credentials' } } });
+		}
 
-    await auditLog('oauth.login.succeeded', { userId: user.id, challenge: challengeParsed.data });
+		await auditLog('oauth.login.succeeded', { userId: user.id, challenge: challengeParsed.data });
 
-    const { data: { redirect_to } } = await hydraAdmin.acceptOAuth2LoginRequest({
-      loginChallenge: challengeParsed.data,
-      acceptOAuth2LoginRequest: {
-        subject: user.id,
-        remember: form.data.remember,
-        remember_for: form.data.rememberFor,
-        acr: form.data.acr,
-      },
-    });
-    throw redirect(303, redirect_to);
-  },
+		const {
+			data: { redirect_to },
+		} = await hydraAdmin.acceptOAuth2LoginRequest({
+			loginChallenge: challengeParsed.data,
+			acceptOAuth2LoginRequest: {
+				subject: user.id,
+				remember: form.data.remember,
+				remember_for: form.data.rememberFor,
+				acr: form.data.acr,
+			},
+		});
+		throw redirect(303, redirect_to);
+	},
 };
 ```
 
@@ -238,102 +271,106 @@ import { auditLog } from '$lib/server/audit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
-  const parsed = ConsentChallenge.safeParse(url.searchParams.get('consent_challenge'));
-  if (!parsed.success) throw error(400, { type: 'invalid_request' });
+	const parsed = ConsentChallenge.safeParse(url.searchParams.get('consent_challenge'));
+	if (!parsed.success) throw error(400, { type: 'invalid_request' });
 
-  const challenge = parsed.data;
-  const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
+	const challenge = parsed.data;
+	const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
 
-  const requestedScopes = (req.requested_scope ?? []).filter((s): s is Scope =>
-    Scope.safeParse(s).success,
-  );
+	const requestedScopes = (req.requested_scope ?? []).filter(
+		(s): s is Scope => Scope.safeParse(s).success,
+	);
 
-  // Auto-approve "skip" cases: trusted first-party clients with previously remembered consent.
-  if (req.skip) {
-    const { data: { redirect_to } } = await hydraAdmin.acceptOAuth2ConsentRequest({
-      consentChallenge: challenge,
-      acceptOAuth2ConsentRequest: {
-        grant_scope: requestedScopes,
-        grant_access_token_audience: req.requested_access_token_audience,
-        session: await buildSession(req.subject!, requestedScopes),
-      },
-    });
-    throw redirect(303, redirect_to);
-  }
+	// Auto-approve "skip" cases: trusted first-party clients with previously remembered consent.
+	if (req.skip) {
+		const {
+			data: { redirect_to },
+		} = await hydraAdmin.acceptOAuth2ConsentRequest({
+			consentChallenge: challenge,
+			acceptOAuth2ConsentRequest: {
+				grant_scope: requestedScopes,
+				grant_access_token_audience: req.requested_access_token_audience,
+				session: await buildSession(req.subject!, requestedScopes),
+			},
+		});
+		throw redirect(303, redirect_to);
+	}
 
-  return {
-    challenge,
-    clientName: req.client?.client_name ?? 'Unknown app',
-    clientUri: req.client?.client_uri,
-    policyUri: req.client?.policy_uri,
-    tosUri: req.client?.tos_uri,
-    requestedScopes: requestedScopes.map((s) => ({ name: s, ...SCOPE_META[s] })),
-    subject: req.subject!,
-  };
+	return {
+		challenge,
+		clientName: req.client?.client_name ?? 'Unknown app',
+		clientUri: req.client?.client_uri,
+		policyUri: req.client?.policy_uri,
+		tosUri: req.client?.tos_uri,
+		requestedScopes: requestedScopes.map((s) => ({ name: s, ...SCOPE_META[s] })),
+		subject: req.subject!,
+	};
 };
 
 export const actions: Actions = {
-  approve: async ({ request, url }) => {
-    const form = await superValidate(request, zod(ConsentDecision));
-    if (!form.valid) return fail(400, { form });
-    const challenge = form.data.challenge;
-    const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
+	approve: async ({ request, url }) => {
+		const form = await superValidate(request, zod(ConsentDecision));
+		if (!form.valid) return fail(400, { form });
+		const challenge = form.data.challenge;
+		const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
 
-    await auditLog('oauth.consent.granted', {
-      userId: req.subject,
-      clientId: req.client?.client_id,
-      scopes: form.data.grantedScopes,
-    });
+		await auditLog('oauth.consent.granted', {
+			userId: req.subject,
+			clientId: req.client?.client_id,
+			scopes: form.data.grantedScopes,
+		});
 
-    const { data: { redirect_to } } = await hydraAdmin.acceptOAuth2ConsentRequest({
-      consentChallenge: challenge,
-      acceptOAuth2ConsentRequest: {
-        grant_scope: form.data.grantedScopes,
-        grant_access_token_audience: req.requested_access_token_audience,
-        remember: form.data.remember,
-        remember_for: form.data.rememberFor,
-        session: await buildSession(req.subject!, form.data.grantedScopes),
-      },
-    });
-    throw redirect(303, redirect_to);
-  },
-  deny: async ({ request }) => {
-    const challenge = ConsentChallenge.parse(
-      (await request.formData()).get('challenge'),
-    );
-    const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
+		const {
+			data: { redirect_to },
+		} = await hydraAdmin.acceptOAuth2ConsentRequest({
+			consentChallenge: challenge,
+			acceptOAuth2ConsentRequest: {
+				grant_scope: form.data.grantedScopes,
+				grant_access_token_audience: req.requested_access_token_audience,
+				remember: form.data.remember,
+				remember_for: form.data.rememberFor,
+				session: await buildSession(req.subject!, form.data.grantedScopes),
+			},
+		});
+		throw redirect(303, redirect_to);
+	},
+	deny: async ({ request }) => {
+		const challenge = ConsentChallenge.parse((await request.formData()).get('challenge'));
+		const { data: req } = await hydraAdmin.getOAuth2ConsentRequest({ consentChallenge: challenge });
 
-    await auditLog('oauth.consent.denied', {
-      userId: req.subject,
-      clientId: req.client?.client_id,
-    });
+		await auditLog('oauth.consent.denied', {
+			userId: req.subject,
+			clientId: req.client?.client_id,
+		});
 
-    const { data: { redirect_to } } = await hydraAdmin.rejectOAuth2ConsentRequest({
-      consentChallenge: challenge,
-      rejectOAuth2Request: { error: 'access_denied', error_description: 'User denied consent' },
-    });
-    throw redirect(303, redirect_to);
-  },
+		const {
+			data: { redirect_to },
+		} = await hydraAdmin.rejectOAuth2ConsentRequest({
+			consentChallenge: challenge,
+			rejectOAuth2Request: { error: 'access_denied', error_description: 'User denied consent' },
+		});
+		throw redirect(303, redirect_to);
+	},
 };
 
 async function buildSession(subject: string, scopes: Scope[]) {
-  const user = await userRepo.findById(subject);
-  // id_token claims: only include what scopes permit
-  const idToken: Record<string, unknown> = {};
-  if (scopes.includes('profile')) {
-    idToken.name = user.name;
-    idToken.picture = user.avatarUrl;
-    idToken.preferred_username = user.username;
-  }
-  if (scopes.includes('email')) {
-    idToken.email = user.email;
-    idToken.email_verified = user.emailVerified;
-  }
-  // access_token claims: scope → permission mapping per rbac-modeling.md
-  const accessToken: Record<string, unknown> = {
-    permissions: scopesToPermissions(scopes, user.id),
-  };
-  return { id_token: idToken, access_token: accessToken };
+	const user = await userRepo.findById(subject);
+	// id_token claims: only include what scopes permit
+	const idToken: Record<string, unknown> = {};
+	if (scopes.includes('profile')) {
+		idToken.name = user.name;
+		idToken.picture = user.avatarUrl;
+		idToken.preferred_username = user.username;
+	}
+	if (scopes.includes('email')) {
+		idToken.email = user.email;
+		idToken.email_verified = user.emailVerified;
+	}
+	// access_token claims: scope → permission mapping per rbac-modeling.md
+	const accessToken: Record<string, unknown> = {
+		permissions: scopesToPermissions(scopes, user.id),
+	};
+	return { id_token: idToken, access_token: accessToken };
 }
 ```
 
@@ -346,7 +383,7 @@ Claims discipline:
   (from [rbac-modeling.md](rbac-modeling.md)). Consumers decide
   authorization by reading `permissions`, not by re-reading scopes.
 - **No tokens minted here.** Hydra signs the JWT using its rotated
-  JWKS; SvelteKit only tells Hydra *what to put inside*.
+  JWKS; SvelteKit only tells Hydra _what to put inside_.
 
 ## PKCE enforcement + token endpoint
 
@@ -367,17 +404,17 @@ Client configuration at creation time:
 
 ```ts
 await hydraAdmin.createOAuth2Client({
-  oAuth2Client: {
-    client_name: 'Acme Dashboard',
-    grant_types: ['authorization_code', 'refresh_token'],
-    response_types: ['code'],
-    scope: 'openid profile email read:projects',
-    redirect_uris: ['https://acme.example.com/callback'],
-    token_endpoint_auth_method: 'client_secret_basic',
-    // PKCE enforcement: required for public clients, forbidden to disable
-    require_pkce: true,              // S256 only; plain not accepted
-    // RFC 8705 mTLS or DPoP for high-value scopes (optional)
-  },
+	oAuth2Client: {
+		client_name: 'Acme Dashboard',
+		grant_types: ['authorization_code', 'refresh_token'],
+		response_types: ['code'],
+		scope: 'openid profile email read:projects',
+		redirect_uris: ['https://acme.example.com/callback'],
+		token_endpoint_auth_method: 'client_secret_basic',
+		// PKCE enforcement: required for public clients, forbidden to disable
+		require_pkce: true, // S256 only; plain not accepted
+		// RFC 8705 mTLS or DPoP for high-value scopes (optional)
+	},
 });
 ```
 
@@ -410,15 +447,17 @@ prevent rotation-induced failures.
 import { sequence } from '@sveltejs/kit/hooks';
 
 const oauthHeaders = async ({ event, resolve }) => {
-  const r = await resolve(event);
-  if (event.url.pathname.startsWith('/oauth/')) {
-    r.headers.set('Cache-Control', 'no-store');
-    r.headers.set('Pragma', 'no-cache');
-    r.headers.set('X-Frame-Options', 'DENY');  // clickjacking: never framed
-    r.headers.set('Content-Security-Policy',
-      "default-src 'self'; frame-ancestors 'none'; form-action 'self';");
-  }
-  return r;
+	const r = await resolve(event);
+	if (event.url.pathname.startsWith('/oauth/')) {
+		r.headers.set('Cache-Control', 'no-store');
+		r.headers.set('Pragma', 'no-cache');
+		r.headers.set('X-Frame-Options', 'DENY'); // clickjacking: never framed
+		r.headers.set(
+			'Content-Security-Policy',
+			"default-src 'self'; frame-ancestors 'none'; form-action 'self';",
+		);
+	}
+	return r;
 };
 ```
 
@@ -469,8 +508,8 @@ DENY` + CSP `frame-ancestors 'none'` is defense-in-depth.
     permanent access. Rotate on every use, invalidate family on
     detected reuse (RFC 6749 §10.4).
 15. **No audit log on consent grants + token issuance** — compliance
-    + incident response need an event trail. Every decision logs to
-    [audit-log.md](audit-log.md).
+    - incident response need an event trail. Every decision logs to
+      [audit-log.md](audit-log.md).
 16. **Broad default scopes** — registering clients with
     `scope: 'read write admin'` encourages over-request. Use
     incremental authorization (ask for scopes when actually needed).
@@ -490,8 +529,8 @@ DENY` + CSP `frame-ancestors 'none'` is defense-in-depth.
     form redirects or RFC 8628 Device Flow for environments with
     third-party cookies blocked; never depend on 3p cookies.
 23. **No logout endpoint / RP-initiated logout** — OIDC front-channel
-    + back-channel logout per OIDC Front-Channel 1.0; without it,
-    users can't fully sign out across federated apps.
+    - back-channel logout per OIDC Front-Channel 1.0; without it,
+      users can't fully sign out across federated apps.
 24. **Showing raw error messages from Hydra to end users** — leak
     implementation details. Map to generic user-facing strings + log
     the detail server-side with a correlation ID.

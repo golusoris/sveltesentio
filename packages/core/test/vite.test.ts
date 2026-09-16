@@ -75,11 +75,14 @@ describe('sentioPlugin', () => {
 			const p = sentioPlugin({ verbose: true });
 			const fn = p.configResolved;
 			const cr = typeof fn === 'function' ? fn : fn?.handler;
-			cr?.call(null as never, {
-				mode: 'production',
-				root: '/app',
-				build: { outDir: 'dist', ssr: true },
-			} as never);
+			cr?.call(
+				null as never,
+				{
+					mode: 'production',
+					root: '/app',
+					build: { outDir: 'dist', ssr: true },
+				} as never,
+			);
 			expect(warn).toHaveBeenCalledWith(
 				'[sentio] Resolved Vite config:',
 				expect.objectContaining({ mode: 'production', root: '/app' }),
@@ -95,11 +98,14 @@ describe('sentioPlugin', () => {
 			const p = sentioPlugin({ verbose: false });
 			const fn = p.configResolved;
 			const cr = typeof fn === 'function' ? fn : fn?.handler;
-			cr?.call(null as never, {
-				mode: 'development',
-				root: '/app',
-				build: { outDir: 'dist', ssr: false },
-			} as never);
+			cr?.call(
+				null as never,
+				{
+					mode: 'development',
+					root: '/app',
+					build: { outDir: 'dist', ssr: false },
+				} as never,
+			);
 			expect(warn).not.toHaveBeenCalled();
 		} finally {
 			warn.mockRestore();

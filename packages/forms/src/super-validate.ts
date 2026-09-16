@@ -1,29 +1,20 @@
 import { zod4 as zod4Adapter } from 'sveltekit-superforms/adapters';
 import { superValidate as upstreamSuperValidate } from 'sveltekit-superforms/server';
-import type {
-	SuperValidated,
-	SuperValidateOptions,
-} from 'sveltekit-superforms';
+import type { SuperValidated, SuperValidateOptions } from 'sveltekit-superforms';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export type ZodV4Schema = Parameters<typeof zod4Adapter>[0];
 
 type AdapterFor<S extends ZodV4Schema> = ReturnType<typeof zod4Adapter<S>>;
-type OutOf<S extends ZodV4Schema> = AdapterFor<S> extends {
-	defaults: infer D extends Record<string, unknown>;
-}
-	? D
-	: Record<string, unknown>;
+type OutOf<S extends ZodV4Schema> =
+	AdapterFor<S> extends {
+		defaults: infer D extends Record<string, unknown>;
+	}
+		? D
+		: Record<string, unknown>;
 
 type ValidateData<In extends Record<string, unknown>> =
-	| RequestEvent
-	| Request
-	| FormData
-	| URLSearchParams
-	| URL
-	| Partial<In>
-	| null
-	| undefined;
+	RequestEvent | Request | FormData | URLSearchParams | URL | Partial<In> | null | undefined;
 
 type CallArgs = readonly [unknown, ...unknown[]];
 
@@ -54,8 +45,6 @@ export async function superValidate(
 
 function isSchema(value: unknown): value is ZodV4Schema {
 	return (
-		typeof value === 'object' &&
-		value !== null &&
-		'_zod' in (value as Record<string, unknown>)
+		typeof value === 'object' && value !== null && '_zod' in (value as Record<string, unknown>)
 	);
 }

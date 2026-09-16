@@ -57,15 +57,15 @@ The `sveltesentio-mcp` binary is wired automatically; the client spawns it over 
 
 ```json
 {
-  "mcpServers": {
-    "sveltesentio": {
-      "command": "pnpm",
-      "args": ["exec", "sveltesentio-mcp"],
-      "env": {
-        "SVELTESENTIO_ROOT": "/absolute/path/to/sveltesentio/checkout"
-      }
-    }
-  }
+	"mcpServers": {
+		"sveltesentio": {
+			"command": "pnpm",
+			"args": ["exec", "sveltesentio-mcp"],
+			"env": {
+				"SVELTESENTIO_ROOT": "/absolute/path/to/sveltesentio/checkout"
+			}
+		}
+	}
 }
 ```
 
@@ -75,12 +75,12 @@ The `sveltesentio-mcp` binary is wired automatically; the client spawns it over 
 
 ```json
 {
-  "mcpServers": {
-    "sveltesentio": {
-      "command": "pnpm",
-      "args": ["exec", "sveltesentio-mcp"]
-    }
-  }
+	"mcpServers": {
+		"sveltesentio": {
+			"command": "pnpm",
+			"args": ["exec", "sveltesentio-mcp"]
+		}
+	}
 }
 ```
 

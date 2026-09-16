@@ -1,32 +1,32 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [
-    "eslint.config.ts",
-    "prettier.config.js",
-    "tsconfig.base.json",
-    "pnpm-workspace.yaml"
-  ],
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".svelte-kit/**"]
-    },
-    "lint": {
-      "dependsOn": []
-    },
-    "typecheck": {
-      "dependsOn": ["^build"]
-    },
-    "test": {
-      "dependsOn": ["^build"]
-    },
-    "test:e2e": {
-      "dependsOn": ["build"],
-      "outputs": ["playwright-report/**", "test-results/**"]
-    },
-    "dev": {
-      "persistent": true,
-      "cache": false
-    }
-  }
+	"$schema": "https://turbo.build/schema.json",
+	"globalDependencies": [
+		"eslint.config.ts",
+		"prettier.config.js",
+		"tsconfig.base.json",
+		"pnpm-workspace.yaml"
+	],
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": ["dist/**", ".svelte-kit/**"]
+		},
+		"lint": {
+			"dependsOn": []
+		},
+		"typecheck": {
+			"dependsOn": ["^build"]
+		},
+		"test": {
+			"dependsOn": ["^build"]
+		},
+		"test:e2e": {
+			"dependsOn": ["build"],
+			"outputs": ["playwright-report/**", "test-results/**"]
+		},
+		"dev": {
+			"persistent": true,
+			"cache": false
+		}
+	}
 }

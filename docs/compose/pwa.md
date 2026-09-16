@@ -24,14 +24,14 @@ events as structured logs).
 
 ## When you need a PWA
 
-| Need | Build a PWA | Skip |
-|---|---|---|
-| Offline-capable workflow | ✅ | — |
-| Install-to-homescreen on mobile | ✅ | — |
-| Background sync / push | ✅ | — |
-| Static-marketing site | ❌ overhead | ✅ |
-| SEO-only blog | ❌ overhead | ✅ |
-| App-store-distributed only | ⚠️ TWA opt-in | App-store native |
+| Need                            | Build a PWA   | Skip             |
+| ------------------------------- | ------------- | ---------------- |
+| Offline-capable workflow        | ✅            | —                |
+| Install-to-homescreen on mobile | ✅            | —                |
+| Background sync / push          | ✅            | —                |
+| Static-marketing site           | ❌ overhead   | ✅               |
+| SEO-only blog                   | ❌ overhead   | ✅               |
+| App-store-distributed only      | ⚠️ TWA opt-in | App-store native |
 
 PWA pays off when offline + install matter. Static SSG sites don't
 need a service worker; the cache headers already do the work.
@@ -53,43 +53,48 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 export default {
-  plugins: [
-    sveltekit(),
-    SvelteKitPWA({
-      strategies: 'generateSW',                  // Workbox autogen; 'injectManifest' for custom SW
-      registerType: 'prompt',                    // see "Update prompt" below
-      includeAssets: ['favicon.svg', 'fonts/*.woff2'],
-      manifest: {
-        name: 'Sveltesentio Demo',
-        short_name: 'Sveltesentio',
-        theme_color: '#0f172a',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'any',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: '/icons/192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['client/**/*.{js,css,svg,woff2}'],
-        navigateFallback: '/offline',
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          // documented below
-        ],
-      },
-      kit: {
-        includeVersionFile: true,                // exposes APP_VERSION for update detection
-      },
-      devOptions: {
-        enabled: false,                          // SW in dev is a debugging hazard
-      },
-    }),
-  ],
+	plugins: [
+		sveltekit(),
+		SvelteKitPWA({
+			strategies: 'generateSW', // Workbox autogen; 'injectManifest' for custom SW
+			registerType: 'prompt', // see "Update prompt" below
+			includeAssets: ['favicon.svg', 'fonts/*.woff2'],
+			manifest: {
+				name: 'Sveltesentio Demo',
+				short_name: 'Sveltesentio',
+				theme_color: '#0f172a',
+				background_color: '#ffffff',
+				display: 'standalone',
+				orientation: 'any',
+				scope: '/',
+				start_url: '/',
+				icons: [
+					{ src: '/icons/192.png', sizes: '192x192', type: 'image/png' },
+					{ src: '/icons/512.png', sizes: '512x512', type: 'image/png' },
+					{
+						src: '/icons/maskable-512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable',
+					},
+				],
+			},
+			workbox: {
+				globPatterns: ['client/**/*.{js,css,svg,woff2}'],
+				navigateFallback: '/offline',
+				navigateFallbackDenylist: [/^\/api\//],
+				runtimeCaching: [
+					// documented below
+				],
+			},
+			kit: {
+				includeVersionFile: true, // exposes APP_VERSION for update detection
+			},
+			devOptions: {
+				enabled: false, // SW in dev is a debugging hazard
+			},
+		}),
+	],
 };
 ```
 
@@ -114,13 +119,13 @@ Six invariants:
 
 Workbox ships five strategies. Match each to its use case:
 
-| Strategy | When to use | Trade-off |
-|---|---|---|
-| `CacheFirst` | Immutable assets (hashed JS/CSS, fonts) | Stale forever without versioning |
-| `StaleWhileRevalidate` | App shell HTML, mostly-static API responses | Old data shown briefly then refresh |
-| `NetworkFirst` | Auth-gated API responses, user-specific data | Fails with 504-gateway-timeout offline |
-| `NetworkOnly` | Mutations (POST/PUT/DELETE), `+server.ts` writes | No offline behaviour; correct for writes |
-| `CacheOnly` | Pre-cached offline page, app icon | Hard fail if not pre-cached |
+| Strategy               | When to use                                      | Trade-off                                |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------- |
+| `CacheFirst`           | Immutable assets (hashed JS/CSS, fonts)          | Stale forever without versioning         |
+| `StaleWhileRevalidate` | App shell HTML, mostly-static API responses      | Old data shown briefly then refresh      |
+| `NetworkFirst`         | Auth-gated API responses, user-specific data     | Fails with 504-gateway-timeout offline   |
+| `NetworkOnly`          | Mutations (POST/PUT/DELETE), `+server.ts` writes | No offline behaviour; correct for writes |
+| `CacheOnly`            | Pre-cached offline page, app icon                | Hard fail if not pre-cached              |
 
 ```ts
 runtimeCaching: [
@@ -183,27 +188,25 @@ Three rules:
 ```svelte
 <!-- src/lib/pwa/UpdatePrompt.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { useRegisterSW } from 'virtual:pwa-register/svelte';
+	import { onMount } from 'svelte';
+	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 
-  const {
-    needRefresh,
-    offlineReady,
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisterError(error) { console.error('[pwa] sw register failed', error); },
-  });
+	const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW({
+		onRegisterError(error) {
+			console.error('[pwa] sw register failed', error);
+		},
+	});
 </script>
 
 {#if $needRefresh}
-  <div role="dialog" aria-labelledby="pwa-update-title" aria-modal="true">
-    <h2 id="pwa-update-title">Update available</h2>
-    <p>A new version is ready. Reload to apply.</p>
-    <button onclick={() => updateServiceWorker(true)}>Reload</button>
-    <button onclick={() => needRefresh.set(false)}>Later</button>
-  </div>
+	<div role="dialog" aria-labelledby="pwa-update-title" aria-modal="true">
+		<h2 id="pwa-update-title">Update available</h2>
+		<p>A new version is ready. Reload to apply.</p>
+		<button onclick={() => updateServiceWorker(true)}>Reload</button>
+		<button onclick={() => needRefresh.set(false)}>Later</button>
+	</div>
 {:else if $offlineReady}
-  <span role="status">Ready to work offline</span>
+	<span role="status">Ready to work offline</span>
 {/if}
 ```
 
@@ -217,13 +220,16 @@ sessions add a periodic check:
 
 ```ts
 useRegisterSW({
-  onRegisteredSW(swUrl, sw) {
-    if (sw) {
-      setInterval(async () => {
-        await sw.update();                     // check for new SW
-      }, 60 * 60 * 1000);                      // hourly
-    }
-  },
+	onRegisteredSW(swUrl, sw) {
+		if (sw) {
+			setInterval(
+				async () => {
+					await sw.update(); // check for new SW
+				},
+				60 * 60 * 1000,
+			); // hourly
+		}
+	},
 });
 ```
 
@@ -232,27 +238,27 @@ useRegisterSW({
 ```svelte
 <!-- src/routes/offline/+page.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  let online = $state(true);
-  $effect(() => {
-    online = navigator.onLine;
-    const onOnline = () => online = true;
-    const onOffline = () => online = false;
-    addEventListener('online', onOnline);
-    addEventListener('offline', onOffline);
-    return () => {
-      removeEventListener('online', onOnline);
-      removeEventListener('offline', onOffline);
-    };
-  });
+	import { onMount } from 'svelte';
+	let online = $state(true);
+	$effect(() => {
+		online = navigator.onLine;
+		const onOnline = () => (online = true);
+		const onOffline = () => (online = false);
+		addEventListener('online', onOnline);
+		addEventListener('offline', onOffline);
+		return () => {
+			removeEventListener('online', onOnline);
+			removeEventListener('offline', onOffline);
+		};
+	});
 </script>
 
 <main role="main">
-  <h1>You're offline</h1>
-  <p>Recent pages are still readable. Try again when you're back online.</p>
-  {#if online}
-    <button onclick={() => location.reload()}>Reload</button>
-  {/if}
+	<h1>You're offline</h1>
+	<p>Recent pages are still readable. Try again when you're back online.</p>
+	{#if online}
+		<button onclick={() => location.reload()}>Reload</button>
+	{/if}
 </main>
 ```
 
@@ -267,9 +273,9 @@ edges. Per [safe-area.md](safe-area.md):
 
 ```html
 <!-- app.html -->
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 ```
 
 `viewport-fit=cover` enables `env(safe-area-inset-*)`. The two
@@ -343,24 +349,28 @@ OTel SDK doesn't see it. Bridge via `postMessage`:
 ```ts
 // in SW
 self.addEventListener('fetch', (e) => {
-  const t0 = performance.now();
-  e.respondWith((async () => {
-    const res = await caches.match(e.request) ?? await fetch(e.request);
-    self.clients.matchAll().then((clients) => {
-      clients.forEach((c) => c.postMessage({
-        type: 'sw.fetch',
-        url: e.request.url,
-        durationMs: performance.now() - t0,
-        cached: !!await caches.match(e.request),
-      }));
-    });
-    return res;
-  })());
+	const t0 = performance.now();
+	e.respondWith(
+		(async () => {
+			const res = (await caches.match(e.request)) ?? (await fetch(e.request));
+			self.clients.matchAll().then((clients) => {
+				clients.forEach((c) =>
+					c.postMessage({
+						type: 'sw.fetch',
+						url: e.request.url,
+						durationMs: performance.now() - t0,
+						cached: !!(await caches.match(e.request)),
+					}),
+				);
+			});
+			return res;
+		})(),
+	);
 });
 
 // in main thread
 navigator.serviceWorker?.addEventListener('message', (e) => {
-  if (e.data?.type === 'sw.fetch') track('sw.fetch', e.data);
+	if (e.data?.type === 'sw.fetch') track('sw.fetch', e.data);
 });
 ```
 
@@ -379,11 +389,11 @@ available in jsdom. Two practical paths:
 
 ```ts
 test('offline fallback works', async ({ page, context }) => {
-  await page.goto('/');                        // SW installs
-  await context.setOffline(true);
-  await page.goto('/some/uncached/route');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText("You're offline");
-  await context.setOffline(false);
+	await page.goto('/'); // SW installs
+	await context.setOffline(true);
+	await page.goto('/some/uncached/route');
+	await expect(page.getByRole('heading', { level: 1 })).toContainText("You're offline");
+	await context.setOffline(false);
 });
 ```
 

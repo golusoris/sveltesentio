@@ -64,32 +64,32 @@ import { db } from '$lib/server/db';
 
 // Stable 64-bit lock key per job name (hashed once at definition time).
 const LOCK_KEYS = {
-  'billing.nightly': 0x1a2b3c4d_5e6f7081n,
-  'reports.weekly': 0x2b3c4d5e_6f708192n,
-  'cleanup.daily': 0x3c4d5e6f_70819203n,
+	'billing.nightly': 0x1a2b3c4d_5e6f7081n,
+	'reports.weekly': 0x2b3c4d5e_6f708192n,
+	'cleanup.daily': 0x3c4d5e6f_70819203n,
 } as const;
 
 export async function withDistributedLock<T>(
-  jobName: keyof typeof LOCK_KEYS,
-  fn: () => Promise<T>,
+	jobName: keyof typeof LOCK_KEYS,
+	fn: () => Promise<T>,
 ): Promise<T | null> {
-  const key = LOCK_KEYS[jobName];
+	const key = LOCK_KEYS[jobName];
 
-  return db.transaction(async (tx) => {
-    // pg_try_advisory_xact_lock: non-blocking; returns false if held elsewhere.
-    // Released automatically at transaction commit/rollback.
-    const { rows } = await tx.query<{ acquired: boolean }>(
-      `SELECT pg_try_advisory_xact_lock($1::bigint) AS acquired`,
-      [key],
-    );
+	return db.transaction(async (tx) => {
+		// pg_try_advisory_xact_lock: non-blocking; returns false if held elsewhere.
+		// Released automatically at transaction commit/rollback.
+		const { rows } = await tx.query<{ acquired: boolean }>(
+			`SELECT pg_try_advisory_xact_lock($1::bigint) AS acquired`,
+			[key],
+		);
 
-    if (!rows[0].acquired) {
-      // Another region/instance holds the lock — silently no-op.
-      return null;
-    }
+		if (!rows[0].acquired) {
+			// Another region/instance holds the lock — silently no-op.
+			return null;
+		}
 
-    return await fn();
-  });
+		return await fn();
+	});
 }
 ```
 
@@ -101,13 +101,13 @@ import { withDistributedLock } from '@sveltesentio/jobs/distributed-cron';
 import { runNightlyBilling } from '@sveltesentio/billing';
 
 export const POST = async ({ request }) => {
-  if (!verifyCronSignature(request)) throw error(401);
+	if (!verifyCronSignature(request)) throw error(401);
 
-  const result = await withDistributedLock('billing.nightly', async () => {
-    return await runNightlyBilling();
-  });
+	const result = await withDistributedLock('billing.nightly', async () => {
+		return await runNightlyBilling();
+	});
 
-  return new Response(result === null ? 'skipped (lock held)' : 'ok');
+	return new Response(result === null ? 'skipped (lock held)' : 'ok');
 };
 ```
 
@@ -133,53 +133,54 @@ import { db } from '$lib/server/db';
 const flow = new FlowProducer({ connection: redisConfig });
 
 export async function startReportGeneration(reportId: string) {
-  const userIds = await db.queryColumn<string>(
-    `SELECT id FROM users WHERE active = TRUE`,
-  );
+	const userIds = await db.queryColumn<string>(`SELECT id FROM users WHERE active = TRUE`);
 
-  // Each leaf job processes one user; the parent job (aggregate)
-  // runs only after ALL children complete.
-  await flow.add({
-    name: 'aggregate-report',
-    queueName: 'reports',
-    data: { reportId, totalChildren: userIds.length },
-    children: userIds.map((userId) => ({
-      name: 'process-user',
-      queueName: 'reports',
-      data: { reportId, userId },
-      opts: {
-        jobId: `report:${reportId}:user:${userId}`, // idempotent
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-      },
-    })),
-  });
+	// Each leaf job processes one user; the parent job (aggregate)
+	// runs only after ALL children complete.
+	await flow.add({
+		name: 'aggregate-report',
+		queueName: 'reports',
+		data: { reportId, totalChildren: userIds.length },
+		children: userIds.map((userId) => ({
+			name: 'process-user',
+			queueName: 'reports',
+			data: { reportId, userId },
+			opts: {
+				jobId: `report:${reportId}:user:${userId}`, // idempotent
+				attempts: 3,
+				backoff: { type: 'exponential', delay: 5000 },
+			},
+		})),
+	});
 }
 
 // Leaf worker: each child writes its partial result to a shared table
-new Worker('reports', async (job) => {
-  if (job.name === 'process-user') {
-    const { reportId, userId } = job.data;
-    const partial = await computeUserPartial(userId);
-    await db.query(
-      `INSERT INTO report_partials (report_id, user_id, data) VALUES ($1, $2, $3)
+new Worker(
+	'reports',
+	async (job) => {
+		if (job.name === 'process-user') {
+			const { reportId, userId } = job.data;
+			const partial = await computeUserPartial(userId);
+			await db.query(
+				`INSERT INTO report_partials (report_id, user_id, data) VALUES ($1, $2, $3)
        ON CONFLICT (report_id, user_id) DO UPDATE SET data = EXCLUDED.data`,
-      [reportId, userId, JSON.stringify(partial)],
-    );
-  } else if (job.name === 'aggregate-report') {
-    // Parent runs only after all children succeed.
-    const { reportId } = job.data;
-    const partials = await db.query(
-      `SELECT data FROM report_partials WHERE report_id = $1`,
-      [reportId],
-    );
-    const aggregate = combinePartials(partials.rows.map((r) => r.data));
-    await db.query(
-      `UPDATE reports SET status = 'completed', data = $1 WHERE id = $2`,
-      [JSON.stringify(aggregate), reportId],
-    );
-  }
-}, { connection: redisConfig, concurrency: 50 });
+				[reportId, userId, JSON.stringify(partial)],
+			);
+		} else if (job.name === 'aggregate-report') {
+			// Parent runs only after all children succeed.
+			const { reportId } = job.data;
+			const partials = await db.query(`SELECT data FROM report_partials WHERE report_id = $1`, [
+				reportId,
+			]);
+			const aggregate = combinePartials(partials.rows.map((r) => r.data));
+			await db.query(`UPDATE reports SET status = 'completed', data = $1 WHERE id = $2`, [
+				JSON.stringify(aggregate),
+				reportId,
+			]);
+		}
+	},
+	{ connection: redisConfig, concurrency: 50 },
+);
 ```
 
 The parent **does not start** until every child either succeeds or
@@ -200,31 +201,29 @@ guarantee resumption across deploys:
 import { inngest } from '$lib/server/inngest';
 
 export const onboardingFollowup = inngest.createFunction(
-  { id: 'onboarding-followup', name: 'Onboarding 7-day follow-up' },
-  { event: 'user.signed_up' },
-  async ({ event, step }) => {
-    // Sleep is durable: process can restart, deploy, scale; resumes on time.
-    await step.sleep('wait-7-days', '7d');
+	{ id: 'onboarding-followup', name: 'Onboarding 7-day follow-up' },
+	{ event: 'user.signed_up' },
+	async ({ event, step }) => {
+		// Sleep is durable: process can restart, deploy, scale; resumes on time.
+		await step.sleep('wait-7-days', '7d');
 
-    const user = await step.run('reload-user', async () =>
-      userRepo.findById(event.data.userId),
-    );
+		const user = await step.run('reload-user', async () => userRepo.findById(event.data.userId));
 
-    if (user.onboardingCompletedAt) {
-      // Onboarded already — skip.
-      return { skipped: true };
-    }
+		if (user.onboardingCompletedAt) {
+			// Onboarded already — skip.
+			return { skipped: true };
+		}
 
-    await step.run('send-reminder-email', async () =>
-      sendEmail({
-        to: user.email,
-        template: 'onboarding-reminder',
-        data: { name: user.name },
-      }),
-    );
+		await step.run('send-reminder-email', async () =>
+			sendEmail({
+				to: user.email,
+				template: 'onboarding-reminder',
+				data: { name: user.name },
+			}),
+		);
 
-    return { sent: true };
-  },
+		return { sent: true };
+	},
 );
 ```
 
@@ -241,35 +240,29 @@ execute → notify customer."
 ```ts
 // packages/jobs/src/refund-flow.ts (Inngest example)
 export const refundFlow = inngest.createFunction(
-  { id: 'refund-approval', name: 'Refund with approval gate' },
-  { event: 'refund.requested' },
-  async ({ event, step }) => {
-    const validated = await step.run('validate', async () =>
-      validateRefund(event.data),
-    );
-    if (!validated.eligible) return { rejected: validated.reason };
+	{ id: 'refund-approval', name: 'Refund with approval gate' },
+	{ event: 'refund.requested' },
+	async ({ event, step }) => {
+		const validated = await step.run('validate', async () => validateRefund(event.data));
+		if (!validated.eligible) return { rejected: validated.reason };
 
-    // Wait for an external "approval" event with matching refundId.
-    // Times out after 7 days → auto-rejected.
-    const approval = await step.waitForEvent('approval', {
-      event: 'refund.approved',
-      timeout: '7d',
-      match: 'data.refundId',
-    });
+		// Wait for an external "approval" event with matching refundId.
+		// Times out after 7 days → auto-rejected.
+		const approval = await step.waitForEvent('approval', {
+			event: 'refund.approved',
+			timeout: '7d',
+			match: 'data.refundId',
+		});
 
-    if (!approval) {
-      await step.run('mark-expired', async () =>
-        markRefundExpired(event.data.refundId),
-      );
-      return { expired: true };
-    }
+		if (!approval) {
+			await step.run('mark-expired', async () => markRefundExpired(event.data.refundId));
+			return { expired: true };
+		}
 
-    await step.run('execute', async () => executeRefund(event.data.refundId));
-    await step.run('notify', async () =>
-      notifyCustomer(event.data.userId, 'refund.completed'),
-    );
-    return { completed: true };
-  },
+		await step.run('execute', async () => executeRefund(event.data.refundId));
+		await step.run('notify', async () => notifyCustomer(event.data.userId, 'refund.completed'));
+		return { completed: true };
+	},
 );
 ```
 
@@ -285,15 +278,22 @@ Sketched here for completeness:
 ```ts
 const steps: { undo: () => Promise<void> }[] = [];
 try {
-  const a = await stepA(); steps.push({ undo: () => undoA(a) });
-  const b = await stepB(a); steps.push({ undo: () => undoB(b) });
-  const c = await stepC(b); steps.push({ undo: () => undoC(c) });
+	const a = await stepA();
+	steps.push({ undo: () => undoA(a) });
+	const b = await stepB(a);
+	steps.push({ undo: () => undoB(b) });
+	const c = await stepC(b);
+	steps.push({ undo: () => undoC(c) });
 } catch (err) {
-  // Best-effort, idempotent, reverse-order undo.
-  for (const s of steps.reverse()) {
-    try { await s.undo(); } catch (e) { /* log + continue */ }
-  }
-  throw err;
+	// Best-effort, idempotent, reverse-order undo.
+	for (const s of steps.reverse()) {
+		try {
+			await s.undo();
+		} catch (e) {
+			/* log + continue */
+		}
+	}
+	throw err;
 }
 ```
 
@@ -307,30 +307,30 @@ worked example with Stripe + DB + storage + search-index undo.
 import { z } from 'zod';
 
 export const JobName = z.enum([
-  'billing.nightly',
-  'reports.weekly',
-  'cleanup.daily',
-  'onboarding.followup',
-  'refund.flow',
-  'tenant.provision',
+	'billing.nightly',
+	'reports.weekly',
+	'cleanup.daily',
+	'onboarding.followup',
+	'refund.flow',
+	'tenant.provision',
 ]);
 export type JobName = z.infer<typeof JobName>;
 
 export const WorkflowStatus = z.enum([
-  'pending',
-  'running',
-  'waiting_signal',
-  'completed',
-  'failed',
-  'cancelled',
+	'pending',
+	'running',
+	'waiting_signal',
+	'completed',
+	'failed',
+	'cancelled',
 ]);
 export type WorkflowStatus = z.infer<typeof WorkflowStatus>;
 
 export const RetryPolicy = z.object({
-  maxAttempts: z.number().int().min(1).max(20).default(3),
-  initialDelayMs: z.number().int().min(100).max(60_000).default(5000),
-  backoff: z.enum(['exponential', 'fixed', 'linear']).default('exponential'),
-  maxDelayMs: z.number().int().min(1000).max(3600_000).default(300_000),
+	maxAttempts: z.number().int().min(1).max(20).default(3),
+	initialDelayMs: z.number().int().min(100).max(60_000).default(5000),
+	backoff: z.enum(['exponential', 'fixed', 'linear']).default('exponential'),
+	maxDelayMs: z.number().int().min(1000).max(3600_000).default(300_000),
 });
 export type RetryPolicy = z.infer<typeof RetryPolicy>;
 ```
@@ -375,7 +375,7 @@ is a significant operational burden.
    fragile, expensive, easy to skip rows. Use durable timers.
 8. **Fan-out without idempotent leaves** — child retry runs work
    twice; partial table double-counts. `jobId` per child + `ON
-   CONFLICT DO NOTHING/UPDATE`.
+CONFLICT DO NOTHING/UPDATE`.
 9. **Fan-in without all-children-success guarantee** — aggregate
    runs on partial data. BullMQ Flow waits; Inngest `step.run` in a
    loop with `step.waitForEvent` doesn't.

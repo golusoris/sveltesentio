@@ -82,64 +82,64 @@ Reporting:
 import { z } from 'zod';
 
 export const PayoutStatus = z.enum([
-  'pending',       // accumulating balance
-  'scheduled',     // scheduled for next payout cycle
-  'in_transit',    // bank is processing
-  'paid',          // landed
-  'failed',        // bank rejected; retry or flag for review
-  'held',          // manual hold (fraud review, moderation action)
-  'reversed',      // buyer refund pulled the money back
+	'pending', // accumulating balance
+	'scheduled', // scheduled for next payout cycle
+	'in_transit', // bank is processing
+	'paid', // landed
+	'failed', // bank rejected; retry or flag for review
+	'held', // manual hold (fraud review, moderation action)
+	'reversed', // buyer refund pulled the money back
 ]);
 export type PayoutStatus = z.infer<typeof PayoutStatus>;
 
 export const RevenueShare = z.object({
-  // For (appId, effectiveFrom) — append-only; rates change over time.
-  appId: z.string().uuid(),
-  developerAccountId: z.string().uuid(),
-  platformPercent: z.number().min(0).max(100),        // e.g. 30 for "platform takes 30%"
-  minimumCentsPerSale: z.number().int().min(0),       // Stripe + processor fee floor
-  effectiveFrom: z.string().datetime({ offset: true }),
-  effectiveUntil: z.string().datetime({ offset: true }).nullable(),
+	// For (appId, effectiveFrom) — append-only; rates change over time.
+	appId: z.string().uuid(),
+	developerAccountId: z.string().uuid(),
+	platformPercent: z.number().min(0).max(100), // e.g. 30 for "platform takes 30%"
+	minimumCentsPerSale: z.number().int().min(0), // Stripe + processor fee floor
+	effectiveFrom: z.string().datetime({ offset: true }),
+	effectiveUntil: z.string().datetime({ offset: true }).nullable(),
 });
 export type RevenueShare = z.infer<typeof RevenueShare>;
 
 export const Sale = z.object({
-  id: z.string().uuid(),                               // UUIDv7
-  appId: z.string().uuid(),
-  installationId: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  buyerCustomerId: z.string().min(1),                  // Stripe customer id
-  paymentIntentId: z.string().min(1),
-  grossMinor: z.number().int().min(0),
-  platformCutMinor: z.number().int().min(0),
-  developerNetMinor: z.number().int().min(0),
-  currency: z.string().regex(/^[a-z]{3}$/),
-  shareRateId: z.string().uuid(),                      // link to RevenueShare row used
-  occurredAt: z.string().datetime({ offset: true }),
-  refundedMinor: z.number().int().min(0).default(0),
-  chargebackMinor: z.number().int().min(0).default(0),
+	id: z.string().uuid(), // UUIDv7
+	appId: z.string().uuid(),
+	installationId: z.string().uuid(),
+	tenantId: z.string().uuid(),
+	buyerCustomerId: z.string().min(1), // Stripe customer id
+	paymentIntentId: z.string().min(1),
+	grossMinor: z.number().int().min(0),
+	platformCutMinor: z.number().int().min(0),
+	developerNetMinor: z.number().int().min(0),
+	currency: z.string().regex(/^[a-z]{3}$/),
+	shareRateId: z.string().uuid(), // link to RevenueShare row used
+	occurredAt: z.string().datetime({ offset: true }),
+	refundedMinor: z.number().int().min(0).default(0),
+	chargebackMinor: z.number().int().min(0).default(0),
 });
 export type Sale = z.infer<typeof Sale>;
 
 export const Payout = z.object({
-  id: z.string().uuid(),
-  developerAccountId: z.string().uuid(),
-  stripeTransferId: z.string().nullable(),             // stripe `tr_...`
-  stripePayoutId: z.string().nullable(),               // stripe `po_...`
-  periodStart: z.string().datetime({ offset: true }),
-  periodEnd: z.string().datetime({ offset: true }),
-  grossMinor: z.number().int().min(0),
-  refundsMinor: z.number().int().min(0),
-  chargebacksMinor: z.number().int().min(0),
-  holdsMinor: z.number().int().min(0),
-  taxWithholdingMinor: z.number().int().min(0),
-  netPaidMinor: z.number().int().min(0),
-  currency: z.string().regex(/^[a-z]{3}$/),
-  status: PayoutStatus,
-  saleIds: z.array(z.string().uuid()).min(1).max(10_000),
-  createdAt: z.string().datetime({ offset: true }),
-  paidAt: z.string().datetime({ offset: true }).nullable(),
-  failureReason: z.string().max(500).nullable(),
+	id: z.string().uuid(),
+	developerAccountId: z.string().uuid(),
+	stripeTransferId: z.string().nullable(), // stripe `tr_...`
+	stripePayoutId: z.string().nullable(), // stripe `po_...`
+	periodStart: z.string().datetime({ offset: true }),
+	periodEnd: z.string().datetime({ offset: true }),
+	grossMinor: z.number().int().min(0),
+	refundsMinor: z.number().int().min(0),
+	chargebacksMinor: z.number().int().min(0),
+	holdsMinor: z.number().int().min(0),
+	taxWithholdingMinor: z.number().int().min(0),
+	netPaidMinor: z.number().int().min(0),
+	currency: z.string().regex(/^[a-z]{3}$/),
+	status: PayoutStatus,
+	saleIds: z.array(z.string().uuid()).min(1).max(10_000),
+	createdAt: z.string().datetime({ offset: true }),
+	paidAt: z.string().datetime({ offset: true }).nullable(),
+	failureReason: z.string().max(500).nullable(),
 });
 export type Payout = z.infer<typeof Payout>;
 ```
@@ -154,32 +154,32 @@ import Stripe from 'stripe';
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' });
 
 export async function startConnectOnboarding(developerAccountId: string, returnUrl: string) {
-  const developer = await loadDeveloper(developerAccountId);
+	const developer = await loadDeveloper(developerAccountId);
 
-  // Create Connect account if not exists.
-  let acct = developer.stripeConnectAccountId
-    ? await stripe.accounts.retrieve(developer.stripeConnectAccountId)
-    : await stripe.accounts.create({
-        type: 'custom',
-        country: developer.country,
-        email: developer.email,
-        capabilities: { transfers: { requested: true } },
-        business_type: developer.isIndividual ? 'individual' : 'company',
-        metadata: { developerAccountId },
-      });
+	// Create Connect account if not exists.
+	let acct = developer.stripeConnectAccountId
+		? await stripe.accounts.retrieve(developer.stripeConnectAccountId)
+		: await stripe.accounts.create({
+				type: 'custom',
+				country: developer.country,
+				email: developer.email,
+				capabilities: { transfers: { requested: true } },
+				business_type: developer.isIndividual ? 'individual' : 'company',
+				metadata: { developerAccountId },
+			});
 
-  if (!developer.stripeConnectAccountId) {
-    await updateDeveloperStripeAccount(developerAccountId, acct.id);
-  }
+	if (!developer.stripeConnectAccountId) {
+		await updateDeveloperStripeAccount(developerAccountId, acct.id);
+	}
 
-  // Create an Account Link for the developer to complete KYC.
-  const link = await stripe.accountLinks.create({
-    account: acct.id,
-    refresh_url: returnUrl,
-    return_url: returnUrl,
-    type: 'account_onboarding',
-  });
-  return link.url;
+	// Create an Account Link for the developer to complete KYC.
+	const link = await stripe.accountLinks.create({
+		account: acct.id,
+		refresh_url: returnUrl,
+		return_url: returnUrl,
+		type: 'account_onboarding',
+	});
+	return link.url;
 }
 ```
 
@@ -193,53 +193,64 @@ documents — Stripe's hosted onboarding collects them.
 ```ts
 // packages/marketplace/src/payouts/charge.ts
 export async function createMarketplaceCharge(input: {
-  appId: string;
-  installationId: string;
-  tenantId: string;
-  buyerCustomerId: string;
-  grossMinor: number;
-  currency: string;
-  description: string;
+	appId: string;
+	installationId: string;
+	tenantId: string;
+	buyerCustomerId: string;
+	grossMinor: number;
+	currency: string;
+	description: string;
 }): Promise<Sale> {
-  const app = await loadApp(input.appId);
-  const share = await currentRevenueShare(input.appId);
-  const dev = await loadDeveloper(share.developerAccountId);
-  if (!dev.stripeConnectAccountId) throw new Error('developer_not_onboarded');
-  if (app.status !== 'listed') throw new Error('app_not_listed');
+	const app = await loadApp(input.appId);
+	const share = await currentRevenueShare(input.appId);
+	const dev = await loadDeveloper(share.developerAccountId);
+	if (!dev.stripeConnectAccountId) throw new Error('developer_not_onboarded');
+	if (app.status !== 'listed') throw new Error('app_not_listed');
 
-  const platformCut = Math.floor((input.grossMinor * share.platformPercent) / 100)
-    + share.minimumCentsPerSale;
-  const developerNet = input.grossMinor - platformCut;
-  if (developerNet < 0) throw new Error('negative_developer_net');
+	const platformCut =
+		Math.floor((input.grossMinor * share.platformPercent) / 100) + share.minimumCentsPerSale;
+	const developerNet = input.grossMinor - platformCut;
+	if (developerNet < 0) throw new Error('negative_developer_net');
 
-  const pi = await stripe.paymentIntents.create({
-    amount: input.grossMinor,
-    currency: input.currency,
-    customer: input.buyerCustomerId,
-    application_fee_amount: platformCut,
-    transfer_data: { destination: dev.stripeConnectAccountId },
-    metadata: { appId: input.appId, installationId: input.installationId, tenantId: input.tenantId },
-    description: input.description,
-  }, { idempotencyKey: `sale:${input.installationId}:${input.description}` });
+	const pi = await stripe.paymentIntents.create(
+		{
+			amount: input.grossMinor,
+			currency: input.currency,
+			customer: input.buyerCustomerId,
+			application_fee_amount: platformCut,
+			transfer_data: { destination: dev.stripeConnectAccountId },
+			metadata: {
+				appId: input.appId,
+				installationId: input.installationId,
+				tenantId: input.tenantId,
+			},
+			description: input.description,
+		},
+		{ idempotencyKey: `sale:${input.installationId}:${input.description}` },
+	);
 
-  const sale = await insertSale({
-    id: crypto.randomUUID(),
-    appId: input.appId,
-    installationId: input.installationId,
-    tenantId: input.tenantId,
-    buyerCustomerId: input.buyerCustomerId,
-    paymentIntentId: pi.id,
-    grossMinor: input.grossMinor,
-    platformCutMinor: platformCut,
-    developerNetMinor: developerNet,
-    currency: input.currency.toLowerCase(),
-    shareRateId: share.id,
-    occurredAt: new Date().toISOString(),
-    refundedMinor: 0,
-    chargebackMinor: 0,
-  });
-  await writeAuditEvent({ kind: 'marketplace.sale.recorded', subjectId: share.developerAccountId, payload: { saleId: sale.id, grossMinor: input.grossMinor, platformCutMinor: platformCut } });
-  return sale;
+	const sale = await insertSale({
+		id: crypto.randomUUID(),
+		appId: input.appId,
+		installationId: input.installationId,
+		tenantId: input.tenantId,
+		buyerCustomerId: input.buyerCustomerId,
+		paymentIntentId: pi.id,
+		grossMinor: input.grossMinor,
+		platformCutMinor: platformCut,
+		developerNetMinor: developerNet,
+		currency: input.currency.toLowerCase(),
+		shareRateId: share.id,
+		occurredAt: new Date().toISOString(),
+		refundedMinor: 0,
+		chargebackMinor: 0,
+	});
+	await writeAuditEvent({
+		kind: 'marketplace.sale.recorded',
+		subjectId: share.developerAccountId,
+		payload: { saleId: sale.id, grossMinor: input.grossMinor, platformCutMinor: platformCut },
+	});
+	return sale;
 }
 ```
 
@@ -253,30 +264,30 @@ reverse proportionally).
 ```ts
 // Webhook: charge.refunded
 export async function onChargeRefunded(event: Stripe.Event) {
-  const charge = event.data.object as Stripe.Charge;
-  const sale = await loadSaleByPaymentIntent(charge.payment_intent as string);
-  if (!sale) return;
+	const charge = event.data.object as Stripe.Charge;
+	const sale = await loadSaleByPaymentIntent(charge.payment_intent as string);
+	if (!sale) return;
 
-  const refundedMinor = charge.amount_refunded;
-  await updateSaleRefund(sale.id, refundedMinor);
+	const refundedMinor = charge.amount_refunded;
+	await updateSaleRefund(sale.id, refundedMinor);
 
-  // If a payout already included this sale, we need to handle clawback.
-  const priorPayout = await findPayoutContainingSale(sale.id);
-  if (priorPayout && priorPayout.status === 'paid') {
-    // Clawback: reduce next payout by the proportional amount.
-    await scheduleClawback({
-      developerAccountId: priorPayout.developerAccountId,
-      saleId: sale.id,
-      amountMinor: Math.floor((refundedMinor * sale.developerNetMinor) / sale.grossMinor),
-      reason: 'refund',
-    });
-  }
+	// If a payout already included this sale, we need to handle clawback.
+	const priorPayout = await findPayoutContainingSale(sale.id);
+	if (priorPayout && priorPayout.status === 'paid') {
+		// Clawback: reduce next payout by the proportional amount.
+		await scheduleClawback({
+			developerAccountId: priorPayout.developerAccountId,
+			saleId: sale.id,
+			amountMinor: Math.floor((refundedMinor * sale.developerNetMinor) / sale.grossMinor),
+			reason: 'refund',
+		});
+	}
 
-  await writeAuditEvent({
-    kind: 'marketplace.refund',
-    subjectId: sale.id,
-    payload: { refundedMinor, priorPayoutId: priorPayout?.id ?? null },
-  });
+	await writeAuditEvent({
+		kind: 'marketplace.refund',
+		subjectId: sale.id,
+		payload: { refundedMinor, priorPayoutId: priorPayout?.id ?? null },
+	});
 }
 ```
 
@@ -289,23 +300,23 @@ invoice the developer if balance goes negative.
 // packages/marketplace/src/payouts/cycle.ts
 // Runs daily via cron-jobs.md; per developer account.
 export async function runPayoutCycle(developerAccountId: string) {
-  const dev = await loadDeveloper(developerAccountId);
-  if (!dev.stripeConnectAccountId) return;
-  if (dev.payoutsHeld) return;                   // admin hold
+	const dev = await loadDeveloper(developerAccountId);
+	if (!dev.stripeConnectAccountId) return;
+	if (dev.payoutsHeld) return; // admin hold
 
-  const acct = await stripe.accounts.retrieve(dev.stripeConnectAccountId);
-  if (!acct.payouts_enabled) return;              // KYC incomplete
+	const acct = await stripe.accounts.retrieve(dev.stripeConnectAccountId);
+	if (!acct.payouts_enabled) return; // KYC incomplete
 
-  // Since Stripe handles the actual payout to developer bank,
-  // we mostly RECORD the payout event and correlate with `payout.paid` webhook.
-  // Our job is to: (a) apply any clawbacks, (b) apply tax withholding,
-  // (c) emit taxable-income events for reporting.
-  const clawbacks = await pendingClawbacks(developerAccountId);
-  for (const cb of clawbacks) {
-    await applyClawback(cb);
-  }
+	// Since Stripe handles the actual payout to developer bank,
+	// we mostly RECORD the payout event and correlate with `payout.paid` webhook.
+	// Our job is to: (a) apply any clawbacks, (b) apply tax withholding,
+	// (c) emit taxable-income events for reporting.
+	const clawbacks = await pendingClawbacks(developerAccountId);
+	for (const cb of clawbacks) {
+		await applyClawback(cb);
+	}
 
-  // Everything else happens through webhook correlation — see next section.
+	// Everything else happens through webhook correlation — see next section.
 }
 ```
 
@@ -314,55 +325,55 @@ export async function runPayoutCycle(developerAccountId: string) {
 ```ts
 // Webhook: payout.paid (fires for Stripe's payout to developer's bank)
 export async function onPayoutPaid(event: Stripe.Event) {
-  const po = event.data.object as Stripe.Payout;
-  const acctId = event.account;              // connected account id
-  const dev = await loadDeveloperByStripeAccount(acctId);
-  if (!dev) return;
+	const po = event.data.object as Stripe.Payout;
+	const acctId = event.account; // connected account id
+	const dev = await loadDeveloperByStripeAccount(acctId);
+	if (!dev) return;
 
-  // List sales included (by period).
-  const sales = await salesInPayoutPeriod(dev.id, po.arrival_date);
-  const net = sales.reduce((s, x) => s + x.developerNetMinor - x.refundedMinor, 0);
+	// List sales included (by period).
+	const sales = await salesInPayoutPeriod(dev.id, po.arrival_date);
+	const net = sales.reduce((s, x) => s + x.developerNetMinor - x.refundedMinor, 0);
 
-  const payout = await insertPayout({
-    id: crypto.randomUUID(),
-    developerAccountId: dev.id,
-    stripeTransferId: null,
-    stripePayoutId: po.id,
-    periodStart: new Date(po.arrival_date * 1000 - 7 * 86400_000).toISOString(),
-    periodEnd: new Date(po.arrival_date * 1000).toISOString(),
-    grossMinor: sales.reduce((s, x) => s + x.grossMinor, 0),
-    refundsMinor: sales.reduce((s, x) => s + x.refundedMinor, 0),
-    chargebacksMinor: sales.reduce((s, x) => s + x.chargebackMinor, 0),
-    holdsMinor: 0,
-    taxWithholdingMinor: 0,
-    netPaidMinor: po.amount,
-    currency: po.currency,
-    status: 'paid',
-    saleIds: sales.map((s) => s.id),
-    createdAt: new Date().toISOString(),
-    paidAt: new Date(po.arrival_date * 1000).toISOString(),
-    failureReason: null,
-  });
+	const payout = await insertPayout({
+		id: crypto.randomUUID(),
+		developerAccountId: dev.id,
+		stripeTransferId: null,
+		stripePayoutId: po.id,
+		periodStart: new Date(po.arrival_date * 1000 - 7 * 86400_000).toISOString(),
+		periodEnd: new Date(po.arrival_date * 1000).toISOString(),
+		grossMinor: sales.reduce((s, x) => s + x.grossMinor, 0),
+		refundsMinor: sales.reduce((s, x) => s + x.refundedMinor, 0),
+		chargebacksMinor: sales.reduce((s, x) => s + x.chargebackMinor, 0),
+		holdsMinor: 0,
+		taxWithholdingMinor: 0,
+		netPaidMinor: po.amount,
+		currency: po.currency,
+		status: 'paid',
+		saleIds: sales.map((s) => s.id),
+		createdAt: new Date().toISOString(),
+		paidAt: new Date(po.arrival_date * 1000).toISOString(),
+		failureReason: null,
+	});
 
-  // Emit taxable-income event for DAC7 / 1099-K aggregation.
-  await emitTaxableIncomeEvent({
-    accountId: dev.id,
-    amountMinor: po.amount,
-    currency: po.currency,
-    category: 'marketplace_payout',
-    occurredAt: new Date(po.arrival_date * 1000).toISOString(),
-  });
+	// Emit taxable-income event for DAC7 / 1099-K aggregation.
+	await emitTaxableIncomeEvent({
+		accountId: dev.id,
+		amountMinor: po.amount,
+		currency: po.currency,
+		category: 'marketplace_payout',
+		occurredAt: new Date(po.arrival_date * 1000).toISOString(),
+	});
 
-  // Developer-facing webhook.
-  await dispatchOutboundWebhook(dev.id, 'payout.paid', {
-    payoutId: payout.id,
-    amountMinor: po.amount,
-    currency: po.currency,
-    periodStart: payout.periodStart,
-    periodEnd: payout.periodEnd,
-  });
+	// Developer-facing webhook.
+	await dispatchOutboundWebhook(dev.id, 'payout.paid', {
+		payoutId: payout.id,
+		amountMinor: po.amount,
+		currency: po.currency,
+		periodStart: payout.periodStart,
+		periodEnd: payout.periodEnd,
+	});
 
-  await writeAuditEvent({ kind: 'marketplace.payout.paid', subjectId: dev.id, payload: payout });
+	await writeAuditEvent({ kind: 'marketplace.payout.paid', subjectId: dev.id, payload: payout });
 }
 ```
 
@@ -370,78 +381,92 @@ export async function onPayoutPaid(event: Stripe.Event) {
 
 ```ts
 // packages/marketplace/src/payouts/hold.ts
-export async function holdDeveloperPayouts(developerAccountId: string, reason: 'fraud_review' | 'moderation_action' | 'tax_cert_missing', operatorId: string, note: string) {
-  await db.update(developer).set({ payoutsHeld: true, payoutsHoldReason: reason })
-    .where(eq(developer.id, developerAccountId));
+export async function holdDeveloperPayouts(
+	developerAccountId: string,
+	reason: 'fraud_review' | 'moderation_action' | 'tax_cert_missing',
+	operatorId: string,
+	note: string,
+) {
+	await db
+		.update(developer)
+		.set({ payoutsHeld: true, payoutsHoldReason: reason })
+		.where(eq(developer.id, developerAccountId));
 
-  // Flip Stripe Connect account to manual payouts.
-  const dev = await loadDeveloper(developerAccountId);
-  if (dev.stripeConnectAccountId) {
-    await stripe.accounts.update(dev.stripeConnectAccountId, {
-      settings: { payouts: { schedule: { interval: 'manual' } } },
-    });
-  }
-  await writeAuditEvent({
-    kind: 'marketplace.payout.held',
-    subjectId: operatorId,
-    payload: { developerAccountId, reason, note },
-  });
-  await notifyDeveloper(developerAccountId, 'payouts-held', { reason, note });
+	// Flip Stripe Connect account to manual payouts.
+	const dev = await loadDeveloper(developerAccountId);
+	if (dev.stripeConnectAccountId) {
+		await stripe.accounts.update(dev.stripeConnectAccountId, {
+			settings: { payouts: { schedule: { interval: 'manual' } } },
+		});
+	}
+	await writeAuditEvent({
+		kind: 'marketplace.payout.held',
+		subjectId: operatorId,
+		payload: { developerAccountId, reason, note },
+	});
+	await notifyDeveloper(developerAccountId, 'payouts-held', { reason, note });
 }
 
-export async function releaseDeveloperPayouts(developerAccountId: string, operatorId: string, note: string) {
-  await db.update(developer).set({ payoutsHeld: false, payoutsHoldReason: null })
-    .where(eq(developer.id, developerAccountId));
-  const dev = await loadDeveloper(developerAccountId);
-  if (dev.stripeConnectAccountId) {
-    await stripe.accounts.update(dev.stripeConnectAccountId, {
-      settings: { payouts: { schedule: { interval: 'daily' } } },
-    });
-  }
-  await writeAuditEvent({
-    kind: 'marketplace.payout.released',
-    subjectId: operatorId,
-    payload: { developerAccountId, note },
-  });
+export async function releaseDeveloperPayouts(
+	developerAccountId: string,
+	operatorId: string,
+	note: string,
+) {
+	await db
+		.update(developer)
+		.set({ payoutsHeld: false, payoutsHoldReason: null })
+		.where(eq(developer.id, developerAccountId));
+	const dev = await loadDeveloper(developerAccountId);
+	if (dev.stripeConnectAccountId) {
+		await stripe.accounts.update(dev.stripeConnectAccountId, {
+			settings: { payouts: { schedule: { interval: 'daily' } } },
+		});
+	}
+	await writeAuditEvent({
+		kind: 'marketplace.payout.released',
+		subjectId: operatorId,
+		payload: { developerAccountId, note },
+	});
 }
 ```
 
 Automatic holds happen when: (1) app flagged by
 [content-moderation.md](content-moderation.md), (2) chargeback rate
+
 > 1%, (3) refund rate > 20% in 30 days, (4) developer's tax-id is
-missing or invalid.
+> missing or invalid.
 
 ### 7. Year-end reporting — DAC7 / 1099-K
 
 ```ts
 // packages/marketplace/src/payouts/reporting.ts
 export async function generateReportingForYear(year: number) {
-  const sellers = await listDevelopersWithPayoutsInYear(year);
-  for (const seller of sellers) {
-    const agg = await aggregateTaxableIncome({ accountId: seller.id, year });
+	const sellers = await listDevelopersWithPayoutsInYear(year);
+	for (const seller of sellers) {
+		const agg = await aggregateTaxableIncome({ accountId: seller.id, year });
 
-    if (seller.country === 'US') {
-      // 1099-K threshold (2024+): $600 gross (TCJA); pre-2024: $20k + 200 txns.
-      if (agg.totalMinor >= 60000) {
-        await generate1099K({
-          developerAccountId: seller.id,
-          year,
-          grossMinor: agg.totalMinor,
-          transactions: agg.transactions,
-        });
-      }
-    } else if (EU_COUNTRIES.includes(seller.country)) {
-      // DAC7 threshold: €2,000 AND ≥30 transactions.
-      if (agg.totalMinor >= 200_000 && agg.transactions >= 30) {
-        await generateDAC7Report({
-          developerAccountId: seller.id,
-          year,
-          grossMinor: agg.totalMinor,
-          transactions: agg.transactions,
-        });
-      }
-    }
-  }
+		if (seller.country === 'US') {
+			// 1099-K threshold (2024+): $600 gross (TCJA); pre-2024: $20k + 200 txns.
+			if (agg.totalMinor >= 60000) {
+				await generate1099K({
+					developerAccountId: seller.id,
+					year,
+					grossMinor: agg.totalMinor,
+					transactions: agg.transactions,
+				});
+			}
+		} else if (EU_COUNTRIES.includes(seller.country)) {
+			// DAC7 threshold: €2,000 AND ≥30 transactions.
+			if (agg.totalMinor >= 200_000 && agg.transactions >= 30) {
+				await generateDAC7Report({
+					developerAccountId: seller.id,
+					year,
+					grossMinor: agg.totalMinor,
+					transactions: agg.transactions,
+				});
+			}
+		}
+	}
 }
 ```
 
@@ -457,29 +482,33 @@ feature — consider that before rolling your own.
 <h1>{data.app.name} — earnings</h1>
 
 <section aria-labelledby="this-month">
-  <h2 id="this-month">This month</h2>
-  <dl>
-    <dt>Gross</dt><dd>{format(data.thisMonth.grossMinor, data.currency)}</dd>
-    <dt>Platform fee (30%)</dt><dd>-{format(data.thisMonth.platformCutMinor, data.currency)}</dd>
-    <dt>Refunds</dt><dd>-{format(data.thisMonth.refundsMinor, data.currency)}</dd>
-    <dt>Net to you</dt><dd><strong>{format(data.thisMonth.netMinor, data.currency)}</strong></dd>
-  </dl>
+	<h2 id="this-month">This month</h2>
+	<dl>
+		<dt>Gross</dt>
+		<dd>{format(data.thisMonth.grossMinor, data.currency)}</dd>
+		<dt>Platform fee (30%)</dt>
+		<dd>-{format(data.thisMonth.platformCutMinor, data.currency)}</dd>
+		<dt>Refunds</dt>
+		<dd>-{format(data.thisMonth.refundsMinor, data.currency)}</dd>
+		<dt>Net to you</dt>
+		<dd><strong>{format(data.thisMonth.netMinor, data.currency)}</strong></dd>
+	</dl>
 </section>
 
 <section aria-labelledby="payouts">
-  <h2 id="payouts">Payout history</h2>
-  <table>
-    <thead><tr><th>Period</th><th>Net</th><th>Status</th></tr></thead>
-    <tbody>
-      {#each data.payouts as p}
-        <tr>
-          <td>{p.periodStart.slice(0, 10)} → {p.periodEnd.slice(0, 10)}</td>
-          <td>{format(p.netPaidMinor, p.currency)}</td>
-          <td class="status-{p.status}">{p.status}</td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+	<h2 id="payouts">Payout history</h2>
+	<table>
+		<thead><tr><th>Period</th><th>Net</th><th>Status</th></tr></thead>
+		<tbody>
+			{#each data.payouts as p}
+				<tr>
+					<td>{p.periodStart.slice(0, 10)} → {p.periodEnd.slice(0, 10)}</td>
+					<td>{format(p.netPaidMinor, p.currency)}</td>
+					<td class="status-{p.status}">{p.status}</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
 </section>
 ```
 
@@ -488,7 +517,7 @@ feature — consider that before rolling your own.
 - Earnings figures use `<bdi>` for number direction in RTL locales.
 - Dashboard dates are `<time>` elements with `datetime` attribute.
 - "Payout held" notice is an `<aside role="note" aria-label="Payouts
-  on hold">` with clear reason and next-action link.
+on hold">` with clear reason and next-action link.
 - Amounts use locale-formatted strings via `Intl.NumberFormat`.
 - Status column has real text ("paid", "held"), not color-only.
 
@@ -510,11 +539,11 @@ feature — consider that before rolling your own.
 
 ```ts
 test('refund creates clawback against future payouts when prior payout was paid', async () => {
-  await recordSale({ grossMinor: 10_000, platformCutMinor: 3_000, developerNetMinor: 7_000 });
-  await simulatePayoutPaid(/* includes that sale */);
-  await simulateChargeRefunded({ amountRefunded: 10_000 });
-  const cb = await loadClawback();
-  expect(cb.amountMinor).toBe(7_000);
+	await recordSale({ grossMinor: 10_000, platformCutMinor: 3_000, developerNetMinor: 7_000 });
+	await simulatePayoutPaid(/* includes that sale */);
+	await simulateChargeRefunded({ amountRefunded: 10_000 });
+	const cb = await loadClawback();
+	expect(cb.amountMinor).toBe(7_000);
 });
 ```
 

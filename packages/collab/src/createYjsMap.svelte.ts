@@ -1,11 +1,5 @@
 import type * as Y from 'yjs';
-import {
-	snapshotYjsMap,
-	observeYjsMap,
-	setYjsMap,
-	deleteYjsMap,
-	clearYjsMap,
-} from './yjs-map.js';
+import { snapshotYjsMap, observeYjsMap, setYjsMap, deleteYjsMap, clearYjsMap } from './yjs-map.js';
 
 export interface YjsMapStore<V> {
 	readonly entries: Readonly<Record<string, V>>;

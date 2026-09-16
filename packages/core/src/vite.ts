@@ -52,10 +52,7 @@ function entrySize(entry: BundleEntry): number {
  * Pure budget check: returns every output entry that exceeds its budget. An
  * entry with no matching budget key is unconstrained. Exported for unit tests.
  */
-export function checkBundleBudget(
-	bundle: BundleLike,
-	budget: BundleBudget,
-): BudgetViolation[] {
+export function checkBundleBudget(bundle: BundleLike, budget: BundleBudget): BudgetViolation[] {
 	const violations: BudgetViolation[] = [];
 	for (const [fileName, entry] of Object.entries(bundle)) {
 		const max = budget[fileName];
@@ -68,10 +65,7 @@ export function checkBundleBudget(
 
 function formatViolations(violations: readonly BudgetViolation[]): string {
 	const lines = violations.map(
-		(v) =>
-			`  - ${v.fileName}: ${v.size} B exceeds budget ${v.budget} B (+${
-				v.size - v.budget
-			} B)`,
+		(v) => `  - ${v.fileName}: ${v.size} B exceeds budget ${v.budget} B (+${v.size - v.budget} B)`,
 	);
 	return `[sentio] Bundle-size budget exceeded:\n${lines.join('\n')}`;
 }

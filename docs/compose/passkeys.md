@@ -65,7 +65,7 @@ feature-detect before showing a passkey affordance.
 import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 
 if (browserSupportsWebAuthn()) {
-  showPasskeyButton();
+	showPasskeyButton();
 }
 ```
 
@@ -75,7 +75,7 @@ For conditional-UI autofill (login forms that suggest passkeys inline):
 import { browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser';
 
 if (await browserSupportsWebAuthnAutofill()) {
-  // autocomplete="username webauthn" on the email field
+	// autocomplete="username webauthn" on the email field
 }
 ```
 
@@ -84,22 +84,22 @@ if (await browserSupportsWebAuthnAutofill()) {
 ```svelte
 <!-- src/routes/account/security/+page.svelte -->
 <script lang="ts">
-  import { registerPasskey } from '@sveltesentio/auth/webauthn';
-  import { toast } from '@sveltesentio/ui';
+	import { registerPasskey } from '@sveltesentio/auth/webauthn';
+	import { toast } from '@sveltesentio/ui';
 
-  let submitting = $state(false);
+	let submitting = $state(false);
 
-  async function enroll() {
-    submitting = true;
-    try {
-      await registerPasskey({ name: 'MacBook Pro — Touch ID' });
-      toast.success('Passkey saved');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Enrollment failed');
-    } finally {
-      submitting = false;
-    }
-  }
+	async function enroll() {
+		submitting = true;
+		try {
+			await registerPasskey({ name: 'MacBook Pro — Touch ID' });
+			toast.success('Passkey saved');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Enrollment failed');
+		} finally {
+			submitting = false;
+		}
+	}
 </script>
 
 <button onclick={enroll} disabled={submitting}>Add passkey</button>
@@ -116,7 +116,7 @@ Or use the drop-in component:
 
 ```svelte
 <script lang="ts">
-  import { PasskeyRegister } from '@sveltesentio/auth/webauthn';
+	import { PasskeyRegister } from '@sveltesentio/auth/webauthn';
 </script>
 
 <PasskeyRegister onsuccess={(e) => toast.success(`Added ${e.detail.name}`)} />
@@ -127,36 +127,36 @@ Or use the drop-in component:
 ```svelte
 <!-- src/routes/login/+page.svelte -->
 <script lang="ts">
-  import { loginPasskey, browserSupportsWebAuthn } from '@sveltesentio/auth/webauthn';
-  import { goto } from '$app/navigation';
+	import { loginPasskey, browserSupportsWebAuthn } from '@sveltesentio/auth/webauthn';
+	import { goto } from '$app/navigation';
 
-  let email = $state('');
-  let err = $state<string | null>(null);
+	let email = $state('');
+	let err = $state<string | null>(null);
 
-  async function signIn() {
-    err = null;
-    try {
-      await loginPasskey({ email });
-      await goto('/app');
-    } catch (e) {
-      err = e instanceof Error ? e.message : 'Sign in failed';
-    }
-  }
+	async function signIn() {
+		err = null;
+		try {
+			await loginPasskey({ email });
+			await goto('/app');
+		} catch (e) {
+			err = e instanceof Error ? e.message : 'Sign in failed';
+		}
+	}
 </script>
 
-<form onsubmit={(e) => { e.preventDefault(); signIn(); }}>
-  <input
-    type="email"
-    bind:value={email}
-    autocomplete="username webauthn"
-    required
-  />
-  {#if browserSupportsWebAuthn()}
-    <button type="submit">Sign in with passkey</button>
-  {:else}
-    <p>This device doesn't support passkeys. <a href="/auth/start">Use OIDC instead.</a></p>
-  {/if}
-  {#if err}<p role="alert">{err}</p>{/if}
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		signIn();
+	}}
+>
+	<input type="email" bind:value={email} autocomplete="username webauthn" required />
+	{#if browserSupportsWebAuthn()}
+		<button type="submit">Sign in with passkey</button>
+	{:else}
+		<p>This device doesn't support passkeys. <a href="/auth/start">Use OIDC instead.</a></p>
+	{/if}
+	{#if err}<p role="alert">{err}</p>{/if}
 </form>
 ```
 
@@ -179,19 +179,19 @@ ceremony runs in the background without a button click:
 import { startAuthentication } from '@simplewebauthn/browser';
 
 onMount(async () => {
-  if (!(await browserSupportsWebAuthnAutofill())) return;
+	if (!(await browserSupportsWebAuthnAutofill())) return;
 
-  const options = await fetch('/auth/webauthn/login/begin', {
-    method: 'POST',
-    body: JSON.stringify({ discoverable: true }),
-  }).then((r) => r.json());
+	const options = await fetch('/auth/webauthn/login/begin', {
+		method: 'POST',
+		body: JSON.stringify({ discoverable: true }),
+	}).then((r) => r.json());
 
-  const result = await startAuthentication(options, true); // useBrowserAutofill = true
-  await fetch('/auth/webauthn/login/finish', {
-    method: 'POST',
-    body: JSON.stringify(result),
-  });
-  await goto('/app');
+	const result = await startAuthentication(options, true); // useBrowserAutofill = true
+	await fetch('/auth/webauthn/login/finish', {
+		method: 'POST',
+		body: JSON.stringify(result),
+	});
+	await goto('/app');
 });
 ```
 
@@ -222,24 +222,24 @@ Users need a UI to see what's enrolled and revoke a lost device:
 
 ```svelte
 <script lang="ts">
-  import { listPasskeys, revokePasskey } from '@sveltesentio/auth/webauthn';
+	import { listPasskeys, revokePasskey } from '@sveltesentio/auth/webauthn';
 
-  let { data } = $props(); // data.passkeys from +page.server.ts
+	let { data } = $props(); // data.passkeys from +page.server.ts
 
-  async function revoke(credentialId: string) {
-    await revokePasskey(credentialId);
-    await invalidate('app:passkeys');
-  }
+	async function revoke(credentialId: string) {
+		await revokePasskey(credentialId);
+		await invalidate('app:passkeys');
+	}
 </script>
 
 <ul>
-  {#each data.passkeys as pk (pk.credentialId)}
-    <li>
-      {pk.name} · added {pk.createdAt.toLocaleDateString()}
-      · last used {pk.lastUsedAt?.toLocaleDateString() ?? 'never'}
-      <button onclick={() => revoke(pk.credentialId)}>Revoke</button>
-    </li>
-  {/each}
+	{#each data.passkeys as pk (pk.credentialId)}
+		<li>
+			{pk.name} · added {pk.createdAt.toLocaleDateString()}
+			· last used {pk.lastUsedAt?.toLocaleDateString() ?? 'never'}
+			<button onclick={() => revoke(pk.credentialId)}>Revoke</button>
+		</li>
+	{/each}
 </ul>
 ```
 
@@ -258,20 +258,26 @@ Playwright can drive WebAuthn with Chrome DevTools' virtual authenticator:
 import { test } from '@playwright/test';
 
 test('passkey login', async ({ page, context }) => {
-  const client = await context.newCDPSession(page);
-  await client.send('WebAuthn.enable');
-  const { authenticatorId } = await client.send('WebAuthn.addVirtualAuthenticator', {
-    options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true },
-  });
+	const client = await context.newCDPSession(page);
+	await client.send('WebAuthn.enable');
+	const { authenticatorId } = await client.send('WebAuthn.addVirtualAuthenticator', {
+		options: {
+			protocol: 'ctap2',
+			transport: 'internal',
+			hasResidentKey: true,
+			hasUserVerification: true,
+			isUserVerified: true,
+		},
+	});
 
-  await page.goto('/account/security');
-  await page.getByRole('button', { name: 'Add passkey' }).click();
-  // The virtual authenticator auto-consents — no OS prompt.
+	await page.goto('/account/security');
+	await page.getByRole('button', { name: 'Add passkey' }).click();
+	// The virtual authenticator auto-consents — no OS prompt.
 
-  // Later: sign in
-  await page.goto('/login');
-  await page.getByRole('button', { name: 'Sign in with passkey' }).click();
-  await page.waitForURL('/app');
+	// Later: sign in
+	await page.goto('/login');
+	await page.getByRole('button', { name: 'Sign in with passkey' }).click();
+	await page.waitForURL('/app');
 });
 ```
 

@@ -67,11 +67,7 @@ export interface FormActionConfig {
  * no Kit runtime. In a SvelteKit app, wire the package `superValidate` and
  * Kit's `fail`.
  */
-export function formAction<
-	Out extends Record<string, unknown>,
-	Event extends FormActionEvent,
-	R,
->(
+export function formAction<Out extends Record<string, unknown>, Event extends FormActionEvent, R>(
 	schema: ZodV4Schema,
 	handler: FormActionHandler<Out, Event, R>,
 	config: FormActionConfig,

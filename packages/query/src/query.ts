@@ -8,8 +8,10 @@ import type { ProblemError } from '@sveltesentio/core';
 
 export type { QueryKey };
 
-export interface SentioQueryOptions<TData, TKey extends QueryKey = QueryKey>
-	extends Omit<CreateQueryOptions<TData, ProblemError, TData, TKey>, 'queryFn'> {
+export interface SentioQueryOptions<TData, TKey extends QueryKey = QueryKey> extends Omit<
+	CreateQueryOptions<TData, ProblemError, TData, TKey>,
+	'queryFn'
+> {
 	queryKey: TKey;
 	/** Resolver — typically wraps an openapi-fetch-shaped client. Throws `ProblemError` on failure. */
 	queryFn: () => Promise<TData>;

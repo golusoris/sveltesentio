@@ -13,6 +13,7 @@
 ## Interface type (if UI change)
 
 <!-- Which interface type does this affect? -->
+
 - [ ] Standard web app
 - [ ] Media server web UI
 - [ ] Dashboard / admin

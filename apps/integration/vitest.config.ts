@@ -11,7 +11,9 @@ export default defineConfig({
 	plugins: [svelte()],
 	resolve: {
 		alias: {
-			'$app/environment': fileURLToPath(new URL('./test/mocks/app-environment.ts', import.meta.url)),
+			'$app/environment': fileURLToPath(
+				new URL('./test/mocks/app-environment.ts', import.meta.url),
+			),
 			'$app/stores': fileURLToPath(new URL('./test/mocks/app-stores.ts', import.meta.url)),
 			'$app/navigation': fileURLToPath(new URL('./test/mocks/app-navigation.ts', import.meta.url)),
 			'$app/forms': fileURLToPath(new URL('./test/mocks/app-forms.ts', import.meta.url)),

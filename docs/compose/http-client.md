@@ -39,11 +39,11 @@ import { problemMiddleware } from '@sveltesentio/core/http';
 import type { paths } from './schema';
 
 export const api = createClient<paths>({
-  baseUrl: 'https://golusoris.example',
-  // `credentials: 'include'` is framework default when the session cookie
-  // lives on a different origin. Same-origin deployments (see
-  // @sveltesentio/ipc-sockmap — ADR-0051) don't need this.
-  credentials: 'include',
+	baseUrl: 'https://golusoris.example',
+	// `credentials: 'include'` is framework default when the session cookie
+	// lives on a different origin. Same-origin deployments (see
+	// @sveltesentio/ipc-sockmap — ADR-0051) don't need this.
+	credentials: 'include',
 });
 
 api.use(problemMiddleware());
@@ -69,18 +69,18 @@ import { ProblemError } from '@sveltesentio/core/http';
 import { error } from '@sveltejs/kit';
 
 export async function load() {
-  const { data, error: apiError } = await api.GET('/v1/users/{id}', {
-    params: { path: { id: 'usr_01HX…' } },
-  });
+	const { data, error: apiError } = await api.GET('/v1/users/{id}', {
+		params: { path: { id: 'usr_01HX…' } },
+	});
 
-  if (apiError) {
-    if (apiError instanceof ProblemError && apiError.status === 404) {
-      error(404, apiError.title);
-    }
-    throw apiError;
-  }
+	if (apiError) {
+		if (apiError instanceof ProblemError && apiError.status === 404) {
+			error(404, apiError.title);
+		}
+		throw apiError;
+	}
 
-  return { user: data };
+	return { user: data };
 }
 ```
 
@@ -98,10 +98,10 @@ import { retryMiddleware } from '@sveltesentio/core/http';
 
 // Only retry idempotent methods on transient 5xx + 429.
 const retry = retryMiddleware({
-  methods: ['GET', 'HEAD', 'OPTIONS'],
-  statuses: [502, 503, 504, 429],
-  attempts: 3,
-  backoff: 'exponential-jitter', // 200ms / 500ms / 1.2s, ±20% jitter
+	methods: ['GET', 'HEAD', 'OPTIONS'],
+	statuses: [502, 503, 504, 429],
+	attempts: 3,
+	backoff: 'exponential-jitter', // 200ms / 500ms / 1.2s, ±20% jitter
 });
 
 api.use(retry);
@@ -119,8 +119,8 @@ For `POST` mutations that must be safe under retry, send an
 import { uuidv7 } from '@sveltesentio/core/id';
 
 const { data, error } = await api.POST('/v1/payments', {
-  body: { amount: 1200, currency: 'EUR' },
-  headers: { 'Idempotency-Key': uuidv7() },
+	body: { amount: 1200, currency: 'EUR' },
+	headers: { 'Idempotency-Key': uuidv7() },
 });
 ```
 
@@ -140,17 +140,17 @@ import { api } from '$lib/api/client';
 import { createQuery } from '@sveltesentio/query';
 
 export function userQuery(id: string) {
-  return createQuery({
-    queryKey: ['user', id] as const,
-    queryFn: async ({ signal }) => {
-      const { data, error } = await api.GET('/v1/users/{id}', {
-        params: { path: { id } },
-        signal,
-      });
-      if (error) throw error;
-      return data;
-    },
-  });
+	return createQuery({
+		queryKey: ['user', id] as const,
+		queryFn: async ({ signal }) => {
+			const { data, error } = await api.GET('/v1/users/{id}', {
+				params: { path: { id } },
+				signal,
+			});
+			if (error) throw error;
+			return data;
+		},
+	});
 }
 ```
 
@@ -173,18 +173,18 @@ Use `@sveltesentio/testing`'s MSW helpers (planned) or a direct `fetch` mock:
 import { vi } from 'vitest';
 
 vi.stubGlobal('fetch', async (url: string) => {
-  return new Response(
-    JSON.stringify({
-      type: 'about:blank',
-      title: 'Not Found',
-      status: 404,
-    }),
-    { status: 404, headers: { 'content-type': 'application/problem+json' } },
-  );
+	return new Response(
+		JSON.stringify({
+			type: 'about:blank',
+			title: 'Not Found',
+			status: 404,
+		}),
+		{ status: 404, headers: { 'content-type': 'application/problem+json' } },
+	);
 });
 
 const { data, error } = await api.GET('/v1/users/{id}', {
-  params: { path: { id: 'x' } },
+	params: { path: { id: 'x' } },
 });
 expect(error).toBeInstanceOf(ProblemError);
 expect(error?.status).toBe(404);

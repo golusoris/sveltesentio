@@ -28,14 +28,14 @@ collaborative state), [connectrpc.md](connectrpc.md) (typed bidi RPC),
 
 ## When to use `partysocket`
 
-| Need | Tool |
-|---|---|
-| Collaborative state (CRDT) | Yjs ([collab.md](collab.md)) |
-| Typed RPC + bidi streaming | ConnectRPC ([connectrpc.md](connectrpc.md)) |
-| Server → client only push | SSE ([sse.md](sse.md)) |
-| Ad-hoc bidi JSON messages | **`partysocket` (this recipe)** |
+| Need                         | Tool                                        |
+| ---------------------------- | ------------------------------------------- |
+| Collaborative state (CRDT)   | Yjs ([collab.md](collab.md))                |
+| Typed RPC + bidi streaming   | ConnectRPC ([connectrpc.md](connectrpc.md)) |
+| Server → client only push    | SSE ([sse.md](sse.md))                      |
+| Ad-hoc bidi JSON messages    | **`partysocket` (this recipe)**             |
 | Third-party WebSocket bridge | **`partysocket`** (auto-reconnect for free) |
-| Game-style 30+ Hz state sync | **`partysocket`** with binary frames |
+| Game-style 30+ Hz state sync | **`partysocket`** with binary frames        |
 
 Default to one of the first three. Reach for `partysocket` only
 when none of them fit — and document why in the route file.
@@ -75,29 +75,29 @@ API. Drop-in replacement once you've decided you need the polish.
 import PartySocket from 'partysocket';
 
 export interface UseWebSocketOptions<TIn, TOut> {
-  url: string | (() => string | Promise<string>);
-  parse: (data: string | ArrayBuffer) => TIn;          // Zod-validated parser
-  serialize?: (msg: TOut) => string | ArrayBuffer;     // default JSON.stringify
-  onMessage?: (msg: TIn) => void;
-  onOpen?: () => void;
-  onClose?: (code: number, reason: string) => void;
-  onError?: (e: Event) => void;
-  protocols?: string | string[];
-  startClosed?: boolean;
-  minReconnectionDelay?: number;
-  maxReconnectionDelay?: number;
-  reconnectionDelayGrowFactor?: number;
-  heartbeat?: { intervalMs: number; payload?: TOut };
+	url: string | (() => string | Promise<string>);
+	parse: (data: string | ArrayBuffer) => TIn; // Zod-validated parser
+	serialize?: (msg: TOut) => string | ArrayBuffer; // default JSON.stringify
+	onMessage?: (msg: TIn) => void;
+	onOpen?: () => void;
+	onClose?: (code: number, reason: string) => void;
+	onError?: (e: Event) => void;
+	protocols?: string | string[];
+	startClosed?: boolean;
+	minReconnectionDelay?: number;
+	maxReconnectionDelay?: number;
+	reconnectionDelayGrowFactor?: number;
+	heartbeat?: { intervalMs: number; payload?: TOut };
 }
 
 export function useWebSocket<TIn, TOut = unknown>(
-  options: UseWebSocketOptions<TIn, TOut>,
+	options: UseWebSocketOptions<TIn, TOut>,
 ): {
-  send(msg: TOut): void;
-  close(code?: number, reason?: string): void;
-  reopen(): void;
-  readonly readyState: 0 | 1 | 2 | 3;
-  readonly queueSize: number;
+	send(msg: TOut): void;
+	close(code?: number, reason?: string): void;
+	reopen(): void;
+	readonly readyState: 0 | 1 | 2 | 3;
+	readonly queueSize: number;
 };
 ```
 
@@ -112,65 +112,76 @@ Two design points:
 
 ```svelte
 <script lang="ts">
-  import { useWebSocket } from '@sveltesentio/realtime/ws';
-  import { z } from 'zod';
+	import { useWebSocket } from '@sveltesentio/realtime/ws';
+	import { z } from 'zod';
 
-  const Inbound = z.discriminatedUnion('type', [
-    z.object({ type: z.literal('chat'), id: z.string(), userId: z.string(), body: z.string() }),
-    z.object({ type: z.literal('presence'), users: z.array(z.string()) }),
-    z.object({ type: z.literal('error'), code: z.string(), message: z.string() }),
-  ]);
-  type Inbound = z.infer<typeof Inbound>;
+	const Inbound = z.discriminatedUnion('type', [
+		z.object({ type: z.literal('chat'), id: z.string(), userId: z.string(), body: z.string() }),
+		z.object({ type: z.literal('presence'), users: z.array(z.string()) }),
+		z.object({ type: z.literal('error'), code: z.string(), message: z.string() }),
+	]);
+	type Inbound = z.infer<typeof Inbound>;
 
-  type Outbound =
-    | { type: 'chat'; body: string }
-    | { type: 'typing'; isTyping: boolean };
+	type Outbound = { type: 'chat'; body: string } | { type: 'typing'; isTyping: boolean };
 
-  let messages = $state<Array<{ id: string; userId: string; body: string }>>([]);
-  let presence = $state<string[]>([]);
-  let composer = $state('');
+	let messages = $state<Array<{ id: string; userId: string; body: string }>>([]);
+	let presence = $state<string[]>([]);
+	let composer = $state('');
 
-  const ws = useWebSocket<Inbound, Outbound>({
-    url: '/api/chat/ws',
-    parse: (data) => Inbound.parse(typeof data === 'string' ? JSON.parse(data) : data),
-    onMessage: (msg) => {
-      switch (msg.type) {
-        case 'chat': messages.push({ id: msg.id, userId: msg.userId, body: msg.body }); break;
-        case 'presence': presence = msg.users; break;
-        case 'error': console.error('[ws] server error', msg); break;
-      }
-    },
-    heartbeat: { intervalMs: 25_000, payload: { type: 'typing', isTyping: false } },
-  });
+	const ws = useWebSocket<Inbound, Outbound>({
+		url: '/api/chat/ws',
+		parse: (data) => Inbound.parse(typeof data === 'string' ? JSON.parse(data) : data),
+		onMessage: (msg) => {
+			switch (msg.type) {
+				case 'chat':
+					messages.push({ id: msg.id, userId: msg.userId, body: msg.body });
+					break;
+				case 'presence':
+					presence = msg.users;
+					break;
+				case 'error':
+					console.error('[ws] server error', msg);
+					break;
+			}
+		},
+		heartbeat: { intervalMs: 25_000, payload: { type: 'typing', isTyping: false } },
+	});
 
-  function send() {
-    if (!composer.trim()) return;
-    ws.send({ type: 'chat', body: composer });
-    composer = '';
-  }
+	function send() {
+		if (!composer.trim()) return;
+		ws.send({ type: 'chat', body: composer });
+		composer = '';
+	}
 </script>
 
 <ul role="log" aria-live="polite" aria-relevant="additions">
-  {#each messages as m (m.id)}
-    <li>{m.userId}: {m.body}</li>
-  {/each}
+	{#each messages as m (m.id)}
+		<li>{m.userId}: {m.body}</li>
+	{/each}
 </ul>
 
 <aside aria-label="Online users">
-  {presence.length} online
+	{presence.length} online
 </aside>
 
-<form onsubmit={(e) => { e.preventDefault(); send(); }}>
-  <input bind:value={composer}
-         oninput={() => ws.send({ type: 'typing', isTyping: true })}
-         disabled={ws.readyState !== 1} />
-  <button type="submit" disabled={ws.readyState !== 1}>Send</button>
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		send();
+	}}
+>
+	<input
+		bind:value={composer}
+		oninput={() => ws.send({ type: 'typing', isTyping: true })}
+		disabled={ws.readyState !== 1}
+	/>
+	<button type="submit" disabled={ws.readyState !== 1}>Send</button>
 </form>
 
 {#if ws.readyState === 0}
-  <span role="status" class="sr-only">Connecting…</span>
+	<span role="status" class="sr-only">Connecting…</span>
 {:else if ws.readyState === 3}
-  <span role="status">Reconnecting…</span>
+	<span role="status">Reconnecting…</span>
 {/if}
 ```
 
@@ -193,8 +204,8 @@ Don't ship un-versioned protocols:
 
 ```ts
 const Frame = z.object({
-  v: z.literal(1),
-  body: z.discriminatedUnion('type', [/* … */]),
+	v: z.literal(1),
+	body: z.discriminatedUnion('type', [/* … */]),
 });
 ```
 
@@ -214,9 +225,9 @@ Document these in `+server.ts` so clients can switch on `code`:
 
 ```ts
 ws.onClose = (code, reason) => {
-  if (code === 4001 || code === 4002) goto('/login');
-  if (code === 4003) toast.error('Banned: ' + reason);
-  // else: partysocket auto-reconnects
+	if (code === 4001 || code === 4002) goto('/login');
+	if (code === 4003) toast.error('Banned: ' + reason);
+	// else: partysocket auto-reconnects
 };
 ```
 
@@ -227,11 +238,11 @@ The `Authorization` header can't be set.
 
 Three auth options:
 
-| Approach | When | Trade-off |
-|---|---|---|
-| HttpOnly session cookie | Same-origin (preferred) | XSRF protection via origin check on upgrade |
-| Token in URL query | Cross-origin / token-bearer | **Tokens leak to server access logs** — short-lived only |
-| Server-issued WS ticket | High security | Extra HTTP round-trip; ticket TTL ≤30 s |
+| Approach                | When                        | Trade-off                                                |
+| ----------------------- | --------------------------- | -------------------------------------------------------- |
+| HttpOnly session cookie | Same-origin (preferred)     | XSRF protection via origin check on upgrade              |
+| Token in URL query      | Cross-origin / token-bearer | **Tokens leak to server access logs** — short-lived only |
+| Server-issued WS ticket | High security               | Extra HTTP round-trip; ticket TTL ≤30 s                  |
 
 Cookies are the default per ADR-0034. Cross-origin WS requires the
 server to validate `Origin` header on upgrade — sveltesentio doesn't
@@ -245,8 +256,8 @@ const { ticket } = await api.POST('/api/chat/ws-ticket').then((r) => r.data);
 
 // 2. ticket goes in URL; server validates + invalidates after first use
 const ws = useWebSocket({
-  url: () => `/api/chat/ws?ticket=${encodeURIComponent(ticket)}`,
-  // ...
+	url: () => `/api/chat/ws?ticket=${encodeURIComponent(ticket)}`,
+	// ...
 });
 ```
 
@@ -266,28 +277,32 @@ import { WebSocketServer } from 'ws';
 import { uuidv7 } from '@sveltesentio/core/id';
 
 export function attachWS(httpServer: import('http').Server) {
-  const wss = new WebSocketServer({ noServer: true });
+	const wss = new WebSocketServer({ noServer: true });
 
-  httpServer.on('upgrade', async (req, socket, head) => {
-    if (!req.url?.startsWith('/api/chat/ws')) return;
+	httpServer.on('upgrade', async (req, socket, head) => {
+		if (!req.url?.startsWith('/api/chat/ws')) return;
 
-    const session = await sessionFromCookieOrTicket(req);
-    if (!session) {
-      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-      socket.destroy();
-      return;
-    }
+		const session = await sessionFromCookieOrTicket(req);
+		if (!session) {
+			socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+			socket.destroy();
+			return;
+		}
 
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit('connection', ws, { session, correlationId: uuidv7() });
-    });
-  });
+		wss.handleUpgrade(req, socket, head, (ws) => {
+			wss.emit('connection', ws, { session, correlationId: uuidv7() });
+		});
+	});
 
-  wss.on('connection', (ws, ctx) => {
-    ws.on('message', (raw) => { /* … */ });
-    ws.on('close', () => { /* unsubscribe */ });
-    // app heartbeat — partysocket sends `{type:'typing',isTyping:false}` every 25 s
-  });
+	wss.on('connection', (ws, ctx) => {
+		ws.on('message', (raw) => {
+			/* … */
+		});
+		ws.on('close', () => {
+			/* unsubscribe */
+		});
+		// app heartbeat — partysocket sends `{type:'typing',isTyping:false}` every 25 s
+	});
 }
 ```
 
@@ -305,10 +320,10 @@ import { trace } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('ws');
 const sessionSpan = tracer.startSpan('ws.session', {
-  attributes: {
-    'ws.url': '/api/chat/ws',
-    'correlation.id': correlationId,
-  },
+	attributes: {
+		'ws.url': '/api/chat/ws',
+		'correlation.id': correlationId,
+	},
 });
 
 ws.addEventListener('close', () => sessionSpan.end());
@@ -327,12 +342,12 @@ const msgLatency = meter.createHistogram('ws.message.parse.duration');
 JSON is the default. For game-style 30+ Hz state sync, use binary:
 
 ```ts
-import { encode, decode } from '@msgpack/msgpack';        // or schema-driven binary
+import { encode, decode } from '@msgpack/msgpack'; // or schema-driven binary
 
 const ws = useWebSocket<StateUpdate, ClientInput>({
-  url: '/api/game/ws',
-  parse: (data) => StateUpdate.parse(decode(data as ArrayBuffer)),
-  serialize: (msg) => encode(msg),
+	url: '/api/game/ws',
+	parse: (data) => StateUpdate.parse(decode(data as ArrayBuffer)),
+	serialize: (msg) => encode(msg),
 });
 ```
 
@@ -348,31 +363,33 @@ class. With Vitest:
 import { Server } from 'mock-socket';
 
 test('useWebSocket reconnects + flushes queued messages', async () => {
-  const url = 'ws://localhost:9999/test';
-  const server = new Server(url);
-  const received: string[] = [];
-  server.on('connection', (sock) => {
-    sock.on('message', (m) => received.push(m as string));
-  });
+	const url = 'ws://localhost:9999/test';
+	const server = new Server(url);
+	const received: string[] = [];
+	server.on('connection', (sock) => {
+		sock.on('message', (m) => received.push(m as string));
+	});
 
-  const ws = useWebSocket({
-    url, parse: (d) => JSON.parse(d as string),
-    minReconnectionDelay: 50, maxReconnectionDelay: 100,
-  });
+	const ws = useWebSocket({
+		url,
+		parse: (d) => JSON.parse(d as string),
+		minReconnectionDelay: 50,
+		maxReconnectionDelay: 100,
+	});
 
-  ws.send({ hello: 'world' });
-  await new Promise((r) => setTimeout(r, 100));
+	ws.send({ hello: 'world' });
+	await new Promise((r) => setTimeout(r, 100));
 
-  server.simulate('error');                   // forces reconnect
-  ws.send({ after: 'reconnect' });
-  await new Promise((r) => setTimeout(r, 200));
+	server.simulate('error'); // forces reconnect
+	ws.send({ after: 'reconnect' });
+	await new Promise((r) => setTimeout(r, 200));
 
-  expect(received).toEqual([
-    JSON.stringify({ hello: 'world' }),
-    JSON.stringify({ after: 'reconnect' }),
-  ]);
+	expect(received).toEqual([
+		JSON.stringify({ hello: 'world' }),
+		JSON.stringify({ after: 'reconnect' }),
+	]);
 
-  server.stop();
+	server.stop();
 });
 ```
 
@@ -395,9 +412,9 @@ ws.addEventListener('close', () => /* manual reconnect logic */);
 ```ts
 // after
 const ws = useWebSocket({
-  url: '/api/chat/ws',
-  parse: (d) => Inbound.parse(typeof d === 'string' ? JSON.parse(d) : d),
-  onMessage: handleInbound,
+	url: '/api/chat/ws',
+	parse: (d) => Inbound.parse(typeof d === 'string' ? JSON.parse(d) : d),
+	onMessage: handleInbound,
 });
 ```
 

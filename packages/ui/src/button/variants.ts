@@ -10,13 +10,7 @@
  */
 
 /** Visual emphasis. Mirrors shadcn-svelte's variant set. */
-export type ButtonVariant =
-	| 'default'
-	| 'destructive'
-	| 'outline'
-	| 'secondary'
-	| 'ghost'
-	| 'link';
+export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 
 /** Control size. `icon` is a square target for icon-only buttons. */
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';

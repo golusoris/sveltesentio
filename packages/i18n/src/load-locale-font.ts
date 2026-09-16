@@ -64,10 +64,7 @@ export interface LoadLocaleFontOptions {
 const DEFAULT_MARKER = 'data-sentio-locale-font';
 
 /** Resolve a locale's assets: exact tag first, then its language subtag. */
-function resolveAssets(
-	locale: string,
-	fonts: LocaleFontMap,
-): readonly LocaleFontAsset[] {
+function resolveAssets(locale: string, fonts: LocaleFontMap): readonly LocaleFontAsset[] {
 	const tag = locale.trim();
 	if (tag.length === 0) return [];
 
@@ -146,8 +143,7 @@ function resolveFontLink(
 }
 
 export function loadLocaleFont(options: LoadLocaleFontOptions): () => void {
-	const doc =
-		options.document ?? (typeof document === 'undefined' ? undefined : document);
+	const doc = options.document ?? (typeof document === 'undefined' ? undefined : document);
 	if (!doc) return () => {};
 
 	const head = doc.head;
@@ -176,9 +172,7 @@ export function loadLocaleFont(options: LoadLocaleFontOptions): () => void {
  * characters significant inside a double-quoted attribute selector.
  */
 function cssEscape(value: string): string {
-	const platform = (
-		globalThis as { CSS?: { escape?: (value: string) => string } }
-	).CSS;
+	const platform = (globalThis as { CSS?: { escape?: (value: string) => string } }).CSS;
 	if (platform?.escape) return platform.escape(value);
 	return value.replace(/["\\]/g, '\\$&');
 }

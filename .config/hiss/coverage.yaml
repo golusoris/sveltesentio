@@ -168,19 +168,29 @@ rules:
     title: Zero-Warning Cascade
     coverage:
       - language: typescript
-        state: partial
+        state: enforced
         runner: tsc
         mechanism: >-
           tsconfig.base.json sets strict, noUncheckedIndexedAccess and
           exactOptionalPropertyTypes; `turbo typecheck` runs tsc --noEmit per
           package, and since this adoption every package's tsconfig.test.json
-          covers test/ as well as src/.
+          covers test/ as well as src/. `pnpm format:check` and
+          `pnpm lint:scripts` run in the same CI job, so compiler, linter and
+          formatter all report zero.
         rationale: >-
           Type warnings are errors and the tree is clean: putting tests under a
           project surfaced 32 and all 32 were fixed. Lint now also covers the
-          root scripts/ directory, which no linter reached before. The gap is
-          formatting -- `prettier --check .` has never run in CI, and reports
-          574 files.
+          root scripts/ directory, which no linter reached before.
+
+          Formatting is no longer the gap. It was recorded as 574 then 591
+          non-conformant files, which measurement reframed: 381 of 475 source
+          files are tab-indented against a config that said `useTabs: false`, so
+          the tree was non-conformant by configuration rather than by neglect.
+          The config now says tabs, the tree is normalised to match, and
+          `pnpm format:check` runs in the CI Lint job over the whole repository.
+          Praetor-managed artifacts are excluded in .prettierignore: reformatting
+          them fails the audit, which is how the devcontainer broke during this
+          change.
 
   - id: HISS-15
     title: Three-Dimensional Testing

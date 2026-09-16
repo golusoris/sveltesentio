@@ -48,57 +48,57 @@ type AssignmentExpressionNode = Extract<Node, { type: 'AssignmentExpression' }>;
 type Callee = CallExpressionNode['callee'];
 
 const CLOCK_HINT =
-  'route time through the injected Clock — `useClock()`/`getClock()` ' +
-  '(or `testClock` in tests) from @sveltesentio/core — so it stays ' +
-  'deterministic and testable';
+	'route time through the injected Clock — `useClock()`/`getClock()` ' +
+	'(or `testClock` in tests) from @sveltesentio/core — so it stays ' +
+	'deterministic and testable';
 
 /** Matches `<object>.<property>` where both are plain (non-computed) identifiers. */
 function isMemberCall(callee: Callee, objectName: string, propertyName: string): boolean {
-  if (callee.type !== 'MemberExpression') return false;
-  if (callee.computed) return false;
-  if (callee.property.type !== 'Identifier') return false;
-  if (callee.property.name !== propertyName) return false;
-  return callee.object.type === 'Identifier' && callee.object.name === objectName;
+	if (callee.type !== 'MemberExpression') return false;
+	if (callee.computed) return false;
+	if (callee.property.type !== 'Identifier') return false;
+	if (callee.property.name !== propertyName) return false;
+	return callee.object.type === 'Identifier' && callee.object.name === objectName;
 }
 
 const noDirectTime: Rule.RuleModule = {
-  meta: {
-    type: 'problem',
-    docs: {
-      description: 'disallow direct wall-clock / monotonic time reads; use the injected Clock',
-      recommended: true,
-    },
-    schema: [],
-    messages: {
-      dateNow: `Avoid \`Date.now()\` — ${CLOCK_HINT}.`,
-      newDate: `Avoid argument-less \`new Date()\` — ${CLOCK_HINT}.`,
-      performanceNow: `Avoid \`performance.now()\` — ${CLOCK_HINT}.`,
-    },
-  },
+	meta: {
+		type: 'problem',
+		docs: {
+			description: 'disallow direct wall-clock / monotonic time reads; use the injected Clock',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			dateNow: `Avoid \`Date.now()\` — ${CLOCK_HINT}.`,
+			newDate: `Avoid argument-less \`new Date()\` — ${CLOCK_HINT}.`,
+			performanceNow: `Avoid \`performance.now()\` — ${CLOCK_HINT}.`,
+		},
+	},
 
-  create(context: Rule.RuleContext): Rule.RuleListener {
-    return {
-      CallExpression(node: CallExpressionNode): void {
-        if (isMemberCall(node.callee, 'Date', 'now')) {
-          context.report({ node, messageId: 'dateNow' });
-          return;
-        }
-        if (isMemberCall(node.callee, 'performance', 'now')) {
-          context.report({ node, messageId: 'performanceNow' });
-        }
-      },
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		return {
+			CallExpression(node: CallExpressionNode): void {
+				if (isMemberCall(node.callee, 'Date', 'now')) {
+					context.report({ node, messageId: 'dateNow' });
+					return;
+				}
+				if (isMemberCall(node.callee, 'performance', 'now')) {
+					context.report({ node, messageId: 'performanceNow' });
+				}
+			},
 
-      NewExpression(node: NewExpressionNode): void {
-        if (node.callee.type !== 'Identifier') return;
-        if (node.callee.name !== 'Date') return;
-        // `new Date(serverMs)` is an explicit, deterministic construction —
-        // only the zero-argument form reads ambient wall-clock time.
-        if (node.arguments.length === 0) {
-          context.report({ node, messageId: 'newDate' });
-        }
-      },
-    };
-  },
+			NewExpression(node: NewExpressionNode): void {
+				if (node.callee.type !== 'Identifier') return;
+				if (node.callee.name !== 'Date') return;
+				// `new Date(serverMs)` is an explicit, deterministic construction —
+				// only the zero-argument form reads ambient wall-clock time.
+				if (node.arguments.length === 0) {
+					context.report({ node, messageId: 'newDate' });
+				}
+			},
+		};
+	},
 };
 
 // --- chart-a11y-wrapper ------------------------------------------------------
@@ -109,8 +109,8 @@ const CHART_LIBS = ['layerchart', 'uplot'] as const;
 const A11Y_WRAPPER_ELEMENTS = new Set(['ChartFigure']);
 
 const CHART_HINT =
-  'render it inside `<ChartFigure>` from @sveltesentio/charts so the chart ' +
-  'ships the required visually-hidden data table (WCAG 2.2 SC 1.1.1, ADR-0013)';
+	'render it inside `<ChartFigure>` from @sveltesentio/charts so the chart ' +
+	'ships the required visually-hidden data table (WCAG 2.2 SC 1.1.1, ADR-0013)';
 
 /**
  * Structural read of a `svelte-eslint-parser` `SvelteElement` name without
@@ -120,81 +120,81 @@ const CHART_HINT =
  * intentionally ignored.
  */
 function svelteElementName(node: unknown): string | undefined {
-  if (typeof node !== 'object' || node === null) return undefined;
-  const name = (node as { name?: unknown }).name;
-  if (typeof name !== 'object' || name === null) return undefined;
-  const raw = (name as { name?: unknown }).name;
-  return typeof raw === 'string' ? raw : undefined;
+	if (typeof node !== 'object' || node === null) return undefined;
+	const name = (node as { name?: unknown }).name;
+	if (typeof name !== 'object' || name === null) return undefined;
+	const raw = (name as { name?: unknown }).name;
+	return typeof raw === 'string' ? raw : undefined;
 }
 
 /** Reads the source string of a (validated) `ImportDeclaration`. */
 function importSource(node: ImportDeclarationNode): string {
-  const value = node.source.value;
-  return typeof value === 'string' ? value : '';
+	const value = node.source.value;
+	return typeof value === 'string' ? value : '';
 }
 
 /** True for `layerchart`, `layerchart/...`, `uplot`, `uplot/...`. */
 function isChartLibSource(source: string): boolean {
-  return CHART_LIBS.some((lib) => source === lib || source.startsWith(`${lib}/`));
+	return CHART_LIBS.some((lib) => source === lib || source.startsWith(`${lib}/`));
 }
 
 const chartA11yWrapper: Rule.RuleModule = {
-  meta: {
-    type: 'problem',
-    docs: {
-      description: 'require chart visuals from layerchart / uplot to be wrapped in <ChartFigure>',
-      recommended: true,
-    },
-    schema: [],
-    messages: {
-      bareChart: `Bare \`<{{name}}>\` from \`{{source}}\` bypasses the a11y wrapper — ${CHART_HINT}.`,
-    },
-  },
+	meta: {
+		type: 'problem',
+		docs: {
+			description: 'require chart visuals from layerchart / uplot to be wrapped in <ChartFigure>',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			bareChart: `Bare \`<{{name}}>\` from \`{{source}}\` bypasses the a11y wrapper — ${CHART_HINT}.`,
+		},
+	},
 
-  create(context: Rule.RuleContext): Rule.RuleListener {
-    // Local binding names imported from a chart library → the source they
-    // came from, so the message can name it.
-    const chartBindings = new Map<string, string>();
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		// Local binding names imported from a chart library → the source they
+		// came from, so the message can name it.
+		const chartBindings = new Map<string, string>();
 
-    return {
-      ImportDeclaration(node: ImportDeclarationNode): void {
-        const source = importSource(node);
-        if (!isChartLibSource(source)) return;
-        for (const spec of node.specifiers) {
-          chartBindings.set(spec.local.name, source);
-        }
-      },
+		return {
+			ImportDeclaration(node: ImportDeclarationNode): void {
+				const source = importSource(node);
+				if (!isChartLibSource(source)) return;
+				for (const spec of node.specifiers) {
+					chartBindings.set(spec.local.name, source);
+				}
+			},
 
-      // `SvelteElement` is the svelte-eslint-parser node for any element;
-      // not part of ESLint's core `NodeListener`, so it rides the
-      // RuleListener index signature.
-      SvelteElement(node: Rule.Node): void {
-        const name = svelteElementName(node);
-        if (name === undefined) return;
-        const source = chartBindings.get(name);
-        if (source === undefined) return;
-        // Allowed when nested under a sanctioned a11y wrapper element.
-        const ancestors = context.sourceCode.getAncestors(node);
-        const wrapped = ancestors.some((ancestor) =>
-          A11Y_WRAPPER_ELEMENTS.has(svelteElementName(ancestor) ?? ''),
-        );
-        if (wrapped) return;
-        context.report({
-          node,
-          messageId: 'bareChart',
-          data: { name, source },
-        });
-      },
-    };
-  },
+			// `SvelteElement` is the svelte-eslint-parser node for any element;
+			// not part of ESLint's core `NodeListener`, so it rides the
+			// RuleListener index signature.
+			SvelteElement(node: Rule.Node): void {
+				const name = svelteElementName(node);
+				if (name === undefined) return;
+				const source = chartBindings.get(name);
+				if (source === undefined) return;
+				// Allowed when nested under a sanctioned a11y wrapper element.
+				const ancestors = context.sourceCode.getAncestors(node);
+				const wrapped = ancestors.some((ancestor) =>
+					A11Y_WRAPPER_ELEMENTS.has(svelteElementName(ancestor) ?? ''),
+				);
+				if (wrapped) return;
+				context.report({
+					node,
+					messageId: 'bareChart',
+					data: { name, source },
+				});
+			},
+		};
+	},
 };
 
 // --- no-unsanitised-html ------------------------------------------------------
 
 const SANITISE_HINT =
-  'pass it through the sanitiser first — `sanitizeHtml()` from ' +
-  '@sveltesentio/ui/markdown, or DOMPurify.sanitize() directly — so untrusted ' +
-  'markup cannot reach the DOM (§2.2 OWASP ASVS L2, ADR-0026)';
+	'pass it through the sanitiser first — `sanitizeHtml()` from ' +
+	'@sveltesentio/ui/markdown, or DOMPurify.sanitize() directly — so untrusted ' +
+	'markup cannot reach the DOM (§2.2 OWASP ASVS L2, ADR-0026)';
 
 /** Property names that parse their assigned string as HTML. */
 const HTML_SINKS = new Set(['innerHTML', 'outerHTML']);
@@ -209,12 +209,12 @@ const HTML_SINKS = new Set(['innerHTML', 'outerHTML']);
  * markup enters the DOM rather than somewhere up the call chain.
  */
 function isSanitiserCall(node: { type: string; callee?: unknown } | null | undefined): boolean {
-  if (!node || node.type !== 'CallExpression') return false;
-  const callee = (node as { callee: Callee }).callee;
-  if (callee.type === 'Identifier') return callee.name === 'sanitizeHtml';
-  if (callee.type !== 'MemberExpression') return false;
-  if (callee.computed || callee.property.type !== 'Identifier') return false;
-  return callee.property.name === 'sanitize';
+	if (!node || node.type !== 'CallExpression') return false;
+	const callee = (node as { callee: Callee }).callee;
+	if (callee.type === 'Identifier') return callee.name === 'sanitizeHtml';
+	if (callee.type !== 'MemberExpression') return false;
+	if (callee.computed || callee.property.type !== 'Identifier') return false;
+	return callee.property.name === 'sanitize';
 }
 
 /**
@@ -223,8 +223,8 @@ function isSanitiserCall(node: { type: string; callee?: unknown } | null | undef
  * without the `parent` the Rule.Node union requires.
  */
 interface MemberLike {
-  computed: boolean;
-  property: { type: string; name?: string; value?: unknown };
+	computed: boolean;
+	property: { type: string; name?: string; value?: unknown };
 }
 
 /**
@@ -237,69 +237,69 @@ interface MemberLike {
  * because reporting it would accuse every computed property access.
  */
 function staticPropertyName(member: MemberLike): string | undefined {
-  if (!member.computed) {
-    return member.property.type === 'Identifier' ? member.property.name : undefined;
-  }
-  const key = member.property;
-  return key.type === 'Literal' && typeof key.value === 'string' ? key.value : undefined;
+	if (!member.computed) {
+		return member.property.type === 'Identifier' ? member.property.name : undefined;
+	}
+	const key = member.property;
+	return key.type === 'Literal' && typeof key.value === 'string' ? key.value : undefined;
 }
 
 const noUnsanitisedHtml: Rule.RuleModule = {
-  meta: {
-    type: 'problem',
-    docs: {
-      description:
-        'disallow assigning unsanitised markup to an HTML sink (innerHTML, outerHTML, insertAdjacentHTML)',
-      recommended: true,
-    },
-    schema: [],
-    messages: {
-      htmlSink: `Assigning to \`{{sink}}\` bypasses sanitisation — ${SANITISE_HINT}.`,
-      insertAdjacent: `\`insertAdjacentHTML\` parses its argument as HTML — ${SANITISE_HINT}.`,
-    },
-  },
+	meta: {
+		type: 'problem',
+		docs: {
+			description:
+				'disallow assigning unsanitised markup to an HTML sink (innerHTML, outerHTML, insertAdjacentHTML)',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			htmlSink: `Assigning to \`{{sink}}\` bypasses sanitisation — ${SANITISE_HINT}.`,
+			insertAdjacent: `\`insertAdjacentHTML\` parses its argument as HTML — ${SANITISE_HINT}.`,
+		},
+	},
 
-  create(context: Rule.RuleContext): Rule.RuleListener {
-    return {
-      AssignmentExpression(node: AssignmentExpressionNode): void {
-        const left = node.left;
-        if (left.type !== 'MemberExpression') return;
-        const sink = staticPropertyName(left);
-        if (sink === undefined || !HTML_SINKS.has(sink)) return;
-        // An empty string literal clears the node; it cannot carry markup.
-        if (node.right.type === 'Literal' && node.right.value === '') return;
-        if (isSanitiserCall(node.right)) return;
-        context.report({
-          node,
-          messageId: 'htmlSink',
-          data: { sink },
-        });
-      },
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		return {
+			AssignmentExpression(node: AssignmentExpressionNode): void {
+				const left = node.left;
+				if (left.type !== 'MemberExpression') return;
+				const sink = staticPropertyName(left);
+				if (sink === undefined || !HTML_SINKS.has(sink)) return;
+				// An empty string literal clears the node; it cannot carry markup.
+				if (node.right.type === 'Literal' && node.right.value === '') return;
+				if (isSanitiserCall(node.right)) return;
+				context.report({
+					node,
+					messageId: 'htmlSink',
+					data: { sink },
+				});
+			},
 
-      CallExpression(node: CallExpressionNode): void {
-        // Any receiver, unlike the Date/performance checks above: the sink is
-        // the method, and it is reached on whatever element is to hand.
-        const callee = node.callee;
-        if (callee.type !== 'MemberExpression') return;
-        if (staticPropertyName(callee) !== 'insertAdjacentHTML') return;
-        if (isSanitiserCall(node.arguments[1])) return;
-        context.report({ node, messageId: 'insertAdjacent' });
-      },
-    };
-  },
+			CallExpression(node: CallExpressionNode): void {
+				// Any receiver, unlike the Date/performance checks above: the sink is
+				// the method, and it is reached on whatever element is to hand.
+				const callee = node.callee;
+				if (callee.type !== 'MemberExpression') return;
+				if (staticPropertyName(callee) !== 'insertAdjacentHTML') return;
+				if (isSanitiserCall(node.arguments[1])) return;
+				context.report({ node, messageId: 'insertAdjacent' });
+			},
+		};
+	},
 };
 
 /** The flat-config plugin object (`plugins: { '@sveltesentio': sentioEslint }`). */
 const sentioEslint = {
-  meta: { name: '@sveltesentio/core', version: '0.2.0' },
-  rules: {
-    'no-direct-time': noDirectTime,
-    'chart-a11y-wrapper': chartA11yWrapper,
-    'no-unsanitised-html': noUnsanitisedHtml,
-  },
+	meta: { name: '@sveltesentio/core', version: '0.2.0' },
+	rules: {
+		'no-direct-time': noDirectTime,
+		'chart-a11y-wrapper': chartA11yWrapper,
+		'no-unsanitised-html': noUnsanitisedHtml,
+	},
 } satisfies {
-  meta: { name: string; version: string };
-  rules: Record<string, Rule.RuleModule>;
+	meta: { name: string; version: string };
+	rules: Record<string, Rule.RuleModule>;
 };
 
 export { noDirectTime, chartA11yWrapper, noUnsanitisedHtml, sentioEslint };

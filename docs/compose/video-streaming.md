@@ -94,50 +94,55 @@ export const DrmSystem = z.enum(['widevine', 'fairplay', 'playready', 'clearkey'
 export type DrmSystem = z.infer<typeof DrmSystem>;
 
 export const VideoAsset = z.object({
-  id: z.string().uuid(),
-  ownerId: z.string().uuid(),
-  title: z.string().min(1).max(300),
-  durationMs: z.number().int().nonnegative(),
-  protocol: StreamProtocol,
-  drm: DrmSystem.default('none'),
-  // Available variants — bandwidth-sorted for ABR ladder
-  variants: z.array(z.object({
-    bandwidth_bps: z.number().int().min(50_000).max(50_000_000),
-    width: z.number().int().min(144).max(7680),
-    height: z.number().int().min(144).max(4320),
-    codec: z.string().min(1).max(50),
-  })).min(1).max(15),
-  hasCaptions: z.boolean(),
-  captionLangs: z.array(z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/)).max(50),
-  thumbnailsUrl: z.string().url().nullable(),
-  visibility: z.enum(['public', 'authenticated', 'paid', 'unlisted']),
+	id: z.string().uuid(),
+	ownerId: z.string().uuid(),
+	title: z.string().min(1).max(300),
+	durationMs: z.number().int().nonnegative(),
+	protocol: StreamProtocol,
+	drm: DrmSystem.default('none'),
+	// Available variants — bandwidth-sorted for ABR ladder
+	variants: z
+		.array(
+			z.object({
+				bandwidth_bps: z.number().int().min(50_000).max(50_000_000),
+				width: z.number().int().min(144).max(7680),
+				height: z.number().int().min(144).max(4320),
+				codec: z.string().min(1).max(50),
+			}),
+		)
+		.min(1)
+		.max(15),
+	hasCaptions: z.boolean(),
+	captionLangs: z.array(z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/)).max(50),
+	thumbnailsUrl: z.string().url().nullable(),
+	visibility: z.enum(['public', 'authenticated', 'paid', 'unlisted']),
 });
 export type VideoAsset = z.infer<typeof VideoAsset>;
 
 export const PlaybackToken = z.object({
-  assetId: z.string().uuid(),
-  userId: z.string().uuid().nullable(), // null for anonymous public playback
-  expiresAt: z.string().datetime(),
-  // Restrictions baked into the token
-  geo: z.array(z.string().regex(/^[A-Z]{2}$/)).optional(),
-  maxBitrate: z.number().int().positive().optional(),
+	assetId: z.string().uuid(),
+	userId: z.string().uuid().nullable(), // null for anonymous public playback
+	expiresAt: z.string().datetime(),
+	// Restrictions baked into the token
+	geo: z.array(z.string().regex(/^[A-Z]{2}$/)).optional(),
+	maxBitrate: z.number().int().positive().optional(),
 });
 export type PlaybackToken = z.infer<typeof PlaybackToken>;
 
 export const QoeEvent = z.object({
-  sessionId: z.string().uuid(),
-  assetId: z.string().uuid(),
-  ts: z.string().datetime(),
-  kind: z.enum([
-    'session_start',
-    'first_frame',
-    'rebuffer_start',
-    'rebuffer_end',
-    'bitrate_change',
-    'error',
-    'session_end',
-  ]),
-  details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+	sessionId: z.string().uuid(),
+	assetId: z.string().uuid(),
+	ts: z.string().datetime(),
+	kind: z.enum([
+		'session_start',
+		'first_frame',
+		'rebuffer_start',
+		'rebuffer_end',
+		'bitrate_change',
+		'error',
+		'session_end',
+	]),
+	details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 export type QoeEvent = z.infer<typeof QoeEvent>;
 ```
@@ -157,65 +162,67 @@ import { auditLog } from '$lib/server/audit';
 const Params = z.object({ assetId: z.string().uuid() });
 
 export const GET = async ({ params, locals, getClientAddress, request }) => {
-  const { assetId } = Params.parse(params);
-  const asset = await videoRepo.findById(assetId);
-  if (!asset) throw error(404, { type: 'not_found' });
+	const { assetId } = Params.parse(params);
+	const asset = await videoRepo.findById(assetId);
+	if (!asset) throw error(404, { type: 'not_found' });
 
-  // Authorization gate
-  switch (asset.visibility) {
-    case 'public':
-      break;
-    case 'authenticated':
-      if (!locals.user) throw error(401, { type: 'auth_required' });
-      break;
-    case 'paid':
-      if (!locals.user) throw error(401, { type: 'auth_required' });
-      const access = await permissions(locals.user).hasAccessTo(assetId);
-      if (!access) throw error(402, { type: 'payment_required' });
-      break;
-    case 'unlisted':
-      // Tokenized URL only — caller must have a valid view token
-      const token = request.headers.get('x-view-token');
-      if (!token || !(await videoRepo.validateUnlistedToken(assetId, token))) {
-        throw error(403, { type: 'forbidden' });
-      }
-      break;
-  }
+	// Authorization gate
+	switch (asset.visibility) {
+		case 'public':
+			break;
+		case 'authenticated':
+			if (!locals.user) throw error(401, { type: 'auth_required' });
+			break;
+		case 'paid':
+			if (!locals.user) throw error(401, { type: 'auth_required' });
+			const access = await permissions(locals.user).hasAccessTo(assetId);
+			if (!access) throw error(402, { type: 'payment_required' });
+			break;
+		case 'unlisted':
+			// Tokenized URL only — caller must have a valid view token
+			const token = request.headers.get('x-view-token');
+			if (!token || !(await videoRepo.validateUnlistedToken(assetId, token))) {
+				throw error(403, { type: 'forbidden' });
+			}
+			break;
+	}
 
-  // Geo restriction
-  const country = request.headers.get('cf-ipcountry') ?? request.headers.get('x-country');
-  if (asset.geoRestrict && country && asset.blockedCountries?.includes(country)) {
-    throw error(451, { type: 'unavailable_for_legal_reasons' });
-  }
+	// Geo restriction
+	const country = request.headers.get('cf-ipcountry') ?? request.headers.get('x-country');
+	if (asset.geoRestrict && country && asset.blockedCountries?.includes(country)) {
+		throw error(451, { type: 'unavailable_for_legal_reasons' });
+	}
 
-  // Sign CDN cookie scoped to this asset's segment URLs
-  const cookies = signCdnCookie({
-    resource: `https://cdn.example.com/streams/${assetId}/*`,
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1h
-    ip: getClientAddress(),
-  });
+	// Sign CDN cookie scoped to this asset's segment URLs
+	const cookies = signCdnCookie({
+		resource: `https://cdn.example.com/streams/${assetId}/*`,
+		expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1h
+		ip: getClientAddress(),
+	});
 
-  await auditLog('video.manifest.served', {
-    assetId,
-    userId: locals.user?.id ?? null,
-    ip: getClientAddress(),
-    country,
-    sessionId: uuidv7(),
-  });
+	await auditLog('video.manifest.served', {
+		assetId,
+		userId: locals.user?.id ?? null,
+		ip: getClientAddress(),
+		country,
+		sessionId: uuidv7(),
+	});
 
-  // Fetch the manifest from origin (S3) once, then return it.
-  // Manifest itself is small (~KB); CDN caches it briefly.
-  const manifest = await fetch(`https://origin.example.com/streams/${assetId}/master.m3u8`).then((r) => r.text());
+	// Fetch the manifest from origin (S3) once, then return it.
+	// Manifest itself is small (~KB); CDN caches it briefly.
+	const manifest = await fetch(`https://origin.example.com/streams/${assetId}/master.m3u8`).then(
+		(r) => r.text(),
+	);
 
-  return new Response(manifest, {
-    headers: {
-      'content-type': 'application/vnd.apple.mpegurl',
-      'cache-control': 'private, max-age=10',
-      'set-cookie': cookies.join(', '),
-      // Vary on auth so anonymous and authenticated responses don't mix in caches
-      'vary': 'cookie, x-view-token',
-    },
-  });
+	return new Response(manifest, {
+		headers: {
+			'content-type': 'application/vnd.apple.mpegurl',
+			'cache-control': 'private, max-age=10',
+			'set-cookie': cookies.join(', '),
+			// Vary on auth so anonymous and authenticated responses don't mix in caches
+			vary: 'cookie, x-view-token',
+		},
+	});
 };
 ```
 
@@ -231,77 +238,86 @@ the CDN.
 ```svelte
 <!-- src/lib/components/StreamPlayer.svelte -->
 <script lang="ts">
-  import 'vidstack/styles/defaults.css';
-  import { MediaPlayer, MediaProvider, useMediaStore } from '@vidstack/svelte';
-  import type { VideoAsset, QoeEvent } from '@sveltesentio/streaming/schema';
+	import 'vidstack/styles/defaults.css';
+	import { MediaPlayer, MediaProvider, useMediaStore } from '@vidstack/svelte';
+	import type { VideoAsset, QoeEvent } from '@sveltesentio/streaming/schema';
 
-  type Props = { asset: VideoAsset };
-  const { asset }: Props = $props();
+	type Props = { asset: VideoAsset };
+	const { asset }: Props = $props();
 
-  const manifestUrl = $derived(`/api/stream/${asset.id}/manifest.${asset.protocol === 'hls' ? 'm3u8' : 'mpd'}`);
-  let player: any = $state(null);
-  const sessionId = crypto.randomUUID();
+	const manifestUrl = $derived(
+		`/api/stream/${asset.id}/manifest.${asset.protocol === 'hls' ? 'm3u8' : 'mpd'}`,
+	);
+	let player: any = $state(null);
+	const sessionId = crypto.randomUUID();
 
-  function emitQoe(kind: QoeEvent['kind'], details?: QoeEvent['details']) {
-    const event: QoeEvent = {
-      sessionId,
-      assetId: asset.id,
-      ts: new Date().toISOString(),
-      kind,
-      details,
-    };
-    // Use sendBeacon so unload events don't get dropped
-    if (kind === 'session_end' && navigator.sendBeacon) {
-      navigator.sendBeacon('/api/qoe', new Blob([JSON.stringify(event)], { type: 'application/json' }));
-    } else {
-      void fetch('/api/qoe', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(event),
-        keepalive: true,
-      }).catch(() => {});
-    }
-  }
+	function emitQoe(kind: QoeEvent['kind'], details?: QoeEvent['details']) {
+		const event: QoeEvent = {
+			sessionId,
+			assetId: asset.id,
+			ts: new Date().toISOString(),
+			kind,
+			details,
+		};
+		// Use sendBeacon so unload events don't get dropped
+		if (kind === 'session_end' && navigator.sendBeacon) {
+			navigator.sendBeacon(
+				'/api/qoe',
+				new Blob([JSON.stringify(event)], { type: 'application/json' }),
+			);
+		} else {
+			void fetch('/api/qoe', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(event),
+				keepalive: true,
+			}).catch(() => {});
+		}
+	}
 
-  function onPlayerReady(p: any) {
-    player = p;
-    emitQoe('session_start');
+	function onPlayerReady(p: any) {
+		player = p;
+		emitQoe('session_start');
 
-    p.addEventListener('can-play', () => emitQoe('first_frame'));
-    p.addEventListener('waiting', () => emitQoe('rebuffer_start'));
-    p.addEventListener('playing', () => emitQoe('rebuffer_end'));
-    p.addEventListener('quality-change', (e: CustomEvent<{ height: number; bandwidth: number }>) =>
-      emitQoe('bitrate_change', { height: e.detail.height, bandwidth: e.detail.bandwidth }),
-    );
-    p.addEventListener('error', (e: ErrorEvent) =>
-      emitQoe('error', { message: e.message ?? 'unknown' }),
-    );
-  }
+		p.addEventListener('can-play', () => emitQoe('first_frame'));
+		p.addEventListener('waiting', () => emitQoe('rebuffer_start'));
+		p.addEventListener('playing', () => emitQoe('rebuffer_end'));
+		p.addEventListener('quality-change', (e: CustomEvent<{ height: number; bandwidth: number }>) =>
+			emitQoe('bitrate_change', { height: e.detail.height, bandwidth: e.detail.bandwidth }),
+		);
+		p.addEventListener('error', (e: ErrorEvent) =>
+			emitQoe('error', { message: e.message ?? 'unknown' }),
+		);
+	}
 
-  $effect(() => {
-    return () => emitQoe('session_end');
-  });
+	$effect(() => {
+		return () => emitQoe('session_end');
+	});
 
-  // DRM key system selection (browser support varies)
-  const drmConfig = $derived(asset.drm === 'none' ? undefined : {
-    keySystems: {
-      'com.widevine.alpha': { serverURL: `/api/drm/widevine/${asset.id}` },
-      'com.apple.fps.1_0':  { serverURL: `/api/drm/fairplay/${asset.id}` },
-      'com.microsoft.playready': { serverURL: `/api/drm/playready/${asset.id}` },
-    },
-  });
+	// DRM key system selection (browser support varies)
+	const drmConfig = $derived(
+		asset.drm === 'none'
+			? undefined
+			: {
+					keySystems: {
+						'com.widevine.alpha': { serverURL: `/api/drm/widevine/${asset.id}` },
+						'com.apple.fps.1_0': { serverURL: `/api/drm/fairplay/${asset.id}` },
+						'com.microsoft.playready': { serverURL: `/api/drm/playready/${asset.id}` },
+					},
+				},
+	);
 </script>
 
 <MediaPlayer
-  src={manifestUrl}
-  title={asset.title}
-  crossorigin
-  storage="player-prefs"
-  oncan-play={(e) => onPlayerReady(e.detail.player)}
-  bind:player
+	src={manifestUrl}
+	title={asset.title}
+	crossorigin
+	storage="player-prefs"
+	oncan-play={(e) => onPlayerReady(e.detail.player)}
+	bind:player
 >
-  <MediaProvider />
-  <!-- vidstack default UI; swap for custom controls per ux-principles -->
+	<MediaProvider />
+	<!-- vidstack default UI; swap for custom controls per ux-principles -->
 </MediaPlayer>
 ```
 
@@ -325,19 +341,20 @@ sprite.jpg#xywh=160,0,160,90
 vidstack picks this up automatically via `<track kind="thumbnails"
 src="…/thumbnails.vtt">` — hovering the scrubber shows the
 appropriate sprite slice. Encoder must produce both `thumbnails.vtt`
-+ `sprite.jpg` (one tile every 10s is the rule of thumb).
+
+- `sprite.jpg` (one tile every 10s is the rule of thumb).
 
 ## Captions — multi-language WebVTT tracks
 
 ```svelte
 {#each asset.captionLangs as lang}
-  <track
-    kind="subtitles"
-    src={`/api/stream/${asset.id}/captions/${lang}.vtt`}
-    srclang={lang}
-    label={languageNameOf(lang)}
-    default={lang === asset.defaultCaptionLang}
-  />
+	<track
+		kind="subtitles"
+		src={`/api/stream/${asset.id}/captions/${lang}.vtt`}
+		srclang={lang}
+		label={languageNameOf(lang)}
+		default={lang === asset.defaultCaptionLang}
+	/>
 {/each}
 ```
 
@@ -369,23 +386,23 @@ import { qoeRepo } from '$lib/server/repos';
 import { rateLimit } from '$lib/server/rate-limit';
 
 export const POST = async ({ request, getClientAddress }) => {
-  await rateLimit({
-    key: `qoe:${getClientAddress()}`,
-    limit: 100,
-    windowMs: 60_000,
-  });
+	await rateLimit({
+		key: `qoe:${getClientAddress()}`,
+		limit: 100,
+		windowMs: 60_000,
+	});
 
-  const body = await request.json();
-  const parsed = QoeEvent.safeParse(body);
-  if (!parsed.success) return new Response('invalid', { status: 400 });
+	const body = await request.json();
+	const parsed = QoeEvent.safeParse(body);
+	if (!parsed.success) return new Response('invalid', { status: 400 });
 
-  // Sample 10% of non-error events to control storage; always keep errors.
-  if (parsed.data.kind !== 'error' && Math.random() > 0.1) {
-    return new Response(null, { status: 204 });
-  }
+	// Sample 10% of non-error events to control storage; always keep errors.
+	if (parsed.data.kind !== 'error' && Math.random() > 0.1) {
+		return new Response(null, { status: 204 });
+	}
 
-  await qoeRepo.insert(parsed.data);
-  return new Response(null, { status: 204 });
+	await qoeRepo.insert(parsed.data);
+	return new Response(null, { status: 204 });
 };
 ```
 
@@ -449,7 +466,7 @@ SLO-eligible — alert when degraded.
     bill grows linearly. Cap window per stream + lifecycle policy.
 24. **Player auto-plays with sound on** — Chrome autoplay policy
     blocks; many users react negatively. Default `muted autoplay
-    playsinline` on hero, click-to-unmute.
+playsinline` on hero, click-to-unmute.
 
 ## References
 

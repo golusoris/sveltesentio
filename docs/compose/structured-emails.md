@@ -58,13 +58,13 @@ belongs in a vendor-managed ESP flow, not in the repo.
 
 ## Build vs buy — send provider
 
-| Option | TLS / DKIM / DMARC | Bounce webhook | Template engine | Suppression API | Best for |
-|---|---|---|---|---|---|
-| **Postmark** | ✅ enforced | ✅ signed | Native (Mustache) or raw HTML | ✅ | Default transactional; reputation-isolated streams |
-| **Resend** | ✅ enforced | ✅ signed | React Email native; raw HTML | ✅ | React-shops already on Resend; OK for us via raw HTML |
-| **AWS SES** | Configurable | SNS-routed | None | Manual | High-volume / existing AWS spend |
-| **Mailgun** | ✅ | ✅ | Handlebars | ✅ | EU-data-residency requirement |
-| **Raw SMTP (e.g. Fastmail, Gmail relay)** | Manual | None | None | Manual | <100/day; dev/preview envs only |
+| Option                                    | TLS / DKIM / DMARC | Bounce webhook | Template engine               | Suppression API | Best for                                              |
+| ----------------------------------------- | ------------------ | -------------- | ----------------------------- | --------------- | ----------------------------------------------------- |
+| **Postmark**                              | ✅ enforced        | ✅ signed      | Native (Mustache) or raw HTML | ✅              | Default transactional; reputation-isolated streams    |
+| **Resend**                                | ✅ enforced        | ✅ signed      | React Email native; raw HTML  | ✅              | React-shops already on Resend; OK for us via raw HTML |
+| **AWS SES**                               | Configurable       | SNS-routed     | None                          | Manual          | High-volume / existing AWS spend                      |
+| **Mailgun**                               | ✅                 | ✅             | Handlebars                    | ✅              | EU-data-residency requirement                         |
+| **Raw SMTP (e.g. Fastmail, Gmail relay)** | Manual             | None           | None                          | Manual          | <100/day; dev/preview envs only                       |
 
 **Default pick: Postmark** for production. Single `servers/` split
 per environment + reputation-isolated "Broadcast" vs "Transactional"
@@ -217,9 +217,9 @@ Every template exports a schema and a plain-text function:
 import { z } from 'zod';
 
 export const WelcomeProps = z.object({
-  userName: z.string().min(1).max(120),
-  ctaUrl: z.string().url().startsWith('https://'),
-  supportEmail: z.string().email(),
+	userName: z.string().min(1).max(120),
+	ctaUrl: z.string().url().startsWith('https://'),
+	supportEmail: z.string().email(),
 });
 
 export type WelcomeProps = z.infer<typeof WelcomeProps>;
@@ -230,17 +230,17 @@ export type WelcomeProps = z.infer<typeof WelcomeProps>;
 import type { WelcomeProps } from './schema';
 
 export function welcomePlainText(props: WelcomeProps): string {
-  return [
-    `Welcome, ${props.userName}.`,
-    '',
-    'Your account is ready. Create your first project to get started:',
-    props.ctaUrl,
-    '',
-    `Questions? Reply to this email or write to ${props.supportEmail}.`,
-    '',
-    '--',
-    'You received this email because you signed up at acme.example.',
-  ].join('\n');
+	return [
+		`Welcome, ${props.userName}.`,
+		'',
+		'Your account is ready. Create your first project to get started:',
+		props.ctaUrl,
+		'',
+		`Questions? Reply to this email or write to ${props.supportEmail}.`,
+		'',
+		'--',
+		'You received this email because you signed up at acme.example.',
+	].join('\n');
 }
 ```
 
@@ -263,80 +263,80 @@ import { z } from 'zod';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 type SendArgs<P> = {
-  template: {
-    Component: unknown;               // Svelte component (MJML)
-    schema: z.ZodSchema<P>;
-    plaintext: (props: P) => string;
-  };
-  props: P;
-  to: string;
-  from?: string;
-  replyTo?: string;
-  headers?: Record<string, string>;    // e.g. X-Idempotency-Key for retries
-  tag?: string;                        // Postmark stream tag
-  correlationId: string;               // UUIDv7 from request
+	template: {
+		Component: unknown; // Svelte component (MJML)
+		schema: z.ZodSchema<P>;
+		plaintext: (props: P) => string;
+	};
+	props: P;
+	to: string;
+	from?: string;
+	replyTo?: string;
+	headers?: Record<string, string>; // e.g. X-Idempotency-Key for retries
+	tag?: string; // Postmark stream tag
+	correlationId: string; // UUIDv7 from request
 };
 
 export async function sendEmail<P>({
-  template,
-  props,
-  to,
-  from = env.EMAIL_FROM,
-  replyTo = env.EMAIL_REPLY_TO,
-  headers = {},
-  tag,
-  correlationId,
+	template,
+	props,
+	to,
+	from = env.EMAIL_FROM,
+	replyTo = env.EMAIL_REPLY_TO,
+	headers = {},
+	tag,
+	correlationId,
 }: SendArgs<P>): Promise<{ messageId: string }> {
-  const tracer = trace.getTracer('emails');
-  return tracer.startActiveSpan('email.send', async (span) => {
-    try {
-      // 1. Validate props against schema — fail-fast before render.
-      const validated = template.schema.parse(props);
+	const tracer = trace.getTracer('emails');
+	return tracer.startActiveSpan('email.send', async (span) => {
+		try {
+			// 1. Validate props against schema — fail-fast before render.
+			const validated = template.schema.parse(props);
 
-      // 2. Render MJML-Svelte → MJML string → HTML via mjml compiler.
-      const { body } = render(template.Component, { props: validated });
-      const { html, errors } = mjml2html(body, {
-        validationLevel: 'strict',   // fail on unknown MJML attrs
-        keepComments: false,
-      });
-      if (errors.length > 0) {
-        throw new Error(`mjml_compile_errors: ${errors.map((e) => e.message).join('; ')}`);
-      }
+			// 2. Render MJML-Svelte → MJML string → HTML via mjml compiler.
+			const { body } = render(template.Component, { props: validated });
+			const { html, errors } = mjml2html(body, {
+				validationLevel: 'strict', // fail on unknown MJML attrs
+				keepComments: false,
+			});
+			if (errors.length > 0) {
+				throw new Error(`mjml_compile_errors: ${errors.map((e) => e.message).join('; ')}`);
+			}
 
-      // 3. Plain-text alternative (MANDATORY — never send HTML-only).
-      const text = template.plaintext(validated);
+			// 3. Plain-text alternative (MANDATORY — never send HTML-only).
+			const text = template.plaintext(validated);
 
-      // 4. Provider dispatch.
-      const result = await postmark.sendEmail({
-        From: from,
-        To: to,
-        ReplyTo: replyTo,
-        Subject: deriveSubjectFromMjmlTitle(html),
-        HtmlBody: html,
-        TextBody: text,
-        MessageStream: tag ?? 'transactional',
-        Headers: [
-          { Name: 'X-Correlation-Id', Value: correlationId },
-          ...Object.entries(headers).map(([Name, Value]) => ({ Name, Value })),
-        ],
-      });
+			// 4. Provider dispatch.
+			const result = await postmark.sendEmail({
+				From: from,
+				To: to,
+				ReplyTo: replyTo,
+				Subject: deriveSubjectFromMjmlTitle(html),
+				HtmlBody: html,
+				TextBody: text,
+				MessageStream: tag ?? 'transactional',
+				Headers: [
+					{ Name: 'X-Correlation-Id', Value: correlationId },
+					...Object.entries(headers).map(([Name, Value]) => ({ Name, Value })),
+				],
+			});
 
-      span.setAttributes({
-        'email.template': tag ?? 'transactional',
-        'email.provider': 'postmark',
-        'email.outcome': 'accepted',
-        'correlation.id': correlationId,
-      });
-      return { messageId: result.MessageID };
-    } catch (err) {
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      span.setAttributes({ 'email.outcome': 'failed' });
-      span.recordException(err as Error);
-      throw err;
-    } finally {
-      span.end();
-    }
-  });
+			span.setAttributes({
+				'email.template': tag ?? 'transactional',
+				'email.provider': 'postmark',
+				'email.outcome': 'accepted',
+				'correlation.id': correlationId,
+			});
+			return { messageId: result.MessageID };
+		} catch (err) {
+			span.setStatus({ code: SpanStatusCode.ERROR });
+			span.setAttributes({ 'email.outcome': 'failed' });
+			span.recordException(err as Error);
+			throw err;
+		} finally {
+			span.end();
+		}
+	});
 }
 ```
 
@@ -365,18 +365,19 @@ fail-closed before provider dispatch.
 ```ts
 // packages/emails/src/suppression.ts
 export async function isSuppressed(email: string): Promise<boolean> {
-  const row = await db.selectFrom('email_suppressions')
-    .where('email', '=', email.toLowerCase())
-    .where('expires_at', '>', new Date())
-    .selectAll()
-    .executeTakeFirst();
-  return row !== undefined;
+	const row = await db
+		.selectFrom('email_suppressions')
+		.where('email', '=', email.toLowerCase())
+		.where('expires_at', '>', new Date())
+		.selectAll()
+		.executeTakeFirst();
+	return row !== undefined;
 }
 
 // In send.ts before dispatch:
 if (await isSuppressed(to)) {
-  span.setAttributes({ 'email.outcome': 'suppressed' });
-  return { messageId: 'suppressed' };
+	span.setAttributes({ 'email.outcome': 'suppressed' });
+	return { messageId: 'suppressed' };
 }
 ```
 
@@ -386,17 +387,24 @@ Bounce webhook endpoint (HMAC-signed per [webhooks.md](webhooks.md)):
 // src/routes/api/webhooks/postmark/+server.ts
 // After HMAC verify + event parse:
 if (event.Type === 'HardBounce' || event.Type === 'SpamComplaint') {
-  await db.insertInto('email_suppressions').values({
-    email: event.Recipient.toLowerCase(),
-    reason: event.Type,
-    suppressed_at: new Date(),
-    expires_at: event.Type === 'SpamComplaint'
-      ? new Date('9999-12-31')   // permanent
-      : addDays(new Date(), 90), // hard-bounce → 90-day cool-off
-  }).onConflict((oc) => oc.column('email').doUpdateSet({
-    reason: event.Type,
-    suppressed_at: new Date(),
-  })).execute();
+	await db
+		.insertInto('email_suppressions')
+		.values({
+			email: event.Recipient.toLowerCase(),
+			reason: event.Type,
+			suppressed_at: new Date(),
+			expires_at:
+				event.Type === 'SpamComplaint'
+					? new Date('9999-12-31') // permanent
+					: addDays(new Date(), 90), // hard-bounce → 90-day cool-off
+		})
+		.onConflict((oc) =>
+			oc.column('email').doUpdateSet({
+				reason: event.Type,
+				suppressed_at: new Date(),
+			}),
+		)
+		.execute();
 }
 ```
 
@@ -430,25 +438,25 @@ import Welcome from '../src/templates/welcome/template.mjml.svelte';
 import { welcomePlainText } from '../src/templates/welcome/plaintext';
 
 describe('welcome template', () => {
-  const props = {
-    userName: 'Alice',
-    ctaUrl: 'https://acme.example/onboarding',
-    supportEmail: 'support@acme.example',
-  };
+	const props = {
+		userName: 'Alice',
+		ctaUrl: 'https://acme.example/onboarding',
+		supportEmail: 'support@acme.example',
+	};
 
-  test('compiles with zero MJML errors', () => {
-    const { body } = render(Welcome, { props });
-    const { html, errors } = mjml2html(body, { validationLevel: 'strict' });
-    expect(errors).toEqual([]);
-    expect(html).toContain('Welcome, Alice');
-    expect(html).toContain('href="https://acme.example/onboarding"');
-  });
+	test('compiles with zero MJML errors', () => {
+		const { body } = render(Welcome, { props });
+		const { html, errors } = mjml2html(body, { validationLevel: 'strict' });
+		expect(errors).toEqual([]);
+		expect(html).toContain('Welcome, Alice');
+		expect(html).toContain('href="https://acme.example/onboarding"');
+	});
 
-  test('plain-text alternative is present and includes CTA url', () => {
-    const text = welcomePlainText(props);
-    expect(text.length).toBeGreaterThan(50);
-    expect(text).toContain('https://acme.example/onboarding');
-  });
+	test('plain-text alternative is present and includes CTA url', () => {
+		const text = welcomePlainText(props);
+		expect(text.length).toBeGreaterThan(50);
+		expect(text).toContain('https://acme.example/onboarding');
+	});
 });
 ```
 
@@ -467,14 +475,14 @@ import { render } from 'svelte/server';
 import { templates } from '@sveltesentio/emails/registry';
 
 export async function GET({ params, url }) {
-  if (!dev) throw error(404);
-  const t = templates[params.template];
-  if (!t) throw error(404);
-  const format = url.searchParams.get('format') ?? 'html';
-  const { body } = render(t.Component, { props: t.preview });
-  if (format === 'text') return new Response(t.plaintext(t.preview));
-  const { html } = mjml2html(body);
-  return new Response(html, { headers: { 'content-type': 'text/html' } });
+	if (!dev) throw error(404);
+	const t = templates[params.template];
+	if (!t) throw error(404);
+	const format = url.searchParams.get('format') ?? 'html';
+	const { body } = render(t.Component, { props: t.preview });
+	if (format === 'text') return new Response(t.plaintext(t.preview));
+	const { html } = mjml2html(body);
+	return new Response(html, { headers: { 'content-type': 'text/html' } });
 }
 ```
 
@@ -484,14 +492,14 @@ Gate behind `dev` — never expose in production.
 
 Email palette is a **subset** of the web palette:
 
-| Token | Web (oklch) | Email (hex) | Rationale |
-|---|---|---|---|
-| `--color-bg` | `oklch(0.98 0 0)` | `#f5f5f5` | Outlook has no oklch |
-| `--color-surface` | `oklch(1 0 0)` | `#ffffff` | — |
-| `--color-text` | `oklch(0.15 0 0)` | `#0b0c10` | 4.5:1 contrast on surface |
-| `--color-text-muted` | `oklch(0.45 0 0)` | `#666666` | 4.5:1 for ≥16px only |
-| `--color-accent` | `oklch(0.65 0.2 265)` | `#0066ff` | Brand blue; 4.5:1 on white |
-| `--color-border` | `oklch(0.92 0 0)` | `#e5e5e5` | Decorative only |
+| Token                | Web (oklch)           | Email (hex) | Rationale                  |
+| -------------------- | --------------------- | ----------- | -------------------------- |
+| `--color-bg`         | `oklch(0.98 0 0)`     | `#f5f5f5`   | Outlook has no oklch       |
+| `--color-surface`    | `oklch(1 0 0)`        | `#ffffff`   | —                          |
+| `--color-text`       | `oklch(0.15 0 0)`     | `#0b0c10`   | 4.5:1 contrast on surface  |
+| `--color-text-muted` | `oklch(0.45 0 0)`     | `#666666`   | 4.5:1 for ≥16px only       |
+| `--color-accent`     | `oklch(0.65 0.2 265)` | `#0066ff`   | Brand blue; 4.5:1 on white |
+| `--color-border`     | `oklch(0.92 0 0)`     | `#e5e5e5`   | Decorative only            |
 
 Tokens live in `packages/emails/src/tokens/colors.ts` and are imported
 by `<mj-attributes>` — never hard-code hex in templates directly.

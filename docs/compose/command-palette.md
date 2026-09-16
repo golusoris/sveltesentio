@@ -42,22 +42,22 @@ import { defineCommand } from '@sveltesentio/ui/cmd';
 import { goto } from '$app/navigation';
 
 export const newFlow = defineCommand({
-  id: 'flow.new',
-  title: 'New flow',
-  description: 'Create a blank flow',
-  keywords: ['create', 'add'],
-  shortcut: '$mod+n',
-  when: ({ permissions }) => permissions.can('edit', { type: 'flow' }),
-  run: () => goto('/flows/new'),
-  icon: 'Plus',
+	id: 'flow.new',
+	title: 'New flow',
+	description: 'Create a blank flow',
+	keywords: ['create', 'add'],
+	shortcut: '$mod+n',
+	when: ({ permissions }) => permissions.can('edit', { type: 'flow' }),
+	run: () => goto('/flows/new'),
+	icon: 'Plus',
 });
 
 export const searchFlows = defineCommand({
-  id: 'flow.search',
-  title: 'Search flows…',
-  shortcut: '$mod+p',
-  run: () => commandPalette.open({ filter: 'flow' }),
-  icon: 'Search',
+	id: 'flow.search',
+	title: 'Search flows…',
+	shortcut: '$mod+p',
+	run: () => commandPalette.open({ filter: 'flow' }),
+	icon: 'Search',
 });
 ```
 
@@ -77,10 +77,10 @@ One `<CommandPalette>` per app, at the root layout:
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { CommandPalette } from '@sveltesentio/ui/cmd';
-  import '$lib/commands'; // side-effect registrations (see below)
+	import { CommandPalette } from '@sveltesentio/ui/cmd';
+	import '$lib/commands'; // side-effect registrations (see below)
 
-  let { children } = $props();
+	let { children } = $props();
 </script>
 
 {@render children()}
@@ -107,12 +107,12 @@ in that route's `+layout.svelte` or `+page.svelte`:
 
 ```svelte
 <script lang="ts">
-  import { useCommands } from '@sveltesentio/ui/cmd';
-  import { deleteFlow, exportFlow } from './commands';
+	import { useCommands } from '@sveltesentio/ui/cmd';
+	import { deleteFlow, exportFlow } from './commands';
 
-  let { data } = $props();
+	let { data } = $props();
 
-  useCommands([deleteFlow(data.flowId), exportFlow(data.flowId)]);
+	useCommands([deleteFlow(data.flowId), exportFlow(data.flowId)]);
 </script>
 ```
 
@@ -129,18 +129,18 @@ import { defineCommandProvider } from '@sveltesentio/ui/cmd';
 import { api } from '$lib/api';
 
 export const recentFlowsProvider = defineCommandProvider({
-  id: 'flow.recent',
-  group: 'Recent flows',
-  async list(query) {
-    const { data } = await api.GET('/flows/recent', { params: { query: { q: query, limit: 8 } } });
-    return data.items.map((f) => ({
-      id: `flow.open.${f.id}`,
-      title: f.name,
-      description: f.description,
-      run: () => goto(`/flows/${f.id}`),
-      icon: 'FileText',
-    }));
-  },
+	id: 'flow.recent',
+	group: 'Recent flows',
+	async list(query) {
+		const { data } = await api.GET('/flows/recent', { params: { query: { q: query, limit: 8 } } });
+		return data.items.map((f) => ({
+			id: `flow.open.${f.id}`,
+			title: f.name,
+			description: f.description,
+			run: () => goto(`/flows/${f.id}`),
+			icon: 'FileText',
+		}));
+	},
 });
 
 registerCommandProvider(recentFlowsProvider);
@@ -157,10 +157,10 @@ render in the order they first appear. Override with `priority`:
 
 ```ts
 defineCommand({
-  id: 'flow.new',
-  group: 'Create',
-  priority: 100, // higher = earlier within group
-  /* … */
+	id: 'flow.new',
+	group: 'Create',
+	priority: 100, // higher = earlier within group
+	/* … */
 });
 ```
 
@@ -173,15 +173,15 @@ Any command with a `shortcut` is bound globally when registered.
 Shortcuts are dormant when an `<input>`, `<textarea>`, or
 `contenteditable` element has focus (per tinykeys defaults).
 
-For a shortcut that fires *even when* a field has focus, use
+For a shortcut that fires _even when_ a field has focus, use
 `captureInInputs: true`:
 
 ```ts
 defineCommand({
-  id: 'app.save',
-  shortcut: '$mod+s',
-  captureInInputs: true, // e.g. save a form from the field
-  run: () => saveCurrentForm(),
+	id: 'app.save',
+	shortcut: '$mod+s',
+	captureInInputs: true, // e.g. save a form from the field
+	run: () => saveCurrentForm(),
 });
 ```
 
@@ -193,11 +193,10 @@ visible and its shortcut is dormant:
 
 ```ts
 defineCommand({
-  id: 'flow.delete',
-  title: 'Delete flow…',
-  when: ({ permissions, page }) =>
-    permissions.can('delete', { type: 'flow', id: page.params.id }),
-  run: () => confirmDelete(),
+	id: 'flow.delete',
+	title: 'Delete flow…',
+	when: ({ permissions, page }) => permissions.can('delete', { type: 'flow', id: page.params.id }),
+	run: () => confirmDelete(),
 });
 ```
 
@@ -212,8 +211,8 @@ shadcn's Command primitive uses the same oklch tokens as the rest of
 ```css
 /* 10-foot preset: larger list items */
 :root[data-preset='10foot'] [data-cmd-item] {
-  padding-block: 0.75rem;
-  font-size: 1.125rem;
+	padding-block: 0.75rem;
+	font-size: 1.125rem;
 }
 ```
 
@@ -230,16 +229,16 @@ import { CommandPalette, registerCommands } from '@sveltesentio/ui/cmd';
 import { newFlow } from '$lib/routes/flows/commands';
 
 test('palette opens on ⌘K and runs command', async () => {
-  const run = vi.fn();
-  registerCommands([{ ...newFlow, run }]);
-  render(CommandPalette);
+	const run = vi.fn();
+	registerCommands([{ ...newFlow, run }]);
+	render(CommandPalette);
 
-  await userEvent.keyboard('{Meta>}k{/Meta}');
-  await waitFor(() => expect(screen.getByRole('dialog')).toBeVisible());
+	await userEvent.keyboard('{Meta>}k{/Meta}');
+	await waitFor(() => expect(screen.getByRole('dialog')).toBeVisible());
 
-  await userEvent.type(screen.getByRole('combobox'), 'new flow');
-  await userEvent.keyboard('{Enter}');
-  expect(run).toHaveBeenCalledOnce();
+	await userEvent.type(screen.getByRole('combobox'), 'new flow');
+	await userEvent.keyboard('{Enter}');
+	expect(run).toHaveBeenCalledOnce();
 });
 ```
 

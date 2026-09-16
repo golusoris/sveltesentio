@@ -124,32 +124,40 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT = readFileSync(fileURLToPath(new URL('./token-bucket.lua', import.meta.url)), 'utf8');
-const SHA = await redis.script('LOAD', SCRIPT) as string;
+const SHA = (await redis.script('LOAD', SCRIPT)) as string;
 
 export type BucketConfig = {
-  capacity: number;
-  refillPerSec: number;
-  cost?: number;
+	capacity: number;
+	refillPerSec: number;
+	cost?: number;
 };
 
 export type BucketResult = {
-  allowed: boolean;
-  remaining: number;
-  retryAfterMs: number;
-  capacity: number;
-  refillPerSec: number;
+	allowed: boolean;
+	remaining: number;
+	retryAfterMs: number;
+	capacity: number;
+	refillPerSec: number;
 };
 
 export async function consume(key: string, cfg: BucketConfig): Promise<BucketResult> {
-  const cost = cfg.cost ?? 1;
-  const result = await redis.evalsha(SHA, 1, key, cfg.capacity, cfg.refillPerSec, Date.now(), cost) as [number, number, number];
-  return {
-    allowed: result[0] === 1,
-    remaining: result[1],
-    retryAfterMs: result[2],
-    capacity: cfg.capacity,
-    refillPerSec: cfg.refillPerSec,
-  };
+	const cost = cfg.cost ?? 1;
+	const result = (await redis.evalsha(
+		SHA,
+		1,
+		key,
+		cfg.capacity,
+		cfg.refillPerSec,
+		Date.now(),
+		cost,
+	)) as [number, number, number];
+	return {
+		allowed: result[0] === 1,
+		remaining: result[1],
+		retryAfterMs: result[2],
+		capacity: cfg.capacity,
+		refillPerSec: cfg.refillPerSec,
+	};
 }
 ```
 
@@ -172,14 +180,14 @@ Five bucket invariants:
 ```ts
 // src/lib/rate-limit/identity.ts
 export function rateLimitKey(event: RequestEvent, scope: string): string {
-  const session = event.locals.session;
-  if (session?.userId) return `rl:${scope}:user:${session.userId}`;
+	const session = event.locals.session;
+	if (session?.userId) return `rl:${scope}:user:${session.userId}`;
 
-  const cookieBucket = event.cookies.get('flag-bucket');
-  if (cookieBucket) return `rl:${scope}:cookie:${cookieBucket}`;
+	const cookieBucket = event.cookies.get('flag-bucket');
+	if (cookieBucket) return `rl:${scope}:cookie:${cookieBucket}`;
 
-  const ip = event.getClientAddress();
-  return `rl:${scope}:ip:${ip}`;
+	const ip = event.getClientAddress();
+	return `rl:${scope}:ip:${ip}`;
 }
 ```
 
@@ -203,16 +211,16 @@ Three identity rules:
 ```ts
 // src/lib/rate-limit/policies.ts
 export const policies = {
-  default:        { capacity: 60,  refillPerSec: 1.0  },
-  login:          { capacity: 5,   refillPerSec: 0.0167 },
-  signup:         { capacity: 3,   refillPerSec: 0.0083 },
-  passwordReset:  { capacity: 3,   refillPerSec: 0.0083 },
-  passkeyChallenge:{ capacity: 10, refillPerSec: 0.0833 },
-  search:         { capacity: 30,  refillPerSec: 0.5  },
-  aiChat:         { capacity: 10,  refillPerSec: 0.0833 },
-  aiAgent:        { capacity: 3,   refillPerSec: 0.0167, cost: 1 },
-  upload:         { capacity: 20,  refillPerSec: 0.1, cost: 2 },
-  webhookReceive: { capacity: 1000, refillPerSec: 100 },
+	default: { capacity: 60, refillPerSec: 1.0 },
+	login: { capacity: 5, refillPerSec: 0.0167 },
+	signup: { capacity: 3, refillPerSec: 0.0083 },
+	passwordReset: { capacity: 3, refillPerSec: 0.0083 },
+	passkeyChallenge: { capacity: 10, refillPerSec: 0.0833 },
+	search: { capacity: 30, refillPerSec: 0.5 },
+	aiChat: { capacity: 10, refillPerSec: 0.0833 },
+	aiAgent: { capacity: 3, refillPerSec: 0.0167, cost: 1 },
+	upload: { capacity: 20, refillPerSec: 0.1, cost: 2 },
+	webhookReceive: { capacity: 1000, refillPerSec: 100 },
 } as const satisfies Record<string, BucketConfig>;
 
 export type PolicyName = keyof typeof policies;
@@ -245,51 +253,51 @@ import { logger } from '$lib/observability/logs';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 export const rateLimitHook: Handle = async ({ event, resolve }) => {
-  const policy = pickPolicy(event);
-  if (!policy) return resolve(event);
+	const policy = pickPolicy(event);
+	if (!policy) return resolve(event);
 
-  const key = rateLimitKey(event, policy.scope);
-  let result;
-  try {
-    result = await consume(key, { ...policies[policy.name], cost: policy.cost });
-  } catch (err) {
-    logger.emit({
-      severityNumber: SeverityNumber.WARN,
-      body: 'rate-limiter unavailable; failing open',
-      attributes: { 'rate.policy': policy.name, 'correlation.id': event.locals.correlationId },
-    });
-    return resolve(event);
-  }
+	const key = rateLimitKey(event, policy.scope);
+	let result;
+	try {
+		result = await consume(key, { ...policies[policy.name], cost: policy.cost });
+	} catch (err) {
+		logger.emit({
+			severityNumber: SeverityNumber.WARN,
+			body: 'rate-limiter unavailable; failing open',
+			attributes: { 'rate.policy': policy.name, 'correlation.id': event.locals.correlationId },
+		});
+		return resolve(event);
+	}
 
-  const headers = {
-    'RateLimit-Limit': String(result.capacity),
-    'RateLimit-Remaining': String(Math.max(0, result.remaining)),
-    'RateLimit-Reset': String(Math.ceil(result.retryAfterMs / 1000)),
-    'RateLimit-Policy': `${result.capacity};w=${Math.ceil(result.capacity / result.refillPerSec)}`,
-  };
+	const headers = {
+		'RateLimit-Limit': String(result.capacity),
+		'RateLimit-Remaining': String(Math.max(0, result.remaining)),
+		'RateLimit-Reset': String(Math.ceil(result.retryAfterMs / 1000)),
+		'RateLimit-Policy': `${result.capacity};w=${Math.ceil(result.capacity / result.refillPerSec)}`,
+	};
 
-  if (!result.allowed) {
-    return new Response(
-      JSON.stringify({
-        type: 'urn:sveltesentio:rate:limited',
-        title: 'Too many requests',
-        status: 429,
-        detail: `Retry after ${Math.ceil(result.retryAfterMs / 1000)}s`,
-      }),
-      {
-        status: 429,
-        headers: {
-          ...headers,
-          'Retry-After': String(Math.ceil(result.retryAfterMs / 1000)),
-          'content-type': 'application/problem+json',
-        },
-      },
-    );
-  }
+	if (!result.allowed) {
+		return new Response(
+			JSON.stringify({
+				type: 'urn:sveltesentio:rate:limited',
+				title: 'Too many requests',
+				status: 429,
+				detail: `Retry after ${Math.ceil(result.retryAfterMs / 1000)}s`,
+			}),
+			{
+				status: 429,
+				headers: {
+					...headers,
+					'Retry-After': String(Math.ceil(result.retryAfterMs / 1000)),
+					'content-type': 'application/problem+json',
+				},
+			},
+		);
+	}
 
-  const response = await resolve(event);
-  for (const [k, v] of Object.entries(headers)) response.headers.set(k, v);
-  return response;
+	const response = await resolve(event);
+	for (const [k, v] of Object.entries(headers)) response.headers.set(k, v);
+	return response;
 };
 ```
 
@@ -317,24 +325,42 @@ Six middleware invariants:
 import type { RequestEvent } from '@sveltejs/kit';
 import type { PolicyName } from './policies';
 
-const RULES: Array<{ test: (e: RequestEvent) => boolean; policy: PolicyName; scope: string; cost?: number }> = [
-  { test: (e) => e.url.pathname.startsWith('/api/auth/login'),       policy: 'login',          scope: 'login' },
-  { test: (e) => e.url.pathname.startsWith('/api/auth/signup'),      policy: 'signup',         scope: 'signup' },
-  { test: (e) => e.url.pathname.startsWith('/api/auth/reset'),       policy: 'passwordReset',  scope: 'reset' },
-  { test: (e) => e.url.pathname.startsWith('/api/auth/passkey'),     policy: 'passkeyChallenge',scope: 'passkey' },
-  { test: (e) => e.url.pathname.startsWith('/api/ai/agent'),         policy: 'aiAgent',        scope: 'ai-agent' },
-  { test: (e) => e.url.pathname.startsWith('/api/ai/'),              policy: 'aiChat',         scope: 'ai-chat' },
-  { test: (e) => e.url.pathname.startsWith('/api/uploads/'),         policy: 'upload',         scope: 'upload' },
-  { test: (e) => e.url.pathname.startsWith('/api/webhooks/'),        policy: 'webhookReceive', scope: 'webhook' },
-  { test: (e) => e.url.pathname === '/api/health',                   policy: null as never,    scope: '' },
-  { test: (e) => e.url.pathname.startsWith('/api/'),                 policy: 'default',        scope: 'default' },
+const RULES: Array<{
+	test: (e: RequestEvent) => boolean;
+	policy: PolicyName;
+	scope: string;
+	cost?: number;
+}> = [
+	{ test: (e) => e.url.pathname.startsWith('/api/auth/login'), policy: 'login', scope: 'login' },
+	{ test: (e) => e.url.pathname.startsWith('/api/auth/signup'), policy: 'signup', scope: 'signup' },
+	{
+		test: (e) => e.url.pathname.startsWith('/api/auth/reset'),
+		policy: 'passwordReset',
+		scope: 'reset',
+	},
+	{
+		test: (e) => e.url.pathname.startsWith('/api/auth/passkey'),
+		policy: 'passkeyChallenge',
+		scope: 'passkey',
+	},
+	{ test: (e) => e.url.pathname.startsWith('/api/ai/agent'), policy: 'aiAgent', scope: 'ai-agent' },
+	{ test: (e) => e.url.pathname.startsWith('/api/ai/'), policy: 'aiChat', scope: 'ai-chat' },
+	{ test: (e) => e.url.pathname.startsWith('/api/uploads/'), policy: 'upload', scope: 'upload' },
+	{
+		test: (e) => e.url.pathname.startsWith('/api/webhooks/'),
+		policy: 'webhookReceive',
+		scope: 'webhook',
+	},
+	{ test: (e) => e.url.pathname === '/api/health', policy: null as never, scope: '' },
+	{ test: (e) => e.url.pathname.startsWith('/api/'), policy: 'default', scope: 'default' },
 ];
 
 export function pickPolicy(event: RequestEvent) {
-  for (const rule of RULES) {
-    if (rule.test(event)) return rule.policy ? { name: rule.policy, scope: rule.scope, cost: rule.cost } : null;
-  }
-  return null;
+	for (const rule of RULES) {
+		if (rule.test(event))
+			return rule.policy ? { name: rule.policy, scope: rule.scope, cost: rule.cost } : null;
+	}
+	return null;
 }
 ```
 
@@ -349,10 +375,10 @@ Two routing rules:
 
 ```ts
 // src/lib/rate-limit/webhook-allowlist.ts
-const STRIPE_IPS = ['3.18.12.63', /* ... see https://stripe.com/files/ips/ips_webhooks.json ... */];
+const STRIPE_IPS = ['3.18.12.63' /* ... see https://stripe.com/files/ips/ips_webhooks.json ... */];
 
 export function isWebhookProvider(ip: string): boolean {
-  return STRIPE_IPS.includes(ip) || isGitHubWebhookIp(ip);
+	return STRIPE_IPS.includes(ip) || isGitHubWebhookIp(ip);
 }
 ```
 
@@ -396,15 +422,15 @@ const tracer = trace.getTracer('rate-limit');
 const limitedCounter = metrics.getMeter('rate-limit').createCounter('rate.limit.outcome');
 
 const span = tracer.startSpan('rate.limit.check', {
-  attributes: {
-    'rate.policy': policy.name,
-    'rate.scope': policy.scope,
-    'rate.outcome': result.allowed ? 'allowed' : 'limited',
-  },
+	attributes: {
+		'rate.policy': policy.name,
+		'rate.scope': policy.scope,
+		'rate.outcome': result.allowed ? 'allowed' : 'limited',
+	},
 });
 limitedCounter.add(1, {
-  policy: policy.name,
-  outcome: result.allowed ? 'allowed' : 'limited',
+	policy: policy.name,
+	outcome: result.allowed ? 'allowed' : 'limited',
 });
 span.end();
 ```
@@ -423,15 +449,15 @@ fine; metric labels are not).
 const SHADOW = (event: RequestEvent) => event.url.searchParams.has('rl_shadow');
 
 if (!result.allowed) {
-  if (SHADOW(event)) {
-    logger.emit({
-      severityNumber: SeverityNumber.WARN,
-      body: 'rate-limit would have blocked',
-      attributes: { 'rate.policy': policy.name, /* ... */ },
-    });
-    return resolve(event);
-  }
-  // ... return 429 ...
+	if (SHADOW(event)) {
+		logger.emit({
+			severityNumber: SeverityNumber.WARN,
+			body: 'rate-limit would have blocked',
+			attributes: { 'rate.policy': policy.name /* ... */ },
+		});
+		return resolve(event);
+	}
+	// ... return 429 ...
 }
 ```
 
@@ -446,14 +472,14 @@ This is the equivalent of CSP Report-Only from
 ```ts
 // src/lib/http/retry-after.ts
 export async function withRetry(req: () => Promise<Response>, attempts = 3): Promise<Response> {
-  for (let i = 0; i < attempts; i++) {
-    const res = await req();
-    if (res.status !== 429) return res;
-    const retryAfter = Number(res.headers.get('Retry-After') ?? '1');
-    if (i === attempts - 1) return res;
-    await sleep(Math.min(retryAfter, 30) * 1000 + Math.random() * 250);
-  }
-  throw new Error('unreachable');
+	for (let i = 0; i < attempts; i++) {
+		const res = await req();
+		if (res.status !== 429) return res;
+		const retryAfter = Number(res.headers.get('Retry-After') ?? '1');
+		if (i === attempts - 1) return res;
+		await sleep(Math.min(retryAfter, 30) * 1000 + Math.random() * 250);
+	}
+	throw new Error('unreachable');
 }
 ```
 
@@ -473,26 +499,28 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { consume } from './redis-bucket';
 
 describe('token bucket', () => {
-  beforeEach(async () => { await redis.flushdb(); });
+	beforeEach(async () => {
+		await redis.flushdb();
+	});
 
-  it('allows up to capacity then limits', async () => {
-    const cfg = { capacity: 3, refillPerSec: 0.1 };
-    expect((await consume('test', cfg)).allowed).toBe(true);
-    expect((await consume('test', cfg)).allowed).toBe(true);
-    expect((await consume('test', cfg)).allowed).toBe(true);
-    const fourth = await consume('test', cfg);
-    expect(fourth.allowed).toBe(false);
-    expect(fourth.retryAfterMs).toBeGreaterThan(0);
-  });
+	it('allows up to capacity then limits', async () => {
+		const cfg = { capacity: 3, refillPerSec: 0.1 };
+		expect((await consume('test', cfg)).allowed).toBe(true);
+		expect((await consume('test', cfg)).allowed).toBe(true);
+		expect((await consume('test', cfg)).allowed).toBe(true);
+		const fourth = await consume('test', cfg);
+		expect(fourth.allowed).toBe(false);
+		expect(fourth.retryAfterMs).toBeGreaterThan(0);
+	});
 
-  it('refills over wall-clock time', async () => {
-    vi.useFakeTimers();
-    const cfg = { capacity: 1, refillPerSec: 1 };
-    expect((await consume('refill', cfg)).allowed).toBe(true);
-    expect((await consume('refill', cfg)).allowed).toBe(false);
-    vi.advanceTimersByTime(1100);
-    expect((await consume('refill', cfg)).allowed).toBe(true);
-  });
+	it('refills over wall-clock time', async () => {
+		vi.useFakeTimers();
+		const cfg = { capacity: 1, refillPerSec: 1 };
+		expect((await consume('refill', cfg)).allowed).toBe(true);
+		expect((await consume('refill', cfg)).allowed).toBe(false);
+		vi.advanceTimersByTime(1100);
+		expect((await consume('refill', cfg)).allowed).toBe(true);
+	});
 });
 ```
 

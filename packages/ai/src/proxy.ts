@@ -1,8 +1,4 @@
-import {
-	ProblemError,
-	isProblemResponse,
-	problemFromResponse,
-} from '@sveltesentio/core';
+import { ProblemError, isProblemResponse, problemFromResponse } from '@sveltesentio/core';
 
 /**
  * A single chat turn. Roles mirror the de-facto provider convention; the proxy
@@ -51,10 +47,7 @@ export interface LlmProxy {
 	/** POST a chat request to the server endpoint and return the parsed JSON body. */
 	chat<T = unknown>(request: ChatRequest, init?: { signal?: AbortSignal }): Promise<T>;
 	/** POST a single-prompt completion request to the server endpoint. */
-	complete<T = unknown>(
-		request: CompleteRequest,
-		init?: { signal?: AbortSignal },
-	): Promise<T>;
+	complete<T = unknown>(request: CompleteRequest, init?: { signal?: AbortSignal }): Promise<T>;
 }
 
 function resolveFetch(injected: FetchLike | undefined): FetchLike {
@@ -99,10 +92,7 @@ async function readBody(response: Response): Promise<unknown> {
 export function createLlmProxy(options: CreateLlmProxyOptions): LlmProxy {
 	const fetchImpl = resolveFetch(options.fetch);
 
-	async function post<T>(
-		payload: unknown,
-		init?: { signal?: AbortSignal },
-	): Promise<T> {
+	async function post<T>(payload: unknown, init?: { signal?: AbortSignal }): Promise<T> {
 		const response = await fetchImpl(options.endpoint, {
 			method: 'POST',
 			headers: {
@@ -134,10 +124,7 @@ export function createLlmProxy(options: CreateLlmProxyOptions): LlmProxy {
 		chat<T = unknown>(request: ChatRequest, init?: { signal?: AbortSignal }): Promise<T> {
 			return post<T>(request, init);
 		},
-		complete<T = unknown>(
-			request: CompleteRequest,
-			init?: { signal?: AbortSignal },
-		): Promise<T> {
+		complete<T = unknown>(request: CompleteRequest, init?: { signal?: AbortSignal }): Promise<T> {
 			return post<T>(request, init);
 		},
 	};

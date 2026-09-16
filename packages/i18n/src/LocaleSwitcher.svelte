@@ -36,13 +36,7 @@ No pure logic to extract — it is a thin, controlled form control.
 		id?: string;
 	}
 
-	const {
-		locales,
-		current,
-		onChange,
-		label = 'Language',
-		id,
-	}: Props = $props();
+	const { locales, current, onChange, label = 'Language', id }: Props = $props();
 
 	const selectId = $derived(id ?? 'sentio-locale-switcher');
 

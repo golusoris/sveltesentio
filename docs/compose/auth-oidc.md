@@ -53,13 +53,13 @@ import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 
 export const authEnv = z
-  .object({
-    GOLUSORIS_URL: z.url(), // e.g. https://golusoris.example
-    OIDC_PROVIDER_ID: z.string().default('default'),
-    SESSION_COOKIE_NAME: z.string().default('sv_session'),
-    SESSION_COOKIE_DOMAIN: z.string().optional(),
-  })
-  .parse(env);
+	.object({
+		GOLUSORIS_URL: z.url(), // e.g. https://golusoris.example
+		OIDC_PROVIDER_ID: z.string().default('default'),
+		SESSION_COOKIE_NAME: z.string().default('sv_session'),
+		SESSION_COOKIE_DOMAIN: z.string().optional(),
+	})
+	.parse(env);
 ```
 
 ## Start login
@@ -68,11 +68,11 @@ Client-side trigger:
 
 ```svelte
 <script lang="ts">
-  import { startLogin } from '@sveltesentio/auth/oidc';
+	import { startLogin } from '@sveltesentio/auth/oidc';
 
-  function signIn() {
-    startLogin(authEnv.OIDC_PROVIDER_ID, { returnTo: window.location.pathname });
-  }
+	function signIn() {
+		startLogin(authEnv.OIDC_PROVIDER_ID, { returnTo: window.location.pathname });
+	}
 </script>
 
 <button type="button" onclick={signIn}>Sign in</button>
@@ -90,14 +90,14 @@ import type { RequestHandler } from './$types';
 import { authEnv } from '$lib/env';
 
 export const GET: RequestHandler = async ({ url }) => {
-  const provider = url.searchParams.get('provider') ?? authEnv.OIDC_PROVIDER_ID;
-  const returnTo = url.searchParams.get('returnTo') ?? '/';
+	const provider = url.searchParams.get('provider') ?? authEnv.OIDC_PROVIDER_ID;
+	const returnTo = url.searchParams.get('returnTo') ?? '/';
 
-  const start = new URL(`${authEnv.GOLUSORIS_URL}/auth/oidc/start`);
-  start.searchParams.set('provider', provider);
-  start.searchParams.set('return_to', returnTo);
+	const start = new URL(`${authEnv.GOLUSORIS_URL}/auth/oidc/start`);
+	start.searchParams.set('provider', provider);
+	start.searchParams.set('return_to', returnTo);
 
-  redirect(302, start.toString());
+	redirect(302, start.toString());
 };
 ```
 
@@ -117,32 +117,32 @@ import type { RequestHandler } from './$types';
 import { authEnv } from '$lib/env';
 
 export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
-  // If Golusoris is same-origin, this route is usually unnecessary —
-  // the redirect lands directly on the app. Only needed for cross-origin.
-  const callback = new URL(`${authEnv.GOLUSORIS_URL}/auth/oidc/callback`);
-  for (const [key, value] of url.searchParams) callback.searchParams.set(key, value);
+	// If Golusoris is same-origin, this route is usually unnecessary —
+	// the redirect lands directly on the app. Only needed for cross-origin.
+	const callback = new URL(`${authEnv.GOLUSORIS_URL}/auth/oidc/callback`);
+	for (const [key, value] of url.searchParams) callback.searchParams.set(key, value);
 
-  const resp = await fetch(callback, { credentials: 'include' });
-  if (!resp.ok) redirect(302, '/auth/error');
+	const resp = await fetch(callback, { credentials: 'include' });
+	if (!resp.ok) redirect(302, '/auth/error');
 
-  const setCookie = resp.headers.get('set-cookie');
-  if (setCookie) {
-    // SvelteKit requires cookies.set() per cookie; parse accordingly.
-    // Single-cookie case shown; multi-cookie → use `cookie` library.
-    const [pair, ...attrs] = setCookie.split(';').map((s) => s.trim());
-    const [name, value] = pair.split('=');
-    cookies.set(name, value, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      domain: authEnv.SESSION_COOKIE_DOMAIN,
-      maxAge: 60 * 60 * 12,
-    });
-  }
+	const setCookie = resp.headers.get('set-cookie');
+	if (setCookie) {
+		// SvelteKit requires cookies.set() per cookie; parse accordingly.
+		// Single-cookie case shown; multi-cookie → use `cookie` library.
+		const [pair, ...attrs] = setCookie.split(';').map((s) => s.trim());
+		const [name, value] = pair.split('=');
+		cookies.set(name, value, {
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			domain: authEnv.SESSION_COOKIE_DOMAIN,
+			maxAge: 60 * 60 * 12,
+		});
+	}
 
-  const returnTo = url.searchParams.get('return_to') ?? '/';
-  redirect(302, returnTo);
+	const returnTo = url.searchParams.get('return_to') ?? '/';
+	redirect(302, returnTo);
 };
 ```
 
@@ -160,11 +160,11 @@ import { readSession } from '@sveltesentio/auth/oidc';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async (event) => {
-  const session = await readSession(event); // null when logged out
-  return {
-    user: session?.user ?? null,
-    permissions: session?.permissions ?? [],
-  };
+	const session = await readSession(event); // null when logged out
+	return {
+		user: session?.user ?? null,
+		permissions: session?.permissions ?? [],
+	};
 };
 ```
 
@@ -193,8 +193,8 @@ import { refreshMiddleware } from '@sveltesentio/auth/oidc';
 import type { paths } from '$lib/api/schema';
 
 export const api = createClient<paths>({
-  baseUrl: authEnv.GOLUSORIS_URL,
-  credentials: 'include',
+	baseUrl: authEnv.GOLUSORIS_URL,
+	credentials: 'include',
 });
 
 api.use(problemMiddleware());
@@ -212,8 +212,8 @@ throws a `ProblemError` with `status: 401` and the UI should trigger
 import { logout } from '@sveltesentio/auth/oidc';
 
 async function signOut() {
-  await logout();
-  window.location.href = '/';
+	await logout();
+	window.location.href = '/';
 }
 ```
 
@@ -225,7 +225,7 @@ clears the session) and clears the local cookie. Redirect after.
 Passkeys are a separate ceremony layered on top of OIDC. See
 [passkeys.md](passkeys.md) (pending) and
 [ADR-0033](../adr/0033-simplewebauthn-passkeys.md). The OIDC flow above is
-orthogonal — passkeys are an authentication *factor*, not a replacement for
+orthogonal — passkeys are an authentication _factor_, not a replacement for
 the session lifecycle.
 
 ## MFA
@@ -244,18 +244,18 @@ Use a pre-seeded session cookie in Playwright:
 import type { Page } from '@playwright/test';
 
 export async function signInAsTestUser(page: Page, userId: string) {
-  await page.context().addCookies([
-    {
-      name: authEnv.SESSION_COOKIE_NAME,
-      value: await mintTestSession(userId), // server fixture that calls
-                                            // Golusoris's test-mode endpoint
-      domain: new URL(authEnv.GOLUSORIS_URL).hostname,
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Lax',
-    },
-  ]);
+	await page.context().addCookies([
+		{
+			name: authEnv.SESSION_COOKIE_NAME,
+			value: await mintTestSession(userId), // server fixture that calls
+			// Golusoris's test-mode endpoint
+			domain: new URL(authEnv.GOLUSORIS_URL).hostname,
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'Lax',
+		},
+	]);
 }
 ```
 

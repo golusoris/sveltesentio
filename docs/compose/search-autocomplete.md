@@ -60,46 +60,51 @@ pnpm add typesense
 import { z } from 'zod';
 
 export const SearchQuery = z.object({
-  q: z.string().trim().min(1).max(200),
-  limit: z.number().int().min(1).max(20).default(8),
-  scope: z.enum(['all', 'products', 'articles', 'users']).default('all'),
+	q: z.string().trim().min(1).max(200),
+	limit: z.number().int().min(1).max(20).default(8),
+	scope: z.enum(['all', 'products', 'articles', 'users']).default('all'),
 });
 export type SearchQuery = z.infer<typeof SearchQuery>;
 
 export const SuggestionKind = z.enum([
-  'product',
-  'article',
-  'user',
-  'category',
-  'query', // recent or popular query
+	'product',
+	'article',
+	'user',
+	'category',
+	'query', // recent or popular query
 ]);
 export type SuggestionKind = z.infer<typeof SuggestionKind>;
 
 export const Suggestion = z.object({
-  id: z.string().min(1).max(100),
-  kind: SuggestionKind,
-  label: z.string().min(1).max(200),
-  secondary: z.string().max(200).optional(),
-  href: z.string().refine((u) => u.startsWith('/'), {
-    message: 'relative URLs only',
-  }),
-  highlights: z.array(z.object({
-    field: z.string(),
-    snippet: z.string().max(400),
-  })).max(3).optional(),
+	id: z.string().min(1).max(100),
+	kind: SuggestionKind,
+	label: z.string().min(1).max(200),
+	secondary: z.string().max(200).optional(),
+	href: z.string().refine((u) => u.startsWith('/'), {
+		message: 'relative URLs only',
+	}),
+	highlights: z
+		.array(
+			z.object({
+				field: z.string(),
+				snippet: z.string().max(400),
+			}),
+		)
+		.max(3)
+		.optional(),
 });
 export type Suggestion = z.infer<typeof Suggestion>;
 
 export const SearchResponse = z.object({
-  query: z.string(),
-  took: z.number().int().nonnegative(), // ms
-  suggestions: z.array(Suggestion).max(20),
+	query: z.string(),
+	took: z.number().int().nonnegative(), // ms
+	suggestions: z.array(Suggestion).max(20),
 });
 export type SearchResponse = z.infer<typeof SearchResponse>;
 
 export const RecentQuery = z.object({
-  q: z.string().min(1).max(200),
-  at: z.string().datetime(), // ISO 8601
+	q: z.string().min(1).max(200),
+	at: z.string().datetime(), // ISO 8601
 });
 export type RecentQuery = z.infer<typeof RecentQuery>;
 ```
@@ -118,67 +123,65 @@ import { SearchQuery, SearchResponse, type Suggestion } from '@sveltesentio/sear
 import { rateLimit } from '$lib/server/rate-limit';
 
 export const GET = async ({ url, locals, getClientAddress }) => {
-  const parsed = SearchQuery.safeParse({
-    q: url.searchParams.get('q') ?? '',
-    limit: Number(url.searchParams.get('limit')) || undefined,
-    scope: url.searchParams.get('scope') ?? undefined,
-  });
-  if (!parsed.success) throw error(400, { type: 'validation', detail: parsed.error.message });
+	const parsed = SearchQuery.safeParse({
+		q: url.searchParams.get('q') ?? '',
+		limit: Number(url.searchParams.get('limit')) || undefined,
+		scope: url.searchParams.get('scope') ?? undefined,
+	});
+	if (!parsed.success) throw error(400, { type: 'validation', detail: parsed.error.message });
 
-  const { q, limit, scope } = parsed.data;
+	const { q, limit, scope } = parsed.data;
 
-  await rateLimit({
-    key: `search:${locals.userId ?? getClientAddress()}`,
-    limit: 30,
-    windowMs: 10_000,
-  });
+	await rateLimit({
+		key: `search:${locals.userId ?? getClientAddress()}`,
+		limit: 30,
+		windowMs: 10_000,
+	});
 
-  const collections = scope === 'all'
-    ? ['products', 'articles', 'users']
-    : [scope];
+	const collections = scope === 'all' ? ['products', 'articles', 'users'] : [scope];
 
-  const t0 = performance.now();
-  const results = await Promise.all(
-    collections.map((c) =>
-      typesense.collections(c).documents().search({
-        q,
-        query_by: 'name,title,description',
-        per_page: limit,
-        prefix: true,
-        highlight_fields: 'name,title',
-        snippet_threshold: 30,
-      }),
-    ),
-  );
-  const took = Math.round(performance.now() - t0);
+	const t0 = performance.now();
+	const results = await Promise.all(
+		collections.map((c) =>
+			typesense.collections(c).documents().search({
+				q,
+				query_by: 'name,title,description',
+				per_page: limit,
+				prefix: true,
+				highlight_fields: 'name,title',
+				snippet_threshold: 30,
+			}),
+		),
+	);
+	const took = Math.round(performance.now() - t0);
 
-  const suggestions: Suggestion[] = results.flatMap((r, i) =>
-    r.hits!.map((h) => ({
-      id: h.document.id as string,
-      kind: collections[i].slice(0, -1) as Suggestion['kind'],
-      label: (h.document.name ?? h.document.title) as string,
-      secondary: h.document.description as string | undefined,
-      href: `/${collections[i]}/${h.document.slug ?? h.document.id}`,
-      highlights: h.highlights?.slice(0, 3).map((x) => ({
-        field: x.field,
-        snippet: x.snippet ?? '',
-      })),
-    })),
-  );
+	const suggestions: Suggestion[] = results.flatMap((r, i) =>
+		r.hits!.map((h) => ({
+			id: h.document.id as string,
+			kind: collections[i].slice(0, -1) as Suggestion['kind'],
+			label: (h.document.name ?? h.document.title) as string,
+			secondary: h.document.description as string | undefined,
+			href: `/${collections[i]}/${h.document.slug ?? h.document.id}`,
+			highlights: h.highlights?.slice(0, 3).map((x) => ({
+				field: x.field,
+				snippet: x.snippet ?? '',
+			})),
+		})),
+	);
 
-  const response = SearchResponse.parse({
-    query: q,
-    took,
-    suggestions: suggestions.slice(0, limit),
-  });
+	const response = SearchResponse.parse({
+		query: q,
+		took,
+		suggestions: suggestions.slice(0, limit),
+	});
 
-  return json(response, {
-    headers: {
-      // private: cache per-user; no-store so transient results aren't kept
-      'cache-control': 'private, no-store',
-      'x-search-took': String(took),
-    },
-  });
+	return json(response, {
+		headers: {
+			// private: cache per-user; no-store so transient results aren't kept
+			'cache-control': 'private, no-store',
+			'x-search-took': String(took),
+		},
+	});
 };
 ```
 
@@ -198,179 +201,177 @@ Notes:
 ```svelte
 <!-- $lib/components/Autocomplete.svelte -->
 <script lang="ts">
-  import { untrack } from 'svelte';
-  import { tick } from 'svelte';
-  import type { Suggestion, SearchResponse } from '@sveltesentio/search/schema';
+	import { untrack } from 'svelte';
+	import { tick } from 'svelte';
+	import type { Suggestion, SearchResponse } from '@sveltesentio/search/schema';
 
-  type Props = {
-    placeholder?: string;
-    scope?: 'all' | 'products' | 'articles' | 'users';
-    onselect?: (s: Suggestion) => void;
-  };
-  const { placeholder = 'Search…', scope = 'all', onselect }: Props = $props();
+	type Props = {
+		placeholder?: string;
+		scope?: 'all' | 'products' | 'articles' | 'users';
+		onselect?: (s: Suggestion) => void;
+	};
+	const { placeholder = 'Search…', scope = 'all', onselect }: Props = $props();
 
-  let inputEl = $state<HTMLInputElement | null>(null);
-  let q = $state('');
-  let open = $state(false);
-  let activeIndex = $state(-1);
-  let items = $state<Suggestion[]>([]);
-  let loading = $state(false);
-  let requestSeq = 0; // guards against stale responses
+	let inputEl = $state<HTMLInputElement | null>(null);
+	let q = $state('');
+	let open = $state(false);
+	let activeIndex = $state(-1);
+	let items = $state<Suggestion[]>([]);
+	let loading = $state(false);
+	let requestSeq = 0; // guards against stale responses
 
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function scheduleFetch(query: string) {
-    clearTimeout(debounceTimer);
-    if (query.trim().length === 0) {
-      items = [];
-      open = false;
-      return;
-    }
-    debounceTimer = setTimeout(() => void run(query), 150);
-  }
+	function scheduleFetch(query: string) {
+		clearTimeout(debounceTimer);
+		if (query.trim().length === 0) {
+			items = [];
+			open = false;
+			return;
+		}
+		debounceTimer = setTimeout(() => void run(query), 150);
+	}
 
-  async function run(query: string) {
-    const seq = ++requestSeq;
-    loading = true;
-    try {
-      const url = new URL('/api/search/suggest', location.origin);
-      url.searchParams.set('q', query);
-      url.searchParams.set('scope', scope);
-      const r = await fetch(url, { headers: { accept: 'application/json' } });
-      if (!r.ok) throw new Error(`search ${r.status}`);
-      const body = (await r.json()) as SearchResponse;
-      if (seq !== requestSeq) return; // superseded by newer input
-      items = body.suggestions;
-      open = items.length > 0;
-      activeIndex = items.length > 0 ? 0 : -1;
-    } catch (e) {
-      console.warn('autocomplete fetch failed', e);
-    } finally {
-      if (seq === requestSeq) loading = false;
-    }
-  }
+	async function run(query: string) {
+		const seq = ++requestSeq;
+		loading = true;
+		try {
+			const url = new URL('/api/search/suggest', location.origin);
+			url.searchParams.set('q', query);
+			url.searchParams.set('scope', scope);
+			const r = await fetch(url, { headers: { accept: 'application/json' } });
+			if (!r.ok) throw new Error(`search ${r.status}`);
+			const body = (await r.json()) as SearchResponse;
+			if (seq !== requestSeq) return; // superseded by newer input
+			items = body.suggestions;
+			open = items.length > 0;
+			activeIndex = items.length > 0 ? 0 : -1;
+		} catch (e) {
+			console.warn('autocomplete fetch failed', e);
+		} finally {
+			if (seq === requestSeq) loading = false;
+		}
+	}
 
-  function onInput(e: Event) {
-    q = (e.currentTarget as HTMLInputElement).value;
-    scheduleFetch(q);
-  }
+	function onInput(e: Event) {
+		q = (e.currentTarget as HTMLInputElement).value;
+		scheduleFetch(q);
+	}
 
-  function onKeydown(e: KeyboardEvent) {
-    if (!open || items.length === 0) {
-      if (e.key === 'ArrowDown' && q.length > 0) {
-        scheduleFetch(q);
-        return;
-      }
-      return;
-    }
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        activeIndex = (activeIndex + 1) % items.length;
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        activeIndex = (activeIndex - 1 + items.length) % items.length;
-        break;
-      case 'Home':
-        e.preventDefault();
-        activeIndex = 0;
-        break;
-      case 'End':
-        e.preventDefault();
-        activeIndex = items.length - 1;
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (activeIndex >= 0) choose(items[activeIndex]);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        open = false;
-        activeIndex = -1;
-        break;
-      case 'Tab':
-        open = false;
-        break;
-    }
-  }
+	function onKeydown(e: KeyboardEvent) {
+		if (!open || items.length === 0) {
+			if (e.key === 'ArrowDown' && q.length > 0) {
+				scheduleFetch(q);
+				return;
+			}
+			return;
+		}
+		switch (e.key) {
+			case 'ArrowDown':
+				e.preventDefault();
+				activeIndex = (activeIndex + 1) % items.length;
+				break;
+			case 'ArrowUp':
+				e.preventDefault();
+				activeIndex = (activeIndex - 1 + items.length) % items.length;
+				break;
+			case 'Home':
+				e.preventDefault();
+				activeIndex = 0;
+				break;
+			case 'End':
+				e.preventDefault();
+				activeIndex = items.length - 1;
+				break;
+			case 'Enter':
+				e.preventDefault();
+				if (activeIndex >= 0) choose(items[activeIndex]);
+				break;
+			case 'Escape':
+				e.preventDefault();
+				open = false;
+				activeIndex = -1;
+				break;
+			case 'Tab':
+				open = false;
+				break;
+		}
+	}
 
-  function choose(s: Suggestion) {
-    onselect?.(s);
-    q = s.label;
-    open = false;
-    activeIndex = -1;
-    recordRecent(s.label);
-  }
+	function choose(s: Suggestion) {
+		onselect?.(s);
+		q = s.label;
+		open = false;
+		activeIndex = -1;
+		recordRecent(s.label);
+	}
 
-  function recordRecent(query: string) {
-    try {
-      const raw = localStorage.getItem('search:recent');
-      const list = raw ? (JSON.parse(raw) as { q: string; at: string }[]) : [];
-      const next = [
-        { q: query, at: new Date().toISOString() },
-        ...list.filter((r) => r.q !== query),
-      ].slice(0, 10);
-      localStorage.setItem('search:recent', JSON.stringify(next));
-    } catch {
-      // localStorage disabled or quota — non-fatal
-    }
-  }
+	function recordRecent(query: string) {
+		try {
+			const raw = localStorage.getItem('search:recent');
+			const list = raw ? (JSON.parse(raw) as { q: string; at: string }[]) : [];
+			const next = [
+				{ q: query, at: new Date().toISOString() },
+				...list.filter((r) => r.q !== query),
+			].slice(0, 10);
+			localStorage.setItem('search:recent', JSON.stringify(next));
+		} catch {
+			// localStorage disabled or quota — non-fatal
+		}
+	}
 
-  const listId = $derived(`autocomplete-list-${Math.random().toString(36).slice(2, 8)}`);
-  const activeId = $derived(activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined);
+	const listId = $derived(`autocomplete-list-${Math.random().toString(36).slice(2, 8)}`);
+	const activeId = $derived(activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined);
 </script>
 
 <div class="relative w-full">
-  <input
-    bind:this={inputEl}
-    type="search"
-    role="combobox"
-    aria-expanded={open}
-    aria-controls={listId}
-    aria-autocomplete="list"
-    aria-activedescendant={activeId}
-    autocomplete="off"
-    autocorrect="off"
-    spellcheck="false"
-    {placeholder}
-    value={q}
-    oninput={onInput}
-    onkeydown={onKeydown}
-    onfocus={() => q.length > 0 && scheduleFetch(q)}
-    class="w-full rounded border px-3 py-2 text-sm"
-  />
-  {#if open}
-    <ul
-      id={listId}
-      role="listbox"
-      class="absolute left-0 right-0 top-full z-10 mt-1 max-h-80 overflow-auto rounded border bg-white shadow-lg"
-    >
-      {#each items as s, i (s.id)}
-        <li
-          id={`${listId}-opt-${i}`}
-          role="option"
-          aria-selected={i === activeIndex}
-          class="cursor-pointer px-3 py-2 text-sm hover:bg-neutral-50 aria-selected:bg-blue-50"
-          onmousedown={(e) => {
-            e.preventDefault();
-            choose(s);
-          }}
-          onmouseenter={() => (activeIndex = i)}
-        >
-          <div class="font-medium">{s.label}</div>
-          {#if s.secondary}
-            <div class="truncate text-xs text-neutral-500">{s.secondary}</div>
-          {/if}
-        </li>
-      {/each}
-      {#if loading}
-        <li class="px-3 py-2 text-xs text-neutral-500" aria-live="polite">
-          Searching…
-        </li>
-      {/if}
-    </ul>
-  {/if}
+	<input
+		bind:this={inputEl}
+		type="search"
+		role="combobox"
+		aria-expanded={open}
+		aria-controls={listId}
+		aria-autocomplete="list"
+		aria-activedescendant={activeId}
+		autocomplete="off"
+		autocorrect="off"
+		spellcheck="false"
+		{placeholder}
+		value={q}
+		oninput={onInput}
+		onkeydown={onKeydown}
+		onfocus={() => q.length > 0 && scheduleFetch(q)}
+		class="w-full rounded border px-3 py-2 text-sm"
+	/>
+	{#if open}
+		<ul
+			id={listId}
+			role="listbox"
+			class="absolute left-0 right-0 top-full z-10 mt-1 max-h-80 overflow-auto rounded border bg-white shadow-lg"
+		>
+			{#each items as s, i (s.id)}
+				<li
+					id={`${listId}-opt-${i}`}
+					role="option"
+					aria-selected={i === activeIndex}
+					class="cursor-pointer px-3 py-2 text-sm hover:bg-neutral-50 aria-selected:bg-blue-50"
+					onmousedown={(e) => {
+						e.preventDefault();
+						choose(s);
+					}}
+					onmouseenter={() => (activeIndex = i)}
+				>
+					<div class="font-medium">{s.label}</div>
+					{#if s.secondary}
+						<div class="truncate text-xs text-neutral-500">{s.secondary}</div>
+					{/if}
+				</li>
+			{/each}
+			{#if loading}
+				<li class="px-3 py-2 text-xs text-neutral-500" aria-live="polite">Searching…</li>
+			{/if}
+		</ul>
+	{/if}
 </div>
 ```
 
@@ -397,29 +398,29 @@ Key details:
 
 ```svelte
 <script lang="ts">
-  import { RecentQuery } from '@sveltesentio/search/schema';
+	import { RecentQuery } from '@sveltesentio/search/schema';
 
-  let recent = $state<{ q: string; at: string }[]>([]);
+	let recent = $state<{ q: string; at: string }[]>([]);
 
-  $effect(() => {
-    try {
-      const raw = localStorage.getItem('search:recent');
-      if (!raw) return;
-      const parsed = z.array(RecentQuery).safeParse(JSON.parse(raw));
-      if (parsed.success) recent = parsed.data;
-    } catch {
-      // ignore
-    }
-  });
+	$effect(() => {
+		try {
+			const raw = localStorage.getItem('search:recent');
+			if (!raw) return;
+			const parsed = z.array(RecentQuery).safeParse(JSON.parse(raw));
+			if (parsed.success) recent = parsed.data;
+		} catch {
+			// ignore
+		}
+	});
 </script>
 
 {#if open && items.length === 0 && q.trim().length === 0 && recent.length > 0}
-  <ul role="listbox">
-    <li class="px-3 py-1 text-xs font-semibold text-neutral-500">Recent</li>
-    {#each recent as r (r.q)}
-      <li role="option" onmousedown={() => (q = r.q)}>{r.q}</li>
-    {/each}
-  </ul>
+	<ul role="listbox">
+		<li class="px-3 py-1 text-xs font-semibold text-neutral-500">Recent</li>
+		{#each recent as r (r.q)}
+			<li role="option" onmousedown={() => (q = r.q)}>{r.q}</li>
+		{/each}
+	</ul>
 {/if}
 ```
 

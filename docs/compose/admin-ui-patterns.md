@@ -88,8 +88,8 @@ Six route rules:
 import { requireRole } from '$lib/auth/rbac';
 
 export async function load(event) {
-  const user = requireRole(event, ['admin:read', 'admin:write', 'admin:super']);
-  return { adminUser: user };
+	const user = requireRole(event, ['admin:read', 'admin:write', 'admin:super']);
+	return { adminUser: user };
 }
 ```
 
@@ -141,21 +141,21 @@ Six table rules:
 import { z } from 'zod';
 
 export const BulkAction = z.enum([
-  'user.suspend',
-  'user.resume',
-  'user.reset_mfa',
-  'user.export_data',
-  'tenant.freeze_billing',
-  'notification.resend',
+	'user.suspend',
+	'user.resume',
+	'user.reset_mfa',
+	'user.export_data',
+	'tenant.freeze_billing',
+	'notification.resend',
 ]);
 export type BulkAction = z.infer<typeof BulkAction>;
 
 export const BulkRequest = z.object({
-  action: BulkAction,
-  targetIds: z.array(z.string().uuid()).min(1).max(10_000),
-  reason: z.string().min(12),
-  dryRun: z.boolean().default(true),
-  confirmToken: z.string().length(6),
+	action: BulkAction,
+	targetIds: z.array(z.string().uuid()).min(1).max(10_000),
+	reason: z.string().min(12),
+	dryRun: z.boolean().default(true),
+	confirmToken: z.string().length(6),
 });
 ```
 
@@ -183,27 +183,29 @@ Seven bulk rules:
 ```svelte
 <!-- src/routes/admin/bulk/[jobId]/+page.svelte -->
 <script lang="ts">
-  const { data } = $props();
-  const job = $derived(data.job);
-  const canCancel = $derived(job.progress < 0.5 && job.status === 'running');
-  const canUndo = $derived(
-    job.status === 'completed' &&
-    job.undoExpiresAt > Date.now() &&
-    job.reversible,
-  );
+	const { data } = $props();
+	const job = $derived(data.job);
+	const canCancel = $derived(job.progress < 0.5 && job.status === 'running');
+	const canUndo = $derived(
+		job.status === 'completed' && job.undoExpiresAt > Date.now() && job.reversible,
+	);
 </script>
 
 <section aria-label="Bulk job status">
-  <h1>{job.action} — {job.totalTargets} targets</h1>
-  <progress value={job.progress} max="1" aria-label="progress" />
-  <dl>
-    <dt>Started by</dt><dd>{job.actor}</dd>
-    <dt>Reason</dt><dd>{job.reason}</dd>
-    <dt>Processed</dt><dd>{job.processed} / {job.totalTargets}</dd>
-    <dt>Failures</dt><dd>{job.failures}</dd>
-  </dl>
-  {#if canCancel}<button onclick={cancel}>Cancel</button>{/if}
-  {#if canUndo}<button onclick={undo}>Undo (expires {relative(job.undoExpiresAt)})</button>{/if}
+	<h1>{job.action} — {job.totalTargets} targets</h1>
+	<progress value={job.progress} max="1" aria-label="progress" />
+	<dl>
+		<dt>Started by</dt>
+		<dd>{job.actor}</dd>
+		<dt>Reason</dt>
+		<dd>{job.reason}</dd>
+		<dt>Processed</dt>
+		<dd>{job.processed} / {job.totalTargets}</dd>
+		<dt>Failures</dt>
+		<dd>{job.failures}</dd>
+	</dl>
+	{#if canCancel}<button onclick={cancel}>Cancel</button>{/if}
+	{#if canUndo}<button onclick={undo}>Undo (expires {relative(job.undoExpiresAt)})</button>{/if}
 </section>
 ```
 
@@ -227,34 +229,34 @@ Six status-UI rules:
 import { z } from 'zod';
 
 export const ImpersonationRequest = z.object({
-  targetUserId: z.string().uuid(),
-  reason: z.string().min(12),
-  durationMinutes: z.number().int().min(5).max(60),
-  scope: z.enum(['read_only', 'read_write']),
+	targetUserId: z.string().uuid(),
+	reason: z.string().min(12),
+	durationMinutes: z.number().int().min(5).max(60),
+	scope: z.enum(['read_only', 'read_write']),
 });
 
 export async function startImpersonation(
-  actor: User,
-  req: ImpersonationRequest,
+	actor: User,
+	req: ImpersonationRequest,
 ): Promise<ImpersonationSession> {
-  if (!actor.roles.includes('admin:super')) throw forbidden();
-  if (await isProtectedAccount(req.targetUserId)) throw forbidden();
-  const session = await createImpersonationSession({
-    actorId: actor.id,
-    targetUserId: req.targetUserId,
-    expiresAt: new Date(Date.now() + req.durationMinutes * 60_000),
-    scope: req.scope,
-    reason: req.reason,
-  });
-  await audit('impersonation_started', {
-    actor: actor.id,
-    target: req.targetUserId,
-    scope: req.scope,
-    durationMinutes: req.durationMinutes,
-    reason: req.reason,
-  });
-  await notifyTargetUserByEmail(req.targetUserId, session);
-  return session;
+	if (!actor.roles.includes('admin:super')) throw forbidden();
+	if (await isProtectedAccount(req.targetUserId)) throw forbidden();
+	const session = await createImpersonationSession({
+		actorId: actor.id,
+		targetUserId: req.targetUserId,
+		expiresAt: new Date(Date.now() + req.durationMinutes * 60_000),
+		scope: req.scope,
+		reason: req.reason,
+	});
+	await audit('impersonation_started', {
+		actor: actor.id,
+		target: req.targetUserId,
+		scope: req.scope,
+		durationMinutes: req.durationMinutes,
+		reason: req.reason,
+	});
+	await notifyTargetUserByEmail(req.targetUserId, session);
+	return session;
 }
 ```
 
@@ -287,25 +289,26 @@ Ten impersonation rules:
 ```svelte
 <!-- src/lib/admin/ImpersonationBanner.svelte -->
 <script lang="ts">
-  const { session } = $props();
-  const remaining = $derived(session.expiresAt - Date.now());
+	const { session } = $props();
+	const remaining = $derived(session.expiresAt - Date.now());
 </script>
 
 <div role="alert" aria-live="assertive" class="impersonation-banner">
-  <strong>Impersonating:</strong> {session.targetUserEmail}
-  — {Math.floor(remaining / 60_000)} min remaining
-  <button onclick={endSession}>End session</button>
+	<strong>Impersonating:</strong>
+	{session.targetUserEmail}
+	— {Math.floor(remaining / 60_000)} min remaining
+	<button onclick={endSession}>End session</button>
 </div>
 
 <style>
-  .impersonation-banner {
-    position: sticky;
-    top: 0;
-    z-index: 9999;
-    background: oklch(45% 0.2 25);
-    color: white;
-    padding: 0.75rem 1rem;
-  }
+	.impersonation-banner {
+		position: sticky;
+		top: 0;
+		z-index: 9999;
+		background: oklch(45% 0.2 25);
+		color: white;
+		padding: 0.75rem 1rem;
+	}
 </style>
 ```
 
@@ -325,22 +328,19 @@ Five banner rules:
 ```svelte
 <!-- Dialog fragment -->
 <Dialog open={confirmOpen}>
-  <h2>Delete tenant <code>{tenant.name}</code>?</h2>
-  <p>This will remove all data irreversibly after 30-day grace.</p>
-  <label>
-    Type <code>{tenant.slug}</code> to confirm:
-    <input bind:value={typed} />
-  </label>
-  <label>
-    Reason (min 20 chars):
-    <textarea bind:value={reason}></textarea>
-  </label>
-  <button
-    disabled={typed !== tenant.slug || reason.length < 20}
-    onclick={execute}
-  >
-    Delete tenant
-  </button>
+	<h2>Delete tenant <code>{tenant.name}</code>?</h2>
+	<p>This will remove all data irreversibly after 30-day grace.</p>
+	<label>
+		Type <code>{tenant.slug}</code> to confirm:
+		<input bind:value={typed} />
+	</label>
+	<label>
+		Reason (min 20 chars):
+		<textarea bind:value={reason}></textarea>
+	</label>
+	<button disabled={typed !== tenant.slug || reason.length < 20} onclick={execute}>
+		Delete tenant
+	</button>
 </Dialog>
 ```
 

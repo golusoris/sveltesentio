@@ -1,9 +1,20 @@
 # Praetor-managed artifacts whose bytes are pinned by .standards.lock digests or
 # covered by an Ed25519 signature. Reformatting them breaks `praetorctl audit`
 # with "lockfile digest does not match the archetype source".
+#
+# The list grew when switching prettier to tabs reformatted four of them at once
+# and verify-all failed with "DevContainer out of sync with declared standards:
+# recorded bootstrap configuration differs from declared profiles or contains
+# unrecognized edits". The adopter's own formatter is enough to break the audit,
+# and praetor does not declare these paths to it -- filed upstream.
 .config/archetypes/
 .standards.lock
 .standards-receipt.json
+.standards-baseline.json
+.standards.yaml
+standards.sublime-project
+.devcontainer/
+.github/rulesets/
 
 # Generated lockfiles and build output
 pnpm-lock.yaml
@@ -23,3 +34,10 @@ CLAUDE.md
 .codex/
 .claude/agents/
 .github/agents/
+
+# The HISS-20 fixture corpus is input to the rules, not source governed by them,
+# which is why eslint.config.ts ignores it too. Its files are written to
+# demonstrate a specific shape -- a function of a given length, an indentation
+# the scanner measures -- so reformatting them would change the evidence the
+# coverage catalog's claims are replayed against.
+.config/hiss/testdata/

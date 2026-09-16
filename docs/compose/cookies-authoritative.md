@@ -25,7 +25,7 @@ top-frame, in-app browser, and PWA standalone.
 - [pwa.md](pwa.md) — standalone-PWA cookie scope (no third-party
   context, but iOS Safari still applies ITP).
 - [sse.md](sse.md) / [websocket.md](websocket.md) — `withCredentials:
-  true` for streaming auth; same cookie attribute rules apply to the
+true` for streaming auth; same cookie attribute rules apply to the
   upgrade request.
 - [permissions.md](permissions.md) — `load`-derived permissions read
   session cookie; attribute mistakes manifest as silent permission
@@ -53,17 +53,17 @@ SSR cache with per-user variant                                         → Vary
 
 ## Attribute matrix — the canonical answers
 
-| Attribute | Session cookie | OAuth state | Theme/locale | CSRF token | Idempotency hint | Consent banner |
-|---|---|---|---|---|---|---|
-| **Name prefix** | `__Host-` | `__Host-` | (none) | `__Host-` | (none) | (none) |
-| **HttpOnly** | ✅ mandatory | ✅ mandatory | ❌ JS reads | ✅ if double-submit; ❌ if header-only | ❌ JS reads | ❌ JS reads |
-| **Secure** | ✅ mandatory | ✅ mandatory | ✅ mandatory | ✅ mandatory | ✅ mandatory | ✅ mandatory |
-| **SameSite** | `Strict` if no SSO; `Lax` if OIDC redirects | `Lax` mandatory | `Lax` | `Strict` | `Lax` | `Lax` |
-| **Path** | `/` | `/` | `/` | `/` | `/api/` | `/` |
-| **Domain** | omit (host-only) | omit | omit | omit | omit | omit |
-| **Max-Age / Expires** | session-id-TTL or omit | 600s | 1y | session | 1h | 1y |
-| **Partitioned** | only for iframe-embed flow | only for iframe-embed flow | optional | only for iframe-embed flow | optional | depends on context |
-| **Priority** | `High` | `High` | `Low` | `High` | `Medium` | `Low` |
+| Attribute             | Session cookie                              | OAuth state                | Theme/locale | CSRF token                             | Idempotency hint | Consent banner     |
+| --------------------- | ------------------------------------------- | -------------------------- | ------------ | -------------------------------------- | ---------------- | ------------------ |
+| **Name prefix**       | `__Host-`                                   | `__Host-`                  | (none)       | `__Host-`                              | (none)           | (none)             |
+| **HttpOnly**          | ✅ mandatory                                | ✅ mandatory               | ❌ JS reads  | ✅ if double-submit; ❌ if header-only | ❌ JS reads      | ❌ JS reads        |
+| **Secure**            | ✅ mandatory                                | ✅ mandatory               | ✅ mandatory | ✅ mandatory                           | ✅ mandatory     | ✅ mandatory       |
+| **SameSite**          | `Strict` if no SSO; `Lax` if OIDC redirects | `Lax` mandatory            | `Lax`        | `Strict`                               | `Lax`            | `Lax`              |
+| **Path**              | `/`                                         | `/`                        | `/`          | `/`                                    | `/api/`          | `/`                |
+| **Domain**            | omit (host-only)                            | omit                       | omit         | omit                                   | omit             | omit               |
+| **Max-Age / Expires** | session-id-TTL or omit                      | 600s                       | 1y           | session                                | 1h               | 1y                 |
+| **Partitioned**       | only for iframe-embed flow                  | only for iframe-embed flow | optional     | only for iframe-embed flow             | optional         | depends on context |
+| **Priority**          | `High`                                      | `High`                     | `Low`        | `High`                                 | `Medium`         | `Low`              |
 
 Reading the matrix: pick the column that matches what you're setting,
 emit every row that says ✅, omit every row that says ❌, and the
@@ -83,25 +83,25 @@ export const SESSION_COOKIE = '__Host-session';
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 export function setSessionCookie(cookies: Cookies, sid: string): void {
-  cookies.set(SESSION_COOKIE, sid, {
-    path: '/',
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: SESSION_TTL_SECONDS,
-    priority: 'high',
-  });
+	cookies.set(SESSION_COOKIE, sid, {
+		path: '/',
+		httpOnly: true,
+		secure: true,
+		sameSite: 'lax',
+		maxAge: SESSION_TTL_SECONDS,
+		priority: 'high',
+	});
 }
 
 export function clearSessionCookie(cookies: Cookies): void {
-  cookies.delete(SESSION_COOKIE, { path: '/' });
+	cookies.delete(SESSION_COOKIE, { path: '/' });
 }
 ```
 
 Five emit rules:
 
 - **`__Host-` prefix** — browser-enforced contract: `Secure` + `Path=/`
-  + no `Domain`; an attacker on a sibling subdomain cannot overwrite.
+  - no `Domain`; an attacker on a sibling subdomain cannot overwrite.
 - **`sameSite: 'lax'` not `'strict'`** for any session that participates
   in an OIDC redirect — `Strict` blocks the cookie on the cross-site
   navigation back from the IdP; the user lands logged-out.
@@ -114,7 +114,7 @@ Five emit rules:
   priority cookies when per-host quota fills (~150-180 cookies).
   Session cookies must survive eviction.
 - **`cookies.delete(name, { path: '/' })` not `cookies.set(name, '',
-  { maxAge: 0 })`** — SvelteKit's `delete` emits the correct
+{ maxAge: 0 })`** — SvelteKit's `delete` emits the correct
   past-expiry attributes and handles the `__Host-` prefix; manual
   `set('', maxAge: 0)` without matching attributes silently fails
   to delete.
@@ -130,31 +130,34 @@ const STATE_COOKIE = '__Host-oidc-state';
 const STATE_TTL_SECONDS = 600;
 
 export function mintStateCookie(cookies: Cookies, returnTo: string): string {
-  const state = randomBytes(32).toString('base64url');
-  const payload = JSON.stringify({ state, returnTo, ts: Date.now() });
-  cookies.set(STATE_COOKIE, payload, {
-    path: '/',
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: STATE_TTL_SECONDS,
-    priority: 'high',
-  });
-  return state;
+	const state = randomBytes(32).toString('base64url');
+	const payload = JSON.stringify({ state, returnTo, ts: Date.now() });
+	cookies.set(STATE_COOKIE, payload, {
+		path: '/',
+		httpOnly: true,
+		secure: true,
+		sameSite: 'lax',
+		maxAge: STATE_TTL_SECONDS,
+		priority: 'high',
+	});
+	return state;
 }
 
-export function consumeStateCookie(cookies: Cookies, returned: string): { returnTo: string } | null {
-  const raw = cookies.get(STATE_COOKIE);
-  if (!raw) return null;
-  cookies.delete(STATE_COOKIE, { path: '/' });
-  try {
-    const payload = JSON.parse(raw) as { state: string; returnTo: string; ts: number };
-    if (payload.state !== returned) return null;
-    if (Date.now() - payload.ts > STATE_TTL_SECONDS * 1000) return null;
-    return { returnTo: payload.returnTo };
-  } catch {
-    return null;
-  }
+export function consumeStateCookie(
+	cookies: Cookies,
+	returned: string,
+): { returnTo: string } | null {
+	const raw = cookies.get(STATE_COOKIE);
+	if (!raw) return null;
+	cookies.delete(STATE_COOKIE, { path: '/' });
+	try {
+		const payload = JSON.parse(raw) as { state: string; returnTo: string; ts: number };
+		if (payload.state !== returned) return null;
+		if (Date.now() - payload.ts > STATE_TTL_SECONDS * 1000) return null;
+		return { returnTo: payload.returnTo };
+	} catch {
+		return null;
+	}
 }
 ```
 
@@ -177,18 +180,18 @@ const THEME_COOKIE = 'theme';
 const THEME_TTL = 60 * 60 * 24 * 365;
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const theme = event.cookies.get(THEME_COOKIE) ?? 'system';
-  return resolve(event, {
-    transformPageChunk: ({ html }) => html.replace('%sveltekit.theme%', theme),
-  });
+	const theme = event.cookies.get(THEME_COOKIE) ?? 'system';
+	return resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%sveltekit.theme%', theme),
+	});
 };
 ```
 
 ```ts
 // src/lib/theme/set-theme.ts (client)
 export function setTheme(theme: 'light' | 'dark' | 'system'): void {
-  document.cookie = `theme=${theme}; Path=/; Max-Age=${365 * 24 * 60 * 60}; SameSite=Lax; Secure`;
-  document.documentElement.dataset.theme = theme;
+	document.cookie = `theme=${theme}; Path=/; Max-Age=${365 * 24 * 60 * 60}; SameSite=Lax; Secure`;
+	document.documentElement.dataset.theme = theme;
 }
 ```
 
@@ -215,19 +218,19 @@ import { randomBytes } from 'node:crypto';
 const CSRF_COOKIE = '__Host-csrf';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  let csrf = event.cookies.get(CSRF_COOKIE);
-  if (!csrf) {
-    csrf = randomBytes(32).toString('base64url');
-    event.cookies.set(CSRF_COOKIE, csrf, {
-      path: '/',
-      httpOnly: false,
-      secure: true,
-      sameSite: 'strict',
-      priority: 'high',
-    });
-  }
-  event.locals.csrfToken = csrf;
-  return resolve(event);
+	let csrf = event.cookies.get(CSRF_COOKIE);
+	if (!csrf) {
+		csrf = randomBytes(32).toString('base64url');
+		event.cookies.set(CSRF_COOKIE, csrf, {
+			path: '/',
+			httpOnly: false,
+			secure: true,
+			sameSite: 'strict',
+			priority: 'high',
+		});
+	}
+	event.locals.csrfToken = csrf;
+	return resolve(event);
 };
 ```
 
@@ -252,12 +255,12 @@ requests.
 ```ts
 // when embedded in customer iframe
 event.cookies.set('__Host-session', sid, {
-  path: '/',
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none',
-  maxAge: SESSION_TTL_SECONDS,
-  partitioned: true,
+	path: '/',
+	httpOnly: true,
+	secure: true,
+	sameSite: 'none',
+	maxAge: SESSION_TTL_SECONDS,
+	partitioned: true,
 });
 ```
 
@@ -289,7 +292,7 @@ iframe).
 
 ```ts
 // good — host-only, browser scopes to exactly the issuing host
-event.cookies.set('__Host-session', sid, { path: '/', /* no domain */ });
+event.cookies.set('__Host-session', sid, { path: '/' /* no domain */ });
 
 // avoid — broadcast to every subdomain
 event.cookies.set('session', sid, { path: '/', domain: '.example.com' });
@@ -316,11 +319,11 @@ Three domain rules:
 ```ts
 // src/hooks.server.ts
 export const handle: Handle = async ({ event, resolve }) => {
-  const response = await resolve(event);
-  if (event.cookies.get('__Host-session')) {
-    response.headers.set('Cache-Control', 'private, no-store');
-  }
-  return response;
+	const response = await resolve(event);
+	if (event.cookies.get('__Host-session')) {
+		response.headers.set('Cache-Control', 'private, no-store');
+	}
+	return response;
 };
 ```
 

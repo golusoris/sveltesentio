@@ -1,29 +1,29 @@
 <script module lang="ts">
-  import { defineMeta } from '@storybook/addon-svelte-csf';
-  import Icon from './Icon.svelte';
-  import StubIcon from '../../../../apps/storybook/.storybook/StubIcon.svelte';
-  import { registerIconLoader } from './registry.js';
+	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import Icon from './Icon.svelte';
+	import StubIcon from '../../../../apps/storybook/.storybook/StubIcon.svelte';
+	import { registerIconLoader } from './registry.js';
 
-  // The default icon set (@lucide/svelte) is an OPTIONAL peer that is not
-  // installed in this Storybook workspace. Register a self-contained stub
-  // loader so `<Icon>` resolves and renders without the peer. Names ending in
-  // `-missing` are intentionally left unresolved to exercise the placeholder.
-  registerIconLoader((name: string) => (name.endsWith('-missing') ? undefined : StubIcon));
+	// The default icon set (@lucide/svelte) is an OPTIONAL peer that is not
+	// installed in this Storybook workspace. Register a self-contained stub
+	// loader so `<Icon>` resolves and renders without the peer. Names ending in
+	// `-missing` are intentionally left unresolved to exercise the placeholder.
+	registerIconLoader((name: string) => (name.endsWith('-missing') ? undefined : StubIcon));
 
-  const { Story } = defineMeta({
-    title: 'ui/icons/Icon',
-    component: Icon,
-    tags: ['autodocs'],
-    argTypes: {
-      name: { control: 'text' },
-      size: { control: { type: 'number', min: 8, max: 96, step: 4 } },
-      label: { control: 'text' },
-    },
-    args: {
-      name: 'arrow-left',
-      size: 24,
-    },
-  });
+	const { Story } = defineMeta({
+		title: 'ui/icons/Icon',
+		component: Icon,
+		tags: ['autodocs'],
+		argTypes: {
+			name: { control: 'text' },
+			size: { control: { type: 'number', min: 8, max: 96, step: 4 } },
+			label: { control: 'text' },
+		},
+		args: {
+			name: 'arrow-left',
+			size: 24,
+		},
+	});
 </script>
 
 <!-- Decorative by default: no `label`, so `aria-hidden` and skipped by AT. -->

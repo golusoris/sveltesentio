@@ -13,10 +13,7 @@ export async function generatePkceChallenge(): Promise<PkceChallenge> {
 }
 
 export async function codeChallengeS256(verifier: string): Promise<string> {
-	const digest = await crypto.subtle.digest(
-		'SHA-256',
-		new TextEncoder().encode(verifier),
-	);
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
 	return base64UrlEncode(new Uint8Array(digest));
 }
 

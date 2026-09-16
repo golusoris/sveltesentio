@@ -22,12 +22,12 @@ plain-object form freezes the key at call time (static keys only).
 
 ```svelte
 <script lang="ts">
-  let sortBy = $state('added');
-  // accessor form → re-reads sortBy, refetches when it changes
-  const q = createSentioQuery(() => ({
-    queryKey: ['movies', 'list', sortBy],
-    queryFn: () => listMovies({ order_by: sortBy }),
-  }));
+	let sortBy = $state('added');
+	// accessor form → re-reads sortBy, refetches when it changes
+	const q = createSentioQuery(() => ({
+		queryKey: ['movies', 'list', sortBy],
+		queryFn: () => listMovies({ order_by: sortBy }),
+	}));
 </script>
 ```
 

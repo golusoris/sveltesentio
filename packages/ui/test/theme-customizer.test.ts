@@ -84,9 +84,9 @@ describe('serialize/parse round-trip', () => {
 		expect(parseOverride(serializeOverride(override))).toEqual(override);
 	});
 	it('drops invalid entries on serialise', () => {
-		expect(serializeOverride({ primary: 'bad', accent: 'oklch(0.6 0.1 60)' } as ThemeOverride)).toBe(
-			JSON.stringify({ accent: 'oklch(0.6 0.1 60)' }),
-		);
+		expect(
+			serializeOverride({ primary: 'bad', accent: 'oklch(0.6 0.1 60)' } as ThemeOverride),
+		).toBe(JSON.stringify({ accent: 'oklch(0.6 0.1 60)' }));
 	});
 	it('parse returns {} for null/empty/garbage/non-object/array', () => {
 		expect(parseOverride(null)).toEqual({});
@@ -96,7 +96,10 @@ describe('serialize/parse round-trip', () => {
 		expect(parseOverride('[1,2]')).toEqual({});
 	});
 	it('parse re-sanitises a stored payload (cannot inject CSS)', () => {
-		const stored = JSON.stringify({ primary: 'oklch(0.5 0.1 120); evil', accent: 'oklch(0.6 0.1 60)' });
+		const stored = JSON.stringify({
+			primary: 'oklch(0.5 0.1 120); evil',
+			accent: 'oklch(0.6 0.1 60)',
+		});
 		expect(parseOverride(stored)).toEqual({ accent: 'oklch(0.6 0.1 60)' });
 	});
 });

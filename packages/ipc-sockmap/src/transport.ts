@@ -34,10 +34,10 @@ function framingError(detail: string, extensions?: Record<string, unknown>): Pro
  */
 export function encodeFrame(payload: Uint8Array): Uint8Array {
 	if (payload.byteLength > MAX_FRAME_BYTES) {
-		throw framingError(
-			`Frame payload ${payload.byteLength} exceeds max ${MAX_FRAME_BYTES}`,
-			{ length: payload.byteLength, max: MAX_FRAME_BYTES },
-		);
+		throw framingError(`Frame payload ${payload.byteLength} exceeds max ${MAX_FRAME_BYTES}`, {
+			length: payload.byteLength,
+			max: MAX_FRAME_BYTES,
+		});
 	}
 	const frame = new Uint8Array(FRAME_HEADER_BYTES + payload.byteLength);
 	const view = new DataView(frame.buffer, frame.byteOffset, FRAME_HEADER_BYTES);
@@ -103,8 +103,7 @@ export class FrameDecoder {
 			offset = frameEnd;
 		}
 
-		this.buffer =
-			offset === 0 ? this.buffer : this.buffer.slice(offset);
+		this.buffer = offset === 0 ? this.buffer : this.buffer.slice(offset);
 		return { frames, pending: this.buffer.byteLength };
 	}
 

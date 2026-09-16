@@ -8,7 +8,9 @@ import {
 	layoutWorkerHandler,
 	LAYOUT_WORKER_ERROR_TYPE,
 	type LayoutWorkerRequest,
-	type LayoutWorkerResponse, type LayoutWorkerMessage } from '../src/layout-worker.js';
+	type LayoutWorkerResponse,
+	type LayoutWorkerMessage,
+} from '../src/layout-worker.js';
 
 // A deterministic ELK double: stacks children top-to-bottom, no real elkjs.
 function fakeElkFactory(): ElkFactory {

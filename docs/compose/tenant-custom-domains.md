@@ -91,37 +91,41 @@ import { z } from 'zod';
 
 // RFC 1035 + practical limits.
 // Max length 253, labels 1-63, LDH (letters, digits, hyphen), no leading/trailing hyphen per label.
-export const DomainName = z.string()
-  .trim()
-  .toLowerCase()
-  .regex(/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/);
+export const DomainName = z
+	.string()
+	.trim()
+	.toLowerCase()
+	.regex(/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/);
 
 export const DomainStatus = z.enum([
-  'pending_verification',  // TXT not yet seen
-  'verifying',              // active polling
-  'verified',               // TXT matches; awaiting CNAME
-  'active',                 // CNAME live + TLS issued
-  'renewal_failed',         // TLS renewal failure; alert
-  'disabled',               // admin disabled OR tenant removed
-  'revoked',                // tenant offboarded; ACME cert revoked
+	'pending_verification', // TXT not yet seen
+	'verifying', // active polling
+	'verified', // TXT matches; awaiting CNAME
+	'active', // CNAME live + TLS issued
+	'renewal_failed', // TLS renewal failure; alert
+	'disabled', // admin disabled OR tenant removed
+	'revoked', // tenant offboarded; ACME cert revoked
 ]);
 export type DomainStatus = z.infer<typeof DomainStatus>;
 
 export const CustomDomain = z.object({
-  id: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  hostname: DomainName,
-  verificationToken: z.string().regex(/^[A-Za-z0-9]{32}$/),
-  status: DomainStatus,
-  isApex: z.boolean(),
-  createdAt: z.string().datetime({ offset: true }),
-  verifiedAt: z.string().datetime({ offset: true }).nullable(),
-  activatedAt: z.string().datetime({ offset: true }).nullable(),
-  lastCheckedAt: z.string().datetime({ offset: true }).nullable(),
-  certProvider: z.enum(['caddy', 'cloudflare-saas', 'fly-certs', 'managed-other']).default('caddy'),
-  // Cert fingerprint — monitor for unexpected rotations.
-  certFingerprint: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
-  certExpiresAt: z.string().datetime({ offset: true }).nullable(),
+	id: z.string().uuid(),
+	tenantId: z.string().uuid(),
+	hostname: DomainName,
+	verificationToken: z.string().regex(/^[A-Za-z0-9]{32}$/),
+	status: DomainStatus,
+	isApex: z.boolean(),
+	createdAt: z.string().datetime({ offset: true }),
+	verifiedAt: z.string().datetime({ offset: true }).nullable(),
+	activatedAt: z.string().datetime({ offset: true }).nullable(),
+	lastCheckedAt: z.string().datetime({ offset: true }).nullable(),
+	certProvider: z.enum(['caddy', 'cloudflare-saas', 'fly-certs', 'managed-other']).default('caddy'),
+	// Cert fingerprint — monitor for unexpected rotations.
+	certFingerprint: z
+		.string()
+		.regex(/^[a-f0-9]{64}$/)
+		.nullable(),
+	certExpiresAt: z.string().datetime({ offset: true }).nullable(),
 });
 export type CustomDomain = z.infer<typeof CustomDomain>;
 ```
@@ -141,51 +145,53 @@ import { z } from 'zod';
 
 const AddDomain = z.object({ hostname: DomainName });
 
-const RESERVED = new Set([
-  'sveltesentio.app', 'localhost', 'invalid',
-]);
+const RESERVED = new Set(['sveltesentio.app', 'localhost', 'invalid']);
 
 export const actions = {
-  add: async ({ request, locals, params }) => {
-    if (!locals.user?.permissions.includes('tenant:admin:domains')) throw error(403);
-    const form = await superValidate(request, zod(AddDomain));
-    if (!form.valid) return fail(400, { form });
-    const hostname = form.data.hostname;
+	add: async ({ request, locals, params }) => {
+		if (!locals.user?.permissions.includes('tenant:admin:domains')) throw error(403);
+		const form = await superValidate(request, zod(AddDomain));
+		if (!form.valid) return fail(400, { form });
+		const hostname = form.data.hostname;
 
-    // Reject platform-owned domains.
-    if (RESERVED.has(hostname) || hostname.endsWith('.sveltesentio.app')) {
-      return fail(422, { form, message: 'Cannot claim a platform-owned domain' });
-    }
+		// Reject platform-owned domains.
+		if (RESERVED.has(hostname) || hostname.endsWith('.sveltesentio.app')) {
+			return fail(422, { form, message: 'Cannot claim a platform-owned domain' });
+		}
 
-    // Reject duplicates (a domain can only be claimed by one tenant).
-    const existing = await findActiveDomain(hostname);
-    if (existing && existing.tenantId !== params.tenant) {
-      return fail(409, { form, message: 'Domain already claimed by another tenant' });
-    }
+		// Reject duplicates (a domain can only be claimed by one tenant).
+		const existing = await findActiveDomain(hostname);
+		if (existing && existing.tenantId !== params.tenant) {
+			return fail(409, { form, message: 'Domain already claimed by another tenant' });
+		}
 
-    const token = randomBytes(16).toString('base64url').replace(/[^A-Za-z0-9]/g, '').slice(0, 32).padEnd(32, 'a');
-    await insertCustomDomain({
-      id: crypto.randomUUID(),
-      tenantId: params.tenant,
-      hostname,
-      verificationToken: token,
-      status: 'pending_verification',
-      isApex: hostname.split('.').length === 2,
-      createdAt: new Date().toISOString(),
-      verifiedAt: null,
-      activatedAt: null,
-      lastCheckedAt: null,
-      certProvider: 'caddy',
-      certFingerprint: null,
-      certExpiresAt: null,
-    });
+		const token = randomBytes(16)
+			.toString('base64url')
+			.replace(/[^A-Za-z0-9]/g, '')
+			.slice(0, 32)
+			.padEnd(32, 'a');
+		await insertCustomDomain({
+			id: crypto.randomUUID(),
+			tenantId: params.tenant,
+			hostname,
+			verificationToken: token,
+			status: 'pending_verification',
+			isApex: hostname.split('.').length === 2,
+			createdAt: new Date().toISOString(),
+			verifiedAt: null,
+			activatedAt: null,
+			lastCheckedAt: null,
+			certProvider: 'caddy',
+			certFingerprint: null,
+			certExpiresAt: null,
+		});
 
-    await writeAuditEvent({
-      kind: 'domain.added',
-      subjectId: locals.user.id,
-      payload: { tenantId: params.tenant, hostname, token },
-    });
-  },
+		await writeAuditEvent({
+			kind: 'domain.added',
+			subjectId: locals.user.id,
+			payload: { tenantId: params.tenant, hostname, token },
+		});
+	},
 };
 ```
 
@@ -196,51 +202,57 @@ export const actions = {
 <h1>Configure {data.domain.hostname}</h1>
 
 <ol>
-  <li>
-    <h2>Step 1 — Verification TXT record</h2>
-    <p>Add this TXT record at your DNS provider:</p>
-    <dl>
-      <dt>Name</dt>
-      <dd><code>_sentio-challenge.{data.domain.hostname}</code></dd>
-      <dt>Type</dt>
-      <dd><code>TXT</code></dd>
-      <dt>Value</dt>
-      <dd><code>verify={data.domain.verificationToken}</code></dd>
-      <dt>TTL</dt>
-      <dd>3600 (or provider default)</dd>
-    </dl>
-    {#if data.domain.status === 'pending_verification'}
-      <form method="POST" action="?/check" use:enhance>
-        <button>Check verification</button>
-      </form>
-    {:else if data.domain.status === 'verified'}
-      <p>✓ Verified at {data.domain.verifiedAt}</p>
-    {/if}
-  </li>
-  <li>
-    <h2>Step 2 — CNAME record (after verification)</h2>
-    {#if data.domain.isApex}
-      <p>Because <code>{data.domain.hostname}</code> is an apex domain, you must use either:</p>
-      <ul>
-        <li><strong>ALIAS / ANAME record</strong> (if your DNS provider supports it)</li>
-        <li><strong>Flattening at Cloudflare / Route 53</strong></li>
-      </ul>
-      <dl><dt>Target</dt><dd><code>domains.sveltesentio.app</code></dd></dl>
-    {:else}
-      <dl>
-        <dt>Name</dt><dd><code>{data.domain.hostname}</code></dd>
-        <dt>Type</dt><dd><code>CNAME</code></dd>
-        <dt>Value</dt><dd><code>domains.sveltesentio.app</code></dd>
-      </dl>
-    {/if}
-  </li>
-  <li>
-    <h2>Step 3 — TLS</h2>
-    <p>Issued automatically on first HTTPS request to <code>{data.domain.hostname}</code>.</p>
-    {#if data.domain.status === 'active'}
-      <p>✓ Active. Cert expires {data.domain.certExpiresAt?.slice(0, 10)}.</p>
-    {/if}
-  </li>
+	<li>
+		<h2>Step 1 — Verification TXT record</h2>
+		<p>Add this TXT record at your DNS provider:</p>
+		<dl>
+			<dt>Name</dt>
+			<dd><code>_sentio-challenge.{data.domain.hostname}</code></dd>
+			<dt>Type</dt>
+			<dd><code>TXT</code></dd>
+			<dt>Value</dt>
+			<dd><code>verify={data.domain.verificationToken}</code></dd>
+			<dt>TTL</dt>
+			<dd>3600 (or provider default)</dd>
+		</dl>
+		{#if data.domain.status === 'pending_verification'}
+			<form method="POST" action="?/check" use:enhance>
+				<button>Check verification</button>
+			</form>
+		{:else if data.domain.status === 'verified'}
+			<p>✓ Verified at {data.domain.verifiedAt}</p>
+		{/if}
+	</li>
+	<li>
+		<h2>Step 2 — CNAME record (after verification)</h2>
+		{#if data.domain.isApex}
+			<p>Because <code>{data.domain.hostname}</code> is an apex domain, you must use either:</p>
+			<ul>
+				<li><strong>ALIAS / ANAME record</strong> (if your DNS provider supports it)</li>
+				<li><strong>Flattening at Cloudflare / Route 53</strong></li>
+			</ul>
+			<dl>
+				<dt>Target</dt>
+				<dd><code>domains.sveltesentio.app</code></dd>
+			</dl>
+		{:else}
+			<dl>
+				<dt>Name</dt>
+				<dd><code>{data.domain.hostname}</code></dd>
+				<dt>Type</dt>
+				<dd><code>CNAME</code></dd>
+				<dt>Value</dt>
+				<dd><code>domains.sveltesentio.app</code></dd>
+			</dl>
+		{/if}
+	</li>
+	<li>
+		<h2>Step 3 — TLS</h2>
+		<p>Issued automatically on first HTTPS request to <code>{data.domain.hostname}</code>.</p>
+		{#if data.domain.status === 'active'}
+			<p>✓ Active. Cert expires {data.domain.certExpiresAt?.slice(0, 10)}.</p>
+		{/if}
+	</li>
 </ol>
 ```
 
@@ -248,22 +260,24 @@ export const actions = {
 
 ```ts
 // packages/shell/src/domains/verify.ts
-export async function verifyDomain(domain: CustomDomain): Promise<'verified' | 'not_found' | 'mismatch'> {
-  // DNS-over-HTTPS via Cloudflare or Google. Avoids platform DNS cache issues.
-  const url = `https://cloudflare-dns.com/dns-query?name=_sentio-challenge.${encodeURIComponent(domain.hostname)}&type=TXT`;
-  const res = await fetch(url, {
-    headers: { accept: 'application/dns-json' },
-    signal: AbortSignal.timeout(5_000),
-  });
-  if (!res.ok) throw new Error('dns_query_failed');
-  const body = await res.json() as { Answer?: Array<{ data: string }> };
-  const txts = (body.Answer ?? []).map((a) => a.data.replace(/^"|"$/g, ''));
-  const expected = `verify=${domain.verificationToken}`;
-  if (txts.length === 0) return 'not_found';
-  if (!txts.some((t) => t === expected)) return 'mismatch';
+export async function verifyDomain(
+	domain: CustomDomain,
+): Promise<'verified' | 'not_found' | 'mismatch'> {
+	// DNS-over-HTTPS via Cloudflare or Google. Avoids platform DNS cache issues.
+	const url = `https://cloudflare-dns.com/dns-query?name=_sentio-challenge.${encodeURIComponent(domain.hostname)}&type=TXT`;
+	const res = await fetch(url, {
+		headers: { accept: 'application/dns-json' },
+		signal: AbortSignal.timeout(5_000),
+	});
+	if (!res.ok) throw new Error('dns_query_failed');
+	const body = (await res.json()) as { Answer?: Array<{ data: string }> };
+	const txts = (body.Answer ?? []).map((a) => a.data.replace(/^"|"$/g, ''));
+	const expected = `verify=${domain.verificationToken}`;
+	if (txts.length === 0) return 'not_found';
+	if (!txts.some((t) => t === expected)) return 'mismatch';
 
-  await markDomainVerified(domain.id);
-  return 'verified';
+	await markDomainVerified(domain.id);
+	return 'verified';
 }
 ```
 
@@ -274,26 +288,26 @@ export async function verifyDomain(domain: CustomDomain): Promise<'verified' | '
 import { getTenantForHostname } from '$lib/server/domains';
 
 export async function handle({ event, resolve }) {
-  const host = event.url.host;
-  const platformSuffix = '.sveltesentio.app';
+	const host = event.url.host;
+	const platformSuffix = '.sveltesentio.app';
 
-  let tenant;
-  if (host.endsWith(platformSuffix) || host === 'sveltesentio.app') {
-    // Platform domain — extract slug from subdomain.
-    const slug = host.slice(0, -platformSuffix.length);
-    tenant = await getTenantBySlug(slug);
-  } else {
-    // Custom domain — look up by hostname.
-    tenant = await getTenantForHostname(host);
-  }
+	let tenant;
+	if (host.endsWith(platformSuffix) || host === 'sveltesentio.app') {
+		// Platform domain — extract slug from subdomain.
+		const slug = host.slice(0, -platformSuffix.length);
+		tenant = await getTenantBySlug(slug);
+	} else {
+		// Custom domain — look up by hostname.
+		tenant = await getTenantForHostname(host);
+	}
 
-  if (!tenant) {
-    return new Response('Tenant not found', { status: 404 });
-  }
+	if (!tenant) {
+		return new Response('Tenant not found', { status: 404 });
+	}
 
-  event.locals.tenant = tenant;
-  event.locals.isCustomDomain = !host.endsWith(platformSuffix);
-  return resolve(event);
+	event.locals.tenant = tenant;
+	event.locals.isCustomDomain = !host.endsWith(platformSuffix);
+	return resolve(event);
 }
 ```
 
@@ -307,24 +321,24 @@ changes.
 ```ts
 // packages/auth/src/cookies.ts
 export function setSessionCookie(event: RequestEvent, token: string) {
-  if (event.locals.isCustomDomain) {
-    event.cookies.set('__Secure-session', token, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      // NO `domain=` — cookie scopes to exact host. No subdomains.
-      maxAge: 60 * 60 * 24 * 7,
-    });
-  } else {
-    event.cookies.set('__Host-session', token, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-  }
+	if (event.locals.isCustomDomain) {
+		event.cookies.set('__Secure-session', token, {
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			// NO `domain=` — cookie scopes to exact host. No subdomains.
+			maxAge: 60 * 60 * 24 * 7,
+		});
+	} else {
+		event.cookies.set('__Host-session', token, {
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 24 * 7,
+		});
+	}
 }
 ```
 
@@ -375,12 +389,12 @@ limits.
 ```ts
 // src/routes/internal/domain-allowed/+server.ts
 export async function GET({ url }) {
-  const host = url.searchParams.get('domain');
-  if (!host) return new Response(null, { status: 404 });
-  const d = await findActiveDomain(host);
-  if (d && d.status === 'verified') return new Response(null, { status: 200 });
-  if (d && d.status === 'active') return new Response(null, { status: 200 });
-  return new Response(null, { status: 404 });
+	const host = url.searchParams.get('domain');
+	if (!host) return new Response(null, { status: 404 });
+	const d = await findActiveDomain(host);
+	if (d && d.status === 'verified') return new Response(null, { status: 200 });
+	if (d && d.status === 'active') return new Response(null, { status: 200 });
+	return new Response(null, { status: 404 });
 }
 ```
 
@@ -389,10 +403,10 @@ export async function GET({ url }) {
 ```ts
 // packages/auth/src/oidc.ts — excerpt
 export async function buildOidcRedirectUris(): Promise<string[]> {
-  const platform = ['https://sveltesentio.app/auth/callback'];
-  const customDomains = await listActiveCustomDomains();
-  const custom = customDomains.map((d) => `https://${d.hostname}/auth/callback`);
-  return [...platform, ...custom];
+	const platform = ['https://sveltesentio.app/auth/callback'];
+	const customDomains = await listActiveCustomDomains();
+	const custom = customDomains.map((d) => `https://${d.hostname}/auth/callback`);
+	return [...platform, ...custom];
 }
 ```
 
@@ -409,30 +423,30 @@ redirect-URI propagation, auth on that domain fails. Gate the
 ```ts
 // packages/shell/src/domains/remove.ts
 export async function removeDomain(domainId: string, operatorId: string) {
-  const d = await loadDomain(domainId);
-  if (!d) return;
+	const d = await loadDomain(domainId);
+	if (!d) return;
 
-  // Best-effort ACME cert revocation (ACME providers support this).
-  // Caddy's cert storage has the key; it handles revoke on API call.
-  try {
-    await caddyApi.deleteCertificate(d.hostname);
-  } catch (e) {
-    logger.warn('cert_revocation_failed', { domain: d.hostname, error: e });
-  }
+	// Best-effort ACME cert revocation (ACME providers support this).
+	// Caddy's cert storage has the key; it handles revoke on API call.
+	try {
+		await caddyApi.deleteCertificate(d.hostname);
+	} catch (e) {
+		logger.warn('cert_revocation_failed', { domain: d.hostname, error: e });
+	}
 
-  await updateDomainStatus(domainId, 'revoked');
+	await updateDomainStatus(domainId, 'revoked');
 
-  // Invalidate the hostname→tenant cache.
-  await redis.del(`domain:hostname:${d.hostname}`);
+	// Invalidate the hostname→tenant cache.
+	await redis.del(`domain:hostname:${d.hostname}`);
 
-  // Remove from OIDC redirect URIs.
-  await removeOidcRedirectUri(`https://${d.hostname}/auth/callback`);
+	// Remove from OIDC redirect URIs.
+	await removeOidcRedirectUri(`https://${d.hostname}/auth/callback`);
 
-  await writeAuditEvent({
-    kind: 'domain.removed',
-    subjectId: operatorId,
-    payload: { hostname: d.hostname, domainId },
-  });
+	await writeAuditEvent({
+		kind: 'domain.removed',
+		subjectId: operatorId,
+		payload: { hostname: d.hostname, domainId },
+	});
 }
 ```
 
@@ -466,17 +480,17 @@ export async function removeDomain(domainId: string, operatorId: string) {
 
 ```ts
 test('verification succeeds when TXT matches', async () => {
-  const domain = await insertDomainForTest();
-  mockDns(`_sentio-challenge.${domain.hostname}`, `"verify=${domain.verificationToken}"`);
-  const result = await verifyDomain(domain);
-  expect(result).toBe('verified');
+	const domain = await insertDomainForTest();
+	mockDns(`_sentio-challenge.${domain.hostname}`, `"verify=${domain.verificationToken}"`);
+	const result = await verifyDomain(domain);
+	expect(result).toBe('verified');
 });
 
 test('verification fails when TXT mismatches', async () => {
-  const domain = await insertDomainForTest();
-  mockDns(`_sentio-challenge.${domain.hostname}`, '"verify=wrongtoken"');
-  const result = await verifyDomain(domain);
-  expect(result).toBe('mismatch');
+	const domain = await insertDomainForTest();
+	mockDns(`_sentio-challenge.${domain.hostname}`, '"verify=wrongtoken"');
+	const result = await verifyDomain(domain);
+	expect(result).toBe('mismatch');
 });
 ```
 

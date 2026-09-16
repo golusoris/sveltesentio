@@ -40,9 +40,9 @@ import { load as loadPermissions } from '@sveltesentio/auth/permissions';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async (event) => {
-  const session = await loadSession(event);
-  const permissions = await loadPermissions(event, session);
-  return { user: session?.user ?? null, permissions };
+	const session = await loadSession(event);
+	const permissions = await loadPermissions(event, session);
+	return { user: session?.user ?? null, permissions };
 };
 ```
 
@@ -51,13 +51,13 @@ forwarded session cookie. The result is a typed shape:
 
 ```ts
 type Permissions = {
-  readonly roles: readonly string[];
-  readonly grants: readonly Grant[];
+	readonly roles: readonly string[];
+	readonly grants: readonly Grant[];
 };
 
 type Grant = {
-  readonly action: 'read' | 'edit' | 'delete' | 'admin';
-  readonly resource: { type: string; id?: string };
+	readonly action: 'read' | 'edit' | 'delete' | 'admin';
+	readonly resource: { type: string; id?: string };
 };
 ```
 
@@ -69,17 +69,17 @@ always a bug.
 
 ```svelte
 <script lang="ts">
-  import { usePermissions } from '@sveltesentio/auth/permissions';
+	import { usePermissions } from '@sveltesentio/auth/permissions';
 
-  const perms = usePermissions();
+	const perms = usePermissions();
 </script>
 
 {#if perms.can('edit', { type: 'flow', id: flowId })}
-  <button onclick={openEditor}>Edit flow</button>
+	<button onclick={openEditor}>Edit flow</button>
 {/if}
 
 {#if perms.hasRole('admin')}
-  <AdminPanel />
+	<AdminPanel />
 {/if}
 ```
 
@@ -87,10 +87,10 @@ always a bug.
 
 ```ts
 type PermissionsView = {
-  readonly roles: readonly string[];
-  hasRole(role: string): boolean;
-  can(action: Grant['action'], resource: Grant['resource']): boolean;
-  canAny(action: Grant['action'], type: string): boolean; // any resource of type
+	readonly roles: readonly string[];
+	hasRole(role: string): boolean;
+	can(action: Grant['action'], resource: Grant['resource']): boolean;
+	canAny(action: Grant['action'], type: string): boolean; // any resource of type
 };
 ```
 
@@ -108,11 +108,11 @@ import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ parent }) => {
-  const { permissions } = await parent();
-  if (!permissions.roles.includes('admin')) {
-    error(403, 'admin role required');
-  }
-  return {};
+	const { permissions } = await parent();
+	if (!permissions.roles.includes('admin')) {
+		error(403, 'admin role required');
+	}
+	return {};
 };
 ```
 
@@ -130,12 +130,12 @@ them — not in the root layout:
 import { load as loadResourcePermissions } from '@sveltesentio/auth/permissions';
 
 export const load: PageServerLoad = async (event) => {
-  const { params } = event;
-  const resourcePerms = await loadResourcePermissions(event, {
-    type: 'flow',
-    id: params.id,
-  });
-  return { resourcePerms };
+	const { params } = event;
+	const resourcePerms = await loadResourcePermissions(event, {
+		type: 'flow',
+		id: params.id,
+	});
+	return { resourcePerms };
 };
 ```
 
@@ -149,13 +149,13 @@ resource-scoped grants:
 
 ```svelte
 <script lang="ts">
-  import { usePermissions } from '@sveltesentio/auth/permissions';
-  let { data } = $props();
+	import { usePermissions } from '@sveltesentio/auth/permissions';
+	let { data } = $props();
 
-  const perms = usePermissions();
-  const canEdit = $derived(
-    perms.hasRole('admin') || perms.can('edit', { type: 'flow', id: data.flowId }),
-  );
+	const perms = usePermissions();
+	const canEdit = $derived(
+		perms.hasRole('admin') || perms.can('edit', { type: 'flow', id: data.flowId }),
+	);
 </script>
 
 <button disabled={!canEdit}>Save</button>
@@ -174,7 +174,10 @@ import { page } from '$app/state';
 import MyComponent from './MyComponent.svelte';
 
 page.data = {
-  permissions: { roles: ['editor'], grants: [{ action: 'edit', resource: { type: 'flow', id: 'f-1' } }] },
+	permissions: {
+		roles: ['editor'],
+		grants: [{ action: 'edit', resource: { type: 'flow', id: 'f-1' } }],
+	},
 };
 
 render(MyComponent);

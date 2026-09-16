@@ -34,9 +34,10 @@ function fakeClient(overrides: Partial<LLMClient> = {}): LLMClient {
 
 describe('createLLMProxy', () => {
 	it('forwards complete() to the injected client and returns its result', async () => {
-		const complete = vi.fn(
-			async (): Promise<LLMCompletion> => ({ text: 'hello there', model: 'claude' }),
-		);
+		const complete = vi.fn(async (): Promise<LLMCompletion> => ({
+			text: 'hello there',
+			model: 'claude',
+		}));
 		const proxy = createLLMProxy({ client: fakeClient({ complete }) });
 
 		const result = await proxy.complete({
@@ -285,13 +286,14 @@ describe('anthropicAdapter', () => {
 
 	it('yields only text_delta content_block_delta events on stream()', async () => {
 		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-		const stream: AnthropicSdkLike['messages']['stream'] = async function* (): AsyncIterable<AnthropicStreamEvent> {
-			yield { type: 'message_start' };
-			yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hel' } };
-			yield { type: 'content_block_delta', delta: { type: 'input_json_delta', text: 'NO' } };
-			yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'lo' } };
-			yield { type: 'message_stop' };
-		};
+		const stream: AnthropicSdkLike['messages']['stream'] =
+			async function* (): AsyncIterable<AnthropicStreamEvent> {
+				yield { type: 'message_start' };
+				yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hel' } };
+				yield { type: 'content_block_delta', delta: { type: 'input_json_delta', text: 'NO' } };
+				yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'lo' } };
+				yield { type: 'message_stop' };
+			};
 		const sdk = fakeAnthropic(async () => ({ content: [] }), stream);
 		const client = anthropicAdapter(sdk);
 

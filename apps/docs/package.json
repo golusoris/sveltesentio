@@ -1,23 +1,23 @@
 {
-  "description": "Private SvelteKit documentation site \u2014 prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
-  "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "2.70.3",
-    "@sveltejs/vite-plugin-svelte": "^7.3.0",
-    "@types/node": "^24.13.4",
-    "mdsvex": "^0.12.8",
-    "svelte": "^5.57.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.2"
-  },
-  "name": "@sveltesentio/docs",
-  "private": true,
-  "scripts": {
-    "build": "vite build",
-    "dev": "vite dev",
-    "preview": "vite preview",
-    "lint": "svelte-kit sync && eslint src/"
-  },
-  "type": "module",
-  "version": "0.0.0"
+	"description": "Private SvelteKit documentation site \u2014 prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
+	"devDependencies": {
+		"@sveltejs/adapter-static": "^3.0.10",
+		"@sveltejs/kit": "2.70.3",
+		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@types/node": "^24.13.4",
+		"mdsvex": "^0.12.8",
+		"svelte": "^5.57.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.2.2"
+	},
+	"name": "@sveltesentio/docs",
+	"private": true,
+	"scripts": {
+		"build": "vite build",
+		"dev": "vite dev",
+		"preview": "vite preview",
+		"lint": "svelte-kit sync && eslint src/"
+	},
+	"type": "module",
+	"version": "0.0.0"
 }

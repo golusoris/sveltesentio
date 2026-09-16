@@ -10,12 +10,7 @@ import { presets, type InterfacePreset, type InterfaceType } from '../presets/in
 
 /** Anchor positions accepted by `svelte-sonner`'s `<Toaster position>`. */
 export type ToastPosition =
-	| 'top-left'
-	| 'top-center'
-	| 'top-right'
-	| 'bottom-left'
-	| 'bottom-center'
-	| 'bottom-right';
+	'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
  * Sizing + placement contract a `<Toaster>` consumes. `style` is a map of CSS

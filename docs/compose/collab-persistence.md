@@ -36,40 +36,35 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { browser } from '$app/environment';
 
 export type CollabHandle = {
-  doc: Y.Doc;
-  ws: WebsocketProvider;
-  idb: IndexeddbPersistence;
-  ready: Promise<void>;
-  destroy(): void;
+	doc: Y.Doc;
+	ws: WebsocketProvider;
+	idb: IndexeddbPersistence;
+	ready: Promise<void>;
+	destroy(): void;
 };
 
 export function connectFlow(flowId: string): CollabHandle {
-  if (!browser) throw new Error('collab client-only');
+	if (!browser) throw new Error('collab client-only');
 
-  const doc = new Y.Doc();
-  const idb = new IndexeddbPersistence(`flow:${flowId}`, doc);
-  const ws = new WebsocketProvider(
-    '/collab',
-    flowId,
-    doc,
-    { connect: true },
-  );
+	const doc = new Y.Doc();
+	const idb = new IndexeddbPersistence(`flow:${flowId}`, doc);
+	const ws = new WebsocketProvider('/collab', flowId, doc, { connect: true });
 
-  const ready = new Promise<void>((resolve) => {
-    idb.once('synced', resolve);
-  });
+	const ready = new Promise<void>((resolve) => {
+		idb.once('synced', resolve);
+	});
 
-  return {
-    doc,
-    ws,
-    idb,
-    ready,
-    destroy() {
-      ws.destroy();
-      idb.destroy();
-      doc.destroy();
-    },
-  };
+	return {
+		doc,
+		ws,
+		idb,
+		ready,
+		destroy() {
+			ws.destroy();
+			idb.destroy();
+			doc.destroy();
+		},
+	};
 }
 ```
 
@@ -80,26 +75,26 @@ provider so local state loads first, then server diffs reconcile on top.
 
 ```svelte
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { connectFlow, type CollabHandle } from '$lib/collab/flow';
+	import { onMount, onDestroy } from 'svelte';
+	import { connectFlow, type CollabHandle } from '$lib/collab/flow';
 
-  let { data } = $props();
-  let handle = $state<CollabHandle | null>(null);
-  let restored = $state(false);
+	let { data } = $props();
+	let handle = $state<CollabHandle | null>(null);
+	let restored = $state(false);
 
-  onMount(async () => {
-    handle = connectFlow(data.flowId);
-    await handle.ready;
-    restored = true;
-  });
+	onMount(async () => {
+		handle = connectFlow(data.flowId);
+		await handle.ready;
+		restored = true;
+	});
 
-  onDestroy(() => handle?.destroy());
+	onDestroy(() => handle?.destroy());
 </script>
 
 {#if !restored}
-  <p role="status" aria-live="polite">Restoring local changes…</p>
+	<p role="status" aria-live="polite">Restoring local changes…</p>
 {:else}
-  <!-- render flow -->
+	<!-- render flow -->
 {/if}
 ```
 
@@ -112,33 +107,33 @@ Surface offline state so writes don't feel lost:
 
 ```svelte
 <script lang="ts">
-  let synced = $state(false);
-  let online = $state(navigator.onLine);
+	let synced = $state(false);
+	let online = $state(navigator.onLine);
 
-  $effect(() => {
-    if (!handle) return;
-    const onStatus = ({ status }: { status: string }) => {
-      synced = status === 'connected';
-    };
-    handle.ws.on('status', onStatus);
-    const onOnline = () => (online = true);
-    const onOffline = () => (online = false);
-    addEventListener('online', onOnline);
-    addEventListener('offline', onOffline);
-    return () => {
-      handle!.ws.off('status', onStatus);
-      removeEventListener('online', onOnline);
-      removeEventListener('offline', onOffline);
-    };
-  });
+	$effect(() => {
+		if (!handle) return;
+		const onStatus = ({ status }: { status: string }) => {
+			synced = status === 'connected';
+		};
+		handle.ws.on('status', onStatus);
+		const onOnline = () => (online = true);
+		const onOffline = () => (online = false);
+		addEventListener('online', onOnline);
+		addEventListener('offline', onOffline);
+		return () => {
+			handle!.ws.off('status', onStatus);
+			removeEventListener('online', onOnline);
+			removeEventListener('offline', onOffline);
+		};
+	});
 </script>
 
 {#if !online}
-  <div role="status" class="bg-warn text-warn-fg">
-    Offline — changes saved locally, will sync on reconnect.
-  </div>
+	<div role="status" class="bg-warn text-warn-fg">
+		Offline — changes saved locally, will sync on reconnect.
+	</div>
 {:else if !synced}
-  <div role="status" class="text-muted-fg">Reconnecting…</div>
+	<div role="status" class="text-muted-fg">Reconnecting…</div>
 {/if}
 ```
 
@@ -147,19 +142,19 @@ informational, not emergency. See [toast.md](toast.md) for role choice.
 
 ## Storage contract
 
-| Key | Database | Notes |
-|---|---|---|
-| IDB database | `y-indexeddb` (default) | One DB per browser origin |
-| Object store | one per doc ID | `flow:${flowId}` above |
-| Payload | Yjs binary update blobs | Not human-inspectable |
-| Eviction | browser-managed (LRU) | Storage Access API for persistent grants |
+| Key          | Database                | Notes                                    |
+| ------------ | ----------------------- | ---------------------------------------- |
+| IDB database | `y-indexeddb` (default) | One DB per browser origin                |
+| Object store | one per doc ID          | `flow:${flowId}` above                   |
+| Payload      | Yjs binary update blobs | Not human-inspectable                    |
+| Eviction     | browser-managed (LRU)   | Storage Access API for persistent grants |
 
 To survive eviction pressure, request persistent storage on sensitive
 docs:
 
 ```ts
 if (navigator.storage?.persist) {
-  await navigator.storage.persist();
+	await navigator.storage.persist();
 }
 ```
 
@@ -173,12 +168,12 @@ shared devices. On logout, **purge** docs for the prior user:
 
 ```ts
 export async function clearFlow(flowId: string) {
-  await IndexeddbPersistence.clearData(`flow:${flowId}`);
+	await IndexeddbPersistence.clearData(`flow:${flowId}`);
 }
 
 // in auth logout handler:
 for (const id of await listCachedFlows()) {
-  await clearFlow(id);
+	await clearFlow(id);
 }
 ```
 
@@ -211,11 +206,11 @@ without periodic compaction:
 
 ```ts
 export async function compact(doc: Y.Doc, flowId: string) {
-  const snapshot = Y.encodeStateAsUpdate(doc);
-  await IndexeddbPersistence.clearData(`flow:${flowId}`);
-  const fresh = new IndexeddbPersistence(`flow:${flowId}`, doc);
-  await new Promise((r) => fresh.once('synced', r));
-  Y.applyUpdate(doc, snapshot);
+	const snapshot = Y.encodeStateAsUpdate(doc);
+	await IndexeddbPersistence.clearData(`flow:${flowId}`);
+	const fresh = new IndexeddbPersistence(`flow:${flowId}`, doc);
+	await new Promise((r) => fresh.once('synced', r));
+	Y.applyUpdate(doc, snapshot);
 }
 ```
 
@@ -234,21 +229,21 @@ import * as Y from 'yjs';
 import 'fake-indexeddb/auto';
 
 test('local edits restore after reload', async () => {
-  const docA = new Y.Doc();
-  const idbA = new IndexeddbPersistence('flow:test', docA);
-  await new Promise((r) => idbA.once('synced', r));
+	const docA = new Y.Doc();
+	const idbA = new IndexeddbPersistence('flow:test', docA);
+	await new Promise((r) => idbA.once('synced', r));
 
-  docA.getArray('nodes').push([{ id: 'n-1' }]);
-  await idbA.whenSynced;
-  idbA.destroy();
-  docA.destroy();
+	docA.getArray('nodes').push([{ id: 'n-1' }]);
+	await idbA.whenSynced;
+	idbA.destroy();
+	docA.destroy();
 
-  const docB = new Y.Doc();
-  const idbB = new IndexeddbPersistence('flow:test', docB);
-  await new Promise((r) => idbB.once('synced', r));
+	const docB = new Y.Doc();
+	const idbB = new IndexeddbPersistence('flow:test', docB);
+	await new Promise((r) => idbB.once('synced', r));
 
-  expect(docB.getArray('nodes').toArray()).toHaveLength(1);
-  idbB.destroy();
+	expect(docB.getArray('nodes').toArray()).toHaveLength(1);
+	idbB.destroy();
 });
 ```
 
@@ -265,8 +260,8 @@ history after a reload. Typical fix:
 
 ```ts
 const undoManager = new Y.UndoManager(doc.getArray('nodes'), {
-  trackedOrigins: new Set(['local']),
-  captureTimeout: 500,
+	trackedOrigins: new Set(['local']),
+	captureTimeout: 500,
 });
 ```
 

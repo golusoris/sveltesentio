@@ -7,7 +7,8 @@ queue** (final decisions on ambiguous cases) + **policy engine**
 (deterministic rule application) + **audit trail** (every decision
 recorded for legal + appeals) + **transparency report** (DSA Art.24
 disclosures), per [ADR-0023](../adr/0023-compliance-observability.md)
-+ [ADR-0045](../adr/0045-ai-compliance.md).
+
+- [ADR-0045](../adr/0045-ai-compliance.md).
 
 EU **DSA** (Digital Services Act, in force 2024) mandates response
 times, appeals, transparency reports, and notice-and-action flows
@@ -59,7 +60,7 @@ scope here — engage counsel.
 
 ```text
 1. INGEST              2. TRIAGE                3. REVIEW              4. ACT
-                                                                       
+
 user posts content     classifier + LLM         human review queue     decision applied:
    │                   evaluates against        moderator inspects     - allow
    │ enqueue           policy rules             content + context      - hide (soft)
@@ -87,86 +88,91 @@ those decisions always go through human review.
 import { z } from 'zod';
 
 export const ContentSurface = z.enum([
-  'post',
-  'comment',
-  'profile_bio',
-  'message',
-  'review',
-  'image',
-  'video',
+	'post',
+	'comment',
+	'profile_bio',
+	'message',
+	'review',
+	'image',
+	'video',
 ]);
 export type ContentSurface = z.infer<typeof ContentSurface>;
 
 export const PolicyRule = z.enum([
-  'spam',
-  'hate_speech',
-  'harassment',
-  'self_harm',
-  'sexual_content',
-  'csam', // child sexual abuse material — mandatory escalation
-  'violence',
-  'misinformation',
-  'illegal_goods',
-  'impersonation',
-  'malware_phishing',
-  'copyright',
-  'pii_exposure',
-  'other',
+	'spam',
+	'hate_speech',
+	'harassment',
+	'self_harm',
+	'sexual_content',
+	'csam', // child sexual abuse material — mandatory escalation
+	'violence',
+	'misinformation',
+	'illegal_goods',
+	'impersonation',
+	'malware_phishing',
+	'copyright',
+	'pii_exposure',
+	'other',
 ]);
 export type PolicyRule = z.infer<typeof PolicyRule>;
 
 export const ModerationAction = z.enum([
-  'allow',
-  'hide',           // soft: not visible to others, visible to author
-  'remove',         // hard: deleted (with grace period for restore)
-  'warn',           // user gets policy reminder
-  'suspend',        // account suspended, optional duration
-  'ban',            // permanent
-  'escalate',       // route to senior reviewer / legal
+	'allow',
+	'hide', // soft: not visible to others, visible to author
+	'remove', // hard: deleted (with grace period for restore)
+	'warn', // user gets policy reminder
+	'suspend', // account suspended, optional duration
+	'ban', // permanent
+	'escalate', // route to senior reviewer / legal
 ]);
 export type ModerationAction = z.infer<typeof ModerationAction>;
 
 export const TriageVerdict = z.object({
-  contentId: z.string().uuid(),
-  surface: ContentSurface,
-  rules: z.array(z.object({
-    rule: PolicyRule,
-    confidence: z.number().min(0).max(1),
-    rationale: z.string().max(2000),
-  })).min(0).max(20),
-  // Routing decision: which threshold tier this hit
-  routing: z.enum(['auto_action', 'human_review', 'allow_clear']),
-  // Always log the model + version that produced this verdict
-  classifier: z.string().min(1).max(100),
-  classifierVersion: z.string().min(1).max(50),
-  triageDurationMs: z.number().int().nonnegative(),
+	contentId: z.string().uuid(),
+	surface: ContentSurface,
+	rules: z
+		.array(
+			z.object({
+				rule: PolicyRule,
+				confidence: z.number().min(0).max(1),
+				rationale: z.string().max(2000),
+			}),
+		)
+		.min(0)
+		.max(20),
+	// Routing decision: which threshold tier this hit
+	routing: z.enum(['auto_action', 'human_review', 'allow_clear']),
+	// Always log the model + version that produced this verdict
+	classifier: z.string().min(1).max(100),
+	classifierVersion: z.string().min(1).max(50),
+	triageDurationMs: z.number().int().nonnegative(),
 });
 export type TriageVerdict = z.infer<typeof TriageVerdict>;
 
 export const ReviewDecision = z.object({
-  contentId: z.string().uuid(),
-  reviewerId: z.string().uuid(),
-  action: ModerationAction,
-  ruleApplied: PolicyRule,
-  // Justification mandatory; appears on appeal / DSA notice
-  justification: z.string().min(20).max(2000),
-  // Was AI triage shown to reviewer? (DSA transparency)
-  aiAssisted: z.boolean(),
-  decidedAt: z.string().datetime(),
+	contentId: z.string().uuid(),
+	reviewerId: z.string().uuid(),
+	action: ModerationAction,
+	ruleApplied: PolicyRule,
+	// Justification mandatory; appears on appeal / DSA notice
+	justification: z.string().min(20).max(2000),
+	// Was AI triage shown to reviewer? (DSA transparency)
+	aiAssisted: z.boolean(),
+	decidedAt: z.string().datetime(),
 });
 export type ReviewDecision = z.infer<typeof ReviewDecision>;
 
 export const Appeal = z.object({
-  id: z.string().uuid(),
-  contentId: z.string().uuid(),
-  appellantUserId: z.string().uuid(),
-  // DSA: appellant must give reasons; we constrain length
-  reason: z.string().min(20).max(2000),
-  status: z.enum(['pending', 'upheld', 'reversed']),
-  filedAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().nullable(),
-  resolverId: z.string().uuid().nullable(),
-  resolverJustification: z.string().max(2000).nullable(),
+	id: z.string().uuid(),
+	contentId: z.string().uuid(),
+	appellantUserId: z.string().uuid(),
+	// DSA: appellant must give reasons; we constrain length
+	reason: z.string().min(20).max(2000),
+	status: z.enum(['pending', 'upheld', 'reversed']),
+	filedAt: z.string().datetime(),
+	resolvedAt: z.string().datetime().nullable(),
+	resolverId: z.string().uuid().nullable(),
+	resolverJustification: z.string().max(2000).nullable(),
 });
 export type Appeal = z.infer<typeof Appeal>;
 ```
@@ -188,72 +194,76 @@ import { recordAiAuditEvent } from '@sveltesentio/ai/audit';
 import { db } from '$lib/server/db';
 
 const TriageSchema = z.object({
-  rules: z.array(z.object({
-    rule: PolicyRule,
-    confidence: z.number().min(0).max(1),
-    rationale: z.string().max(2000),
-  })),
+	rules: z.array(
+		z.object({
+			rule: PolicyRule,
+			confidence: z.number().min(0).max(1),
+			rationale: z.string().max(2000),
+		}),
+	),
 });
 
 export async function triage(input: {
-  contentId: string;
-  surface: ContentSurface;
-  text: string;
-  userId: string;
+	contentId: string;
+	surface: ContentSurface;
+	text: string;
+	userId: string;
 }): Promise<TriageVerdict> {
-  const t0 = performance.now();
+	const t0 = performance.now();
 
-  // CSAM detection runs FIRST and short-circuits everything else.
-  // This is hash-matching against NCMEC PhotoDNA, NOT LLM-based.
-  // Out of scope here; assume external service.
+	// CSAM detection runs FIRST and short-circuits everything else.
+	// This is hash-matching against NCMEC PhotoDNA, NOT LLM-based.
+	// Out of scope here; assume external service.
 
-  const result = await generateObject({
-    model: openai('gpt-4o-mini'),
-    schema: TriageSchema,
-    system: SYSTEM_PROMPT,
-    prompt: `Content: ${input.text}\n\nSurface: ${input.surface}`,
-  });
+	const result = await generateObject({
+		model: openai('gpt-4o-mini'),
+		schema: TriageSchema,
+		system: SYSTEM_PROMPT,
+		prompt: `Content: ${input.text}\n\nSurface: ${input.surface}`,
+	});
 
-  // High-confidence CSAM signal → escalate immediately, never auto-action.
-  const hasCsam = result.object.rules.some((r) => r.rule === 'csam' && r.confidence > 0.5);
+	// High-confidence CSAM signal → escalate immediately, never auto-action.
+	const hasCsam = result.object.rules.some((r) => r.rule === 'csam' && r.confidence > 0.5);
 
-  // Bounded auto-action: only spam + malformed at very high confidence.
-  const topRule = result.object.rules.sort((a, b) => b.confidence - a.confidence)[0];
-  const autoActionable: PolicyRule[] = ['spam'];
-  const routing: TriageVerdict['routing'] =
-    hasCsam ? 'human_review'
-    : topRule && topRule.confidence >= 0.95 && autoActionable.includes(topRule.rule) ? 'auto_action'
-    : topRule && topRule.confidence < 0.3 ? 'allow_clear'
-    : 'human_review';
+	// Bounded auto-action: only spam + malformed at very high confidence.
+	const topRule = result.object.rules.sort((a, b) => b.confidence - a.confidence)[0];
+	const autoActionable: PolicyRule[] = ['spam'];
+	const routing: TriageVerdict['routing'] = hasCsam
+		? 'human_review'
+		: topRule && topRule.confidence >= 0.95 && autoActionable.includes(topRule.rule)
+			? 'auto_action'
+			: topRule && topRule.confidence < 0.3
+				? 'allow_clear'
+				: 'human_review';
 
-  const verdict = TriageVerdict.parse({
-    contentId: input.contentId,
-    surface: input.surface,
-    rules: result.object.rules,
-    routing,
-    classifier: 'openai:gpt-4o-mini',
-    classifierVersion: '2026-04',
-    triageDurationMs: Math.round(performance.now() - t0),
-  });
+	const verdict = TriageVerdict.parse({
+		contentId: input.contentId,
+		surface: input.surface,
+		rules: result.object.rules,
+		routing,
+		classifier: 'openai:gpt-4o-mini',
+		classifierVersion: '2026-04',
+		triageDurationMs: Math.round(performance.now() - t0),
+	});
 
-  // EU AI Act compliance hook: every AI-derived decision affecting users.
-  await recordAiAuditEvent({
-    type: 'content_moderation_triage',
-    subject: input.userId,
-    decision: verdict.routing,
-    model: verdict.classifier,
-    inputs: { surface: input.surface, contentId: input.contentId },
-    outputs: { rules: verdict.rules.map((r) => ({ rule: r.rule, confidence: r.confidence })) },
-  });
+	// EU AI Act compliance hook: every AI-derived decision affecting users.
+	await recordAiAuditEvent({
+		type: 'content_moderation_triage',
+		subject: input.userId,
+		decision: verdict.routing,
+		model: verdict.classifier,
+		inputs: { surface: input.surface, contentId: input.contentId },
+		outputs: { rules: verdict.rules.map((r) => ({ rule: r.rule, confidence: r.confidence })) },
+	});
 
-  // Persist verdict for review-queue context.
-  await db.query(
-    `INSERT INTO triage_verdicts (content_id, verdict, classifier, classifier_version)
+	// Persist verdict for review-queue context.
+	await db.query(
+		`INSERT INTO triage_verdicts (content_id, verdict, classifier, classifier_version)
      VALUES ($1, $2, $3, $4)`,
-    [verdict.contentId, JSON.stringify(verdict), verdict.classifier, verdict.classifierVersion],
-  );
+		[verdict.contentId, JSON.stringify(verdict), verdict.classifier, verdict.classifierVersion],
+	);
 
-  return verdict;
+	return verdict;
 }
 
 const SYSTEM_PROMPT = `You are a content moderation triage assistant.
@@ -284,10 +294,10 @@ import { superValidate, fail } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  permissions(locals.user).require('moderation.review');
+	permissions(locals.user).require('moderation.review');
 
-  const queue = await db.query(
-    `SELECT q.id, q.content_id, q.surface, q.priority, q.created_at,
+	const queue = await db.query(
+		`SELECT q.id, q.content_id, q.surface, q.priority, q.created_at,
             t.verdict AS triage_verdict, c.text AS content_text, c.user_id AS author_id
      FROM moderation_queue q
      JOIN triage_verdicts t ON t.content_id = q.content_id
@@ -296,40 +306,50 @@ export const load: PageServerLoad = async ({ locals }) => {
        AND (q.locked_by IS NULL OR q.locked_at < NOW() - INTERVAL '5 minutes')
      ORDER BY q.priority DESC, q.created_at ASC
      LIMIT 50`,
-  );
+	);
 
-  return { queue: queue.rows };
+	return { queue: queue.rows };
 };
 
 export const actions: Actions = {
-  decide: async ({ request, locals }) => {
-    permissions(locals.user).require('moderation.review');
+	decide: async ({ request, locals }) => {
+		permissions(locals.user).require('moderation.review');
 
-    const form = await superValidate(request, zod(ReviewDecision.omit({ reviewerId: true, decidedAt: true })));
-    if (!form.valid) return fail(400, { form });
+		const form = await superValidate(
+			request,
+			zod(ReviewDecision.omit({ reviewerId: true, decidedAt: true })),
+		);
+		if (!form.valid) return fail(400, { form });
 
-    const decision = ReviewDecision.parse({
-      ...form.data,
-      reviewerId: locals.user.id,
-      decidedAt: new Date().toISOString(),
-    });
+		const decision = ReviewDecision.parse({
+			...form.data,
+			reviewerId: locals.user.id,
+			decidedAt: new Date().toISOString(),
+		});
 
-    await db.transaction(async (tx) => {
-      await tx.query(
-        `INSERT INTO review_decisions (content_id, reviewer_id, action, rule_applied, justification, ai_assisted, decided_at)
+		await db.transaction(async (tx) => {
+			await tx.query(
+				`INSERT INTO review_decisions (content_id, reviewer_id, action, rule_applied, justification, ai_assisted, decided_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [decision.contentId, decision.reviewerId, decision.action, decision.ruleApplied,
-         decision.justification, decision.aiAssisted, decision.decidedAt],
-      );
-      await tx.query(
-        `UPDATE moderation_queue SET status = 'resolved', locked_by = NULL WHERE content_id = $1`,
-        [decision.contentId],
-      );
-    });
+				[
+					decision.contentId,
+					decision.reviewerId,
+					decision.action,
+					decision.ruleApplied,
+					decision.justification,
+					decision.aiAssisted,
+					decision.decidedAt,
+				],
+			);
+			await tx.query(
+				`UPDATE moderation_queue SET status = 'resolved', locked_by = NULL WHERE content_id = $1`,
+				[decision.contentId],
+			);
+		});
 
-    await applyAction(decision);
-    await auditLog('moderation.decision', { ...decision, surface: 'admin_ui' });
-  },
+		await applyAction(decision);
+		await auditLog('moderation.decision', { ...decision, surface: 'admin_ui' });
+	},
 };
 ```
 
@@ -347,58 +367,67 @@ import { sendNotification } from '@sveltesentio/notifications';
 import { auditLog } from '$lib/server/audit';
 
 export async function applyAction(d: ReviewDecision) {
-  const content = await db.queryOne<{ id: string; user_id: string }>(
-    `SELECT id, user_id FROM contents WHERE id = $1`, [d.contentId],
-  );
+	const content = await db.queryOne<{ id: string; user_id: string }>(
+		`SELECT id, user_id FROM contents WHERE id = $1`,
+		[d.contentId],
+	);
 
-  switch (d.action) {
-    case 'allow':
-      // No state change; record decision only (used for false-positive feedback to triage).
-      break;
+	switch (d.action) {
+		case 'allow':
+			// No state change; record decision only (used for false-positive feedback to triage).
+			break;
 
-    case 'hide':
-      await db.query(`UPDATE contents SET visibility = 'hidden_by_moderation' WHERE id = $1`, [d.contentId]);
-      break;
+		case 'hide':
+			await db.query(`UPDATE contents SET visibility = 'hidden_by_moderation' WHERE id = $1`, [
+				d.contentId,
+			]);
+			break;
 
-    case 'remove':
-      // Soft-delete first; hard-delete after grace per account-deletion.md cadence.
-      await db.query(`UPDATE contents SET deleted_at = NOW(), removed_reason = $1 WHERE id = $2`,
-        [d.ruleApplied, d.contentId]);
-      break;
+		case 'remove':
+			// Soft-delete first; hard-delete after grace per account-deletion.md cadence.
+			await db.query(`UPDATE contents SET deleted_at = NOW(), removed_reason = $1 WHERE id = $2`, [
+				d.ruleApplied,
+				d.contentId,
+			]);
+			break;
 
-    case 'warn':
-      // No content state change; user gets a policy reminder.
-      break;
+		case 'warn':
+			// No content state change; user gets a policy reminder.
+			break;
 
-    case 'suspend':
-      await db.query(`UPDATE users SET status = 'suspended', suspended_until = NOW() + INTERVAL '7 days' WHERE id = $1`,
-        [content.user_id]);
-      break;
+		case 'suspend':
+			await db.query(
+				`UPDATE users SET status = 'suspended', suspended_until = NOW() + INTERVAL '7 days' WHERE id = $1`,
+				[content.user_id],
+			);
+			break;
 
-    case 'ban':
-      await db.query(`UPDATE users SET status = 'banned' WHERE id = $1`, [content.user_id]);
-      break;
+		case 'ban':
+			await db.query(`UPDATE users SET status = 'banned' WHERE id = $1`, [content.user_id]);
+			break;
 
-    case 'escalate':
-      await db.query(`UPDATE moderation_queue SET priority = 'high', escalated_at = NOW(), status = 'pending' WHERE content_id = $1`,
-        [d.contentId]);
-      return; // no user-facing notice; senior reviewer takes it
-  }
+		case 'escalate':
+			await db.query(
+				`UPDATE moderation_queue SET priority = 'high', escalated_at = NOW(), status = 'pending' WHERE content_id = $1`,
+				[d.contentId],
+			);
+			return; // no user-facing notice; senior reviewer takes it
+	}
 
-  // DSA Art.17: user notified of action with reasons + appeals path.
-  if (d.action !== 'allow') {
-    await sendNotification({
-      userId: content.user_id,
-      type: 'moderation.action_taken',
-      dedupeKey: `mod-action:${d.contentId}:${d.action}`,
-      meta: {
-        action: d.action,
-        ruleApplied: d.ruleApplied,
-        justification: d.justification,
-        appealUrl: `/appeals/new?content=${d.contentId}`,
-      },
-    });
-  }
+	// DSA Art.17: user notified of action with reasons + appeals path.
+	if (d.action !== 'allow') {
+		await sendNotification({
+			userId: content.user_id,
+			type: 'moderation.action_taken',
+			dedupeKey: `mod-action:${d.contentId}:${d.action}`,
+			meta: {
+				action: d.action,
+				ruleApplied: d.ruleApplied,
+				justification: d.justification,
+				appealUrl: `/appeals/new?content=${d.contentId}`,
+			},
+		});
+	}
 }
 ```
 
@@ -416,39 +445,46 @@ import { sendNotification } from '@sveltesentio/notifications';
 import { auditLog } from '$lib/server/audit';
 
 export const actions = {
-  resolve: async ({ request, locals, params }) => {
-    permissions(locals.user).require('moderation.appeal_review');
+	resolve: async ({ request, locals, params }) => {
+		permissions(locals.user).require('moderation.appeal_review');
 
-    const data = await request.formData();
-    const status = z.enum(['upheld', 'reversed']).parse(data.get('status'));
-    const justification = z.string().min(20).max(2000).parse(data.get('justification'));
+		const data = await request.formData();
+		const status = z.enum(['upheld', 'reversed']).parse(data.get('status'));
+		const justification = z.string().min(20).max(2000).parse(data.get('justification'));
 
-    await db.transaction(async (tx) => {
-      await tx.query(
-        `UPDATE appeals SET status = $1, resolved_at = NOW(), resolver_id = $2, resolver_justification = $3
+		await db.transaction(async (tx) => {
+			await tx.query(
+				`UPDATE appeals SET status = $1, resolved_at = NOW(), resolver_id = $2, resolver_justification = $3
          WHERE id = $4`,
-        [status, locals.user.id, justification, params.id],
-      );
+				[status, locals.user.id, justification, params.id],
+			);
 
-      if (status === 'reversed') {
-        const appeal = await tx.queryOne<{ content_id: string }>(
-          `SELECT content_id FROM appeals WHERE id = $1`, [params.id],
-        );
-        // Restore content
-        await tx.query(`UPDATE contents SET visibility = 'public', deleted_at = NULL WHERE id = $1`,
-          [appeal.content_id]);
-      }
-    });
+			if (status === 'reversed') {
+				const appeal = await tx.queryOne<{ content_id: string }>(
+					`SELECT content_id FROM appeals WHERE id = $1`,
+					[params.id],
+				);
+				// Restore content
+				await tx.query(
+					`UPDATE contents SET visibility = 'public', deleted_at = NULL WHERE id = $1`,
+					[appeal.content_id],
+				);
+			}
+		});
 
-    await sendNotification({
-      userId: appeal.appellantUserId,
-      type: 'moderation.appeal_resolved',
-      dedupeKey: `appeal-resolve:${params.id}`,
-      meta: { status, justification },
-    });
+		await sendNotification({
+			userId: appeal.appellantUserId,
+			type: 'moderation.appeal_resolved',
+			dedupeKey: `appeal-resolve:${params.id}`,
+			meta: { status, justification },
+		});
 
-    await auditLog('moderation.appeal_resolved', { appealId: params.id, status, resolverId: locals.user.id });
-  },
+		await auditLog('moderation.appeal_resolved', {
+			appealId: params.id,
+			status,
+			resolverId: locals.user.id,
+		});
+	},
 };
 ```
 
@@ -464,37 +500,37 @@ classifier improves.
 // packages/moderation/src/transparency.ts
 // Generate yearly report aggregating all moderation activity.
 export async function buildTransparencyReport(periodStart: Date, periodEnd: Date) {
-  return {
-    period: { start: periodStart.toISOString(), end: periodEnd.toISOString() },
-    actions: await db.query(
-      `SELECT action, rule_applied, COUNT(*) AS count
+	return {
+		period: { start: periodStart.toISOString(), end: periodEnd.toISOString() },
+		actions: await db.query(
+			`SELECT action, rule_applied, COUNT(*) AS count
        FROM review_decisions
        WHERE decided_at >= $1 AND decided_at < $2
        GROUP BY action, rule_applied`,
-      [periodStart, periodEnd],
-    ),
-    appeals: await db.query(
-      `SELECT status, COUNT(*) AS count FROM appeals
+			[periodStart, periodEnd],
+		),
+		appeals: await db.query(
+			`SELECT status, COUNT(*) AS count FROM appeals
        WHERE filed_at >= $1 AND filed_at < $2
        GROUP BY status`,
-      [periodStart, periodEnd],
-    ),
-    automatedShare: await db.queryOne(
-      `SELECT
+			[periodStart, periodEnd],
+		),
+		automatedShare: await db.queryOne(
+			`SELECT
          AVG(CASE WHEN ai_assisted THEN 1 ELSE 0 END) AS ai_share,
          COUNT(*) FILTER (WHERE ai_assisted) AS ai_count,
          COUNT(*) AS total
        FROM review_decisions
        WHERE decided_at >= $1 AND decided_at < $2`,
-      [periodStart, periodEnd],
-    ),
-    medianResponseTimeMs: await db.queryOne(
-      `SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (decided_at - created_at)) * 1000) AS median
+			[periodStart, periodEnd],
+		),
+		medianResponseTimeMs: await db.queryOne(
+			`SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (decided_at - created_at)) * 1000) AS median
        FROM review_decisions r JOIN moderation_queue q ON q.content_id = r.content_id
        WHERE r.decided_at >= $1 AND r.decided_at < $2`,
-      [periodStart, periodEnd],
-    ),
-  };
+			[periodStart, periodEnd],
+		),
+	};
 }
 ```
 

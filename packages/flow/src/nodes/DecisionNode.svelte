@@ -13,12 +13,12 @@ WCAG 2.2 AA:
   branches are distinguishable to assistive tech.
 -->
 <script lang="ts">
-  import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-  import { deriveNodeView, type ExampleNodeData } from '../node-view.js';
-  import NodeBody from './NodeBody.svelte';
+	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+	import { deriveNodeView, type ExampleNodeData } from '../node-view.js';
+	import NodeBody from './NodeBody.svelte';
 
-  const { id, data, selected }: NodeProps = $props();
-  const view = $derived(deriveNodeView('decision', (data ?? {}) as ExampleNodeData));
+	const { id, data, selected }: NodeProps = $props();
+	const view = $derived(deriveNodeView('decision', (data ?? {}) as ExampleNodeData));
 </script>
 
 <Handle type="target" position={Position.Top} aria-label="Incoming connection" />

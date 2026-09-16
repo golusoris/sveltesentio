@@ -50,128 +50,128 @@ const DYNAMIC = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 const SOURCE_EXT = ['.ts', '.svelte.ts', '.svelte'];
 
 async function walk(dir, out = []) {
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) await walk(full, out);
-    else if (SOURCE_EXT.some((e) => entry.name.endsWith(e))) out.push(full);
-  }
-  return out;
+	let entries;
+	try {
+		entries = await readdir(dir, { withFileTypes: true });
+	} catch {
+		return out;
+	}
+	for (const entry of entries) {
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) await walk(full, out);
+		else if (SOURCE_EXT.some((e) => entry.name.endsWith(e))) out.push(full);
+	}
+	return out;
 }
 
 /** Resolves a relative specifier to a real file, trying the extensions TS rewrites. */
 async function resolveRelative(fromFile, spec) {
-  const base = resolve(dirname(fromFile), spec);
-  const candidates = [
-    base,
-    base.replace(/\.js$/, '.ts'),
-    base.replace(/\.js$/, '.svelte.ts'),
-    `${base}.ts`,
-    join(base, 'index.ts'),
-  ];
-  for (const candidate of candidates) {
-    try {
-      if ((await stat(candidate)).isFile()) return candidate;
-    } catch {
-      /* try the next shape */
-    }
-  }
-  return undefined;
+	const base = resolve(dirname(fromFile), spec);
+	const candidates = [
+		base,
+		base.replace(/\.js$/, '.ts'),
+		base.replace(/\.js$/, '.svelte.ts'),
+		`${base}.ts`,
+		join(base, 'index.ts'),
+	];
+	for (const candidate of candidates) {
+		try {
+			if ((await stat(candidate)).isFile()) return candidate;
+		} catch {
+			/* try the next shape */
+		}
+	}
+	return undefined;
 }
 
 function specifiersOf(source) {
-  const found = new Set();
-  for (const re of [SPECIFIER, BARE, DYNAMIC]) {
-    re.lastIndex = 0;
-    let match;
-    while ((match = re.exec(source)) !== null) found.add(match[1]);
-  }
-  return [...found];
+	const found = new Set();
+	for (const re of [SPECIFIER, BARE, DYNAMIC]) {
+		re.lastIndex = 0;
+		let match;
+		while ((match = re.exec(source)) !== null) found.add(match[1]);
+	}
+	return [...found];
 }
 
 /** Depth-first cycle search; returns the first cycle found as a node list. */
 function findCycle(graph) {
-  const WHITE = 0,
-    GREY = 1,
-    BLACK = 2;
-  const colour = new Map([...graph.keys()].map((k) => [k, WHITE]));
-  const stack = [];
+	const WHITE = 0,
+		GREY = 1,
+		BLACK = 2;
+	const colour = new Map([...graph.keys()].map((k) => [k, WHITE]));
+	const stack = [];
 
-  const visit = (node) => {
-    colour.set(node, GREY);
-    stack.push(node);
-    for (const next of graph.get(node) ?? []) {
-      if (colour.get(next) === GREY) return [...stack.slice(stack.indexOf(next)), next];
-      if (colour.get(next) === WHITE) {
-        const found = visit(next);
-        if (found) return found;
-      }
-    }
-    stack.pop();
-    colour.set(node, BLACK);
-    return undefined;
-  };
+	const visit = (node) => {
+		colour.set(node, GREY);
+		stack.push(node);
+		for (const next of graph.get(node) ?? []) {
+			if (colour.get(next) === GREY) return [...stack.slice(stack.indexOf(next)), next];
+			if (colour.get(next) === WHITE) {
+				const found = visit(next);
+				if (found) return found;
+			}
+		}
+		stack.pop();
+		colour.set(node, BLACK);
+		return undefined;
+	};
 
-  for (const node of graph.keys()) {
-    if (colour.get(node) === WHITE) {
-      const found = visit(node);
-      if (found) return found;
-    }
-  }
-  return undefined;
+	for (const node of graph.keys()) {
+		if (colour.get(node) === WHITE) {
+			const found = visit(node);
+			if (found) return found;
+		}
+	}
+	return undefined;
 }
 
 async function main() {
-  const packages = (await readdir(packagesDir, { withFileTypes: true }))
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name);
+	const packages = (await readdir(packagesDir, { withFileTypes: true }))
+		.filter((e) => e.isDirectory())
+		.map((e) => e.name);
 
-  const fileGraph = new Map();
-  const packageGraph = new Map(packages.map((p) => [`@sveltesentio/${p}`, new Set()]));
+	const fileGraph = new Map();
+	const packageGraph = new Map(packages.map((p) => [`@sveltesentio/${p}`, new Set()]));
 
-  for (const pkg of packages) {
-    for (const file of await walk(join(packagesDir, pkg, 'src'))) {
-      const source = await readFile(file, 'utf8');
-      const edges = new Set();
-      for (const spec of specifiersOf(source)) {
-        if (spec.startsWith('.')) {
-          const target = await resolveRelative(file, spec);
-          if (target) edges.add(target);
-        } else if (spec.startsWith('@sveltesentio/')) {
-          const dep = spec.split('/').slice(0, 2).join('/');
-          const self = `@sveltesentio/${pkg}`;
-          if (dep !== self) packageGraph.get(self)?.add(dep);
-        }
-      }
-      fileGraph.set(file, edges);
-    }
-  }
+	for (const pkg of packages) {
+		for (const file of await walk(join(packagesDir, pkg, 'src'))) {
+			const source = await readFile(file, 'utf8');
+			const edges = new Set();
+			for (const spec of specifiersOf(source)) {
+				if (spec.startsWith('.')) {
+					const target = await resolveRelative(file, spec);
+					if (target) edges.add(target);
+				} else if (spec.startsWith('@sveltesentio/')) {
+					const dep = spec.split('/').slice(0, 2).join('/');
+					const self = `@sveltesentio/${pkg}`;
+					if (dep !== self) packageGraph.get(self)?.add(dep);
+				}
+			}
+			fileGraph.set(file, edges);
+		}
+	}
 
-  const problems = [];
-  const fileCycle = findCycle(fileGraph);
-  if (fileCycle) {
-    problems.push(
-      'Module import cycle:\n  ' + fileCycle.map((f) => relative(root, f)).join('\n    -> '),
-    );
-  }
-  const packageCycle = findCycle(packageGraph);
-  if (packageCycle) {
-    problems.push('Package import cycle:\n  ' + packageCycle.join('\n    -> '));
-  }
+	const problems = [];
+	const fileCycle = findCycle(fileGraph);
+	if (fileCycle) {
+		problems.push(
+			'Module import cycle:\n  ' + fileCycle.map((f) => relative(root, f)).join('\n    -> '),
+		);
+	}
+	const packageCycle = findCycle(packageGraph);
+	if (packageCycle) {
+		problems.push('Package import cycle:\n  ' + packageCycle.join('\n    -> '));
+	}
 
-  if (problems.length > 0) {
-    console.error('HISS-01: the import graph is not acyclic.\n');
-    for (const problem of problems) console.error(problem + '\n');
-    process.exit(1);
-  }
-  console.log(
-    `OK: no import cycles across ${fileGraph.size} modules in ${packages.length} packages.`,
-  );
+	if (problems.length > 0) {
+		console.error('HISS-01: the import graph is not acyclic.\n');
+		for (const problem of problems) console.error(problem + '\n');
+		process.exit(1);
+	}
+	console.log(
+		`OK: no import cycles across ${fileGraph.size} modules in ${packages.length} packages.`,
+	);
 }
 
 await main();

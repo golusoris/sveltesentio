@@ -23,9 +23,7 @@ describe('validationProblem', () => {
 	it('maps single-string field reasons to one invalid-param', () => {
 		const err = validationProblem({ fields: { email: 'must be email' } });
 		expect(err.status).toBe(422);
-		expect(err.invalidParams).toEqual([
-			{ name: 'email', reason: 'must be email' },
-		]);
+		expect(err.invalidParams).toEqual([{ name: 'email', reason: 'must be email' }]);
 	});
 
 	it('maps array reasons to one invalid-param per reason', () => {

@@ -139,10 +139,7 @@ export function reachableFrom(
 	return reached;
 }
 
-export function hasCycle(
-	nodes: readonly DagNodeLike[],
-	edges: readonly DagEdgeLike[],
-): boolean {
+export function hasCycle(nodes: readonly DagNodeLike[], edges: readonly DagEdgeLike[]): boolean {
 	return findCycles(nodes, edges).length > 0;
 }
 

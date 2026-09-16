@@ -62,9 +62,7 @@ describe('Player', () => {
 	});
 
 	it('throws a ProblemError when a video omits the tracks prop (captions contract)', () => {
-		expect(() => render(Player, { src: '/clip.mp4', title: 'No captions' })).toThrow(
-			ProblemError,
-		);
+		expect(() => render(Player, { src: '/clip.mp4', title: 'No captions' })).toThrow(ProblemError);
 	});
 
 	it('accepts an explicit empty tracks opt-out for video', () => {

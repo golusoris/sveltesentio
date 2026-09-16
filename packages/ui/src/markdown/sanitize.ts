@@ -83,8 +83,12 @@ function mergeConfig(config?: Config): Config {
 	for (const key of FORBIDDEN_OVERRIDE_KEYS) {
 		delete (merged as Record<string, unknown>)[key];
 	}
-	merged.FORBID_TAGS = [...new Set([...(config.FORBID_TAGS ?? []), ...(ALLOWLIST.FORBID_TAGS ?? [])])];
-	merged.FORBID_ATTR = [...new Set([...(config.FORBID_ATTR ?? []), ...(ALLOWLIST.FORBID_ATTR ?? [])])];
+	merged.FORBID_TAGS = [
+		...new Set([...(config.FORBID_TAGS ?? []), ...(ALLOWLIST.FORBID_TAGS ?? [])]),
+	];
+	merged.FORBID_ATTR = [
+		...new Set([...(config.FORBID_ATTR ?? []), ...(ALLOWLIST.FORBID_ATTR ?? [])]),
+	];
 	merged.ALLOWED_URI_REGEXP = ALLOWLIST.ALLOWED_URI_REGEXP;
 	merged.ALLOW_UNKNOWN_PROTOCOLS = false;
 	merged.ALLOW_DATA_ATTR = false;

@@ -26,7 +26,7 @@ generic-self-host all want differently.
   ack rides through the same idempotent-side-effect contract.
 - [observability.md](observability.md) — webhook spans must include
   `webhook.provider` + `webhook.event_type` + `webhook.id` (low-card
-  + per-event identifier ok for trace-only, never log).
+  - per-event identifier ok for trace-only, never log).
 - [opentelemetry-logs.md](opentelemetry-logs.md) — verification
   failures emit `WARN` with `webhook.provider` + reason (no payload).
 - [cookies-authoritative.md](cookies-authoritative.md) — webhooks
@@ -75,41 +75,44 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 const REPLAY_WINDOW_SECONDS = 5 * 60;
 
 const Headers = z.object({
-  'x-webhook-id': z.string().min(1),
-  'x-webhook-timestamp': z.coerce.number().int().positive(),
-  'x-webhook-signature': z.string().regex(/^v1=[a-f0-9]{64}$/),
+	'x-webhook-id': z.string().min(1),
+	'x-webhook-timestamp': z.coerce.number().int().positive(),
+	'x-webhook-signature': z.string().regex(/^v1=[a-f0-9]{64}$/),
 });
 
 export const POST: RequestHandler = async ({ request, params, locals }) => {
-  const headers = Headers.safeParse(Object.fromEntries(request.headers));
-  if (!headers.success) throw error(400, 'malformed_signature_headers');
-  const { 'x-webhook-id': eventId, 'x-webhook-timestamp': ts, 'x-webhook-signature': sig } = headers.data;
+	const headers = Headers.safeParse(Object.fromEntries(request.headers));
+	if (!headers.success) throw error(400, 'malformed_signature_headers');
+	const {
+		'x-webhook-id': eventId,
+		'x-webhook-timestamp': ts,
+		'x-webhook-signature': sig,
+	} = headers.data;
 
-  const skew = Math.abs(Date.now() / 1000 - ts);
-  if (skew > REPLAY_WINDOW_SECONDS) throw error(400, 'timestamp_outside_window');
+	const skew = Math.abs(Date.now() / 1000 - ts);
+	if (skew > REPLAY_WINDOW_SECONDS) throw error(400, 'timestamp_outside_window');
 
-  const raw = await request.text();
-  const expected = 'v1=' + createHmac('sha256', env.WEBHOOK_SECRET)
-    .update(`${ts}.${raw}`)
-    .digest('hex');
+	const raw = await request.text();
+	const expected =
+		'v1=' + createHmac('sha256', env.WEBHOOK_SECRET).update(`${ts}.${raw}`).digest('hex');
 
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    logger.emit({
-      severityNumber: SeverityNumber.WARN,
-      body: 'webhook signature mismatch',
-      attributes: { 'webhook.provider': params.provider, 'correlation.id': locals.correlationId },
-    });
-    throw error(401, 'signature_mismatch');
-  }
+	const a = Buffer.from(sig);
+	const b = Buffer.from(expected);
+	if (a.length !== b.length || !timingSafeEqual(a, b)) {
+		logger.emit({
+			severityNumber: SeverityNumber.WARN,
+			body: 'webhook signature mismatch',
+			attributes: { 'webhook.provider': params.provider, 'correlation.id': locals.correlationId },
+		});
+		throw error(401, 'signature_mismatch');
+	}
 
-  await dedupOrThrow(params.provider!, eventId);
+	await dedupOrThrow(params.provider!, eventId);
 
-  const payload = JSON.parse(raw);
-  await enqueue('webhook.process', { provider: params.provider, eventId, payload });
+	const payload = JSON.parse(raw);
+	await enqueue('webhook.process', { provider: params.provider, eventId, payload });
 
-  return json({ received: true }, { status: 202 });
+	return json({ received: true }, { status: 202 });
 };
 ```
 
@@ -135,15 +138,15 @@ Six receiver invariants:
 
 ## Provider-specific quirks table
 
-| Provider | Header(s) | Algo | Body in HMAC | Replay window | Notes |
-|---|---|---|---|---|---|
-| **Stripe** | `Stripe-Signature` (multi-value `t=`,`v1=`) | HMAC-SHA256 | `t.body` | 5 min default | Use `stripe.webhooks.constructEvent` — handles `Stripe-Signature` parsing + replay window. Raw body via `await request.text()`. |
-| **GitHub** | `X-Hub-Signature-256` | HMAC-SHA256 | `body` only | none in header | No timestamp; rely on dedup-by-`X-GitHub-Delivery` UUID. Use `@octokit/webhooks` for handler routing. |
-| **Slack** | `X-Slack-Signature` + `X-Slack-Request-Timestamp` | HMAC-SHA256 | `v0:ts:body` | 5 min | Prefix `v0:` literal in HMAC input. Slack's "URL verification" challenge requires echoing `challenge` field once. |
-| **Linear** | `Linear-Signature` | HMAC-SHA256 | `body` only | none | Dedup by `data.id` from payload. |
-| **Discord** | `X-Signature-Ed25519` + `X-Signature-Timestamp` | Ed25519 | `ts.body` | none in header | NOT HMAC — use `nacl.sign.detached.verify` against application's public key. Interaction `PING` (type 1) must echo `PONG` (type 1) in <3s. |
-| **Twilio** | `X-Twilio-Signature` | HMAC-SHA1 | URL + sorted `body` params | none | Concatenate full URL + `key=value` pairs sorted by key. Use `twilio.validateRequest`. |
-| **Generic internal** | `X-Webhook-{Id,Timestamp,Signature}` | HMAC-SHA256 | `ts.body` | 5 min | This recipe's default. |
+| Provider             | Header(s)                                         | Algo        | Body in HMAC               | Replay window  | Notes                                                                                                                                      |
+| -------------------- | ------------------------------------------------- | ----------- | -------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Stripe**           | `Stripe-Signature` (multi-value `t=`,`v1=`)       | HMAC-SHA256 | `t.body`                   | 5 min default  | Use `stripe.webhooks.constructEvent` — handles `Stripe-Signature` parsing + replay window. Raw body via `await request.text()`.            |
+| **GitHub**           | `X-Hub-Signature-256`                             | HMAC-SHA256 | `body` only                | none in header | No timestamp; rely on dedup-by-`X-GitHub-Delivery` UUID. Use `@octokit/webhooks` for handler routing.                                      |
+| **Slack**            | `X-Slack-Signature` + `X-Slack-Request-Timestamp` | HMAC-SHA256 | `v0:ts:body`               | 5 min          | Prefix `v0:` literal in HMAC input. Slack's "URL verification" challenge requires echoing `challenge` field once.                          |
+| **Linear**           | `Linear-Signature`                                | HMAC-SHA256 | `body` only                | none           | Dedup by `data.id` from payload.                                                                                                           |
+| **Discord**          | `X-Signature-Ed25519` + `X-Signature-Timestamp`   | Ed25519     | `ts.body`                  | none in header | NOT HMAC — use `nacl.sign.detached.verify` against application's public key. Interaction `PING` (type 1) must echo `PONG` (type 1) in <3s. |
+| **Twilio**           | `X-Twilio-Signature`                              | HMAC-SHA1   | URL + sorted `body` params | none           | Concatenate full URL + `key=value` pairs sorted by key. Use `twilio.validateRequest`.                                                      |
+| **Generic internal** | `X-Webhook-{Id,Timestamp,Signature}`              | HMAC-SHA256 | `ts.body`                  | 5 min          | This recipe's default.                                                                                                                     |
 
 Three rules from the table:
 
@@ -170,20 +173,20 @@ import { enqueue } from '$lib/queue';
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
 export const POST: RequestHandler = async ({ request }) => {
-  const sig = request.headers.get('stripe-signature');
-  if (!sig) throw error(400, 'missing_signature');
-  const raw = await request.text();
+	const sig = request.headers.get('stripe-signature');
+	if (!sig) throw error(400, 'missing_signature');
+	const raw = await request.text();
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(raw, sig, env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    throw error(401, 'signature_invalid');
-  }
+	let event: Stripe.Event;
+	try {
+		event = stripe.webhooks.constructEvent(raw, sig, env.STRIPE_WEBHOOK_SECRET);
+	} catch (err) {
+		throw error(401, 'signature_invalid');
+	}
 
-  await dedupOrThrow('stripe', event.id);
-  await enqueue('stripe.process', { eventId: event.id, type: event.type, data: event.data });
-  return json({ received: true }, { status: 202 });
+	await dedupOrThrow('stripe', event.id);
+	await enqueue('stripe.process', { eventId: event.id, type: event.type, data: event.data });
+	return json({ received: true }, { status: 202 });
 };
 ```
 
@@ -210,16 +213,20 @@ import { db } from '$lib/db';
 const DEDUP_TTL_DAYS = 7;
 
 export async function dedupOrThrow(provider: string, eventId: string): Promise<void> {
-  const inserted = await db.insertInto('webhook_events')
-    .values({ provider, event_id: eventId, received_at: new Date() })
-    .onConflict((oc) => oc.columns(['provider', 'event_id']).doNothing())
-    .executeTakeFirst();
+	const inserted = await db
+		.insertInto('webhook_events')
+		.values({ provider, event_id: eventId, received_at: new Date() })
+		.onConflict((oc) => oc.columns(['provider', 'event_id']).doNothing())
+		.executeTakeFirst();
 
-  if (Number(inserted.numInsertedOrUpdatedRows) === 0) {
-    throw error(200, 'duplicate'); // 200 — provider treats 4xx/5xx as retry trigger
-  }
+	if (Number(inserted.numInsertedOrUpdatedRows) === 0) {
+		throw error(200, 'duplicate'); // 200 — provider treats 4xx/5xx as retry trigger
+	}
 
-  await db.deleteFrom('webhook_events').where('received_at', '<', new Date(Date.now() - DEDUP_TTL_DAYS * 86400 * 1000)).execute();
+	await db
+		.deleteFrom('webhook_events')
+		.where('received_at', '<', new Date(Date.now() - DEDUP_TTL_DAYS * 86400 * 1000))
+		.execute();
 }
 ```
 
@@ -242,15 +249,15 @@ Three dedup rules:
 import { z } from 'zod';
 
 const StripeChargeSucceeded = z.object({
-  type: z.literal('charge.succeeded'),
-  data: z.object({ object: z.object({ id: z.string(), amount: z.number().int().positive() }) }),
+	type: z.literal('charge.succeeded'),
+	data: z.object({ object: z.object({ id: z.string(), amount: z.number().int().positive() }) }),
 });
 
 export async function processWebhook(job: { provider: string; eventId: string; payload: unknown }) {
-  if (job.provider !== 'stripe') return;
-  const parsed = StripeChargeSucceeded.safeParse(job.payload);
-  if (!parsed.success) return;
-  await markChargeSucceeded(parsed.data.data.object.id, parsed.data.data.object.amount);
+	if (job.provider !== 'stripe') return;
+	const parsed = StripeChargeSucceeded.safeParse(job.payload);
+	if (!parsed.success) return;
+	await markChargeSucceeded(parsed.data.data.object.id, parsed.data.data.object.amount);
 }
 ```
 
@@ -275,17 +282,17 @@ import { trace } from '@opentelemetry/api';
 const tracer = trace.getTracer('webhooks');
 
 const span = tracer.startSpan('webhook.receive', {
-  attributes: {
-    'webhook.provider': params.provider,
-    'webhook.event_id': eventId,
-    'webhook.signature_version': 'v1',
-  },
+	attributes: {
+		'webhook.provider': params.provider,
+		'webhook.event_id': eventId,
+		'webhook.signature_version': 'v1',
+	},
 });
 try {
-  // ... verify + dedup + enqueue ...
-  span.setAttribute('webhook.outcome', 'enqueued');
+	// ... verify + dedup + enqueue ...
+	span.setAttribute('webhook.outcome', 'enqueued');
 } finally {
-  span.end();
+	span.end();
 }
 ```
 
@@ -304,14 +311,17 @@ Per [observability.md](observability.md):
 ```ts
 // src/lib/webhooks/problem.ts
 export function webhookProblem(status: number, type: string, title: string) {
-  return new Response(JSON.stringify({
-    type: `urn:sveltesentio:webhook:${type}`,
-    title,
-    status,
-  }), {
-    status,
-    headers: { 'content-type': 'application/problem+json' },
-  });
+	return new Response(
+		JSON.stringify({
+			type: `urn:sveltesentio:webhook:${type}`,
+			title,
+			status,
+		}),
+		{
+			status,
+			headers: { 'content-type': 'application/problem+json' },
+		},
+	);
 }
 ```
 
@@ -347,32 +357,32 @@ import { describe, it, expect } from 'vitest';
 import { createHmac } from 'node:crypto';
 
 describe('webhook receiver', () => {
-  const secret = 'test-secret';
-  function sign(ts: number, body: string): string {
-    return 'v1=' + createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');
-  }
+	const secret = 'test-secret';
+	function sign(ts: number, body: string): string {
+		return 'v1=' + createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');
+	}
 
-  it('rejects timestamp outside window', async () => {
-    const ts = Math.floor(Date.now() / 1000) - 1000;
-    const body = JSON.stringify({ id: 'evt_1' });
-    const res = await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
-    expect(res.status).toBe(400);
-  });
+	it('rejects timestamp outside window', async () => {
+		const ts = Math.floor(Date.now() / 1000) - 1000;
+		const body = JSON.stringify({ id: 'evt_1' });
+		const res = await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
+		expect(res.status).toBe(400);
+	});
 
-  it('rejects signature mismatch', async () => {
-    const ts = Math.floor(Date.now() / 1000);
-    const body = JSON.stringify({ id: 'evt_1' });
-    const res = await POST({ request: makeReq(body, { ts, sig: 'v1=deadbeef'.padEnd(67, '0') }) });
-    expect(res.status).toBe(401);
-  });
+	it('rejects signature mismatch', async () => {
+		const ts = Math.floor(Date.now() / 1000);
+		const body = JSON.stringify({ id: 'evt_1' });
+		const res = await POST({ request: makeReq(body, { ts, sig: 'v1=deadbeef'.padEnd(67, '0') }) });
+		expect(res.status).toBe(401);
+	});
 
-  it('dedups duplicate event IDs', async () => {
-    const ts = Math.floor(Date.now() / 1000);
-    const body = JSON.stringify({ id: 'evt_1' });
-    await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
-    const res = await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
-    expect(res.status).toBe(200); // 200 not 4xx — dedup is success
-  });
+	it('dedups duplicate event IDs', async () => {
+		const ts = Math.floor(Date.now() / 1000);
+		const body = JSON.stringify({ id: 'evt_1' });
+		await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
+		const res = await POST({ request: makeReq(body, { ts, sig: sign(ts, body) }) });
+		expect(res.status).toBe(200); // 200 not 4xx — dedup is success
+	});
 });
 ```
 
@@ -408,7 +418,7 @@ Three test rules:
 - **4xx on duplicate** — provider treats as retry trigger; return 2xx
   with "already processed" semantics.
 - **Synchronous business logic in receiver** — provider timeout (5-30s)
-  + slow DB call = retry storm; ack 2xx fast, work in queue.
+  - slow DB call = retry storm; ack 2xx fast, work in queue.
 - **Logging the request body** — payloads carry PII (customer email,
   charge amount, full payment metadata); structured logs with bounded
   attributes only.

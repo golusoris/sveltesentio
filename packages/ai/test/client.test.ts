@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	useLLMChat,
-	type ChatTransport,
-	type ChatTransportChunk,
-} from '../src/client.svelte.js';
+import { useLLMChat, type ChatTransport, type ChatTransportChunk } from '../src/client.svelte.js';
 
 /**
  * `client.svelte.ts` is a rune module compiled by the `svelteRunes` Vite plugin

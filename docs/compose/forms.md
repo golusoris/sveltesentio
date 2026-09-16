@@ -41,33 +41,33 @@ dialogs. Matches revenge / subdo / Lurkarr patterns.
 ```svelte
 <!-- src/routes/profile/+page.svelte -->
 <script lang="ts">
-  import { enhance } from '$app/forms';
+	import { enhance } from '$app/forms';
 
-  let { form } = $props();
-  let name = $state(form?.values?.name ?? '');
-  let submitting = $state(false);
+	let { form } = $props();
+	let name = $state(form?.values?.name ?? '');
+	let submitting = $state(false);
 </script>
 
 <form
-  method="POST"
-  use:enhance={() => {
-    submitting = true;
-    return async ({ update }) => {
-      await update();
-      submitting = false;
-    };
-  }}
+	method="POST"
+	use:enhance={() => {
+		submitting = true;
+		return async ({ update }) => {
+			await update();
+			submitting = false;
+		};
+	}}
 >
-  <label for="name">Name</label>
-  <input id="name" name="name" bind:value={name} required />
+	<label for="name">Name</label>
+	<input id="name" name="name" bind:value={name} required />
 
-  {#if form?.errors?.name}
-    <p role="alert">{form.errors.name}</p>
-  {/if}
+	{#if form?.errors?.name}
+		<p role="alert">{form.errors.name}</p>
+	{/if}
 
-  <button type="submit" disabled={submitting}>
-    {submitting ? 'Saving…' : 'Save'}
-  </button>
+	<button type="submit" disabled={submitting}>
+		{submitting ? 'Saving…' : 'Save'}
+	</button>
 </form>
 ```
 
@@ -78,20 +78,20 @@ import type { Actions } from './$types';
 import { profileSchema } from './schema';
 
 export const actions: Actions = {
-  default: async ({ request }) => {
-    const raw = Object.fromEntries(await request.formData());
-    const parsed = profileSchema.safeParse(raw);
+	default: async ({ request }) => {
+		const raw = Object.fromEntries(await request.formData());
+		const parsed = profileSchema.safeParse(raw);
 
-    if (!parsed.success) {
-      return fail(422, {
-        values: raw,
-        errors: parsed.error.flatten().fieldErrors,
-      });
-    }
+		if (!parsed.success) {
+			return fail(422, {
+				values: raw,
+				errors: parsed.error.flatten().fieldErrors,
+			});
+		}
 
-    await saveProfile(parsed.data);
-    return { success: true };
-  },
+		await saveProfile(parsed.data);
+		return { success: true };
+	},
 };
 ```
 
@@ -129,20 +129,20 @@ import { superValidate } from '@sveltesentio/forms';
 import { signupSchema } from './schema';
 
 export async function load() {
-  return { form: await superValidate(signupSchema) };
+	return { form: await superValidate(signupSchema) };
 }
 
 export const actions = {
-  default: async ({ request }) => {
-    const form = await superValidate(request, signupSchema);
+	default: async ({ request }) => {
+		const form = await superValidate(request, signupSchema);
 
-    if (!form.valid) {
-      return fail(422, { form });
-    }
+		if (!form.valid) {
+			return fail(422, { form });
+		}
 
-    await createUser(form.data);
-    redirect(303, '/welcome');
-  },
+		await createUser(form.data);
+		redirect(303, '/welcome');
+	},
 };
 ```
 
@@ -155,39 +155,36 @@ upstream Superforms docs.
 ```svelte
 <!-- src/routes/signup/+page.svelte -->
 <script lang="ts">
-  import { superForm } from '@sveltesentio/forms';
-  import { signupSchema } from './schema';
+	import { superForm } from '@sveltesentio/forms';
+	import { signupSchema } from './schema';
 
-  let { data } = $props();
+	let { data } = $props();
 
-  const { form, errors, enhance, submitting, delayed, tainted } = superForm(
-    data.form,
-    {
-      resetForm: false,
-      taintedMessage: 'Unsaved changes. Leave anyway?',
-    },
-  );
+	const { form, errors, enhance, submitting, delayed, tainted } = superForm(data.form, {
+		resetForm: false,
+		taintedMessage: 'Unsaved changes. Leave anyway?',
+	});
 </script>
 
 <form method="POST" use:enhance>
-  <label for="email">Email</label>
-  <input
-    id="email"
-    name="email"
-    type="email"
-    bind:value={$form.email}
-    aria-invalid={$errors.email ? 'true' : undefined}
-    aria-describedby={$errors.email ? 'email-error' : undefined}
-  />
-  {#if $errors.email}
-    <p id="email-error" role="alert">{$errors.email}</p>
-  {/if}
+	<label for="email">Email</label>
+	<input
+		id="email"
+		name="email"
+		type="email"
+		bind:value={$form.email}
+		aria-invalid={$errors.email ? 'true' : undefined}
+		aria-describedby={$errors.email ? 'email-error' : undefined}
+	/>
+	{#if $errors.email}
+		<p id="email-error" role="alert">{$errors.email}</p>
+	{/if}
 
-  <!-- …remaining fields -->
+	<!-- …remaining fields -->
 
-  <button type="submit" disabled={$submitting}>
-    {$delayed ? 'Still working…' : 'Sign up'}
-  </button>
+	<button type="submit" disabled={$submitting}>
+		{$delayed ? 'Still working…' : 'Sign up'}
+	</button>
 </form>
 ```
 
@@ -201,17 +198,17 @@ Optional — lowers boilerplate for accessible field / label / error triples:
 
 ```svelte
 <script lang="ts">
-  import { Control, Label, FieldErrors } from 'formsnap';
-  import { superForm } from '@sveltesentio/forms';
+	import { Control, Label, FieldErrors } from 'formsnap';
+	import { superForm } from '@sveltesentio/forms';
 
-  let { data } = $props();
-  const form = superForm(data.form);
+	let { data } = $props();
+	const form = superForm(data.form);
 </script>
 
 <Control let:attrs>
-  <Label>Email</Label>
-  <input type="email" bind:value={$form.email} {...attrs} />
-  <FieldErrors />
+	<Label>Email</Label>
+	<input type="email" bind:value={$form.email} {...attrs} />
+	<FieldErrors />
 </Control>
 ```
 

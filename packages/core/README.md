@@ -66,19 +66,19 @@ Adopters enable them by rule name, so the names are the API:
 import sentio from '@sveltesentio/core/eslint';
 
 export default [
-  {
-    files: ['src/**/*.ts'],
-    plugins: { '@sveltesentio': sentio },
-    rules: {
-      '@sveltesentio/no-direct-time': 'error',
-      '@sveltesentio/no-unsanitised-html': 'error',
-    },
-  },
-  {
-    files: ['src/**/*.svelte'],
-    plugins: { '@sveltesentio': sentio },
-    rules: { '@sveltesentio/chart-a11y-wrapper': 'error' },
-  },
+	{
+		files: ['src/**/*.ts'],
+		plugins: { '@sveltesentio': sentio },
+		rules: {
+			'@sveltesentio/no-direct-time': 'error',
+			'@sveltesentio/no-unsanitised-html': 'error',
+		},
+	},
+	{
+		files: ['src/**/*.svelte'],
+		plugins: { '@sveltesentio': sentio },
+		rules: { '@sveltesentio/chart-a11y-wrapper': 'error' },
+	},
 ];
 ```
 

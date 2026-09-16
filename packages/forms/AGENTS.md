@@ -11,25 +11,25 @@ This package **is** a thin wrapper — justified because:
 3. **Bridges RFC 9457 into Superforms.** `problemToFieldErrors()` turns a `ProblemError` from `@sveltesentio/core` into the `Record<string, string[]>` field-error shape Superforms expects — the framework value-add this package is built around (ADR-0019).
 4. **Re-exports the runtime surface Superforms consumers actually use** (`superForm`, proxies, `message`, `setError`, `fail`) so apps import one package instead of two.
 
-| Export | Purpose |
-|---|---|
-| `superValidate(schema, options?)` | Pre-wired Zod v4 adapter; returns defaults |
-| `superValidate(data, schema, options?)` | Parses `Request` / `FormData` / `URL` through the v4 adapter |
-| `superForm` | Upstream re-export (client-side store/rune contract) |
-| `problemToFieldErrors(err)` | `ProblemError` → `Record<string, string[]>` Superforms shape |
-| `fail`, `message`, `setError`, `setMessage` | Upstream re-exports |
-| `*Proxy` helpers, `actionResult`, `defaults`, `schemaShape`, `mergeFormUnion`, `splitPath`, `withFiles`, `removeFiles`, `SuperFormError`, `SchemaError` | Upstream re-exports |
+| Export                                                                                                                                                  | Purpose                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `superValidate(schema, options?)`                                                                                                                       | Pre-wired Zod v4 adapter; returns defaults                   |
+| `superValidate(data, schema, options?)`                                                                                                                 | Parses `Request` / `FormData` / `URL` through the v4 adapter |
+| `superForm`                                                                                                                                             | Upstream re-export (client-side store/rune contract)         |
+| `problemToFieldErrors(err)`                                                                                                                             | `ProblemError` → `Record<string, string[]>` Superforms shape |
+| `fail`, `message`, `setError`, `setMessage`                                                                                                             | Upstream re-exports                                          |
+| `*Proxy` helpers, `actionResult`, `defaults`, `schemaShape`, `mergeFormUnion`, `splitPath`, `withFiles`, `removeFiles`, `SuperFormError`, `SchemaError` | Upstream re-exports                                          |
 
 Plain-state pattern documented in [docs/compose/forms.md](../../docs/compose/forms.md) Path 1 for trivial forms that don't need Superforms machinery.
 
 ## Sub-exports
 
-| Path | Purpose |
-|---|---|
-| `@sveltesentio/forms` | Everything above |
-| `@sveltesentio/forms/problem` | Just `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull) |
-| `@sveltesentio/forms/server` | Server-safe `superValidate` + helpers; no client `superForm`/`$app/*` |
-| `@sveltesentio/forms/action` | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })` |
+| Path                           | Purpose                                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/forms`          | Everything above                                                                                                      |
+| `@sveltesentio/forms/problem`  | Just `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull)                                               |
+| `@sveltesentio/forms/server`   | Server-safe `superValidate` + helpers; no client `superForm`/`$app/*`                                                 |
+| `@sveltesentio/forms/action`   | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`             |
 | `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, `FieldErrors`, `Description`, …); optional `formsnap@^2` peer |
 
 ### `formAction()`
@@ -52,10 +52,14 @@ import { superValidate } from '@sveltesentio/forms/server';
 import { fail } from '@sveltejs/kit';
 
 export const actions = {
-  default: formAction(schema, async ({ form }) => {
-    await createUser(form.data); // throws ProblemError on conflict
-    return { form };
-  }, { superValidate, fail }),
+	default: formAction(
+		schema,
+		async ({ form }) => {
+			await createUser(form.data); // throws ProblemError on conflict
+			return { form };
+		},
+		{ superValidate, fail },
+	),
 };
 ```
 
@@ -88,10 +92,10 @@ Wired by consumer-side markup — this package does not ship components. Recipe 
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/forms typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/forms test` |
+| Task       | Command                                       |
+| ---------- | --------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/forms typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/forms test`      |
 
 ## Related ADRs
 

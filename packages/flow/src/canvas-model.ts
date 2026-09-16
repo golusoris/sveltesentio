@@ -14,23 +14,23 @@ import type { XYPosition } from './node-palette.js';
  * structural so this model never imports the optional `@xyflow/svelte` peer.
  */
 export interface CanvasNodeLike {
-  readonly id: string;
-  readonly position: XYPosition;
-  readonly width?: number | null;
-  readonly height?: number | null;
-  readonly measured?: { readonly width?: number | null; readonly height?: number | null };
+	readonly id: string;
+	readonly position: XYPosition;
+	readonly width?: number | null;
+	readonly height?: number | null;
+	readonly measured?: { readonly width?: number | null; readonly height?: number | null };
 }
 
 /** The minimal edge shape — `@xyflow/svelte`'s `Edge` is a structural superset. */
 export interface CanvasEdgeLike {
-  readonly source: string;
-  readonly target: string;
+	readonly source: string;
+	readonly target: string;
 }
 
 /** Fallback node size used when a node has not been measured by the renderer yet. */
 export interface FallbackNodeSize {
-  readonly width: number;
-  readonly height: number;
+	readonly width: number;
+	readonly height: number;
 }
 
 /**
@@ -48,12 +48,12 @@ const DEFAULT_FALLBACK_SIZE: FallbackNodeSize = { width: 150, height: 50 };
  * a non-zero box per node or it collapses the layout onto the origin.
  */
 export function resolveNodeSize(
-  node: CanvasNodeLike,
-  fallback: FallbackNodeSize = DEFAULT_FALLBACK_SIZE,
+	node: CanvasNodeLike,
+	fallback: FallbackNodeSize = DEFAULT_FALLBACK_SIZE,
 ): { width: number; height: number } {
-  const width = node.measured?.width ?? node.width ?? fallback.width;
-  const height = node.measured?.height ?? node.height ?? fallback.height;
-  return { width, height };
+	const width = node.measured?.width ?? node.width ?? fallback.width;
+	const height = node.measured?.height ?? node.height ?? fallback.height;
+	return { width, height };
 }
 
 /**
@@ -63,21 +63,21 @@ export function resolveNodeSize(
  * preserved by spreading the original node — only `position` changes.
  */
 export async function applyElkLayout<N extends CanvasNodeLike, E extends CanvasEdgeLike>(
-  nodes: readonly N[],
-  edges: readonly E[],
-  options: ElkLayoutOptions = {},
-  fallback: FallbackNodeSize = DEFAULT_FALLBACK_SIZE,
-  layoutFactory = createElkLayout,
+	nodes: readonly N[],
+	edges: readonly E[],
+	options: ElkLayoutOptions = {},
+	fallback: FallbackNodeSize = DEFAULT_FALLBACK_SIZE,
+	layoutFactory = createElkLayout,
 ): Promise<N[]> {
-  const layout = layoutFactory(options);
-  const sized = nodes.map((n) => ({ id: n.id, ...resolveNodeSize(n, fallback) }));
-  const result = await layout(sized, edges as readonly CanvasEdgeLike[]);
-  const placed = new Map(result.nodes.map((p) => [p.id, p] as const));
-  return nodes.map((n) => {
-    const pos = placed.get(n.id);
-    if (!pos) return n;
-    return { ...n, position: { x: pos.x, y: pos.y } };
-  });
+	const layout = layoutFactory(options);
+	const sized = nodes.map((n) => ({ id: n.id, ...resolveNodeSize(n, fallback) }));
+	const result = await layout(sized, edges as readonly CanvasEdgeLike[]);
+	const placed = new Map(result.nodes.map((p) => [p.id, p] as const));
+	return nodes.map((n) => {
+		const pos = placed.get(n.id);
+		if (!pos) return n;
+		return { ...n, position: { x: pos.x, y: pos.y } };
+	});
 }
 
 /**
@@ -86,7 +86,7 @@ export async function applyElkLayout<N extends CanvasNodeLike, E extends CanvasE
  * coordinates.
  */
 export function focusOrder(nodes: readonly CanvasNodeLike[]): string[] {
-  return nodes.map((n) => n.id);
+	return nodes.map((n) => n.id);
 }
 
 /** Direction an arrow-key press moves focus along the graph. */
@@ -101,26 +101,26 @@ export type FocusDirection = 'next' | 'previous';
  * when `currentId` is not in `nodes`.
  */
 export function nextFocusTarget(
-  nodes: readonly CanvasNodeLike[],
-  edges: readonly CanvasEdgeLike[],
-  currentId: string,
-  direction: FocusDirection,
+	nodes: readonly CanvasNodeLike[],
+	edges: readonly CanvasEdgeLike[],
+	currentId: string,
+	direction: FocusDirection,
 ): string | undefined {
-  const order = focusOrder(nodes);
-  const index = order.indexOf(currentId);
-  if (index === -1) return undefined;
+	const order = focusOrder(nodes);
+	const index = order.indexOf(currentId);
+	if (index === -1) return undefined;
 
-  const { outgoing, incoming } = buildAdjacency(nodes, edges);
-  const connected = direction === 'next' ? outgoing.get(currentId) : incoming.get(currentId);
-  if (connected && connected.length > 0) {
-    const [first] = [...connected].sort();
-    return first;
-  }
+	const { outgoing, incoming } = buildAdjacency(nodes, edges);
+	const connected = direction === 'next' ? outgoing.get(currentId) : incoming.get(currentId);
+	if (connected && connected.length > 0) {
+		const [first] = [...connected].sort();
+		return first;
+	}
 
-  if (order.length === 1) return currentId;
-  const step = direction === 'next' ? 1 : -1;
-  const wrapped = (index + step + order.length) % order.length;
-  return order[wrapped];
+	if (order.length === 1) return currentId;
+	const step = direction === 'next' ? 1 : -1;
+	const wrapped = (index + step + order.length) % order.length;
+	return order[wrapped];
 }
 
 /**
@@ -129,12 +129,12 @@ export function nextFocusTarget(
  * non-text content, WCAG 2.2 SC 1.1.1).
  */
 export function canvasAriaLabel(
-  nodes: readonly CanvasNodeLike[],
-  edges: readonly CanvasEdgeLike[],
-  label?: string,
+	nodes: readonly CanvasNodeLike[],
+	edges: readonly CanvasEdgeLike[],
+	label?: string,
 ): string {
-  const nodeWord = nodes.length === 1 ? 'node' : 'nodes';
-  const edgeWord = edges.length === 1 ? 'connection' : 'connections';
-  const summary = `Flow diagram, ${nodes.length} ${nodeWord}, ${edges.length} ${edgeWord}`;
-  return label ? `${label}: ${summary}` : summary;
+	const nodeWord = nodes.length === 1 ? 'node' : 'nodes';
+	const edgeWord = edges.length === 1 ? 'connection' : 'connections';
+	const summary = `Flow diagram, ${nodes.length} ${nodeWord}, ${edges.length} ${edgeWord}`;
+	return label ? `${label}: ${summary}` : summary;
 }

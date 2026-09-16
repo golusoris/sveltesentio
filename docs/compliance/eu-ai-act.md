@@ -26,12 +26,12 @@
 
 ## Role determination
 
-| Role | Definition (AI Act Art. 3) | Applies to |
-|---|---|---|
-| **Provider** | Develops / has developed an AI system / GPAI model + places it on the market. | Third-party model vendors; sveltesentio consumers who fine-tune their own models. |
-| **Deployer** | Uses an AI system under its authority (except personal non-professional). | `golusoris/app-*` consumers + commercial sveltesentio consumers. |
-| **Distributor / Importer** | Makes AI systems available on the Union market without provider-like modifications. | N/A for sveltesentio. |
-| **Product manufacturer** | Places a product on the market with an AI system embedded. | Consumers embedding on-device models (ADR-0044). |
+| Role                       | Definition (AI Act Art. 3)                                                          | Applies to                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Provider**               | Develops / has developed an AI system / GPAI model + places it on the market.       | Third-party model vendors; sveltesentio consumers who fine-tune their own models. |
+| **Deployer**               | Uses an AI system under its authority (except personal non-professional).           | `golusoris/app-*` consumers + commercial sveltesentio consumers.                  |
+| **Distributor / Importer** | Makes AI systems available on the Union market without provider-like modifications. | N/A for sveltesentio.                                                             |
+| **Product manufacturer**   | Places a product on the market with an AI system embedded.                          | Consumers embedding on-device models (ADR-0044).                                  |
 
 `@sveltesentio/ai` itself is **not** a provider or deployer; it is a
 framework component that helps consumers act as compliant deployers.
@@ -42,16 +42,16 @@ These are never permitted and sveltesentio primitives do not enable them.
 Consumers are responsible for not configuring the framework to violate
 these prohibitions.
 
-| # | Prohibition | Framework stance |
-|---|---|---|
+| #       | Prohibition                                                                         | Framework stance                                                                 |
+| ------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | 5(1)(a) | Subliminal / manipulative / deceptive techniques that materially distort behaviour. | Transparency components in `@sveltesentio/ai` surface every AI-generated output. |
-| 5(1)(b) | Exploiting vulnerabilities due to age / disability / socio-economic situation. | Framework convention; no mitigation on top of consumer discretion. |
-| 5(1)(c) | Social scoring. | Out of scope; framework offers no ranking primitive. |
-| 5(1)(d) | Predictive policing based solely on profiling. | Out of scope. |
-| 5(1)(e) | Untargeted facial-image scraping for recognition databases. | `@sveltesentio/media` exposes no facial-recognition primitive. |
-| 5(1)(f) | Emotion inference in workplace / education. | Out of scope. |
-| 5(1)(g) | Biometric categorisation by sensitive attributes. | Out of scope. |
-| 5(1)(h) | Real-time remote biometric ID in public spaces by law enforcement. | Out of scope. |
+| 5(1)(b) | Exploiting vulnerabilities due to age / disability / socio-economic situation.      | Framework convention; no mitigation on top of consumer discretion.               |
+| 5(1)(c) | Social scoring.                                                                     | Out of scope; framework offers no ranking primitive.                             |
+| 5(1)(d) | Predictive policing based solely on profiling.                                      | Out of scope.                                                                    |
+| 5(1)(e) | Untargeted facial-image scraping for recognition databases.                         | `@sveltesentio/media` exposes no facial-recognition primitive.                   |
+| 5(1)(f) | Emotion inference in workplace / education.                                         | Out of scope.                                                                    |
+| 5(1)(g) | Biometric categorisation by sensitive attributes.                                   | Out of scope.                                                                    |
+| 5(1)(h) | Real-time remote biometric ID in public spaces by law enforcement.                  | Out of scope.                                                                    |
 
 ## Transparency obligations (Art. 50) — from 2 August 2026
 
@@ -60,11 +60,11 @@ these prohibitions.
 Consumers must inform users that they are interacting with an AI system,
 unless it is obvious from context.
 
-| # | Requirement | Status | Evidence |
-|---|---|---|---|
-| 50.1.1 | Explicit disclosure component when a chat / agent surface is AI-backed. | ✅ | `@sveltesentio/ai` exports `<AiDisclosure>` component; ADR-0043. |
-| 50.1.2 | Disclosure visible at the start of interaction + persistent. | ✅ | Component defaults to sticky top-of-flow placement; keyboard-reachable. |
-| 50.1.3 | Accessible to users with disabilities. | ✅ | Component inherits WCAG 2.2 AA defaults. |
+| #      | Requirement                                                             | Status | Evidence                                                                |
+| ------ | ----------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| 50.1.1 | Explicit disclosure component when a chat / agent surface is AI-backed. | ✅     | `@sveltesentio/ai` exports `<AiDisclosure>` component; ADR-0043.        |
+| 50.1.2 | Disclosure visible at the start of interaction + persistent.            | ✅     | Component defaults to sticky top-of-flow placement; keyboard-reachable. |
+| 50.1.3 | Accessible to users with disabilities.                                  | ✅     | Component inherits WCAG 2.2 AA defaults.                                |
 
 ### Art. 50(2) — AI-generated synthetic content
 
@@ -72,11 +72,11 @@ Providers of generative AI systems must mark outputs in machine-readable
 format. Deployers must inform users when content is AI-generated or
 manipulated (deepfakes), unless artistic / creative exception applies.
 
-| # | Requirement | Status | Evidence |
-|---|---|---|---|
-| 50.2.1 | Watermarking / content credentials pass-through (C2PA). | 🔲 | `@sveltesentio/ai` + `@sveltesentio/media`: planned C2PA manifest read + display. |
-| 50.2.2 | Deepfake disclosure component. | ✅ | Uses the same `<AiDisclosure>` with `kind="synthetic"` variant. |
-| 50.2.3 | Text disclosure for AI-generated articles / informational content. | ⚠️ | Consumer responsibility; component provided. |
+| #      | Requirement                                                        | Status | Evidence                                                                          |
+| ------ | ------------------------------------------------------------------ | ------ | --------------------------------------------------------------------------------- |
+| 50.2.1 | Watermarking / content credentials pass-through (C2PA).            | 🔲     | `@sveltesentio/ai` + `@sveltesentio/media`: planned C2PA manifest read + display. |
+| 50.2.2 | Deepfake disclosure component.                                     | ✅     | Uses the same `<AiDisclosure>` with `kind="synthetic"` variant.                   |
+| 50.2.3 | Text disclosure for AI-generated articles / informational content. | ⚠️     | Consumer responsibility; component provided.                                      |
 
 ### Art. 50(3) — Emotion / biometric categorisation
 
@@ -89,11 +89,11 @@ primitive. Consumers adding one are responsible for the notice.
 
 Deployers must keep logs of high-risk AI use (Art. 26(6)) for at least 6 months.
 
-| # | Requirement | Status | Evidence |
-|---|---|---|---|
-| 50.4.1 | Every AI request logged with input hash + output hash + model id + timestamp. | ✅ | ADR-0045 — audit hook with Zod schema. |
-| 50.4.2 | Tamper-evident log (append-only + signed). | ⚠️ | Consumer storage; framework provides signed envelope. |
-| 50.4.3 | Retention of ≥ 6 months. | ⚠️ | Consumer responsibility. |
+| #      | Requirement                                                                   | Status | Evidence                                              |
+| ------ | ----------------------------------------------------------------------------- | ------ | ----------------------------------------------------- |
+| 50.4.1 | Every AI request logged with input hash + output hash + model id + timestamp. | ✅     | ADR-0045 — audit hook with Zod schema.                |
+| 50.4.2 | Tamper-evident log (append-only + signed).                                    | ⚠️     | Consumer storage; framework provides signed envelope. |
+| 50.4.3 | Retention of ≥ 6 months.                                                      | ⚠️     | Consumer responsibility.                              |
 
 ## High-risk AI systems (Annex III) — from 2 August 2026
 
@@ -104,15 +104,15 @@ must satisfy Chapter III Section 2 obligations.
 
 Framework primitives available:
 
-| # | Obligation | Status | Evidence |
-|---|---|---|---|
-| 9 | Risk-management system. | ⚠️ | Consumer responsibility. |
-| 10 | Data and data governance. | ⚠️ | Consumer responsibility. |
-| 11 | Technical documentation. | ⚠️ | Framework exposes ADR template; consumer fills Annex IV template. |
-| 12 | Record-keeping (automatic logging of events over the lifecycle). | ✅ | ADR-0045 log schema applies. |
-| 13 | Transparency and provision of information to deployers. | ✅ | Component defaults. |
-| 14 | Human oversight. | ✅ | `@sveltesentio/ai` `<HumanReview>` gate; consumer wires approval flow. |
-| 15 | Accuracy, robustness and cybersecurity. | ⚠️ | Consumer responsibility; framework enforces OWASP ASVS L2 defaults. |
+| #   | Obligation                                                       | Status | Evidence                                                               |
+| --- | ---------------------------------------------------------------- | ------ | ---------------------------------------------------------------------- |
+| 9   | Risk-management system.                                          | ⚠️     | Consumer responsibility.                                               |
+| 10  | Data and data governance.                                        | ⚠️     | Consumer responsibility.                                               |
+| 11  | Technical documentation.                                         | ⚠️     | Framework exposes ADR template; consumer fills Annex IV template.      |
+| 12  | Record-keeping (automatic logging of events over the lifecycle). | ✅     | ADR-0045 log schema applies.                                           |
+| 13  | Transparency and provision of information to deployers.          | ✅     | Component defaults.                                                    |
+| 14  | Human oversight.                                                 | ✅     | `@sveltesentio/ai` `<HumanReview>` gate; consumer wires approval flow. |
+| 15  | Accuracy, robustness and cybersecurity.                          | ⚠️     | Consumer responsibility; framework enforces OWASP ASVS L2 defaults.    |
 
 ## General-purpose AI (GPAI) models (Chapter V) — since 2 August 2025
 
@@ -138,7 +138,7 @@ The AI Act complements (does not replace) GDPR. sveltesentio's stance:
 ## Open items
 
 - C2PA manifest pass-through (item 50.2.1) — wire into `@sveltesentio/media`
-  + `@sveltesentio/ai` before v0.2.
+  - `@sveltesentio/ai` before v0.2.
 - Signed-envelope reference implementation for the audit log.
 - Annex IV technical-documentation template — add under `docs/compliance/`.
 - GPAI consumer guidance — document the "provider on fine-tune" boundary in

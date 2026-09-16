@@ -40,57 +40,61 @@ is small and app-owned; no `uplot-svelte` third-party (stale, pre-runes).
 ```svelte
 <!-- src/lib/charts/RealtimeChart.svelte -->
 <script lang="ts">
-  import uPlot, { type Options, type AlignedData } from 'uplot';
-  import 'uplot/dist/uPlot.min.css';
-  import { onMount, onDestroy } from 'svelte';
+	import uPlot, { type Options, type AlignedData } from 'uplot';
+	import 'uplot/dist/uPlot.min.css';
+	import { onMount, onDestroy } from 'svelte';
 
-  type Props = {
-    data: AlignedData;          // [timestamps, ...series]
-    options: Options;
-    title: string;              // a11y — never skip
-    description: string;        // a11y — sr-only summary
-    class?: string;
-  };
+	type Props = {
+		data: AlignedData; // [timestamps, ...series]
+		options: Options;
+		title: string; // a11y — never skip
+		description: string; // a11y — sr-only summary
+		class?: string;
+	};
 
-  let { data, options, title, description, class: className }: Props = $props();
+	let { data, options, title, description, class: className }: Props = $props();
 
-  let el: HTMLDivElement;
-  let plot: uPlot | null = null;
-  const descId = `chart-desc-${crypto.randomUUID()}`;
+	let el: HTMLDivElement;
+	let plot: uPlot | null = null;
+	const descId = `chart-desc-${crypto.randomUUID()}`;
 
-  onMount(() => {
-    plot = new uPlot(options, data, el);
-    const ro = new ResizeObserver(([entry]) => {
-      plot?.setSize({ width: entry.contentRect.width, height: options.height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  });
+	onMount(() => {
+		plot = new uPlot(options, data, el);
+		const ro = new ResizeObserver(([entry]) => {
+			plot?.setSize({ width: entry.contentRect.width, height: options.height });
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	});
 
-  onDestroy(() => plot?.destroy());
+	onDestroy(() => plot?.destroy());
 
-  $effect(() => {
-    if (plot) plot.setData(data);
-  });
+	$effect(() => {
+		if (plot) plot.setData(data);
+	});
 </script>
 
 <figure role="img" aria-labelledby="{descId}-title" aria-describedby={descId}>
-  <figcaption id="{descId}-title" class="sr-only">{title}</figcaption>
-  <p id={descId} class="sr-only">{description}</p>
-  <div bind:this={el} class={className}></div>
-  <!-- Off-screen table fallback for SR users -->
-  <table class="sr-only">
-    <caption>{title} data</caption>
-    <thead><tr><th>Time</th>{#each options.series.slice(1) as s}<th>{s.label}</th>{/each}</tr></thead>
-    <tbody>
-      {#each data[0] as t, i}
-        <tr>
-          <td>{new Date(t * 1000).toISOString()}</td>
-          {#each data.slice(1) as series}<td>{series[i]}</td>{/each}
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+	<figcaption id="{descId}-title" class="sr-only">{title}</figcaption>
+	<p id={descId} class="sr-only">{description}</p>
+	<div bind:this={el} class={className}></div>
+	<!-- Off-screen table fallback for SR users -->
+	<table class="sr-only">
+		<caption>{title} data</caption>
+		<thead
+			><tr
+				><th>Time</th>{#each options.series.slice(1) as s}<th>{s.label}</th>{/each}</tr
+			></thead
+		>
+		<tbody>
+			{#each data[0] as t, i}
+				<tr>
+					<td>{new Date(t * 1000).toISOString()}</td>
+					{#each data.slice(1) as series}<td>{series[i]}</td>{/each}
+				</tr>
+			{/each}
+		</tbody>
+	</table>
 </figure>
 ```
 
@@ -103,8 +107,8 @@ off-screen table hurts axe-core run time and SR nav. Trim with:
 
 ```ts
 const tableData = $derived.by(() => {
-  const stride = Math.max(1, Math.floor(data[0].length / 100));
-  return data.map((s) => s.filter((_, i) => i % stride === 0));
+	const stride = Math.max(1, Math.floor(data[0].length / 100));
+	return data.map((s) => s.filter((_, i) => i % stride === 0));
 });
 ```
 
@@ -112,47 +116,41 @@ const tableData = $derived.by(() => {
 
 ```svelte
 <script lang="ts">
-  import RealtimeChart from '$lib/charts/RealtimeChart.svelte';
-  import type { AlignedData } from 'uplot';
+	import RealtimeChart from '$lib/charts/RealtimeChart.svelte';
+	import type { AlignedData } from 'uplot';
 
-  const MAX = 5_000;
-  let times = $state<number[]>([]);
-  let values = $state<number[]>([]);
+	const MAX = 5_000;
+	let times = $state<number[]>([]);
+	let values = $state<number[]>([]);
 
-  $effect(() => {
-    const es = new EventSource('/metrics/stream');
-    es.onmessage = (e) => {
-      const { t, v } = JSON.parse(e.data);
-      times.push(t);
-      values.push(v);
-      if (times.length > MAX) {
-        times.splice(0, times.length - MAX);
-        values.splice(0, values.length - MAX);
-      }
-    };
-    return () => es.close();
-  });
+	$effect(() => {
+		const es = new EventSource('/metrics/stream');
+		es.onmessage = (e) => {
+			const { t, v } = JSON.parse(e.data);
+			times.push(t);
+			values.push(v);
+			if (times.length > MAX) {
+				times.splice(0, times.length - MAX);
+				values.splice(0, values.length - MAX);
+			}
+		};
+		return () => es.close();
+	});
 
-  const data = $derived<AlignedData>([times, values]);
+	const data = $derived<AlignedData>([times, values]);
 </script>
 
 <RealtimeChart
-  {data}
-  title="Request rate"
-  description="Requests per second, last 5 minutes, live stream."
-  options={{
-    width: 800,
-    height: 280,
-    series: [
-      {},
-      { label: 'rps', stroke: 'oklch(var(--color-chart-1))', width: 1 },
-    ],
-    scales: { x: { time: true } },
-    axes: [
-      { stroke: 'oklch(var(--color-fg) / 0.6)' },
-      { stroke: 'oklch(var(--color-fg) / 0.6)' },
-    ],
-  }}
+	{data}
+	title="Request rate"
+	description="Requests per second, last 5 minutes, live stream."
+	options={{
+		width: 800,
+		height: 280,
+		series: [{}, { label: 'rps', stroke: 'oklch(var(--color-chart-1))', width: 1 }],
+		scales: { x: { time: true } },
+		axes: [{ stroke: 'oklch(var(--color-fg) / 0.6)' }, { stroke: 'oklch(var(--color-fg) / 0.6)' }],
+	}}
 />
 ```
 
@@ -168,18 +166,19 @@ fallback both suffer.
 ```ts
 let pending = false;
 function scheduleUpdate() {
-  if (pending) return;
-  pending = true;
-  requestAnimationFrame(() => {
-    plot?.setData(data);
-    pending = false;
-  });
+	if (pending) return;
+	pending = true;
+	requestAnimationFrame(() => {
+		plot?.setData(data);
+		pending = false;
+	});
 }
 ```
 
 Svelte's `$effect` already runs on micro-tasks, which coalesces bursts
 up to ~120 Hz on most hardware. Only hand-schedule if profiling shows
->5% main-thread time in `setData`.
+
+> 5% main-thread time in `setData`.
 
 ## Zoom / pan / crosshair
 
@@ -224,13 +223,13 @@ the same palette. Don't inline hex — breaks theming (see
 ```ts
 const reduceMotion = $state(false);
 $effect(() => {
-  const mq = matchMedia('(prefers-reduced-motion: reduce)');
-  reduceMotion = mq.matches;
-  mq.addEventListener('change', (e) => (reduceMotion = e.matches));
+	const mq = matchMedia('(prefers-reduced-motion: reduce)');
+	reduceMotion = mq.matches;
+	mq.addEventListener('change', (e) => (reduceMotion = e.matches));
 });
 
 $effect(() => {
-  if (plot && !reduceMotion) plot.setData(data);
+	if (plot && !reduceMotion) plot.setData(data);
 });
 ```
 
@@ -244,13 +243,13 @@ change:
 
 ```ts
 $effect(() => {
-  const mq = matchMedia('(prefers-color-scheme: dark)');
-  const rebuild = () => {
-    plot?.destroy();
-    plot = new uPlot(themedOptions(), data, el);
-  };
-  mq.addEventListener('change', rebuild);
-  return () => mq.removeEventListener('change', rebuild);
+	const mq = matchMedia('(prefers-color-scheme: dark)');
+	const rebuild = () => {
+		plot?.destroy();
+		plot = new uPlot(themedOptions(), data, el);
+	};
+	mq.addEventListener('change', rebuild);
+	return () => mq.removeEventListener('change', rebuild);
 });
 ```
 
@@ -264,10 +263,10 @@ on pages that don't need it. Dynamic import:
 
 ```svelte
 <script lang="ts">
-  let Chart = $state<typeof import('$lib/charts/RealtimeChart.svelte').default | null>(null);
-  onMount(async () => {
-    ({ default: Chart } = await import('$lib/charts/RealtimeChart.svelte'));
-  });
+	let Chart = $state<typeof import('$lib/charts/RealtimeChart.svelte').default | null>(null);
+	onMount(async () => {
+		({ default: Chart } = await import('$lib/charts/RealtimeChart.svelte'));
+	});
 </script>
 
 {#if Chart}<Chart {data} {options} {title} {description} />{/if}
@@ -281,20 +280,23 @@ import { axe } from 'jest-axe';
 import RealtimeChart from '$lib/charts/RealtimeChart.svelte';
 
 test('RealtimeChart is axe-clean', async () => {
-  const data: [number[], number[]] = [[1, 2, 3], [10, 12, 11]];
-  const { container } = render(RealtimeChart, {
-    props: {
-      data,
-      title: 'Test',
-      description: 'Test chart',
-      options: {
-        width: 400,
-        height: 200,
-        series: [{}, { label: 'v' }],
-      },
-    },
-  });
-  expect(await axe(container)).toHaveNoViolations();
+	const data: [number[], number[]] = [
+		[1, 2, 3],
+		[10, 12, 11],
+	];
+	const { container } = render(RealtimeChart, {
+		props: {
+			data,
+			title: 'Test',
+			description: 'Test chart',
+			options: {
+				width: 400,
+				height: 200,
+				series: [{}, { label: 'v' }],
+			},
+		},
+	});
+	expect(await axe(container)).toHaveNoViolations();
 });
 ```
 

@@ -55,11 +55,7 @@ export type {
 } from './csrf-hook.js';
 
 export { handleSession, resolveSessionLocals } from './session-hook.js';
-export type {
-	HandleSessionOptions,
-	SessionEvent,
-	SessionResolver,
-} from './session-hook.js';
+export type { HandleSessionOptions, SessionEvent, SessionResolver } from './session-hook.js';
 
 export {
 	MFA_INVALID,
@@ -77,11 +73,7 @@ export {
 } from './mfa-view.js';
 export type { MfaChallengeCopy, MfaChallengeView } from './mfa-view.js';
 
-export {
-	authenticatePasskey,
-	passkeysSupported,
-	registerPasskey,
-} from './passkey.js';
+export { authenticatePasskey, passkeysSupported, registerPasskey } from './passkey.js';
 export type {
 	AuthenticationResponseJSON,
 	PublicKeyCredentialCreationOptionsJSON,

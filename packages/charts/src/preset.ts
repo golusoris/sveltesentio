@@ -6,50 +6,50 @@
 
 /** Per-side inner padding (px) reserved for axes / labels. */
 export interface ChartPadding {
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-  readonly left: number;
+	readonly top: number;
+	readonly right: number;
+	readonly bottom: number;
+	readonly left: number;
 }
 
 /** Grid-line visibility for the dashboard look. */
 export interface GridPreset {
-  readonly x: boolean;
-  readonly y: boolean;
+	readonly x: boolean;
+	readonly y: boolean;
 }
 
 /** Tooltip behaviour defaults. `mode` mirrors LayerChart's `Tooltip` mode union. */
 export interface TooltipPreset {
-  readonly mode: 'bisect-x' | 'bisect-y' | 'bisect-band' | 'band' | 'voronoi' | 'quadtree';
-  readonly snapToDataX: boolean;
-  readonly snapToDataY: boolean;
+	readonly mode: 'bisect-x' | 'bisect-y' | 'bisect-band' | 'band' | 'voronoi' | 'quadtree';
+	readonly snapToDataX: boolean;
+	readonly snapToDataY: boolean;
 }
 
 /** Animation defaults; `duration` is 0 under reduced-motion. */
 export interface MotionPreset {
-  /** Tween duration in ms (0 disables). */
-  readonly duration: number;
-  /** D3 easing name hint for the consumer. */
-  readonly easing: 'cubicOut' | 'linear';
+	/** Tween duration in ms (0 disables). */
+	readonly duration: number;
+	/** D3 easing name hint for the consumer. */
+	readonly easing: 'cubicOut' | 'linear';
 }
 
 /** The full dashboard preset surface. */
 export interface DashboardPreset {
-  readonly padding: ChartPadding;
-  readonly grid: GridPreset;
-  readonly tooltip: TooltipPreset;
-  readonly motion: MotionPreset;
+	readonly padding: ChartPadding;
+	readonly grid: GridPreset;
+	readonly tooltip: TooltipPreset;
+	readonly motion: MotionPreset;
 }
 
 /** Options for {@link dashboardPreset}. */
 export interface DashboardPresetOptions {
-  /**
-   * When `true`, motion duration collapses to 0 (WCAG 2.2 SC 2.3.3 / 2.2.2).
-   * Pass `prefersReducedMotion()` from the component so it stays SSR-safe.
-   */
-  reducedMotion?: boolean;
-  /** Override individual padding sides. */
-  padding?: Partial<ChartPadding>;
+	/**
+	 * When `true`, motion duration collapses to 0 (WCAG 2.2 SC 2.3.3 / 2.2.2).
+	 * Pass `prefersReducedMotion()` from the component so it stays SSR-safe.
+	 */
+	reducedMotion?: boolean;
+	/** Override individual padding sides. */
+	padding?: Partial<ChartPadding>;
 }
 
 const BASE_PADDING: ChartPadding = { top: 8, right: 16, bottom: 28, left: 40 };
@@ -68,23 +68,23 @@ const BASE_PADDING: ChartPadding = { top: 8, right: 16, bottom: 28, left: 40 };
  * long axis labels keeps the tuned defaults on the other three.
  */
 function resolvePadding(override: Partial<ChartPadding> | undefined): ChartPadding {
-  return {
-    top: override?.top ?? BASE_PADDING.top,
-    right: override?.right ?? BASE_PADDING.right,
-    bottom: override?.bottom ?? BASE_PADDING.bottom,
-    left: override?.left ?? BASE_PADDING.left,
-  };
+	return {
+		top: override?.top ?? BASE_PADDING.top,
+		right: override?.right ?? BASE_PADDING.right,
+		bottom: override?.bottom ?? BASE_PADDING.bottom,
+		left: override?.left ?? BASE_PADDING.left,
+	};
 }
 
 export function dashboardPreset(options: DashboardPresetOptions = {}): DashboardPreset {
-  return {
-    padding: resolvePadding(options.padding),
-    grid: { x: true, y: true },
-    tooltip: { mode: 'bisect-x', snapToDataX: true, snapToDataY: false },
-    motion: options.reducedMotion
-      ? { duration: 0, easing: 'linear' }
-      : { duration: 300, easing: 'cubicOut' },
-  };
+	return {
+		padding: resolvePadding(options.padding),
+		grid: { x: true, y: true },
+		tooltip: { mode: 'bisect-x', snapToDataX: true, snapToDataY: false },
+		motion: options.reducedMotion
+			? { duration: 0, easing: 'linear' }
+			: { duration: 300, easing: 'cubicOut' },
+	};
 }
 
 /**
@@ -93,6 +93,6 @@ export function dashboardPreset(options: DashboardPresetOptions = {}): Dashboard
  * non-reduced default and the component can refine in an `$effect`.
  */
 export function prefersReducedMotion(): boolean {
-  if (typeof globalThis.matchMedia !== 'function') return false;
-  return globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	if (typeof globalThis.matchMedia !== 'function') return false;
+	return globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

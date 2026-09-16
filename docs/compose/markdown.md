@@ -19,12 +19,12 @@ boundary).
 
 ## Decision matrix
 
-| Source | Library | Where it runs |
-|---|---|---|
-| User input (chat, comments) | `<Markdown source>` (marked + DOMPurify) | Runtime in browser |
-| Authored docs (`.md` files) | `mdsvex` preprocessor | Build time |
-| AI model output rendered to user | `<Markdown source>` (treat as untrusted!) | Runtime |
-| Embedded help text in component | `mdsvex` (`.svx` file) | Build time |
+| Source                           | Library                                   | Where it runs      |
+| -------------------------------- | ----------------------------------------- | ------------------ |
+| User input (chat, comments)      | `<Markdown source>` (marked + DOMPurify)  | Runtime in browser |
+| Authored docs (`.md` files)      | `mdsvex` preprocessor                     | Build time         |
+| AI model output rendered to user | `<Markdown source>` (treat as untrusted!) | Runtime            |
+| Embedded help text in component  | `mdsvex` (`.svx` file)                    | Build time         |
 
 Rule: **anything that isn't 100% in your repo at build time goes
 through the runtime sanitizer.**
@@ -43,7 +43,7 @@ pnpm add -D mdsvex
 
 ```svelte
 <script lang="ts">
-  import { Markdown } from '@sveltesentio/ui/markdown';
+	import { Markdown } from '@sveltesentio/ui/markdown';
 </script>
 
 <Markdown source={comment.body} />
@@ -54,25 +54,23 @@ Wrapper internals (simplified):
 ```svelte
 <!-- @sveltesentio/ui/markdown/Markdown.svelte -->
 <script lang="ts">
-  import { marked } from 'marked';
-  import DOMPurify from 'dompurify';
-  import { browser } from '$app/environment';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
+	import { browser } from '$app/environment';
 
-  type Props = {
-    source: string;
-    unsafe?: boolean;          // bypasses sanitizer; loud opt-out
-    class?: string;
-  };
+	type Props = {
+		source: string;
+		unsafe?: boolean; // bypasses sanitizer; loud opt-out
+		class?: string;
+	};
 
-  let { source, unsafe = false, class: className }: Props = $props();
+	let { source, unsafe = false, class: className }: Props = $props();
 
-  const html = $derived.by(() => {
-    const raw = marked.parse(source, { async: false }) as string;
-    if (unsafe) return raw;
-    return browser
-      ? DOMPurify.sanitize(raw, ALLOWLIST)
-      : sanitizeServer(raw);   // jsdom-based
-  });
+	const html = $derived.by(() => {
+		const raw = marked.parse(source, { async: false }) as string;
+		if (unsafe) return raw;
+		return browser ? DOMPurify.sanitize(raw, ALLOWLIST) : sanitizeServer(raw); // jsdom-based
+	});
 </script>
 
 <div class={className}>{@html html}</div>
@@ -87,19 +85,36 @@ correctness wins over caching.
 ```ts
 // @sveltesentio/ui/markdown/allowlist.ts
 export const ALLOWLIST: DOMPurify.Config = {
-  ALLOWED_TAGS: [
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'p', 'br', 'hr',
-    'strong', 'em', 'code', 'pre', 'blockquote',
-    'ul', 'ol', 'li',
-    'a', 'img',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  ],
-  ALLOWED_ATTR: [
-    'href', 'title', 'src', 'alt', 'rel', 'target', 'class',
-  ],
-  ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|data:image\/(png|jpeg|webp|gif))/i,
-  ADD_ATTR: ['target', 'rel'],
+	ALLOWED_TAGS: [
+		'h1',
+		'h2',
+		'h3',
+		'h4',
+		'h5',
+		'h6',
+		'p',
+		'br',
+		'hr',
+		'strong',
+		'em',
+		'code',
+		'pre',
+		'blockquote',
+		'ul',
+		'ol',
+		'li',
+		'a',
+		'img',
+		'table',
+		'thead',
+		'tbody',
+		'tr',
+		'th',
+		'td',
+	],
+	ALLOWED_ATTR: ['href', 'title', 'src', 'alt', 'rel', 'target', 'class'],
+	ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|data:image\/(png|jpeg|webp|gif))/i,
+	ADD_ATTR: ['target', 'rel'],
 };
 ```
 
@@ -123,14 +138,16 @@ External links auto-get `rel="noopener noreferrer" target="_blank"`:
 ```ts
 const renderer = new marked.Renderer();
 renderer.link = (href, title, text) => {
-  const isExternal = /^https?:\/\//.test(href ?? '');
-  const attrs = [
-    `href="${href}"`,
-    title && `title="${title}"`,
-    isExternal && 'rel="noopener noreferrer"',
-    isExternal && 'target="_blank"',
-  ].filter(Boolean).join(' ');
-  return `<a ${attrs}>${text}</a>`;
+	const isExternal = /^https?:\/\//.test(href ?? '');
+	const attrs = [
+		`href="${href}"`,
+		title && `title="${title}"`,
+		isExternal && 'rel="noopener noreferrer"',
+		isExternal && 'target="_blank"',
+	]
+		.filter(Boolean)
+		.join(' ');
+	return `<a ${attrs}>${text}</a>`;
 };
 marked.use({ renderer });
 ```
@@ -153,8 +170,8 @@ ALLOWED_URI_REGEXP: /^(?:https:\/\/(cdn\.example\.com|images\.example\.com))/i,
 
 ```ts
 renderer.image = (href, title, text) => {
-  const proxied = `/api/img-proxy?url=${encodeURIComponent(href ?? '')}`;
-  return `<img src="${proxied}" alt="${text}" loading="lazy">`;
+	const proxied = `/api/img-proxy?url=${encodeURIComponent(href ?? '')}`;
+	return `<img src="${proxied}" alt="${text}" loading="lazy">`;
 };
 ```
 
@@ -169,11 +186,9 @@ import javascript from 'highlight.js/lib/languages/javascript';
 hljs.registerLanguage('javascript', javascript);
 
 renderer.code = (code, lang) => {
-  const valid = lang && hljs.getLanguage(lang);
-  const highlighted = valid
-    ? hljs.highlight(code, { language: lang }).value
-    : escapeHtml(code);
-  return `<pre><code class="hljs language-${valid ? lang : 'plaintext'}">${highlighted}</code></pre>`;
+	const valid = lang && hljs.getLanguage(lang);
+	const highlighted = valid ? hljs.highlight(code, { language: lang }).value : escapeHtml(code);
+	return `<pre><code class="hljs language-${valid ? lang : 'plaintext'}">${highlighted}</code></pre>`;
 };
 ```
 
@@ -196,8 +211,7 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window as unknown as Window);
 
-export const sanitizeServer = (html: string) =>
-  DOMPurify.sanitize(html, ALLOWLIST);
+export const sanitizeServer = (html: string) => DOMPurify.sanitize(html, ALLOWLIST);
 ```
 
 Cost: jsdom adds ~3 MB to the server bundle. Acceptable for SSR
@@ -237,13 +251,13 @@ review must validate.
 import { mdsvex } from 'mdsvex';
 
 export default {
-  extensions: ['.svelte', '.svx'],
-  preprocess: mdsvex({
-    extensions: ['.svx', '.md'],
-    layout: { _: './src/lib/layouts/Doc.svelte' },
-    rehypePlugins: [/* … */],
-    remarkPlugins: [/* … */],
-  }),
+	extensions: ['.svelte', '.svx'],
+	preprocess: mdsvex({
+		extensions: ['.svx', '.md'],
+		layout: { _: './src/lib/layouts/Doc.svelte' },
+		rehypePlugins: [/* … */],
+		remarkPlugins: [/* … */],
+	}),
 };
 ```
 
@@ -262,7 +276,7 @@ Use `<Markdown>` for runtime content.
 
 ```svelte
 <script lang="ts">
-  import GettingStarted from '$lib/docs/getting-started.md';
+	import GettingStarted from '$lib/docs/getting-started.md';
 </script>
 
 <GettingStarted />
@@ -286,10 +300,10 @@ review the source.
 import { z } from 'zod';
 
 export const DocFrontmatter = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  publishedAt: z.iso.date().optional(),
-  draft: z.boolean().default(false),
+	title: z.string(),
+	description: z.string().optional(),
+	publishedAt: z.iso.date().optional(),
+	draft: z.boolean().default(false),
 });
 ```
 
@@ -298,9 +312,9 @@ Validate at the page route:
 ```ts
 // src/routes/docs/[slug]/+page.ts
 export const load = async ({ params }) => {
-  const mod = await import(`$lib/docs/${params.slug}.md`);
-  const meta = DocFrontmatter.parse(mod.metadata);
-  return { meta, default: mod.default };
+	const mod = await import(`$lib/docs/${params.slug}.md`);
+	const meta = DocFrontmatter.parse(mod.metadata);
+	return { meta, default: mod.default };
 };
 ```
 
@@ -322,32 +336,32 @@ Common axe issues:
 
 ## Testing
 
-```ts
+````ts
 import { Markdown } from '@sveltesentio/ui/markdown';
 import { render } from '@testing-library/svelte';
 
 test('strips script tag', () => {
-  const { container } = render(Markdown, {
-    props: { source: 'hi <script>alert(1)</script>' },
-  });
-  expect(container.innerHTML).not.toContain('<script');
-  expect(container.innerHTML).not.toContain('alert');
+	const { container } = render(Markdown, {
+		props: { source: 'hi <script>alert(1)</script>' },
+	});
+	expect(container.innerHTML).not.toContain('<script');
+	expect(container.innerHTML).not.toContain('alert');
 });
 
 test('strips javascript: href', () => {
-  const { container } = render(Markdown, {
-    props: { source: '[click](javascript:alert(1))' },
-  });
-  expect(container.querySelector('a')?.getAttribute('href')).not.toMatch(/^javascript:/);
+	const { container } = render(Markdown, {
+		props: { source: '[click](javascript:alert(1))' },
+	});
+	expect(container.querySelector('a')?.getAttribute('href')).not.toMatch(/^javascript:/);
 });
 
 test('preserves safe code block', () => {
-  const { container } = render(Markdown, {
-    props: { source: '```js\nconst x = 1\n```' },
-  });
-  expect(container.querySelector('pre code.hljs')).toBeTruthy();
+	const { container } = render(Markdown, {
+		props: { source: '```js\nconst x = 1\n```' },
+	});
+	expect(container.querySelector('pre code.hljs')).toBeTruthy();
 });
-```
+````
 
 Run XSS payloads from the
 [OWASP cheat sheet](https://owasp.org/www-community/xss-filter-evasion-cheatsheet)
@@ -388,7 +402,7 @@ See `docs/compliance/owasp-asvs-l2.md` for the full CSP recipe.
 - **`{@html source}` directly anywhere.** If you're not going through
   `<Markdown>`, you're rolling your own sanitizer. Don't.
 - **`unsafe={true}` without justification comment.** ESLint flag
-  + code review block.
+  - code review block.
 - **Loading `highlight.js` full bundle.** 700 KB — register only
   the languages you use.
 

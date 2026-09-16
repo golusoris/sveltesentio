@@ -75,17 +75,17 @@ Cross-context behavioral ad (CCPA)                 → specific "Do Not Sell or 
 
 ## Build vs buy — banner SDK
 
-| Option | Self-host | IAB TCF | SSR-friendly | Free-tier | Best for |
-|---|---|---|---|---|---|
-| **Klaro** (OSS) | ✅ | ⚠️ plugin | ✅ | Unlimited | Default: self-hosted, banner + preferences modal |
-| **OneTrust** | ❌ SaaS | ✅ | ⚠️ | Paid | Enterprise; complex regional matrix |
-| **Cookiebot** | ❌ SaaS | ✅ | ⚠️ | Tiny free tier | Small-team + regional matrix + IAB needs |
-| **Iubenda** | ❌ SaaS | ✅ | ⚠️ | Paid | Legal-docs + banner in one package |
-| **Cookieyes / Termly / Complianz** | Mixed | ⚠️ | ⚠️ | Varies | Usually WordPress-heritage, integration debt |
-| **Custom + IAB TCF SDK** | ✅ | ✅ | ✅ | n/a | Only if you have specific AdTech needs |
+| Option                             | Self-host | IAB TCF   | SSR-friendly | Free-tier      | Best for                                         |
+| ---------------------------------- | --------- | --------- | ------------ | -------------- | ------------------------------------------------ |
+| **Klaro** (OSS)                    | ✅        | ⚠️ plugin | ✅           | Unlimited      | Default: self-hosted, banner + preferences modal |
+| **OneTrust**                       | ❌ SaaS   | ✅        | ⚠️           | Paid           | Enterprise; complex regional matrix              |
+| **Cookiebot**                      | ❌ SaaS   | ✅        | ⚠️           | Tiny free tier | Small-team + regional matrix + IAB needs         |
+| **Iubenda**                        | ❌ SaaS   | ✅        | ⚠️           | Paid           | Legal-docs + banner in one package               |
+| **Cookieyes / Termly / Complianz** | Mixed     | ⚠️        | ⚠️           | Varies         | Usually WordPress-heritage, integration debt     |
+| **Custom + IAB TCF SDK**           | ✅        | ✅        | ✅           | n/a            | Only if you have specific AdTech needs           |
 
 **Default pick: Klaro** (self-hosted OSS). No SaaS subscription, no
-data sent to a third party *by the consent tool itself*, full SSR
+data sent to a third party _by the consent tool itself_, full SSR
 control, and hook-based gating that fits our architecture. Add IAB
 TCF only if AdTech is actually in scope.
 
@@ -126,67 +126,67 @@ src/routes/
 import { z } from 'zod';
 
 export const ConsentCategory = z.enum([
-  'essential',          // always-on; not negotiable
-  'functional',         // theme, locale
-  'analytics',          // aggregate usage; no cross-site
-  'advertising',        // targeted ads; cross-context
-  'marketing',          // email tracking, product comms
-  'replay',             // session replay, heatmaps
-  'ai_personalization', // ML profiling, recommendations
+	'essential', // always-on; not negotiable
+	'functional', // theme, locale
+	'analytics', // aggregate usage; no cross-site
+	'advertising', // targeted ads; cross-context
+	'marketing', // email tracking, product comms
+	'replay', // session replay, heatmaps
+	'ai_personalization', // ML profiling, recommendations
 ]);
 export type ConsentCategory = z.infer<typeof ConsentCategory>;
 
 export const CATEGORIES = [
-  {
-    id: 'essential',
-    required: true,
-    legalBasis: { gdpr: 'necessary', ccpa: 'necessary' },
-    description: 'Session, auth, CSRF, and load-balancing cookies.',
-    services: ['session', 'csrf'],
-  },
-  {
-    id: 'functional',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'consent' },
-    description: 'Remember your theme and language preferences.',
-    services: ['theme-cookie', 'locale-cookie'],
-  },
-  {
-    id: 'analytics',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
-    description: 'Aggregate product usage to improve features.',
-    services: ['plausible'],
-  },
-  {
-    id: 'advertising',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
-    description: 'Targeted advertising across sites.',
-    services: ['google-ads', 'meta-pixel'],
-    tcfVendors: [755, 89],   // IAB vendor IDs
-  },
-  {
-    id: 'marketing',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
-    description: 'Track email opens and link clicks.',
-    services: ['postmark-tracking'],
-  },
-  {
-    id: 'replay',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
-    description: 'Anonymized session replay for debugging.',
-    services: ['sentry-replay'],
-  },
-  {
-    id: 'ai_personalization',
-    required: false,
-    legalBasis: { gdpr: 'consent', ccpa: 'consent' },
-    description: 'Personalize AI suggestions based on your activity.',
-    services: ['ai-profile'],
-  },
+	{
+		id: 'essential',
+		required: true,
+		legalBasis: { gdpr: 'necessary', ccpa: 'necessary' },
+		description: 'Session, auth, CSRF, and load-balancing cookies.',
+		services: ['session', 'csrf'],
+	},
+	{
+		id: 'functional',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'consent' },
+		description: 'Remember your theme and language preferences.',
+		services: ['theme-cookie', 'locale-cookie'],
+	},
+	{
+		id: 'analytics',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
+		description: 'Aggregate product usage to improve features.',
+		services: ['plausible'],
+	},
+	{
+		id: 'advertising',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
+		description: 'Targeted advertising across sites.',
+		services: ['google-ads', 'meta-pixel'],
+		tcfVendors: [755, 89], // IAB vendor IDs
+	},
+	{
+		id: 'marketing',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
+		description: 'Track email opens and link clicks.',
+		services: ['postmark-tracking'],
+	},
+	{
+		id: 'replay',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'opt-out' },
+		description: 'Anonymized session replay for debugging.',
+		services: ['sentry-replay'],
+	},
+	{
+		id: 'ai_personalization',
+		required: false,
+		legalBasis: { gdpr: 'consent', ccpa: 'consent' },
+		description: 'Personalize AI suggestions based on your activity.',
+		services: ['ai-profile'],
+	},
 ] as const;
 ```
 
@@ -213,10 +213,10 @@ export const CATEGORIES = [
 import { resolveConsent } from '$lib/consent/ssr';
 
 export async function handle({ event, resolve }) {
-  event.locals.consent = resolveConsent(event.cookies.get('__Host-consent'));
-  event.locals.region = resolveRegion(event.request);
-  // …
-  return resolve(event);
+	event.locals.consent = resolveConsent(event.cookies.get('__Host-consent'));
+	event.locals.region = resolveRegion(event.request);
+	// …
+	return resolve(event);
 }
 ```
 
@@ -226,30 +226,33 @@ import { z } from 'zod';
 import { CATEGORIES, ConsentCategory } from './categories';
 
 const CookieShape = z.object({
-  v: z.literal(1),                                    // schema version
-  t: z.number().int(),                                 // timestamp epoch sec
-  c: z.record(ConsentCategory, z.boolean()),
-  r: z.string().length(2).nullable(),                  // region code at grant
+	v: z.literal(1), // schema version
+	t: z.number().int(), // timestamp epoch sec
+	c: z.record(ConsentCategory, z.boolean()),
+	r: z.string().length(2).nullable(), // region code at grant
 });
 
 export type ConsentState = z.infer<typeof CookieShape>;
 
 export function resolveConsent(raw: string | undefined): ConsentState {
-  const defaultState: ConsentState = {
-    v: 1,
-    t: 0,
-    c: Object.fromEntries(CATEGORIES.map((c) => [c.id, c.required])) as Record<ConsentCategory, boolean>,
-    r: null,
-  };
-  if (!raw) return defaultState;
-  try {
-    const parsed = CookieShape.parse(JSON.parse(raw));
-    // Reject if older than 13 months — consent expires per GDPR guidance.
-    if (Date.now() / 1000 - parsed.t > 13 * 30 * 86400) return defaultState;
-    return parsed;
-  } catch {
-    return defaultState;
-  }
+	const defaultState: ConsentState = {
+		v: 1,
+		t: 0,
+		c: Object.fromEntries(CATEGORIES.map((c) => [c.id, c.required])) as Record<
+			ConsentCategory,
+			boolean
+		>,
+		r: null,
+	};
+	if (!raw) return defaultState;
+	try {
+		const parsed = CookieShape.parse(JSON.parse(raw));
+		// Reject if older than 13 months — consent expires per GDPR guidance.
+		if (Date.now() / 1000 - parsed.t > 13 * 30 * 86400) return defaultState;
+		return parsed;
+	} catch {
+		return defaultState;
+	}
 }
 ```
 
@@ -275,18 +278,17 @@ export function resolveConsent(raw: string | undefined): ConsentState {
 export type Regulation = 'gdpr' | 'ccpa' | 'lgpd' | 'none';
 
 export function resolveRegion(request: Request): {
-  country: string | null;
-  regulation: Regulation;
+	country: string | null;
+	regulation: Regulation;
 } {
-  const country = request.headers.get('x-vercel-ip-country')
-    ?? request.headers.get('cf-ipcountry')
-    ?? null;
+	const country =
+		request.headers.get('x-vercel-ip-country') ?? request.headers.get('cf-ipcountry') ?? null;
 
-  const gdprCountries = new Set([/* EU27 + EEA + UK */]);
-  if (country && gdprCountries.has(country)) return { country, regulation: 'gdpr' };
-  if (country === 'US-CA' || isCCPAApplicable(request)) return { country, regulation: 'ccpa' };
-  if (country === 'BR') return { country, regulation: 'lgpd' };
-  return { country, regulation: 'none' };
+	const gdprCountries = new Set([/* EU27 + EEA + UK */]);
+	if (country && gdprCountries.has(country)) return { country, regulation: 'gdpr' };
+	if (country === 'US-CA' || isCCPAApplicable(request)) return { country, regulation: 'ccpa' };
+	if (country === 'BR') return { country, regulation: 'lgpd' };
+	return { country, regulation: 'none' };
 }
 ```
 
@@ -306,22 +308,22 @@ export function resolveRegion(request: Request): {
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { browser } from '$app/environment';
-  import type { LayoutData } from './$types';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import type { LayoutData } from './$types';
 
-  let { data, children }: { data: LayoutData; children: any } = $props();
+	let { data, children }: { data: LayoutData; children: any } = $props();
 
-  onMount(async () => {
-    if (!browser) return;
-    // Only load Klaro JS if banner is needed.
-    if (data.consent.t === 0) {
-      const klaro = await import('klaro');
-      const { buildConfig } = await import('$lib/consent/klaro-config');
-      klaro.setup(buildConfig(data.region));
-      klaro.show();
-    }
-  });
+	onMount(async () => {
+		if (!browser) return;
+		// Only load Klaro JS if banner is needed.
+		if (data.consent.t === 0) {
+			const klaro = await import('klaro');
+			const { buildConfig } = await import('$lib/consent/klaro-config');
+			klaro.setup(buildConfig(data.region));
+			klaro.show();
+		}
+	});
 </script>
 
 {@render children()}
@@ -345,11 +347,7 @@ export function resolveRegion(request: Request): {
 ```svelte
 <!-- src/routes/+layout.svelte -->
 {#if data.consent.c.analytics}
-  <script
-    src="https://plausible.io/js/plausible.js"
-    data-domain="acme.example"
-    defer
-  ></script>
+	<script src="https://plausible.io/js/plausible.js" data-domain="acme.example" defer></script>
 {/if}
 ```
 
@@ -372,30 +370,30 @@ import { emit as audit } from '@sveltesentio/audit';
 import type { ConsentState } from './ssr';
 
 export async function auditConsent(
-  previous: ConsentState,
-  next: ConsentState,
-  source: { requestId: string; userId: string | null; ip: string; userAgent: string },
+	previous: ConsentState,
+	next: ConsentState,
+	source: { requestId: string; userId: string | null; ip: string; userAgent: string },
 ): Promise<void> {
-  const changed = Object.entries(next.c).filter(
-    ([k, v]) => previous.c[k as keyof typeof previous.c] !== v,
-  );
-  for (const [category, granted] of changed) {
-    await audit({
-      actor: { type: source.userId ? 'user' : 'system', id: source.userId, label: null },
-      onBehalfOf: null,
-      action: granted ? 'consent.granted' : 'consent.withdrawn',
-      target: { type: 'consent_category', id: category, label: null },
-      source: {
-        ip: anonymizeIp(source.ip),
-        userAgent: source.userAgent,
-        requestId: source.requestId,
-        origin: 'web',
-      },
-      outcome: 'success',
-      reason: null,
-      metadata: { region: next.r ?? 'unknown' },
-    });
-  }
+	const changed = Object.entries(next.c).filter(
+		([k, v]) => previous.c[k as keyof typeof previous.c] !== v,
+	);
+	for (const [category, granted] of changed) {
+		await audit({
+			actor: { type: source.userId ? 'user' : 'system', id: source.userId, label: null },
+			onBehalfOf: null,
+			action: granted ? 'consent.granted' : 'consent.withdrawn',
+			target: { type: 'consent_category', id: category, label: null },
+			source: {
+				ip: anonymizeIp(source.ip),
+				userAgent: source.userAgent,
+				requestId: source.requestId,
+				origin: 'web',
+			},
+			outcome: 'success',
+			reason: null,
+			metadata: { region: next.r ?? 'unknown' },
+		});
+	}
 }
 ```
 
@@ -420,9 +418,9 @@ without interaction, stable URL:
 ```svelte
 <!-- src/routes/+layout.svelte footer -->
 {#if data.region.regulation === 'ccpa'}
-  <footer>
-    <a href="/do-not-sell">Do Not Sell or Share My Personal Information</a>
-  </footer>
+	<footer>
+		<a href="/do-not-sell">Do Not Sell or Share My Personal Information</a>
+	</footer>
 {/if}
 ```
 
@@ -440,9 +438,9 @@ vendors via a global API:
 import { CmpApi } from '@iabtcf/cmpapi';
 
 export function exposeTcApi(): void {
-  if (typeof window === 'undefined') return;
-  const cmpApi = new CmpApi(CMP_ID, CMP_VERSION, false);
-  // Set TCString from cookie; update on change.
+	if (typeof window === 'undefined') return;
+	const cmpApi = new CmpApi(CMP_ID, CMP_VERSION, false);
+	// Set TCString from cookie; update on change.
 }
 ```
 
@@ -460,15 +458,15 @@ Three TCF rules:
 
 ```ts
 span.setAttributes({
-  'consent.region': region.country ?? 'unknown',
-  'consent.regulation': region.regulation,
-  'consent.analytics': state.c.analytics,
-  'consent.advertising': state.c.advertising,
+	'consent.region': region.country ?? 'unknown',
+	'consent.regulation': region.regulation,
+	'consent.analytics': state.c.analytics,
+	'consent.advertising': state.c.advertising,
 });
 
 metrics.consentGranted.add(1, {
-  category: changed_category,
-  region: region.regulation,
+	category: changed_category,
+	region: region.regulation,
 });
 ```
 
@@ -488,21 +486,21 @@ import { describe, expect, test } from 'vitest';
 import { resolveConsent } from '../src/ssr';
 
 describe('consent SSR resolution', () => {
-  test('no cookie → all false except essential', () => {
-    const state = resolveConsent(undefined);
-    expect(state.c.essential).toBe(true);
-    expect(state.c.analytics).toBe(false);
-  });
+	test('no cookie → all false except essential', () => {
+		const state = resolveConsent(undefined);
+		expect(state.c.essential).toBe(true);
+		expect(state.c.analytics).toBe(false);
+	});
 
-  test('expired cookie → default state', () => {
-    const old = JSON.stringify({ v: 1, t: 0, c: { analytics: true }, r: 'DE' });
-    const state = resolveConsent(old);
-    expect(state.c.analytics).toBe(false);
-  });
+	test('expired cookie → default state', () => {
+		const old = JSON.stringify({ v: 1, t: 0, c: { analytics: true }, r: 'DE' });
+		const state = resolveConsent(old);
+		expect(state.c.analytics).toBe(false);
+	});
 
-  test('malformed cookie → default state, no throw', () => {
-    expect(() => resolveConsent('not-json')).not.toThrow();
-  });
+	test('malformed cookie → default state, no throw', () => {
+		expect(() => resolveConsent('not-json')).not.toThrow();
+	});
 });
 ```
 
@@ -515,7 +513,7 @@ all, reload, assert banner hidden + analytics script present.
   The "flash of tracking" is a documented GDPR violation; DPAs have
   fined for exactly this.
 - **Don't pre-check opt-in boxes in EU.** ePrivacy Directive + GDPR
-  + CJEU's *Planet49* ruling — pre-ticked = no consent.
+  - CJEU's _Planet49_ ruling — pre-ticked = no consent.
 - **Don't treat dismiss as accept.** Closing the banner without a
   choice is not consent. Show the banner again until a decision is
   made.
@@ -533,7 +531,7 @@ all, reload, assert banner hidden + analytics script present.
 - **Don't ignore CCPA if you ship globally.** The "Do Not Sell or
   Share" link is mandatory for California visitors; you don't know
   who's visiting without the link being universal or geo-targeted.
-- **Don't log PII with consent events.** Audit records the *fact*
+- **Don't log PII with consent events.** Audit records the _fact_
   of consent, not the content of the user's interaction with the
   banner. IP anonymized per [audit-log.md](audit-log.md) retention
   policy.
@@ -580,4 +578,4 @@ all, reload, assert banner hidden + analytics script present.
   - IAB TCF v2.2: <https://iabeurope.eu/transparency-consent-framework/>
   - IAB Global Privacy Platform: <https://iabtechlab.com/gpp/>
   - Klaro documentation: <https://klaro.org/docs>
-  - CJEU *Planet49* (pre-ticked boxes): <https://curia.europa.eu/juris/documents.jsf?num=C-673/17>
+  - CJEU _Planet49_ (pre-ticked boxes): <https://curia.europa.eu/juris/documents.jsf?num=C-673/17>

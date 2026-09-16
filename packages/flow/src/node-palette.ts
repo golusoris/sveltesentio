@@ -50,7 +50,9 @@ export interface NodeTypeDef<TData extends Record<string, unknown> = Record<stri
 }
 
 /** Options for {@link createNode} — per-create overrides. */
-export interface CreateNodeOptions<TData extends Record<string, unknown> = Record<string, unknown>> {
+export interface CreateNodeOptions<
+	TData extends Record<string, unknown> = Record<string, unknown>,
+> {
 	/** Explicit id (skips the id factory) — useful for deterministic restores. */
 	readonly id?: string;
 	/** Data merged over the type's seed data. */

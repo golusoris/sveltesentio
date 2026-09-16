@@ -29,12 +29,7 @@ export type {
 	ResponsiveImageAttrs,
 	BuildResponsiveImageOptions,
 } from './image.js';
-export {
-	buildSrcSet,
-	buildSrcSetCandidates,
-	buildSizes,
-	buildResponsiveImage,
-} from './image.js';
+export { buildSrcSet, buildSrcSetCandidates, buildSizes, buildResponsiveImage } from './image.js';
 
 export type { PlayerAction, MediaTrack } from './player-controls.js';
 export {
@@ -56,13 +51,5 @@ export {
 	carouselPrefersReducedMotion,
 } from './carousel.js';
 
-export type {
-	LqipPlaceholder,
-	ImageLoadingPriority,
-	ImageLoadingAttrs,
-} from './lqip.js';
-export {
-	buildPlaceholderStyle,
-	resolveAspectRatio,
-	imageLoadingAttrs,
-} from './lqip.js';
+export type { LqipPlaceholder, ImageLoadingPriority, ImageLoadingAttrs } from './lqip.js';
+export { buildPlaceholderStyle, resolveAspectRatio, imageLoadingAttrs } from './lqip.js';

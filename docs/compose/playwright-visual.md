@@ -54,38 +54,38 @@ pnpm exec playwright install chromium firefox webkit
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? [['html'], ['github']] : 'list',
-  use: {
-    baseURL: 'http://localhost:4173',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-  expect: {
-    toHaveScreenshot: {
-      maxDiffPixels: 200,
-      animations: 'disabled',
-      caret: 'hide',
-      scale: 'css',
-    },
-  },
-  projects: [
-    { name: 'chromium', use: devices['Desktop Chrome'] },
-    { name: 'firefox', use: devices['Desktop Firefox'] },
-    { name: 'webkit', use: devices['Desktop Safari'] },
-    { name: 'mobile-chrome', use: devices['Pixel 7'] },
-    { name: 'mobile-safari', use: devices['iPhone 14'] },
-  ],
-  webServer: {
-    command: 'pnpm build && pnpm preview',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+	testDir: './tests/e2e',
+	fullyParallel: true,
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 2 : 0,
+	reporter: process.env.CI ? [['html'], ['github']] : 'list',
+	use: {
+		baseURL: 'http://localhost:4173',
+		trace: 'on-first-retry',
+		screenshot: 'only-on-failure',
+		video: 'retain-on-failure',
+	},
+	expect: {
+		toHaveScreenshot: {
+			maxDiffPixels: 200,
+			animations: 'disabled',
+			caret: 'hide',
+			scale: 'css',
+		},
+	},
+	projects: [
+		{ name: 'chromium', use: devices['Desktop Chrome'] },
+		{ name: 'firefox', use: devices['Desktop Firefox'] },
+		{ name: 'webkit', use: devices['Desktop Safari'] },
+		{ name: 'mobile-chrome', use: devices['Pixel 7'] },
+		{ name: 'mobile-safari', use: devices['iPhone 14'] },
+	],
+	webServer: {
+		command: 'pnpm build && pnpm preview',
+		url: 'http://localhost:4173',
+		reuseExistingServer: !process.env.CI,
+		timeout: 120_000,
+	},
 });
 ```
 
@@ -119,22 +119,22 @@ anything else.
 import { test as base, expect } from '@playwright/test';
 
 export const test = base.extend<{
-  prep: (url: string) => Promise<void>;
+	prep: (url: string) => Promise<void>;
 }>({
-  prep: async ({ page }, use) => {
-    const prep = async (url: string) => {
-      await page.goto(url);
-      await page.evaluate(() => document.fonts.ready);
-      await page.waitForLoadState('networkidle');
-      await page.addStyleTag({
-        content: `*, *::before, *::after {
+	prep: async ({ page }, use) => {
+		const prep = async (url: string) => {
+			await page.goto(url);
+			await page.evaluate(() => document.fonts.ready);
+			await page.waitForLoadState('networkidle');
+			await page.addStyleTag({
+				content: `*, *::before, *::after {
           animation-duration: 0s !important;
           transition-duration: 0s !important;
         }`,
-      });
-    };
-    await use(prep);
-  },
+			});
+		};
+		await use(prep);
+	},
 });
 
 export { expect };
@@ -149,17 +149,17 @@ animation-kill gives reproducible pixels.
 import { test, expect } from './_fixtures';
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`dashboard @${theme}`, async ({ page, prep }) => {
-    await page.context().addCookies([
-      {
-        name: 'theme',
-        value: theme,
-        url: 'http://localhost:4173',
-      },
-    ]);
-    await prep('/dashboard');
-    await expect(page).toHaveScreenshot(`dashboard-${theme}.png`);
-  });
+	test(`dashboard @${theme}`, async ({ page, prep }) => {
+		await page.context().addCookies([
+			{
+				name: 'theme',
+				value: theme,
+				url: 'http://localhost:4173',
+			},
+		]);
+		await prep('/dashboard');
+		await expect(page).toHaveScreenshot(`dashboard-${theme}.png`);
+	});
 }
 ```
 
@@ -171,17 +171,17 @@ navigation so SSR renders the right theme and there's no flash.
 
 ```ts
 for (const locale of ['en', 'ar', 'he'] as const) {
-  test(`checkout @${locale}`, async ({ page, prep }) => {
-    await page.context().addCookies([
-      {
-        name: 'PARAGLIDE_LOCALE',
-        value: locale,
-        url: 'http://localhost:4173',
-      },
-    ]);
-    await prep('/checkout');
-    await expect(page).toHaveScreenshot(`checkout-${locale}.png`);
-  });
+	test(`checkout @${locale}`, async ({ page, prep }) => {
+		await page.context().addCookies([
+			{
+				name: 'PARAGLIDE_LOCALE',
+				value: locale,
+				url: 'http://localhost:4173',
+			},
+		]);
+		await prep('/checkout');
+		await expect(page).toHaveScreenshot(`checkout-${locale}.png`);
+	});
 }
 ```
 
@@ -194,11 +194,11 @@ Timestamps, random IDs, avatar colors, chart canvases need masking:
 
 ```ts
 await expect(page).toHaveScreenshot('orders.png', {
-  mask: [
-    page.locator('[data-testid="timestamp"]'),
-    page.locator('canvas'),
-    page.locator('[data-avatar]'),
-  ],
+	mask: [
+		page.locator('[data-testid="timestamp"]'),
+		page.locator('canvas'),
+		page.locator('[data-avatar]'),
+	],
 });
 ```
 
@@ -220,19 +220,19 @@ pnpm add -D lost-pixel
 import { CustomProjectConfig } from 'lost-pixel';
 
 export const config: CustomProjectConfig = {
-  storybookShots: {
-    storybookUrl: './apps/storybook/storybook-static',
-  },
-  lostPixelProjectId: 'sveltesentio-ui',
-  ciBuildId: process.env.GITHUB_SHA,
-  ciBuildNumber: process.env.GITHUB_RUN_NUMBER,
-  threshold: 0.002,
-  shotConcurrency: 4,
-  timeouts: { fetchStories: 60_000, loadState: 20_000 },
-  waitBeforeScreenshot: 500,
-  imagePathBaseline: './.lostpixel/baseline',
-  imagePathCurrent: './.lostpixel/current',
-  imagePathDifference: './.lostpixel/difference',
+	storybookShots: {
+		storybookUrl: './apps/storybook/storybook-static',
+	},
+	lostPixelProjectId: 'sveltesentio-ui',
+	ciBuildId: process.env.GITHUB_SHA,
+	ciBuildNumber: process.env.GITHUB_RUN_NUMBER,
+	threshold: 0.002,
+	shotConcurrency: 4,
+	timeouts: { fetchStories: 60_000, loadState: 20_000 },
+	waitBeforeScreenshot: 500,
+	imagePathBaseline: './.lostpixel/baseline',
+	imagePathCurrent: './.lostpixel/current',
+	imagePathDifference: './.lostpixel/difference',
 };
 ```
 

@@ -14,8 +14,8 @@ Paraglide v2 is locked (ADR-0017). Open questions: locale detection strategy, RT
 - **Strategy default** in `@sveltesentio/i18n`:
   ```ts
   paraglideVitePlugin({
-    strategy: ['url', 'cookie', 'baseLocale'],
-    // ...
+  	strategy: ['url', 'cookie', 'baseLocale'],
+  	// ...
   });
   ```
   URL wins (SEO, shareable); cookie is the persistence override; baseLocale is the fallback.

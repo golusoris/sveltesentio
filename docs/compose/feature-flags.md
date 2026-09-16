@@ -54,15 +54,15 @@ tool. A flag without a removal date becomes permanent config debt.
 
 ## Build vs buy matrix
 
-| Option | Hosting | OpenFeature provider | Per-user targeting | Free-tier ceiling | Self-host | Best for |
-|---|---|---|---|---|---|---|
-| **OpenFeature + custom in-process** | Your infra | Trivial (`InMemoryProvider`) | Manual rules | n/a | n/a (in-process) | Tiny apps; <10 flags total; no audit need |
-| **GrowthBook** (OSS) | SaaS or self-host | `@openfeature/server-provider-growthbook` | ✅ | Generous SaaS / unlimited self-host | ✅ Docker | Default OSS choice; built around OpenFeature; low ops |
-| **Unleash** (OSS) | SaaS or self-host | `@openfeature/server-provider-unleash` | ✅ | Generous SaaS / unlimited self-host | ✅ Docker | Mature OSS; org with multiple stacks (Java/Go/Node) |
-| **Flagsmith** (OSS) | SaaS or self-host | `@openfeature/js-flagsmith-provider` | ✅ | Generous SaaS / unlimited self-host | ✅ Docker | OSS with multivariate + remote-config focus |
-| **LaunchDarkly** | SaaS only | `@openfeature/server-provider-launchdarkly` | ✅ best-in-class | Limited (per-context-MAU pricing) | ❌ | Enterprise commit, deep targeting/experiment features |
-| **PostHog feature flags** | SaaS or self-host | `@openfeature/server-provider-posthog` | ✅ | Generous SaaS / unlimited self-host | ✅ Docker | Already on PostHog for analytics; flags as bonus |
-| **ConfigCat** | SaaS only | `@openfeature/js-configcat-provider` | ✅ | Generous free | ❌ | Simple SaaS, polling-based, low-ops |
+| Option                              | Hosting           | OpenFeature provider                        | Per-user targeting | Free-tier ceiling                   | Self-host        | Best for                                              |
+| ----------------------------------- | ----------------- | ------------------------------------------- | ------------------ | ----------------------------------- | ---------------- | ----------------------------------------------------- |
+| **OpenFeature + custom in-process** | Your infra        | Trivial (`InMemoryProvider`)                | Manual rules       | n/a                                 | n/a (in-process) | Tiny apps; <10 flags total; no audit need             |
+| **GrowthBook** (OSS)                | SaaS or self-host | `@openfeature/server-provider-growthbook`   | ✅                 | Generous SaaS / unlimited self-host | ✅ Docker        | Default OSS choice; built around OpenFeature; low ops |
+| **Unleash** (OSS)                   | SaaS or self-host | `@openfeature/server-provider-unleash`      | ✅                 | Generous SaaS / unlimited self-host | ✅ Docker        | Mature OSS; org with multiple stacks (Java/Go/Node)   |
+| **Flagsmith** (OSS)                 | SaaS or self-host | `@openfeature/js-flagsmith-provider`        | ✅                 | Generous SaaS / unlimited self-host | ✅ Docker        | OSS with multivariate + remote-config focus           |
+| **LaunchDarkly**                    | SaaS only         | `@openfeature/server-provider-launchdarkly` | ✅ best-in-class   | Limited (per-context-MAU pricing)   | ❌               | Enterprise commit, deep targeting/experiment features |
+| **PostHog feature flags**           | SaaS or self-host | `@openfeature/server-provider-posthog`      | ✅                 | Generous SaaS / unlimited self-host | ✅ Docker        | Already on PostHog for analytics; flags as bonus      |
+| **ConfigCat**                       | SaaS only         | `@openfeature/js-configcat-provider`        | ✅                 | Generous free                       | ❌               | Simple SaaS, polling-based, low-ops                   |
 
 Three rules from the matrix:
 
@@ -101,10 +101,10 @@ import { GrowthBookProvider } from '@openfeature/server-provider-growthbook';
 import { env } from '$env/dynamic/private';
 
 export const flagsReady = OpenFeature.setProviderAndWait(
-  new GrowthBookProvider({
-    apiHost: env.GROWTHBOOK_API_HOST,
-    clientKey: env.GROWTHBOOK_CLIENT_KEY,
-  }),
+	new GrowthBookProvider({
+		apiHost: env.GROWTHBOOK_API_HOST,
+		clientKey: env.GROWTHBOOK_CLIENT_KEY,
+	}),
 );
 
 export const serverFlagClient = OpenFeature.getClient('server');
@@ -118,17 +118,18 @@ import { flagsReady, serverFlagClient } from '$lib/flags/server';
 await flagsReady;
 
 export const handle = sequence(async ({ event, resolve }) => {
-  const session = event.locals.session;
-  const bucketKey = session?.userId ?? event.cookies.get('flag-bucket') ?? mintBucket(event.cookies);
+	const session = event.locals.session;
+	const bucketKey =
+		session?.userId ?? event.cookies.get('flag-bucket') ?? mintBucket(event.cookies);
 
-  event.locals.flags = serverFlagClient.bind({
-    targetingKey: bucketKey,
-    userId: session?.userId,
-    tier: session?.tier ?? 'anonymous',
-    locale: event.locals.locale,
-    deploymentEnv: env.DEPLOYMENT_ENV,
-  });
-  return resolve(event);
+	event.locals.flags = serverFlagClient.bind({
+		targetingKey: bucketKey,
+		userId: session?.userId,
+		tier: session?.tier ?? 'anonymous',
+		locale: event.locals.locale,
+		deploymentEnv: env.DEPLOYMENT_ENV,
+	});
+	return resolve(event);
 });
 ```
 
@@ -161,13 +162,13 @@ import { GrowthBookWebProvider } from '@openfeature/web-provider-growthbook';
 import { env as publicEnv } from '$env/dynamic/public';
 
 export async function initClientFlags(initialContext: Record<string, unknown>): Promise<void> {
-  await OpenFeature.setContext(initialContext);
-  await OpenFeature.setProviderAndWait(
-    new GrowthBookWebProvider({
-      apiHost: publicEnv.PUBLIC_GROWTHBOOK_API_HOST,
-      clientKey: publicEnv.PUBLIC_GROWTHBOOK_CLIENT_KEY,
-    }),
-  );
+	await OpenFeature.setContext(initialContext);
+	await OpenFeature.setProviderAndWait(
+		new GrowthBookWebProvider({
+			apiHost: publicEnv.PUBLIC_GROWTHBOOK_API_HOST,
+			clientKey: publicEnv.PUBLIC_GROWTHBOOK_CLIENT_KEY,
+		}),
+	);
 }
 
 export const clientFlagClient = OpenFeature.getClient('web');
@@ -179,10 +180,10 @@ import { browser } from '$app/environment';
 import { initClientFlags } from '$lib/flags/client';
 
 export async function load({ data }) {
-  if (browser) {
-    await initClientFlags(data.flagContext);
-  }
-  return data;
+	if (browser) {
+		await initClientFlags(data.flagContext);
+	}
+	return data;
 }
 ```
 
@@ -203,15 +204,15 @@ Three client-bootstrap rules:
 ```svelte
 <!-- src/routes/checkout/+page.svelte -->
 <script lang="ts">
-  import { page } from '$app/state';
+	import { page } from '$app/state';
 
-  const newCheckoutEnabled = $derived(page.data.flags.newCheckout);
+	const newCheckoutEnabled = $derived(page.data.flags.newCheckout);
 </script>
 
 {#if newCheckoutEnabled}
-  <NewCheckout />
+	<NewCheckout />
 {:else}
-  <LegacyCheckout />
+	<LegacyCheckout />
 {/if}
 ```
 
@@ -220,10 +221,10 @@ Three client-bootstrap rules:
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const newCheckout = await locals.flags.getBooleanValue('checkout-v2', false, {
-    track: { context: 'page-load', route: 'checkout' },
-  });
-  return { flags: { newCheckout } };
+	const newCheckout = await locals.flags.getBooleanValue('checkout-v2', false, {
+		track: { context: 'page-load', route: 'checkout' },
+	});
+	return { flags: { newCheckout } };
 };
 ```
 
@@ -248,16 +249,16 @@ import { uuidv7 } from '$lib/ids';
 const PIN_COOKIE = 'flag-bucket';
 
 export function mintBucket(cookies: Cookies): string {
-  const bucketKey = uuidv7();
-  cookies.set(PIN_COOKIE, bucketKey, {
-    path: '/',
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 365,
-    priority: 'medium',
-  });
-  return bucketKey;
+	const bucketKey = uuidv7();
+	cookies.set(PIN_COOKIE, bucketKey, {
+		path: '/',
+		httpOnly: true,
+		secure: true,
+		sameSite: 'lax',
+		maxAge: 60 * 60 * 24 * 365,
+		priority: 'medium',
+	});
+	return bucketKey;
 }
 ```
 
@@ -287,23 +288,29 @@ import { trace, metrics } from '@opentelemetry/api';
 const tracer = trace.getTracer('flags');
 const meter = metrics.getMeter('flags');
 const exposureCounter = meter.createCounter('flag.exposure', {
-  description: 'Flag-variant exposure count',
+	description: 'Flag-variant exposure count',
 });
 
-export function recordExposure(key: string, variant: string, ctx: { route: string; bucketKey: string }): void {
-  exposureCounter.add(1, {
-    'flag.key': key,
-    'flag.variant': variant,
-    route: ctx.route,
-  });
-  tracer.startSpan('flag.exposure', {
-    attributes: {
-      'flag.key': key,
-      'flag.variant': variant,
-      'flag.bucket': ctx.bucketKey,
-      route: ctx.route,
-    },
-  }).end();
+export function recordExposure(
+	key: string,
+	variant: string,
+	ctx: { route: string; bucketKey: string },
+): void {
+	exposureCounter.add(1, {
+		'flag.key': key,
+		'flag.variant': variant,
+		route: ctx.route,
+	});
+	tracer
+		.startSpan('flag.exposure', {
+			attributes: {
+				'flag.key': key,
+				'flag.variant': variant,
+				'flag.bucket': ctx.bucketKey,
+				route: ctx.route,
+			},
+		})
+		.end();
 }
 ```
 
@@ -371,8 +378,8 @@ const orphaned = codeFlagKeys.filter((k) => !definedFlagKeys.includes(k));
 const unused = definedFlagKeys.filter((k) => !codeFlagKeys.includes(k));
 
 if (orphaned.length || unused.length) {
-  console.error({ orphaned, unused });
-  process.exit(1);
+	console.error({ orphaned, unused });
+	process.exit(1);
 }
 ```
 
@@ -392,19 +399,25 @@ import { describe, it, expect } from 'vitest';
 import { OpenFeature, InMemoryProvider } from '@openfeature/server-sdk';
 
 describe('checkout flag', () => {
-  it('renders new checkout when flag on', async () => {
-    await OpenFeature.setProviderAndWait(new InMemoryProvider({
-      'checkout-v2': { variants: { on: true, off: false }, defaultVariant: 'on', disabled: false },
-    }));
-    const value = await OpenFeature.getClient().getBooleanValue('checkout-v2', false);
-    expect(value).toBe(true);
-  });
+	it('renders new checkout when flag on', async () => {
+		await OpenFeature.setProviderAndWait(
+			new InMemoryProvider({
+				'checkout-v2': {
+					variants: { on: true, off: false },
+					defaultVariant: 'on',
+					disabled: false,
+				},
+			}),
+		);
+		const value = await OpenFeature.getClient().getBooleanValue('checkout-v2', false);
+		expect(value).toBe(true);
+	});
 
-  it('falls through to default on provider outage', async () => {
-    await OpenFeature.setProviderAndWait(new BrokenProvider());
-    const value = await OpenFeature.getClient().getBooleanValue('checkout-v2', false);
-    expect(value).toBe(false);
-  });
+	it('falls through to default on provider outage', async () => {
+		await OpenFeature.setProviderAndWait(new BrokenProvider());
+		const value = await OpenFeature.getClient().getBooleanValue('checkout-v2', false);
+		expect(value).toBe(false);
+	});
 });
 ```
 

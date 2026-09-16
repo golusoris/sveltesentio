@@ -81,9 +81,9 @@ Each file begins with frontmatter:
 ---
 effectiveAt: '2026-04-01T00:00:00Z'
 locale: 'en'
-materialChange: true         # triggers re-consent prompt for existing users
+materialChange: true # triggers re-consent prompt for existing users
 summary: 'Added Tuta Mail as subprocessor for transactional email.'
-supersedes: '2025-06-01'     # previous version filename
+supersedes: '2025-06-01' # previous version filename
 ---
 ```
 
@@ -101,23 +101,23 @@ export const LegalDoc = z.enum(['terms', 'privacy', 'cookies', 'dpa']);
 export type LegalDoc = z.infer<typeof LegalDoc>;
 
 export const LegalVersion = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Version must be YYYY-MM-DD filename stem');
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/, 'Version must be YYYY-MM-DD filename stem');
 
 export const Acceptance = z.object({
-  subjectKind: z.enum(['user', 'anonymous', 'tenant-admin']),
-  subjectId: z.string().min(1).max(128),
-  doc: LegalDoc,
-  version: LegalVersion,
-  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
-  acceptedAt: z.string().datetime({ offset: true }),
-  // SHA-256 of the rendered-at-acceptance body. Proves exact wording later.
-  bodyHash: z.string().regex(/^[a-f0-9]{64}$/),
-  // Optional — anonymous session id before signup; merged on account creation.
-  anonymousSessionId: z.string().optional(),
-  // Remote IP is NOT stored here. The audit-log row stores it with its own
-  // retention policy; this table is "did they accept" not "from where".
-  userAgent: z.string().max(500).optional(),
+	subjectKind: z.enum(['user', 'anonymous', 'tenant-admin']),
+	subjectId: z.string().min(1).max(128),
+	doc: LegalDoc,
+	version: LegalVersion,
+	locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
+	acceptedAt: z.string().datetime({ offset: true }),
+	// SHA-256 of the rendered-at-acceptance body. Proves exact wording later.
+	bodyHash: z.string().regex(/^[a-f0-9]{64}$/),
+	// Optional — anonymous session id before signup; merged on account creation.
+	anonymousSessionId: z.string().optional(),
+	// Remote IP is NOT stored here. The audit-log row stores it with its own
+	// retention policy; this table is "did they accept" not "from where".
+	userAgent: z.string().max(500).optional(),
 });
 export type Acceptance = z.infer<typeof Acceptance>;
 ```
@@ -139,34 +139,34 @@ import matter from 'gray-matter';
 import { render as mdsvexRender } from 'mdsvex';
 
 type Entry = {
-  doc: 'terms' | 'privacy' | 'cookies' | 'dpa';
-  version: string;
-  locale: string;
-  effectiveAt: string;
-  materialChange: boolean;
-  summary: string;
-  bodyHash: string;
+	doc: 'terms' | 'privacy' | 'cookies' | 'dpa';
+	version: string;
+	locale: string;
+	effectiveAt: string;
+	materialChange: boolean;
+	summary: string;
+	bodyHash: string;
 };
 
 const manifest: Entry[] = [];
 const root = 'src/legal';
 for (const doc of ['terms', 'privacy', 'cookies', 'dpa'] as const) {
-  for (const file of await readdir(`${root}/${doc}`)) {
-    if (!file.endsWith('.md')) continue;
-    const raw = await readFile(`${root}/${doc}/${file}`, 'utf8');
-    const { data, content } = matter(raw);
-    const rendered = await mdsvexRender(content);
-    const bodyHash = createHash('sha256').update(rendered.code).digest('hex');
-    manifest.push({
-      doc,
-      version: file.replace(/\.md$/, ''),
-      locale: data.locale,
-      effectiveAt: data.effectiveAt,
-      materialChange: data.materialChange === true,
-      summary: String(data.summary ?? ''),
-      bodyHash,
-    });
-  }
+	for (const file of await readdir(`${root}/${doc}`)) {
+		if (!file.endsWith('.md')) continue;
+		const raw = await readFile(`${root}/${doc}/${file}`, 'utf8');
+		const { data, content } = matter(raw);
+		const rendered = await mdsvexRender(content);
+		const bodyHash = createHash('sha256').update(rendered.code).digest('hex');
+		manifest.push({
+			doc,
+			version: file.replace(/\.md$/, ''),
+			locale: data.locale,
+			effectiveAt: data.effectiveAt,
+			materialChange: data.materialChange === true,
+			summary: String(data.summary ?? ''),
+			bodyHash,
+		});
+	}
 }
 await writeFile(`${root}/generated/manifest.json`, JSON.stringify(manifest, null, 2));
 ```
@@ -180,40 +180,40 @@ and imports the pre-compiled Svelte module for rendering.
 ```svelte
 <!-- src/routes/legal/[doc=legalDoc]/[[version]]/+page.svelte -->
 <script lang="ts">
-  import type { PageData } from './$types';
-  let { data }: { data: PageData } = $props();
+	import type { PageData } from './$types';
+	let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head>
-  <title>{data.docTitle} · v{data.version}</title>
-  <meta name="robots" content="index,follow" />
+	<title>{data.docTitle} · v{data.version}</title>
+	<meta name="robots" content="index,follow" />
 </svelte:head>
 
 <article class="prose mx-auto py-12">
-  <header>
-    <h1>{data.docTitle}</h1>
-    <p class="text-muted">
-      Effective {data.effectiveAt.slice(0, 10)} · Version {data.version}
-    </p>
-    {#if data.isSuperseded}
-      <aside role="note" aria-label="Archived version">
-        This is an archived version. The current version is
-        <a href="/legal/{data.doc}">here</a>.
-      </aside>
-    {/if}
-  </header>
+	<header>
+		<h1>{data.docTitle}</h1>
+		<p class="text-muted">
+			Effective {data.effectiveAt.slice(0, 10)} · Version {data.version}
+		</p>
+		{#if data.isSuperseded}
+			<aside role="note" aria-label="Archived version">
+				This is an archived version. The current version is
+				<a href="/legal/{data.doc}">here</a>.
+			</aside>
+		{/if}
+	</header>
 
-  {#await data.bodyModule then Body}
-    <Body.default />
-  {/await}
+	{#await data.bodyModule then Body}
+		<Body.default />
+	{/await}
 
-  <footer>
-    <a href="/legal/{data.doc}/history">Version history</a>
-    ·
-    <a href="/legal/{data.doc}/diff/{data.previousVersion}">
-      Diff vs {data.previousVersion}
-    </a>
-  </footer>
+	<footer>
+		<a href="/legal/{data.doc}/history">Version history</a>
+		·
+		<a href="/legal/{data.doc}/diff/{data.previousVersion}">
+			Diff vs {data.previousVersion}
+		</a>
+	</footer>
 </article>
 ```
 
@@ -221,7 +221,7 @@ and imports the pre-compiled Svelte module for rendering.
 // src/params/legalDoc.ts — param matcher
 import type { ParamMatcher } from '@sveltejs/kit';
 export const match: ParamMatcher = (v) =>
-  v === 'terms' || v === 'privacy' || v === 'cookies' || v === 'dpa';
+	v === 'terms' || v === 'privacy' || v === 'cookies' || v === 'dpa';
 ```
 
 **The archived-version banner is mandatory** — a regulator or a user
@@ -239,48 +239,48 @@ import { writeAuditEvent } from '@sveltesentio/audit';
 import { z } from 'zod';
 
 const Input = z.object({
-  doc: LegalDoc,
-  version: LegalVersion,
-  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
+	doc: LegalDoc,
+	version: LegalVersion,
+	locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
 });
 
 export async function POST({ request, locals, getClientAddress }) {
-  const raw = await request.json();
-  const parsed = Input.safeParse(raw);
-  if (!parsed.success) throw error(400, { message: 'invalid_input' });
+	const raw = await request.json();
+	const parsed = Input.safeParse(raw);
+	if (!parsed.success) throw error(400, { message: 'invalid_input' });
 
-  const entry = manifest.find(
-    (e) =>
-      e.doc === parsed.data.doc &&
-      e.version === parsed.data.version &&
-      e.locale === parsed.data.locale,
-  );
-  if (!entry) throw error(404, { message: 'legal_version_not_found' });
+	const entry = manifest.find(
+		(e) =>
+			e.doc === parsed.data.doc &&
+			e.version === parsed.data.version &&
+			e.locale === parsed.data.locale,
+	);
+	if (!entry) throw error(404, { message: 'legal_version_not_found' });
 
-  const acceptance = Acceptance.parse({
-    subjectKind: locals.user ? 'user' : 'anonymous',
-    subjectId: locals.user?.id ?? locals.anonymousSessionId,
-    doc: entry.doc,
-    version: entry.version,
-    locale: entry.locale,
-    acceptedAt: new Date().toISOString(),
-    bodyHash: entry.bodyHash,
-    anonymousSessionId: locals.user ? locals.anonymousSessionId : undefined,
-    userAgent: request.headers.get('user-agent') ?? undefined,
-  });
+	const acceptance = Acceptance.parse({
+		subjectKind: locals.user ? 'user' : 'anonymous',
+		subjectId: locals.user?.id ?? locals.anonymousSessionId,
+		doc: entry.doc,
+		version: entry.version,
+		locale: entry.locale,
+		acceptedAt: new Date().toISOString(),
+		bodyHash: entry.bodyHash,
+		anonymousSessionId: locals.user ? locals.anonymousSessionId : undefined,
+		userAgent: request.headers.get('user-agent') ?? undefined,
+	});
 
-  await insertAcceptance(acceptance);
-  await writeAuditEvent({
-    kind: 'legal.accepted',
-    subjectId: acceptance.subjectId,
-    payload: {
-      doc: entry.doc,
-      version: entry.version,
-      bodyHash: entry.bodyHash,
-      ip: getClientAddress(),
-    },
-  });
-  return json({ ok: true });
+	await insertAcceptance(acceptance);
+	await writeAuditEvent({
+		kind: 'legal.accepted',
+		subjectId: acceptance.subjectId,
+		payload: {
+			doc: entry.doc,
+			version: entry.version,
+			bodyHash: entry.bodyHash,
+			ip: getClientAddress(),
+		},
+	});
+	return json({ ok: true });
 }
 ```
 
@@ -289,36 +289,32 @@ export async function POST({ request, locals, getClientAddress }) {
 ```svelte
 <!-- src/routes/signup/+page.svelte — excerpt -->
 <script lang="ts">
-  import { manifest } from '$lib/legal/manifest';
-  const currentTerms = $derived(
-    manifest.find((e) => e.doc === 'terms' && e.locale === 'en'),
-  );
-  const currentPrivacy = $derived(
-    manifest.find((e) => e.doc === 'privacy' && e.locale === 'en'),
-  );
-  let acceptedTerms = $state(false);
-  let acceptedPrivacy = $state(false);
+	import { manifest } from '$lib/legal/manifest';
+	const currentTerms = $derived(manifest.find((e) => e.doc === 'terms' && e.locale === 'en'));
+	const currentPrivacy = $derived(manifest.find((e) => e.doc === 'privacy' && e.locale === 'en'));
+	let acceptedTerms = $state(false);
+	let acceptedPrivacy = $state(false);
 </script>
 
 <form method="POST" use:enhance>
-  <!-- ... email/password fields ... -->
-  <label>
-    <input type="checkbox" name="acceptedTerms" required bind:checked={acceptedTerms} />
-    I agree to the
-    <a href="/legal/terms" target="_blank" rel="noopener">
-      Terms of Service (v{currentTerms?.version})
-    </a>
-  </label>
-  <label>
-    <input type="checkbox" name="acceptedPrivacy" required bind:checked={acceptedPrivacy} />
-    I agree to the
-    <a href="/legal/privacy" target="_blank" rel="noopener">
-      Privacy Policy (v{currentPrivacy?.version})
-    </a>
-  </label>
-  <input type="hidden" name="termsVersion" value={currentTerms?.version} />
-  <input type="hidden" name="privacyVersion" value={currentPrivacy?.version} />
-  <button disabled={!acceptedTerms || !acceptedPrivacy}>Create account</button>
+	<!-- ... email/password fields ... -->
+	<label>
+		<input type="checkbox" name="acceptedTerms" required bind:checked={acceptedTerms} />
+		I agree to the
+		<a href="/legal/terms" target="_blank" rel="noopener">
+			Terms of Service (v{currentTerms?.version})
+		</a>
+	</label>
+	<label>
+		<input type="checkbox" name="acceptedPrivacy" required bind:checked={acceptedPrivacy} />
+		I agree to the
+		<a href="/legal/privacy" target="_blank" rel="noopener">
+			Privacy Policy (v{currentPrivacy?.version})
+		</a>
+	</label>
+	<input type="hidden" name="termsVersion" value={currentTerms?.version} />
+	<input type="hidden" name="privacyVersion" value={currentPrivacy?.version} />
+	<button disabled={!acceptedTerms || !acceptedPrivacy}>Create account</button>
 </form>
 ```
 
@@ -337,37 +333,36 @@ import { manifest } from '$lib/legal/manifest';
 import { getLatestAcceptance } from '$lib/db/legal';
 
 export async function handle({ event, resolve }) {
-  if (!event.locals.user) return resolve(event);
+	if (!event.locals.user) return resolve(event);
 
-  const userLocale = event.locals.user.locale ?? 'en';
-  const required: Array<'terms' | 'privacy'> = ['terms', 'privacy'];
-  const stale: Array<{ doc: string; version: string; summary: string }> = [];
+	const userLocale = event.locals.user.locale ?? 'en';
+	const required: Array<'terms' | 'privacy'> = ['terms', 'privacy'];
+	const stale: Array<{ doc: string; version: string; summary: string }> = [];
 
-  for (const doc of required) {
-    const latest = manifest.find((e) => e.doc === doc && e.locale === userLocale);
-    if (!latest) continue;
-    const acc = await getLatestAcceptance(event.locals.user.id, doc);
-    if (!acc || (acc.version !== latest.version && latest.materialChange)) {
-      stale.push({ doc, version: latest.version, summary: latest.summary });
-    }
-  }
+	for (const doc of required) {
+		const latest = manifest.find((e) => e.doc === doc && e.locale === userLocale);
+		if (!latest) continue;
+		const acc = await getLatestAcceptance(event.locals.user.id, doc);
+		if (!acc || (acc.version !== latest.version && latest.materialChange)) {
+			stale.push({ doc, version: latest.version, summary: latest.summary });
+		}
+	}
 
-  event.locals.pendingLegalAcceptance = stale;
+	event.locals.pendingLegalAcceptance = stale;
 
-  // If the route is anything other than /legal/*, /logout, or /api/legal/accept,
-  // redirect to the re-prompt page.
-  const pathname = event.url.pathname;
-  const allow = pathname.startsWith('/legal/')
-    || pathname === '/logout'
-    || pathname === '/api/legal/accept';
-  if (stale.length > 0 && !allow) {
-    return new Response(null, {
-      status: 303,
-      headers: { location: '/legal/review' },
-    });
-  }
+	// If the route is anything other than /legal/*, /logout, or /api/legal/accept,
+	// redirect to the re-prompt page.
+	const pathname = event.url.pathname;
+	const allow =
+		pathname.startsWith('/legal/') || pathname === '/logout' || pathname === '/api/legal/accept';
+	if (stale.length > 0 && !allow) {
+		return new Response(null, {
+			status: 303,
+			headers: { location: '/legal/review' },
+		});
+	}
 
-  return resolve(event);
+	return resolve(event);
 }
 ```
 
@@ -379,29 +374,29 @@ bumps the version but leaves existing acceptances valid.
 ```svelte
 <!-- src/routes/legal/[doc=legalDoc]/diff/[from]/+page.svelte -->
 <script lang="ts">
-  import { diffWords } from 'diff';
-  import type { PageData } from './$types';
-  let { data }: { data: PageData } = $props();
+	import { diffWords } from 'diff';
+	import type { PageData } from './$types';
+	let { data }: { data: PageData } = $props();
 
-  const parts = $derived(diffWords(data.fromText, data.toText));
+	const parts = $derived(diffWords(data.fromText, data.toText));
 </script>
 
 <article class="prose mx-auto">
-  <h1>{data.docTitle} · diff v{data.from} → v{data.to}</h1>
-  <p>
-    <span aria-label="Removed">-</span> removed ·
-    <span aria-label="Added">+</span> added
-  </p>
-  <pre class="legal-diff">
+	<h1>{data.docTitle} · diff v{data.from} → v{data.to}</h1>
+	<p>
+		<span aria-label="Removed">-</span> removed ·
+		<span aria-label="Added">+</span> added
+	</p>
+	<pre class="legal-diff">
     {#each parts as part}
-      {#if part.added}
-        <ins>{part.value}</ins>
-      {:else if part.removed}
-        <del>{part.value}</del>
-      {:else}
-        <span>{part.value}</span>
-      {/if}
-    {/each}
+			{#if part.added}
+				<ins>{part.value}</ins>
+			{:else if part.removed}
+				<del>{part.value}</del>
+			{:else}
+				<span>{part.value}</span>
+			{/if}
+		{/each}
   </pre>
 </article>
 ```
@@ -424,18 +419,18 @@ notice (per DPA common wording):
 import { enqueueEmail } from '@sveltesentio/mail';
 
 export async function POST({ request, locals }) {
-  if (!locals.user?.permissions.includes('legal:admin')) throw error(403);
-  const { newSubprocessor, effectiveAt } = await request.json();
-  const tenants = await listTenantsWithActiveDPA();
-  for (const t of tenants) {
-    await enqueueEmail({
-      to: t.legalContactEmail,
-      template: 'subprocessor-notice',
-      data: { newSubprocessor, effectiveAt, tenantName: t.name },
-      // 30-day notice requirement — send now even if effectiveAt is future.
-    });
-  }
-  return json({ ok: true, notified: tenants.length });
+	if (!locals.user?.permissions.includes('legal:admin')) throw error(403);
+	const { newSubprocessor, effectiveAt } = await request.json();
+	const tenants = await listTenantsWithActiveDPA();
+	for (const t of tenants) {
+		await enqueueEmail({
+			to: t.legalContactEmail,
+			template: 'subprocessor-notice',
+			data: { newSubprocessor, effectiveAt, tenantName: t.name },
+			// 30-day notice requirement — send now even if effectiveAt is future.
+		});
+	}
+	return json({ ok: true, notified: tenants.length });
 }
 ```
 
@@ -446,22 +441,22 @@ export async function POST({ request, locals }) {
 import { db } from '@sveltesentio/db';
 
 export async function exportLegalAcceptances(userId: string) {
-  const rows = await db
-    .select()
-    .from(legalAcceptance)
-    .where(eq(legalAcceptance.subjectId, userId))
-    .orderBy(desc(legalAcceptance.acceptedAt));
-  return {
-    category: 'legal-acceptances',
-    rows: rows.map((r) => ({
-      document: r.doc,
-      version: r.version,
-      locale: r.locale,
-      acceptedAt: r.acceptedAt,
-      bodyHash: r.bodyHash,
-      archivedUrl: `https://example.com/legal/${r.doc}/${r.version}`,
-    })),
-  };
+	const rows = await db
+		.select()
+		.from(legalAcceptance)
+		.where(eq(legalAcceptance.subjectId, userId))
+		.orderBy(desc(legalAcceptance.acceptedAt));
+	return {
+		category: 'legal-acceptances',
+		rows: rows.map((r) => ({
+			document: r.doc,
+			version: r.version,
+			locale: r.locale,
+			acceptedAt: r.acceptedAt,
+			bodyHash: r.bodyHash,
+			archivedUrl: `https://example.com/legal/${r.doc}/${r.version}`,
+		})),
+	};
 }
 ```
 
@@ -508,17 +503,17 @@ import matter from 'gray-matter';
 import { render } from 'mdsvex';
 
 test('every manifest entry hash matches the committed source', async () => {
-  for (const entry of manifest) {
-    const raw = await readFile(`src/legal/${entry.doc}/${entry.version}.md`, 'utf8');
-    const { content } = matter(raw);
-    const rendered = await render(content);
-    const actual = createHash('sha256').update(rendered.code).digest('hex');
-    expect(actual).toBe(entry.bodyHash);
-  }
+	for (const entry of manifest) {
+		const raw = await readFile(`src/legal/${entry.doc}/${entry.version}.md`, 'utf8');
+		const { content } = matter(raw);
+		const rendered = await render(content);
+		const actual = createHash('sha256').update(rendered.code).digest('hex');
+		expect(actual).toBe(entry.bodyHash);
+	}
 });
 
 test('material-change versions reject stale acceptances', async () => {
-  // ... seed acceptance at old version, bump material change, assert re-prompt fires
+	// ... seed acceptance at old version, bump material change, assert re-prompt fires
 });
 ```
 

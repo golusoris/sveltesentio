@@ -4,10 +4,7 @@ import { generatePkceChallenge } from './pkce.js';
 import type { PkceChallenge } from './pkce.js';
 
 /** Subset of the global `fetch` the OIDC helpers need; injectable for tests + SvelteKit's `event.fetch`. */
-export type FetchLike = (
-	input: string | URL | Request,
-	init?: RequestInit,
-) => Promise<Response>;
+export type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 /** Inputs to {@link buildAuthorizationUrl}. Either `authorizationEndpoint` or `issuer` must be supplied. */
 export interface AuthorizationUrlInit {
@@ -57,8 +54,10 @@ export function buildAuthorizationUrl(init: AuthorizationUrlInit): string {
 }
 
 /** Inputs for {@link createAuthorizationRequest}: everything {@link buildAuthorizationUrl} needs minus the generated secrets. */
-export interface AuthorizationRequestInit
-	extends Omit<AuthorizationUrlInit, 'state' | 'nonce' | 'codeChallenge'> {
+export interface AuthorizationRequestInit extends Omit<
+	AuthorizationUrlInit,
+	'state' | 'nonce' | 'codeChallenge'
+> {
 	/** Override the generated state (defaults to a fresh CSPRNG value). */
 	state?: string;
 	/** Override the generated nonce (defaults to a fresh CSPRNG value). */

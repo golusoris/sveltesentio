@@ -143,11 +143,7 @@ export function directionFromGamepadButton(buttonIndex: number): Direction | nul
  * dominant axis so a slightly-off push still reads as a clean cardinal move.
  * Returns `null` inside the deadzone.
  */
-export function directionFromAxes(
-	axisX: number,
-	axisY: number,
-	deadzone = 0.5,
-): Direction | null {
+export function directionFromAxes(axisX: number, axisY: number, deadzone = 0.5): Direction | null {
 	if (Math.abs(axisX) < deadzone && Math.abs(axisY) < deadzone) return null;
 	if (Math.abs(axisX) >= Math.abs(axisY)) {
 		return axisX < 0 ? 'left' : 'right';
@@ -168,10 +164,7 @@ export interface FocusGraphSource {
  * Returns `null` when focus is outside the graph, the current cell is unknown,
  * or there is no neighbour in `direction`. Pure given the source callbacks.
  */
-export function resolveNextFocus(
-	source: FocusGraphSource,
-	direction: Direction,
-): string | null {
+export function resolveNextFocus(source: FocusGraphSource, direction: Direction): string | null {
 	const currentId = source.current();
 	if (currentId === null) return null;
 	const candidates = source.candidates();

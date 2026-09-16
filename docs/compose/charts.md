@@ -41,34 +41,34 @@ as of 2026-04-17); pin carefully. The shadcn generator pins a specific
 ```svelte
 <!-- src/routes/dashboard/+page.svelte -->
 <script lang="ts">
-  import { Chart, Svg, Axis, Spline, Tooltip } from 'layerchart';
-  import { AccessibleChart } from '@sveltesentio/ui/chart';
-  import { scaleTime, scaleLinear } from 'd3-scale';
+	import { Chart, Svg, Axis, Spline, Tooltip } from 'layerchart';
+	import { AccessibleChart } from '@sveltesentio/ui/chart';
+	import { scaleTime, scaleLinear } from 'd3-scale';
 
-  let { data } = $props(); // data.points: { t: Date; v: number }[]
+	let { data } = $props(); // data.points: { t: Date; v: number }[]
 </script>
 
 <AccessibleChart
-  title="Daily active users"
-  description="Trailing 30 days; weekends shown in muted-fg."
-  data={data.points}
+	title="Daily active users"
+	description="Trailing 30 days; weekends shown in muted-fg."
+	data={data.points}
 >
-  <Chart
-    data={data.points}
-    x="t"
-    xScale={scaleTime()}
-    y="v"
-    yScale={scaleLinear()}
-    yDomain={[0, null]}
-    padding={{ top: 16, bottom: 32, left: 48, right: 16 }}
-  >
-    <Svg>
-      <Axis placement="left" grid rule />
-      <Axis placement="bottom" rule />
-      <Spline class="stroke-accent stroke-2" />
-      <Tooltip />
-    </Svg>
-  </Chart>
+	<Chart
+		data={data.points}
+		x="t"
+		xScale={scaleTime()}
+		y="v"
+		yScale={scaleLinear()}
+		yDomain={[0, null]}
+		padding={{ top: 16, bottom: 32, left: 48, right: 16 }}
+	>
+		<Svg>
+			<Axis placement="left" grid rule />
+			<Axis placement="bottom" rule />
+			<Spline class="stroke-accent stroke-2" />
+			<Tooltip />
+		</Svg>
+	</Chart>
 </AccessibleChart>
 ```
 
@@ -77,10 +77,10 @@ It renders:
 
 ```html
 <figure role="img" aria-labelledby="chart-title-…" aria-describedby="chart-desc-…">
-  <figcaption id="chart-title-…">Daily active users</figcaption>
-  <p id="chart-desc-…" class="sr-only">Trailing 30 days; weekends shown in muted-fg.</p>
-  <!-- LayerChart SVG with <title>/<desc> injected -->
-  <!-- …and an off-screen <table> sibling exposing the dataset for SRs -->
+	<figcaption id="chart-title-…">Daily active users</figcaption>
+	<p id="chart-desc-…" class="sr-only">Trailing 30 days; weekends shown in muted-fg.</p>
+	<!-- LayerChart SVG with <title>/<desc> injected -->
+	<!-- …and an off-screen <table> sibling exposing the dataset for SRs -->
 </figure>
 ```
 
@@ -94,11 +94,11 @@ LayerChart v2-next reads oklch via shadcn's chart tokens:
 ```css
 /* Already set by shadcn when you ran `add chart` */
 :root {
-  --color-chart-1: var(--color-accent);
-  --color-chart-2: oklch(0.72 0.16 155); /* success */
-  --color-chart-3: oklch(0.8 0.16 85); /* warning */
-  --color-chart-4: oklch(0.66 0.22 28); /* danger */
-  --color-chart-5: oklch(0.7 0.14 200);
+	--color-chart-1: var(--color-accent);
+	--color-chart-2: oklch(0.72 0.16 155); /* success */
+	--color-chart-3: oklch(0.8 0.16 85); /* warning */
+	--color-chart-4: oklch(0.66 0.22 28); /* danger */
+	--color-chart-5: oklch(0.7 0.14 200);
 }
 ```
 
@@ -112,30 +112,30 @@ Never hard-code hex / HSL / `oklch(...)` in a chart component.
 
 ```svelte
 <script lang="ts">
-  import { Chart, Svg, Axis, Bars, Tooltip } from 'layerchart';
-  import { AccessibleChart } from '@sveltesentio/ui/chart';
-  import { scaleBand, scaleLinear } from 'd3-scale';
+	import { Chart, Svg, Axis, Bars, Tooltip } from 'layerchart';
+	import { AccessibleChart } from '@sveltesentio/ui/chart';
+	import { scaleBand, scaleLinear } from 'd3-scale';
 
-  let { data } = $props(); // { category: string; value: number }[]
+	let { data } = $props(); // { category: string; value: number }[]
 </script>
 
 <AccessibleChart title="Revenue by region" description="Q1 2026, EUR millions." data={data.points}>
-  <Chart
-    data={data.points}
-    x="category"
-    xScale={scaleBand().padding(0.2)}
-    y="value"
-    yScale={scaleLinear()}
-    yDomain={[0, null]}
-    padding={{ top: 16, bottom: 48, left: 56, right: 16 }}
-  >
-    <Svg>
-      <Axis placement="left" grid rule />
-      <Axis placement="bottom" rule />
-      <Bars class="fill-chart-1" radius={4} />
-      <Tooltip />
-    </Svg>
-  </Chart>
+	<Chart
+		data={data.points}
+		x="category"
+		xScale={scaleBand().padding(0.2)}
+		y="value"
+		yScale={scaleLinear()}
+		yDomain={[0, null]}
+		padding={{ top: 16, bottom: 48, left: 56, right: 16 }}
+	>
+		<Svg>
+			<Axis placement="left" grid rule />
+			<Axis placement="bottom" rule />
+			<Bars class="fill-chart-1" radius={4} />
+			<Tooltip />
+		</Svg>
+	</Chart>
 </AccessibleChart>
 ```
 
@@ -176,26 +176,26 @@ LayerChart v2-next covers these out of the box. No extra dep.
 
 ```svelte
 <script lang="ts">
-  import { Chart, Svg, Treemap } from 'layerchart';
-  import { hierarchy, treemap as d3Treemap } from 'd3-hierarchy';
+	import { Chart, Svg, Treemap } from 'layerchart';
+	import { hierarchy, treemap as d3Treemap } from 'd3-hierarchy';
 </script>
 
 <AccessibleChart title="Storage by bucket" data={buckets}>
-  <Chart data={hierarchy(buckets).sum((d) => d.size)}>
-    <Svg>
-      <Treemap let:nodes>
-        {#each nodes as node}
-          <rect
-            x={node.x0}
-            y={node.y0}
-            width={node.x1 - node.x0}
-            height={node.y1 - node.y0}
-            class="fill-chart-1 stroke-bg stroke-2"
-          />
-        {/each}
-      </Treemap>
-    </Svg>
-  </Chart>
+	<Chart data={hierarchy(buckets).sum((d) => d.size)}>
+		<Svg>
+			<Treemap let:nodes>
+				{#each nodes as node}
+					<rect
+						x={node.x0}
+						y={node.y0}
+						width={node.x1 - node.x0}
+						height={node.y1 - node.y0}
+						class="fill-chart-1 stroke-bg stroke-2"
+					/>
+				{/each}
+			</Treemap>
+		</Svg>
+	</Chart>
 </AccessibleChart>
 ```
 
@@ -251,13 +251,13 @@ import MyChart from './MyChart.svelte';
 expect.extend({ toHaveNoViolations });
 
 test('MyChart is axe-clean', async () => {
-  const { container } = render(MyChart, { props: { data: sample } });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(MyChart, { props: { data: sample } });
+	expect(await axe(container)).toHaveNoViolations();
 });
 
 test('MyChart has an accessible name', () => {
-  const { getByRole } = render(MyChart, { props: { data: sample } });
-  expect(getByRole('img', { name: /daily active users/i })).toBeInTheDocument();
+	const { getByRole } = render(MyChart, { props: { data: sample } });
+	expect(getByRole('img', { name: /daily active users/i })).toBeInTheDocument();
 });
 ```
 

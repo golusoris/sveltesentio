@@ -23,7 +23,7 @@ when single-region demonstrably can't meet the requirement.
 - [data-migrations.md](data-migrations.md) — schema changes are
   region-aware (apply expand-globally, contract-globally)
 - [backup-recovery.md](backup-recovery.md) — cross-region replication
-  + failover drills
+  - failover drills
 - [feature-flag-rollout-patterns.md](feature-flag-rollout-patterns.md) —
   region-staggered rollouts
 - [rate-limiting.md](rate-limiting.md) — global vs per-region quotas
@@ -81,44 +81,40 @@ with strict residency requirements.
 // packages/region/src/schema.ts
 import { z } from 'zod';
 
-export const Region = z.enum([
-  'eu-west-1',
-  'us-east-1',
-  'ap-southeast-2',
-]);
+export const Region = z.enum(['eu-west-1', 'us-east-1', 'ap-southeast-2']);
 export type Region = z.infer<typeof Region>;
 
 export const ResidencyPolicy = z.enum([
-  'eu-only',       // GDPR Art.44+
-  'us-only',       // FedRAMP / state law
-  'apac-only',     // PIPL / DPDP
-  'global',        // no constraint
+	'eu-only', // GDPR Art.44+
+	'us-only', // FedRAMP / state law
+	'apac-only', // PIPL / DPDP
+	'global', // no constraint
 ]);
 export type ResidencyPolicy = z.infer<typeof ResidencyPolicy>;
 
 export const TenantRegion = z.object({
-  tenantId: z.string().uuid(),
-  homeRegion: Region,
-  residencyPolicy: ResidencyPolicy,
-  createdAt: z.string().datetime(),
-  pinnedAt: z.string().datetime(),
+	tenantId: z.string().uuid(),
+	homeRegion: Region,
+	residencyPolicy: ResidencyPolicy,
+	createdAt: z.string().datetime(),
+	pinnedAt: z.string().datetime(),
 });
 export type TenantRegion = z.infer<typeof TenantRegion>;
 
 export const RegionHealth = z.object({
-  region: Region,
-  status: z.enum(['healthy', 'degraded', 'failed']),
-  rtt_ms: z.number().nonnegative(),
-  replicationLag_ms: z.number().nonnegative(),
-  lastChecked: z.string().datetime(),
+	region: Region,
+	status: z.enum(['healthy', 'degraded', 'failed']),
+	rtt_ms: z.number().nonnegative(),
+	replicationLag_ms: z.number().nonnegative(),
+	lastChecked: z.string().datetime(),
 });
 export type RegionHealth = z.infer<typeof RegionHealth>;
 
 export const RESIDENCY_TO_REGIONS: Record<ResidencyPolicy, Region[]> = {
-  'eu-only':   ['eu-west-1'],
-  'us-only':   ['us-east-1'],
-  'apac-only': ['ap-southeast-2'],
-  'global':    ['eu-west-1', 'us-east-1', 'ap-southeast-2'],
+	'eu-only': ['eu-west-1'],
+	'us-only': ['us-east-1'],
+	'apac-only': ['ap-southeast-2'],
+	global: ['eu-west-1', 'us-east-1', 'ap-southeast-2'],
 };
 ```
 
@@ -133,43 +129,43 @@ import { tenantRepo } from '$lib/server/repos';
 const LOCAL_REGION = Region.parse(process.env.REGION); // injected per pod
 
 export const handle = async ({ event, resolve }) => {
-  const tenantSlug = event.params.tenant ?? event.locals.tenantSlug;
-  if (!tenantSlug) return resolve(event);
+	const tenantSlug = event.params.tenant ?? event.locals.tenantSlug;
+	if (!tenantSlug) return resolve(event);
 
-  const tenant = await tenantRepo.findBySlug(tenantSlug);
-  if (!tenant) return resolve(event);
+	const tenant = await tenantRepo.findBySlug(tenantSlug);
+	if (!tenant) return resolve(event);
 
-  // Cross-region request → redirect to tenant's home region.
-  // This avoids cross-region writes which would either fail or
-  // create eventual-consistency anomalies.
-  if (tenant.homeRegion !== LOCAL_REGION && isWriteIntent(event)) {
-    const target = regionToHost(tenant.homeRegion);
-    throw redirect(307, `https://${target}${event.url.pathname}${event.url.search}`);
-  }
+	// Cross-region request → redirect to tenant's home region.
+	// This avoids cross-region writes which would either fail or
+	// create eventual-consistency anomalies.
+	if (tenant.homeRegion !== LOCAL_REGION && isWriteIntent(event)) {
+		const target = regionToHost(tenant.homeRegion);
+		throw redirect(307, `https://${target}${event.url.pathname}${event.url.search}`);
+	}
 
-  // Reads can serve from local region if tenant's residency allows
-  // (else also redirect).
-  const allowed = RESIDENCY_TO_REGIONS[tenant.residencyPolicy];
-  if (!allowed.includes(LOCAL_REGION)) {
-    const target = regionToHost(tenant.homeRegion);
-    throw redirect(307, `https://${target}${event.url.pathname}${event.url.search}`);
-  }
+	// Reads can serve from local region if tenant's residency allows
+	// (else also redirect).
+	const allowed = RESIDENCY_TO_REGIONS[tenant.residencyPolicy];
+	if (!allowed.includes(LOCAL_REGION)) {
+		const target = regionToHost(tenant.homeRegion);
+		throw redirect(307, `https://${target}${event.url.pathname}${event.url.search}`);
+	}
 
-  event.locals.region = LOCAL_REGION;
-  event.locals.tenant = tenant;
-  return resolve(event);
+	event.locals.region = LOCAL_REGION;
+	event.locals.tenant = tenant;
+	return resolve(event);
 };
 
 function isWriteIntent(event: { request: Request }) {
-  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.request.method);
+	return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.request.method);
 }
 
 function regionToHost(r: Region): string {
-  return {
-    'eu-west-1':       'eu.app.example.com',
-    'us-east-1':       'us.app.example.com',
-    'ap-southeast-2':  'apac.app.example.com',
-  }[r];
+	return {
+		'eu-west-1': 'eu.app.example.com',
+		'us-east-1': 'us.app.example.com',
+		'ap-southeast-2': 'apac.app.example.com',
+	}[r];
 }
 ```
 
@@ -229,10 +225,8 @@ import type { Region } from './schema';
 
 // Last-Write-Wins (LWW) — simple, but risks lost updates.
 // Use only when fields are independently editable (e.g., user prefs).
-export function lwwMerge<T extends { updatedAt: string; region: Region }>(
-  local: T, remote: T,
-): T {
-  return new Date(remote.updatedAt) > new Date(local.updatedAt) ? remote : local;
+export function lwwMerge<T extends { updatedAt: string; region: Region }>(local: T, remote: T): T {
+	return new Date(remote.updatedAt) > new Date(local.updatedAt) ? remote : local;
 }
 
 // For collaborative shared state (documents, lists), use Yjs CRDTs
@@ -253,36 +247,38 @@ import { route53Client, dbClient } from './aws';
 import { auditLog } from '$lib/server/audit';
 
 async function failover(failedRegion: Region, takeoverRegion: Region) {
-  // Step 1: confirm failed region is actually down (not just slow).
-  const healthChecks = await Promise.all([
-    pingRegion(failedRegion),
-    pingRegion(takeoverRegion),
-  ]);
-  if (healthChecks[0].status !== 'failed') {
-    throw new Error(`failover aborted: ${failedRegion} not failed (status=${healthChecks[0].status})`);
-  }
+	// Step 1: confirm failed region is actually down (not just slow).
+	const healthChecks = await Promise.all([pingRegion(failedRegion), pingRegion(takeoverRegion)]);
+	if (healthChecks[0].status !== 'failed') {
+		throw new Error(
+			`failover aborted: ${failedRegion} not failed (status=${healthChecks[0].status})`,
+		);
+	}
 
-  await auditLog('region.failover.initiated', { from: failedRegion, to: takeoverRegion });
+	await auditLog('region.failover.initiated', { from: failedRegion, to: takeoverRegion });
 
-  // Step 2: promote takeover region's replica to primary (PostgreSQL).
-  // This is point-of-no-return — the failed region's primary must NOT be
-  // restarted before reseeding from the new primary, or you get split-brain.
-  await dbClient.promote(takeoverRegion);
+	// Step 2: promote takeover region's replica to primary (PostgreSQL).
+	// This is point-of-no-return — the failed region's primary must NOT be
+	// restarted before reseeding from the new primary, or you get split-brain.
+	await dbClient.promote(takeoverRegion);
 
-  // Step 3: update Route 53 weights to drain failed region to 0.
-  await route53Client.updateRecord({
-    name: 'app.example.com',
-    setIdentifier: failedRegion,
-    weight: 0,
-  });
+	// Step 3: update Route 53 weights to drain failed region to 0.
+	await route53Client.updateRecord({
+		name: 'app.example.com',
+		setIdentifier: failedRegion,
+		weight: 0,
+	});
 
-  // Step 4: update tenant-region mappings for tenants pinned to failed region.
-  await dbClient.query(`
+	// Step 4: update tenant-region mappings for tenants pinned to failed region.
+	await dbClient.query(
+		`
     UPDATE tenant_regions SET home_region = $1
     WHERE home_region = $2 AND residency_policy = 'global'
-  `, [takeoverRegion, failedRegion]);
+  `,
+		[takeoverRegion, failedRegion],
+	);
 
-  await auditLog('region.failover.completed', { from: failedRegion, to: takeoverRegion });
+	await auditLog('region.failover.completed', { from: failedRegion, to: takeoverRegion });
 }
 ```
 
@@ -300,26 +296,26 @@ import { RegionHealth, Region } from '@sveltesentio/region/schema';
 import { db } from '$lib/server/db';
 
 export const GET = async () => {
-  const region = Region.parse(process.env.REGION);
-  const lag = await replicationLag();
-  const status = lag > 60_000 ? 'degraded' : lag > 300_000 ? 'failed' : 'healthy';
-  const health = RegionHealth.parse({
-    region,
-    status,
-    rtt_ms: 0,
-    replicationLag_ms: lag,
-    lastChecked: new Date().toISOString(),
-  });
-  return json(health, {
-    status: status === 'healthy' ? 200 : 503,
-  });
+	const region = Region.parse(process.env.REGION);
+	const lag = await replicationLag();
+	const status = lag > 60_000 ? 'degraded' : lag > 300_000 ? 'failed' : 'healthy';
+	const health = RegionHealth.parse({
+		region,
+		status,
+		rtt_ms: 0,
+		replicationLag_ms: lag,
+		lastChecked: new Date().toISOString(),
+	});
+	return json(health, {
+		status: status === 'healthy' ? 200 : 503,
+	});
 };
 
 async function replicationLag(): Promise<number> {
-  const r = await db.query<{ lag: string }>(
-    `SELECT EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())) * 1000 AS lag`,
-  );
-  return Number(r.rows[0].lag);
+	const r = await db.query<{ lag: string }>(
+		`SELECT EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())) * 1000 AS lag`,
+	);
+	return Number(r.rows[0].lag);
 }
 ```
 

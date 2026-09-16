@@ -57,10 +57,7 @@ export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
 	return diff === 0;
 }
 
-async function hmac(
-	secret: Uint8Array | ArrayBuffer,
-	data: Uint8Array,
-): Promise<Uint8Array> {
+async function hmac(secret: Uint8Array | ArrayBuffer, data: Uint8Array): Promise<Uint8Array> {
 	const key = await crypto.subtle.importKey(
 		'raw',
 		toBufferSource(secret),
@@ -91,7 +88,9 @@ function encodeExp(exp: number): Uint8Array {
 }
 
 function decodeExp(bytes: Uint8Array): number {
-	return Number(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getBigUint64(0, false));
+	return Number(
+		new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getBigUint64(0, false),
+	);
 }
 
 function concat(...parts: Uint8Array[]): Uint8Array {

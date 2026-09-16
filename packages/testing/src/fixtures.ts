@@ -4,11 +4,7 @@
 // Golusoris-aligned APIs. Use directly in fetch mocks, MSW handlers, or as
 // fixtures fed into `problemToFieldErrors()` round-trips.
 
-import {
-	ProblemError,
-	type InvalidParam,
-	type ProblemErrorInit,
-} from '@sveltesentio/core';
+import { ProblemError, type InvalidParam, type ProblemErrorInit } from '@sveltesentio/core';
 
 export type FieldReasons = Readonly<Record<string, string | readonly string[]>>;
 

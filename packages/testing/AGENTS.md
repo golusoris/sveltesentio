@@ -6,20 +6,20 @@
 
 ### Landed (v0.0.1)
 
-| Sub-export | Contents | ADR |
-|---|---|---|
-| `./clock` | `testClock({ now })` + `TestClock` interface (`advance`, `set`) implementing `@sveltesentio/core/clock` `Clock` | [ADR-0052](../../docs/adr/0052-clock-injection-hybrid.md) |
-| `./a11y` | `axeDefaults` (WCAG 2.2 AA tag set), `mergeAxeOptions(...)`, `filterViolationsByImpact`, `assertNoViolations(results, opts?)`, `AxeViolationsError`. Pure-data + assertion surface — `axe-core` + `vitest-axe` are consumer-installed dev-deps fed into the assertion. | [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md) |
-| `./playwright-axe` | `playwrightAxeDefaults`, `axeConfig({impactsFail, disableRules, tags})`, `filterPlaywrightViolations`, `applyAxeConfig(builder, config)` (wires `withTags` + `disableRules` onto an `AxeBuilder`-shaped object). | [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md) |
-| `./fixtures` | RFC 9457 builders: `validationProblem({fields})`, `authProblem`, `forbiddenProblem`, `notFoundProblem`, `rateLimitedProblem({retryAfterSeconds?})`, `serverErrorProblem`, raw `problemError(init)`, `problemResponse(err, {headers?})` (returns a `Response` with `application/problem+json`). | — |
+| Sub-export         | Contents                                                                                                                                                                                                                                                                                       | ADR                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `./clock`          | `testClock({ now })` + `TestClock` interface (`advance`, `set`) implementing `@sveltesentio/core/clock` `Clock`                                                                                                                                                                                | [ADR-0052](../../docs/adr/0052-clock-injection-hybrid.md) |
+| `./a11y`           | `axeDefaults` (WCAG 2.2 AA tag set), `mergeAxeOptions(...)`, `filterViolationsByImpact`, `assertNoViolations(results, opts?)`, `AxeViolationsError`. Pure-data + assertion surface — `axe-core` + `vitest-axe` are consumer-installed dev-deps fed into the assertion.                         | [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md)      |
+| `./playwright-axe` | `playwrightAxeDefaults`, `axeConfig({impactsFail, disableRules, tags})`, `filterPlaywrightViolations`, `applyAxeConfig(builder, config)` (wires `withTags` + `disableRules` onto an `AxeBuilder`-shaped object).                                                                               | [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md)      |
+| `./fixtures`       | RFC 9457 builders: `validationProblem({fields})`, `authProblem`, `forbiddenProblem`, `notFoundProblem`, `rateLimitedProblem({retryAfterSeconds?})`, `serverErrorProblem`, raw `problemError(init)`, `problemResponse(err, {headers?})` (returns a `Response` with `application/problem+json`). | —                                                         |
 
 ### Follow-through (not in v0.0.1)
 
-| Sub-export | Contents |
-|---|---|
-| `./forms` | Superforms fixture factory — initial-state + action-result round-trip helpers tied to `@sveltesentio/forms` |
-| `./query` | TanStack Query SSR hydration assertions — depends on Phase 4 query finishing (#33) |
-| `./contrast` | Token-pair contrast gate — depends on `@sveltesentio/ui/tokens` shipping (Phase 3 finishing #32) |
+| Sub-export   | Contents                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `./forms`    | Superforms fixture factory — initial-state + action-result round-trip helpers tied to `@sveltesentio/forms` |
+| `./query`    | TanStack Query SSR hydration assertions — depends on Phase 4 query finishing (#33)                          |
+| `./contrast` | Token-pair contrast gate — depends on `@sveltesentio/ui/tokens` shipping (Phase 3 finishing #32)            |
 
 ## Invariants
 
@@ -39,14 +39,14 @@ import { setClock } from '@sveltesentio/core/clock';
 import MyComponent from '../src/MyComponent.svelte';
 
 it('formats the current time', () => {
-  const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
-  // bind inside the root during test render
-  const { getByTestId } = render(MyComponent, {
-    context: new Map([[Symbol.for('sveltesentio.clock'), clock]]),
-  });
-  expect(getByTestId('timestamp').textContent).toBe('2026-04-17T12:00:00.000Z');
-  clock.advance(60_000);
-  // re-render or tick to observe rolled-forward value
+	const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
+	// bind inside the root during test render
+	const { getByTestId } = render(MyComponent, {
+		context: new Map([[Symbol.for('sveltesentio.clock'), clock]]),
+	});
+	expect(getByTestId('timestamp').textContent).toBe('2026-04-17T12:00:00.000Z');
+	clock.advance(60_000);
+	// re-render or tick to observe rolled-forward value
 });
 ```
 
@@ -72,10 +72,10 @@ const handle = withClock(clock);
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/testing typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/testing test` |
+| Task       | Command                                         |
+| ---------- | ----------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/testing typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/testing test`      |
 
 ## Related ADRs
 

@@ -42,5 +42,13 @@ contract (they share the <ChartFigure> envelope).
 {:else if kind === 'bar'}
 	<BarChart {title} {description} {series} {accessors} {tableOptions} {showDataTable} {idBase} />
 {:else}
-	<ScatterChart {title} {description} {series} {accessors} {tableOptions} {showDataTable} {idBase} />
+	<ScatterChart
+		{title}
+		{description}
+		{series}
+		{accessors}
+		{tableOptions}
+		{showDataTable}
+		{idBase}
+	/>
 {/if}

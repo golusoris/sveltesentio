@@ -120,36 +120,30 @@ import { z } from 'zod';
 export const Plan = z.enum(['free', 'pro', 'team', 'enterprise']);
 export type Plan = z.infer<typeof Plan>;
 
-export const TenantStatus = z.enum([
-  'provisioning',
-  'active',
-  'suspended',
-  'archived',
-  'deleted',
-]);
+export const TenantStatus = z.enum(['provisioning', 'active', 'suspended', 'archived', 'deleted']);
 
 export const Slug = z
-  .string()
-  .min(3)
-  .max(32)
-  .regex(/^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/)
-  .refine((s) => !RESERVED_SLUGS.includes(s), 'reserved');
+	.string()
+	.min(3)
+	.max(32)
+	.regex(/^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/)
+	.refine((s) => !RESERVED_SLUGS.includes(s), 'reserved');
 
 export const SignupInput = z.object({
-  workspaceName: z.string().min(1).max(64),
-  slug: Slug,
-  plan: Plan,
-  adminEmail: z.string().email().max(254),
-  country: z.string().length(2),
-  termsAcceptedAt: z.string().datetime(),
-  marketingOptIn: z.boolean(),
+	workspaceName: z.string().min(1).max(64),
+	slug: Slug,
+	plan: Plan,
+	adminEmail: z.string().email().max(254),
+	country: z.string().length(2),
+	termsAcceptedAt: z.string().datetime(),
+	marketingOptIn: z.boolean(),
 });
 
 export const ProvisionJob = z.object({
-  tenantId: z.string().uuid(),
-  plan: Plan,
-  adminUserId: z.string().uuid(),
-  attempt: z.number().int().min(0).max(10),
+	tenantId: z.string().uuid(),
+	plan: Plan,
+	adminUserId: z.string().uuid(),
+	attempt: z.number().int().min(0).max(10),
 });
 ```
 
@@ -184,43 +178,43 @@ import { clock } from '@sveltesentio/core/clock';
 import { uuidv7 } from '@sveltesentio/core/ids';
 
 export const actions = {
-  default: async ({ request }) => {
-    const form = await superValidate(request, zod(SignupInput));
-    if (!form.valid) return { form };
+	default: async ({ request }) => {
+		const form = await superValidate(request, zod(SignupInput));
+		if (!form.valid) return { form };
 
-    const taken = await db.tenants.slugTaken(form.data.slug);
-    if (taken) return message(form, 'slug_taken', { status: 409 });
+		const taken = await db.tenants.slugTaken(form.data.slug);
+		if (taken) return message(form, 'slug_taken', { status: 409 });
 
-    const tenantId = uuidv7();
-    const userId = uuidv7();
+		const tenantId = uuidv7();
+		const userId = uuidv7();
 
-    await db.transaction(async (tx) => {
-      await tx.users.upsertByEmail({
-        id: userId,
-        email: form.data.adminEmail,
-        emailVerified: false,
-      });
-      await tx.pendingTenants.insert({
-        id: tenantId,
-        slug: form.data.slug,
-        name: form.data.workspaceName,
-        plan: form.data.plan,
-        adminUserId: userId,
-        createdAt: clock.now().toISOString(),
-        termsAcceptedAt: form.data.termsAcceptedAt,
-        country: form.data.country,
-      });
-    });
+		await db.transaction(async (tx) => {
+			await tx.users.upsertByEmail({
+				id: userId,
+				email: form.data.adminEmail,
+				emailVerified: false,
+			});
+			await tx.pendingTenants.insert({
+				id: tenantId,
+				slug: form.data.slug,
+				name: form.data.workspaceName,
+				plan: form.data.plan,
+				adminUserId: userId,
+				createdAt: clock.now().toISOString(),
+				termsAcceptedAt: form.data.termsAcceptedAt,
+				country: form.data.country,
+			});
+		});
 
-    const token = await issueMagicLink(userId, { purpose: 'verify_and_provision', tenantId });
-    await sendEmail({
-      template: 'workspace-activation',
-      to: form.data.adminEmail,
-      data: { activationUrl: `${PUBLIC_ORIGIN}/signup/activate?t=${token}` },
-    });
+		const token = await issueMagicLink(userId, { purpose: 'verify_and_provision', tenantId });
+		await sendEmail({
+			template: 'workspace-activation',
+			to: form.data.adminEmail,
+			data: { activationUrl: `${PUBLIC_ORIGIN}/signup/activate?t=${token}` },
+		});
 
-    return message(form, 'check_email');
-  },
+		return message(form, 'check_email');
+	},
 };
 ```
 
@@ -248,54 +242,58 @@ Six signup rules:
 ```ts
 // src/routes/signup/activate/+server.ts
 export async function GET({ url, cookies }) {
-  const raw = url.searchParams.get('t');
-  if (!raw) throw error(400);
-  const claim = await verifyMagicLink(raw);
-  if (!claim || claim.purpose !== 'verify_and_provision') throw error(410);
+	const raw = url.searchParams.get('t');
+	if (!raw) throw error(400);
+	const claim = await verifyMagicLink(raw);
+	if (!claim || claim.purpose !== 'verify_and_provision') throw error(410);
 
-  const pending = await db.pendingTenants.findById(claim.tenantId);
-  if (!pending) throw error(404);
-  if (pending.provisionedAt) {
-    return redirect(303, `/workspace/${pending.slug}/onboarding`);
-  }
+	const pending = await db.pendingTenants.findById(claim.tenantId);
+	if (!pending) throw error(404);
+	if (pending.provisionedAt) {
+		return redirect(303, `/workspace/${pending.slug}/onboarding`);
+	}
 
-  await db.transaction(async (tx) => {
-    await tx.users.markEmailVerified(pending.adminUserId);
-    await tx.tenants.insert({
-      id: pending.id,
-      slug: pending.slug,
-      name: pending.name,
-      plan: pending.plan,
-      status: 'provisioning',
-      country: pending.country,
-      termsAcceptedAt: pending.termsAcceptedAt,
-    });
-    await tx.tenantMembers.insert({
-      tenantId: pending.id,
-      userId: pending.adminUserId,
-      role: 'owner',
-      grantedBy: 'system',
-      grantedAt: new Date().toISOString(),
-      reason: 'workspace creator',
-    });
-    await tx.tenantSettings.insertDefaults(pending.id);
-  });
+	await db.transaction(async (tx) => {
+		await tx.users.markEmailVerified(pending.adminUserId);
+		await tx.tenants.insert({
+			id: pending.id,
+			slug: pending.slug,
+			name: pending.name,
+			plan: pending.plan,
+			status: 'provisioning',
+			country: pending.country,
+			termsAcceptedAt: pending.termsAcceptedAt,
+		});
+		await tx.tenantMembers.insert({
+			tenantId: pending.id,
+			userId: pending.adminUserId,
+			role: 'owner',
+			grantedBy: 'system',
+			grantedAt: new Date().toISOString(),
+			reason: 'workspace creator',
+		});
+		await tx.tenantSettings.insertDefaults(pending.id);
+	});
 
-  await queue.enqueue('tenant.provision', {
-    tenantId: pending.id,
-    plan: pending.plan,
-    adminUserId: pending.adminUserId,
-    attempt: 0,
-  }, { jobId: `provision:${pending.id}` });
+	await queue.enqueue(
+		'tenant.provision',
+		{
+			tenantId: pending.id,
+			plan: pending.plan,
+			adminUserId: pending.adminUserId,
+			attempt: 0,
+		},
+		{ jobId: `provision:${pending.id}` },
+	);
 
-  await audit.emit({
-    type: 'tenant.provisioning_started',
-    actorId: pending.adminUserId,
-    targetId: pending.id,
-  });
+	await audit.emit({
+		type: 'tenant.provisioning_started',
+		actorId: pending.adminUserId,
+		targetId: pending.id,
+	});
 
-  setSessionCookie(cookies, pending.adminUserId);
-  throw redirect(303, `/workspace/${pending.slug}/onboarding/pending`);
+	setSessionCookie(cookies, pending.adminUserId);
+	throw redirect(303, `/workspace/${pending.slug}/onboarding/pending`);
 }
 ```
 
@@ -332,75 +330,85 @@ import { applyPlanEntitlements } from './entitlements';
 import { seedTenant } from './seed';
 
 export const provisionWorker = makeWorker(
-  'tenant.provision',
-  ProvisionJob,
-  async ({ tenantId, plan, adminUserId }) => {
-    const tenant = await db.tenants.findById(tenantId);
-    if (!tenant) return { skipped: 'tenant_missing' };
-    if (tenant.status === 'active') return { skipped: 'already_provisioned' };
+	'tenant.provision',
+	ProvisionJob,
+	async ({ tenantId, plan, adminUserId }) => {
+		const tenant = await db.tenants.findById(tenantId);
+		if (!tenant) return { skipped: 'tenant_missing' };
+		if (tenant.status === 'active') return { skipped: 'already_provisioned' };
 
-    const steps: CompensatingStep[] = [];
+		const steps: CompensatingStep[] = [];
 
-    try {
-      const stripeCustomer = await stripe.customers.create({
-        metadata: { tenant_id: tenantId },
-      }, { idempotencyKey: `tenant-customer-${tenantId}` });
-      steps.push({ undo: () => stripe.customers.del(stripeCustomer.id) });
+		try {
+			const stripeCustomer = await stripe.customers.create(
+				{
+					metadata: { tenant_id: tenantId },
+				},
+				{ idempotencyKey: `tenant-customer-${tenantId}` },
+			);
+			steps.push({ undo: () => stripe.customers.del(stripeCustomer.id) });
 
-      const sub = await stripe.subscriptions.create({
-        customer: stripeCustomer.id,
-        items: [{ price: priceIdFor(plan) }],
-        trial_period_days: 14,
-        metadata: { tenant_id: tenantId },
-      }, { idempotencyKey: `tenant-sub-${tenantId}` });
-      steps.push({ undo: () => stripe.subscriptions.cancel(sub.id) });
+			const sub = await stripe.subscriptions.create(
+				{
+					customer: stripeCustomer.id,
+					items: [{ price: priceIdFor(plan) }],
+					trial_period_days: 14,
+					metadata: { tenant_id: tenantId },
+				},
+				{ idempotencyKey: `tenant-sub-${tenantId}` },
+			);
+			steps.push({ undo: () => stripe.subscriptions.cancel(sub.id) });
 
-      await storage.createPrefix(`tenants/${tenantId}/`);
-      steps.push({ undo: () => storage.deletePrefix(`tenants/${tenantId}/`) });
+			await storage.createPrefix(`tenants/${tenantId}/`);
+			steps.push({ undo: () => storage.deletePrefix(`tenants/${tenantId}/`) });
 
-      await search.createIndex(`tenant-${tenantId}`);
-      steps.push({ undo: () => search.deleteIndex(`tenant-${tenantId}`) });
+			await search.createIndex(`tenant-${tenantId}`);
+			steps.push({ undo: () => search.deleteIndex(`tenant-${tenantId}`) });
 
-      await seedTenant(tenantId, plan);
-      await applyPlanEntitlements(tenantId, plan);
+			await seedTenant(tenantId, plan);
+			await applyPlanEntitlements(tenantId, plan);
 
-      await db.transaction(async (tx) => {
-        await tx.tenantBilling.insert({
-          tenantId,
-          stripeCustomerId: stripeCustomer.id,
-          stripeSubscriptionId: sub.id,
-        });
-        await tx.tenants.setStatus(tenantId, 'active');
-      });
+			await db.transaction(async (tx) => {
+				await tx.tenantBilling.insert({
+					tenantId,
+					stripeCustomerId: stripeCustomer.id,
+					stripeSubscriptionId: sub.id,
+				});
+				await tx.tenants.setStatus(tenantId, 'active');
+			});
 
-      await sendEmail({
-        template: 'workspace-welcome',
-        to: (await db.users.findById(adminUserId)).email,
-        data: { workspaceUrl: `${PUBLIC_ORIGIN}/w/${tenant.slug}` },
-      });
+			await sendEmail({
+				template: 'workspace-welcome',
+				to: (await db.users.findById(adminUserId)).email,
+				data: { workspaceUrl: `${PUBLIC_ORIGIN}/w/${tenant.slug}` },
+			});
 
-      await audit.emit({
-        type: 'tenant.provisioning_completed',
-        actorId: 'system',
-        targetId: tenantId,
-        meta: { plan, trialDays: 14 },
-      });
+			await audit.emit({
+				type: 'tenant.provisioning_completed',
+				actorId: 'system',
+				targetId: tenantId,
+				meta: { plan, trialDays: 14 },
+			});
 
-      return { ok: true };
-    } catch (err) {
-      for (const s of steps.reverse()) {
-        try { await s.undo(); } catch (e) { /* log, do not throw */ }
-      }
-      await db.tenants.setStatus(tenantId, 'archived', { reason: 'provision_failed' });
-      await audit.emit({
-        type: 'tenant.provisioning_failed',
-        actorId: 'system',
-        targetId: tenantId,
-        meta: { error: serializeError(err) },
-      });
-      throw err;
-    }
-  },
+			return { ok: true };
+		} catch (err) {
+			for (const s of steps.reverse()) {
+				try {
+					await s.undo();
+				} catch (e) {
+					/* log, do not throw */
+				}
+			}
+			await db.tenants.setStatus(tenantId, 'archived', { reason: 'provision_failed' });
+			await audit.emit({
+				type: 'tenant.provisioning_failed',
+				actorId: 'system',
+				targetId: tenantId,
+				meta: { error: serializeError(err) },
+			});
+			throw err;
+		}
+	},
 );
 ```
 
@@ -440,8 +448,8 @@ Eleven worker rules:
 ```ts
 // packages/tenants/src/provision/compensations.ts
 export type CompensatingStep = {
-  name?: string;
-  undo: () => Promise<void>;
+	name?: string;
+	undo: () => Promise<void>;
 };
 ```
 
@@ -469,15 +477,25 @@ Six compensation rules:
 import { Plan } from '../types';
 
 const PLAN_ENTITLEMENTS: Record<z.infer<typeof Plan>, Entitlements> = {
-  free:       { maxUsers: 3,   maxProjects: 2,   maxStorageGb: 1,   features: ['basic'] },
-  pro:        { maxUsers: 10,  maxProjects: 20,  maxStorageGb: 50,  features: ['basic', 'exports'] },
-  team:       { maxUsers: 50,  maxProjects: 100, maxStorageGb: 500, features: ['basic', 'exports', 'sso'] },
-  enterprise: { maxUsers: -1,  maxProjects: -1,  maxStorageGb: -1,  features: ['basic', 'exports', 'sso', 'audit', 'scim'] },
+	free: { maxUsers: 3, maxProjects: 2, maxStorageGb: 1, features: ['basic'] },
+	pro: { maxUsers: 10, maxProjects: 20, maxStorageGb: 50, features: ['basic', 'exports'] },
+	team: {
+		maxUsers: 50,
+		maxProjects: 100,
+		maxStorageGb: 500,
+		features: ['basic', 'exports', 'sso'],
+	},
+	enterprise: {
+		maxUsers: -1,
+		maxProjects: -1,
+		maxStorageGb: -1,
+		features: ['basic', 'exports', 'sso', 'audit', 'scim'],
+	},
 };
 
 export async function applyPlanEntitlements(tenantId: string, plan: z.infer<typeof Plan>) {
-  const ent = PLAN_ENTITLEMENTS[plan];
-  await db.tenantEntitlements.upsert({ tenantId, ...ent, appliedAt: new Date().toISOString() });
+	const ent = PLAN_ENTITLEMENTS[plan];
+	await db.tenantEntitlements.upsert({ tenantId, ...ent, appliedAt: new Date().toISOString() });
 }
 ```
 
@@ -503,23 +521,23 @@ Five entitlement rules:
 ```ts
 // packages/tenants/src/provision/seed.ts
 export async function seedTenant(tenantId: string, plan: Plan) {
-  await db.transaction(async (tx) => {
-    await tx.projects.insert({
-      id: uuidv7(),
-      tenantId,
-      name: 'Welcome',
-      createdBy: 'system',
-    });
-    if (plan !== 'free') {
-      await tx.projects.insertMany(demoProjects(tenantId));
-    }
-    await tx.tenantPreferences.insert({
-      tenantId,
-      locale: 'en',
-      timezone: 'UTC',
-      theme: 'system',
-    });
-  });
+	await db.transaction(async (tx) => {
+		await tx.projects.insert({
+			id: uuidv7(),
+			tenantId,
+			name: 'Welcome',
+			createdBy: 'system',
+		});
+		if (plan !== 'free') {
+			await tx.projects.insertMany(demoProjects(tenantId));
+		}
+		await tx.tenantPreferences.insert({
+			tenantId,
+			locale: 'en',
+			timezone: 'UTC',
+			theme: 'system',
+		});
+	});
 }
 ```
 
@@ -555,7 +573,7 @@ Five failure rules:
 4. **Manual retry from operator** — ops can re-enqueue with
    `attempt: 0` via admin UI; prior compensations must have run.
 5. **No automatic "resume mid-flight"** — simpler to full-rollback
-   + re-run than to track partial state.
+   - re-run than to track partial state.
 
 ## SSO-initiated tenant creation
 
@@ -609,7 +627,7 @@ Six a11y rules:
 3. **Plan selector is a radio group**, not custom divs; labels
    include price + key limits.
 4. **Provisioning-progress page is `role="status"` + `aria-
-   live="polite"`** with determinate percentage.
+live="polite"`** with determinate percentage.
 5. **Failure state has a `role="alert"`** with a clear retry
    button and support link.
 6. **Onboarding redirect uses meta-refresh or JS redirect with
@@ -621,12 +639,12 @@ Bounded attributes only:
 
 ```ts
 export const PROVISION_ATTRIBUTES = [
-  'provision.plan',              // bounded: free | pro | team | enterprise
-  'provision.outcome',           // started | completed | failed | compensated
-  'provision.step',              // stripe_customer | stripe_sub | storage | search | seed | entitle | commit
-  'provision.source',            // self_serve | sso_jit | operator
-  'provision.failure_reason',    // bounded ≤20: stripe_timeout | slug_collision | quota_exceeded | ...
-  'provision.duration_bucket',   // <5s | <15s | <60s | >60s
+	'provision.plan', // bounded: free | pro | team | enterprise
+	'provision.outcome', // started | completed | failed | compensated
+	'provision.step', // stripe_customer | stripe_sub | storage | search | seed | entitle | commit
+	'provision.source', // self_serve | sso_jit | operator
+	'provision.failure_reason', // bounded ≤20: stripe_timeout | slug_collision | quota_exceeded | ...
+	'provision.duration_bucket', // <5s | <15s | <60s | >60s
 ] as const;
 ```
 
@@ -684,7 +702,7 @@ Six testing lanes:
 11. **No rate limit on signup form** — mass-signup abuse fills DB
     with ghost tenants.
 12. **Free-form plan column** — breaks entitlements; bounded enum
-    + DB check constraint.
+    - DB check constraint.
 13. **`country` stored as free text** — tax routing breaks; ISO
     code enforced.
 14. **No audit on provisioning start/complete/fail** — ops cannot

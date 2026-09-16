@@ -1,6 +1,7 @@
 # Paperclip Operating Rules (golusoris/sveltesentio)
 
 ## Operating Contract
+
 - Pushing a branch is NOT shipping: an open PR is required, but still not shipped work until merged.
 - Rebase onto main immediately: run git fetch origin && git rebase origin/main before proposing.
 - Rule 0 Terminal Disposition: every run must end with a structured disposition (in_review or blocked).
@@ -8,11 +9,13 @@
 - Timeout Resilience: timeout is not failure; re-check open PRs before retrying to prevent duplicate PRs.
 
 ## AGit Push Protocol
+
 ```bash
 git push origin HEAD:refs/for/main -o topic=<issue-id>
 ```
 
 ## High-Integrity Invariants
+
 - HISS-01: Acyclic DAG control flow (no recursion)
 - HISS-02: Scalar upper bounds on all loops; context timeout on all I/O
 - HISS-04: McCabe Cyclomatic <= 10, Cognitive <= 15, Func LOC <= 75

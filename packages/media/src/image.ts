@@ -107,10 +107,7 @@ export interface BuildSizesOptions {
  * fallback length, e.g. `"(min-width: 768px) 50vw, 100vw"`. Rules are emitted
  * in array order — the browser uses the first matching condition.
  */
-export function buildSizes(
-	rules: readonly SizesRule[],
-	options: BuildSizesOptions = {},
-): string {
+export function buildSizes(rules: readonly SizesRule[], options: BuildSizesOptions = {}): string {
 	const fallback = options.fallback ?? '100vw';
 	const conditional = rules.map((r) => `${r.condition} ${r.size}`);
 	return [...conditional, fallback].join(', ');
@@ -143,18 +140,14 @@ export function buildResponsiveImage(
 	options: BuildResponsiveImageOptions = {},
 ): ResponsiveImageAttrs {
 	const candidates = buildSrcSetCandidates(src, widths, options);
-	const fallbackWidth =
-		options.fallbackWidth ?? candidates.at(-1)?.width;
+	const fallbackWidth = options.fallbackWidth ?? candidates.at(-1)?.width;
 	const resolved = resolveTemplate(src, options.template);
-	const fallbackSrc =
-		fallbackWidth === undefined ? src : resolved(fallbackWidth);
+	const fallbackSrc = fallbackWidth === undefined ? src : resolved(fallbackWidth);
 	return {
 		src: fallbackSrc,
 		srcset: candidates.map((c) => `${c.url} ${c.width}w`).join(', '),
 		sizes: buildSizes(options.sizes ?? [], {
-			...(options.sizesFallback === undefined
-				? {}
-				: { fallback: options.sizesFallback }),
+			...(options.sizesFallback === undefined ? {} : { fallback: options.sizesFallback }),
 		}),
 	};
 }

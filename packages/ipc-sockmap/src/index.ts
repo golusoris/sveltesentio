@@ -15,20 +15,10 @@ export {
 	detectTransport,
 	encodeFrame,
 } from './transport.js';
-export type {
-	AccessFn,
-	DecodeResult,
-	DetectTransportOptions,
-	IpcTier,
-} from './transport.js';
+export type { AccessFn, DecodeResult, DetectTransportOptions, IpcTier } from './transport.js';
 
 export { createIpcClient } from './client.js';
-export type {
-	ConnectFn,
-	IpcClient,
-	IpcClientOptions,
-	SocketLike,
-} from './client.js';
+export type { ConnectFn, IpcClient, IpcClientOptions, SocketLike } from './client.js';
 
 export {
 	CGROUP_V2_MARKER,

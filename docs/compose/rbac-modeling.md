@@ -81,44 +81,36 @@ Six ladder rules:
 // src/lib/rbac/model.ts
 import { z } from 'zod';
 
-export const Role = z.enum([
-  'owner',
-  'admin',
-  'member',
-  'viewer',
-  'billing',
-  'support',
-  'staff',
-]);
+export const Role = z.enum(['owner', 'admin', 'member', 'viewer', 'billing', 'support', 'staff']);
 export type Role = z.infer<typeof Role>;
 
 export const Permission = z.enum([
-  // users
-  'user.read',
-  'user.invite',
-  'user.suspend',
-  'user.delete',
-  // content
-  'content.read',
-  'content.create',
-  'content.update',
-  'content.delete',
-  'content.publish',
-  // billing
-  'billing.read',
-  'billing.manage',
-  // admin (back-office, see admin-ui-patterns.md)
-  'admin.read',
-  'admin.write',
-  'admin.super',
+	// users
+	'user.read',
+	'user.invite',
+	'user.suspend',
+	'user.delete',
+	// content
+	'content.read',
+	'content.create',
+	'content.update',
+	'content.delete',
+	'content.publish',
+	// billing
+	'billing.read',
+	'billing.manage',
+	// admin (back-office, see admin-ui-patterns.md)
+	'admin.read',
+	'admin.write',
+	'admin.super',
 ]);
 export type Permission = z.infer<typeof Permission>;
 
 export const Scope = z.enum([
-  'global',            // only for back-office roles
-  'tenant',
-  'workspace',
-  'project',
+	'global', // only for back-office roles
+	'tenant',
+	'workspace',
+	'project',
 ]);
 export type Scope = z.infer<typeof Scope>;
 ```
@@ -145,28 +137,39 @@ Six vocabulary rules:
 import type { Role, Permission } from './model';
 
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
-  owner: [
-    'user.read', 'user.invite', 'user.suspend', 'user.delete',
-    'content.read', 'content.create', 'content.update', 'content.delete', 'content.publish',
-    'billing.read', 'billing.manage',
-  ],
-  admin: [
-    'user.read', 'user.invite', 'user.suspend',
-    'content.read', 'content.create', 'content.update', 'content.delete', 'content.publish',
-    'billing.read',
-  ],
-  member: [
-    'user.read',
-    'content.read', 'content.create', 'content.update',
-  ],
-  viewer: ['user.read', 'content.read'],
-  billing: ['user.read', 'billing.read', 'billing.manage'],
-  support: ['user.read', 'content.read'],
-  staff: ['admin.read'],
+	owner: [
+		'user.read',
+		'user.invite',
+		'user.suspend',
+		'user.delete',
+		'content.read',
+		'content.create',
+		'content.update',
+		'content.delete',
+		'content.publish',
+		'billing.read',
+		'billing.manage',
+	],
+	admin: [
+		'user.read',
+		'user.invite',
+		'user.suspend',
+		'content.read',
+		'content.create',
+		'content.update',
+		'content.delete',
+		'content.publish',
+		'billing.read',
+	],
+	member: ['user.read', 'content.read', 'content.create', 'content.update'],
+	viewer: ['user.read', 'content.read'],
+	billing: ['user.read', 'billing.read', 'billing.manage'],
+	support: ['user.read', 'content.read'],
+	staff: ['admin.read'],
 } as const;
 
 export function rolePermissions(role: Role): readonly Permission[] {
-  return ROLE_PERMISSIONS[role];
+	return ROLE_PERMISSIONS[role];
 }
 ```
 
@@ -192,14 +195,14 @@ import { z } from 'zod';
 import { Role, Scope } from './model';
 
 export const Grant = z.object({
-  userId: z.string().uuid(),
-  role: Role,
-  scope: Scope,
-  scopeId: z.string().min(1),       // tenant/workspace/project id
-  grantedAt: z.string().datetime(),
-  grantedBy: z.string().uuid(),
-  expiresAt: z.string().datetime().nullable(),
-  reason: z.string().min(4),
+	userId: z.string().uuid(),
+	role: Role,
+	scope: Scope,
+	scopeId: z.string().min(1), // tenant/workspace/project id
+	grantedAt: z.string().datetime(),
+	grantedBy: z.string().uuid(),
+	expiresAt: z.string().datetime().nullable(),
+	reason: z.string().min(4),
 });
 export type Grant = z.infer<typeof Grant>;
 ```
@@ -228,34 +231,37 @@ import { rolePermissions } from './mapping';
 import { evaluateCondition, type Conditions } from './conditions';
 
 export type AuthContext = {
-  user: { id: string; grants: Grant[]; mfaAgeSec: number };
-  permission: Permission;
-  resource: { tenantId: string; ownerId?: string; status?: string };
-  now: Date;
+	user: { id: string; grants: Grant[]; mfaAgeSec: number };
+	permission: Permission;
+	resource: { tenantId: string; ownerId?: string; status?: string };
+	now: Date;
 };
 
 export type AuthDecision =
-  | { allow: true }
-  | { allow: false; reason: 'no_grant' | 'scope_mismatch' | 'condition_failed' | 'mfa_required' | 'expired' };
+	| { allow: true }
+	| {
+			allow: false;
+			reason: 'no_grant' | 'scope_mismatch' | 'condition_failed' | 'mfa_required' | 'expired';
+	  };
 
 export function authorize(ctx: AuthContext): AuthDecision {
-  const applicable = ctx.user.grants.filter((g) =>
-    g.scope === 'tenant' && g.scopeId === ctx.resource.tenantId,
-  );
-  if (applicable.length === 0) return { allow: false, reason: 'scope_mismatch' };
+	const applicable = ctx.user.grants.filter(
+		(g) => g.scope === 'tenant' && g.scopeId === ctx.resource.tenantId,
+	);
+	if (applicable.length === 0) return { allow: false, reason: 'scope_mismatch' };
 
-  for (const grant of applicable) {
-    if (grant.expiresAt && new Date(grant.expiresAt) < ctx.now) continue;
-    const perms = rolePermissions(grant.role);
-    if (!perms.includes(ctx.permission)) continue;
-    const cond = conditionFor(grant.role, ctx.permission);
-    if (cond && !evaluateCondition(cond, ctx)) continue;
-    if (requiresMfa(ctx.permission) && ctx.user.mfaAgeSec > 300) {
-      return { allow: false, reason: 'mfa_required' };
-    }
-    return { allow: true };
-  }
-  return { allow: false, reason: 'no_grant' };
+	for (const grant of applicable) {
+		if (grant.expiresAt && new Date(grant.expiresAt) < ctx.now) continue;
+		const perms = rolePermissions(grant.role);
+		if (!perms.includes(ctx.permission)) continue;
+		const cond = conditionFor(grant.role, ctx.permission);
+		if (cond && !evaluateCondition(cond, ctx)) continue;
+		if (requiresMfa(ctx.permission) && ctx.user.mfaAgeSec > 300) {
+			return { allow: false, reason: 'mfa_required' };
+		}
+		return { allow: true };
+	}
+	return { allow: false, reason: 'no_grant' };
 }
 ```
 
@@ -282,24 +288,24 @@ Seven evaluation rules:
 ```ts
 // src/lib/rbac/conditions.ts
 export type Condition =
-  | { type: 'owner'; field: 'ownerId' }
-  | { type: 'status_in'; values: readonly string[] }
-  | { type: 'tenant_tier_in'; tiers: readonly string[] }
-  | { type: 'time_window'; fromUtcHour: number; toUtcHour: number };
+	| { type: 'owner'; field: 'ownerId' }
+	| { type: 'status_in'; values: readonly string[] }
+	| { type: 'tenant_tier_in'; tiers: readonly string[] }
+	| { type: 'time_window'; fromUtcHour: number; toUtcHour: number };
 
 export function evaluateCondition(cond: Condition, ctx: AuthContext): boolean {
-  switch (cond.type) {
-    case 'owner':
-      return ctx.resource.ownerId === ctx.user.id;
-    case 'status_in':
-      return !!ctx.resource.status && cond.values.includes(ctx.resource.status);
-    case 'tenant_tier_in':
-      return cond.tiers.includes(ctx.user.tenantTier);
-    case 'time_window': {
-      const h = ctx.now.getUTCHours();
-      return h >= cond.fromUtcHour && h < cond.toUtcHour;
-    }
-  }
+	switch (cond.type) {
+		case 'owner':
+			return ctx.resource.ownerId === ctx.user.id;
+		case 'status_in':
+			return !!ctx.resource.status && cond.values.includes(ctx.resource.status);
+		case 'tenant_tier_in':
+			return cond.tiers.includes(ctx.user.tenantTier);
+		case 'time_window': {
+			const h = ctx.now.getUTCHours();
+			return h >= cond.fromUtcHour && h < cond.toUtcHour;
+		}
+	}
 }
 ```
 
@@ -358,21 +364,21 @@ Three client rules:
    [permissions.md](permissions.md)), not raw grants.
 2. **UI gating hides vs disables** — gate destructive actions with
    hidden (reduce attack surface); gate normal actions with disabled
-   + tooltip (discoverability).
+   - tooltip (discoverability).
 3. **Client is hint, server is truth** — every action is re-checked
    server-side; client check is UX only.
 
 ```svelte
 <script lang="ts">
-  import { usePermissions } from '$lib/rbac/client';
-  const perms = usePermissions();
-  const canPublish = $derived(perms.has('content.publish'));
+	import { usePermissions } from '$lib/rbac/client';
+	const perms = usePermissions();
+	const canPublish = $derived(perms.has('content.publish'));
 </script>
 
 {#if canPublish}
-  <button onclick={publish}>Publish</button>
+	<button onclick={publish}>Publish</button>
 {:else}
-  <button disabled title="Your role cannot publish content">Publish</button>
+	<button disabled title="Your role cannot publish content">Publish</button>
 {/if}
 ```
 
@@ -412,7 +418,7 @@ Five SSO rules:
 Six test lanes:
 
 1. **Unit** — `authorize(ctx)` with a matrix of `(role, permission,
-   scope, condition)` tuples.
+scope, condition)` tuples.
 2. **Property-based** — all permissions either allow or deny with a
    reason; no throw.
 3. **Grant lifecycle** — grant, expire, revoke, re-grant.
@@ -431,7 +437,7 @@ Bounded labels:
 - `authz.role` — bounded enum
 - `authz.decision` — `allow|deny`
 - `authz.deny_reason` — bounded enum (`no_grant|scope_mismatch|
-  condition_failed|mfa_required|expired`)
+condition_failed|mfa_required|expired`)
 - `authz.scope` — `global|tenant|workspace|project`
 
 Gauges + alerts:
@@ -451,7 +457,7 @@ Gauges + alerts:
 2. **Per-user permission overrides** — "this one user can publish"
    creates auditable drift; use a new role.
 3. **Role inheritance trees** — `adminExtended extends admin extends
-   member` — unauditable diffs, fragile on refactor.
+member` — unauditable diffs, fragile on refactor.
 4. **Plan entitlements modeled as roles** — "pro", "free" are plans;
    see [service-limits.md](service-limits.md).
 5. **Time-bounded access via "temp role"** — use a grant with

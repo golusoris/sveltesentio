@@ -1,9 +1,9 @@
 // Paraglide runtime + locale-aware Intl helpers (RTL-aware).
 import {
-  paraglideVitePlugin,
-  getTextDirection,
-  formatCurrency,
-  formatDate,
+	paraglideVitePlugin,
+	getTextDirection,
+	formatCurrency,
+	formatDate,
 } from '@sveltesentio/i18n';
 
 const dir = getTextDirection('ar'); // 'rtl'
