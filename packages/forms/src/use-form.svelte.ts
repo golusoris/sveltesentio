@@ -4,6 +4,7 @@
 // component import (mirrors the `./server` invariant in AGENTS.md).
 import { superForm as upstreamSuperForm } from 'sveltekit-superforms/client';
 import type { Readable } from 'svelte/store';
+import { mirror } from './store-rune.svelte.js';
 import type { FormOptions, SuperForm, SuperValidated } from 'sveltekit-superforms';
 
 /**
@@ -129,13 +130,34 @@ export interface UseForm<
  * the first render matches the store rather than showing an empty frame until
  * the `$effect` subscriptions land.
  */
-const seed = <T>(store: Readable<T>): T => {
-	let captured!: T;
-	store.subscribe((value) => {
-		captured = value;
-	})();
-	return captured;
-};
+/**
+ * The members handed straight back from Superforms.
+ *
+ * `useForm` does two different things to `SuperForm`: nine of its stores are
+ * mirrored into runes, and the rest — the actions, the config, the instance
+ * itself — pass through untouched. Naming that split makes it visible which
+ * members are reactive here and which are simply forwarded.
+ *
+ * Spreading the result is safe because every member is a plain value or function
+ * reference. The reactive members must stay as getters on the returned object,
+ * since spreading a getter would evaluate it once and freeze the value.
+ */
+function passthrough<Out extends Record<string, unknown>, In extends Record<string, unknown>>(
+	sf: SuperForm<Out, In>,
+) {
+	return {
+		enhance: sf.enhance,
+		submit: sf.submit,
+		reset: sf.reset,
+		validate: sf.validate,
+		validateForm: sf.validateForm,
+		isTainted: sf.isTainted,
+		capture: sf.capture,
+		restore: sf.restore,
+		options: sf.options,
+		superform: sf,
+	};
+}
 
 export function useForm<
 	Out extends Record<string, unknown>,
@@ -153,91 +175,47 @@ export function useForm<
 	type Constraints = SuperForm<Out>['constraints'] extends Readable<infer C> ? C : never;
 	type Tainted = SuperForm<Out>['tainted'] extends Readable<infer T> ? T : never;
 
-	let data = $state<Data>(seed(sf.form));
-	let errors = $state<Errors>(seed(sf.errors));
-	let constraints = $state<Constraints>(seed(sf.constraints));
-	let message = $state<unknown>(seed(sf.message));
-	let tainted = $state<Tainted>(seed(sf.tainted));
-	let submitting = $state(seed(sf.submitting));
-	let delayed = $state(seed(sf.delayed));
-	let timeout = $state(seed(sf.timeout));
-	let allErrors = $state<FormError[]>(seed(sf.allErrors));
-
-	$effect(() => {
-		const stops = [
-			sf.form.subscribe((value) => {
-				data = value;
-			}),
-			sf.errors.subscribe((value) => {
-				errors = value;
-			}),
-			sf.constraints.subscribe((value) => {
-				constraints = value;
-			}),
-			sf.message.subscribe((value) => {
-				message = value;
-			}),
-			sf.tainted.subscribe((value) => {
-				tainted = value;
-			}),
-			sf.submitting.subscribe((value) => {
-				submitting = value;
-			}),
-			sf.delayed.subscribe((value) => {
-				delayed = value;
-			}),
-			sf.timeout.subscribe((value) => {
-				timeout = value;
-			}),
-			sf.allErrors.subscribe((value) => {
-				allErrors = value;
-			}),
-		];
-		return () => {
-			for (const stop of stops) stop();
-		};
-	});
+	const data = mirror<Data>(sf.form);
+	const errors = mirror<Errors>(sf.errors);
+	const constraints = mirror<Constraints>(sf.constraints);
+	const message = mirror<unknown>(sf.message);
+	const tainted = mirror<Tainted>(sf.tainted);
+	const submitting = mirror(sf.submitting);
+	const delayed = mirror(sf.delayed);
+	const timeout = mirror(sf.timeout);
+	const allErrors = mirror<FormError[]>(sf.allErrors);
 
 	return {
 		get data() {
-			return data;
+			return data.current;
 		},
 		get errors() {
-			return errors;
+			return errors.current;
 		},
 		get constraints() {
-			return constraints;
+			return constraints.current;
 		},
 		get message() {
-			return message;
+			return message.current;
 		},
 		get tainted() {
-			return tainted;
+			return tainted.current;
 		},
 		get submitting() {
-			return submitting;
+			return submitting.current;
 		},
 		get delayed() {
-			return delayed;
+			return delayed.current;
 		},
 		get timeout() {
-			return timeout;
+			return timeout.current;
 		},
 		get allErrors() {
-			return allErrors;
+			return allErrors.current;
 		},
 		get valid() {
-			return allErrors.length === 0;
+			return allErrors.current.length === 0;
 		},
-		enhance: sf.enhance,
-		submit: sf.submit,
-		reset: sf.reset,
-		validate: sf.validate,
-		validateForm: sf.validateForm,
-		isTainted: sf.isTainted,
-		capture: sf.capture,
-		restore: sf.restore,
-		options: sf.options,
-		superform: sf,
+		...passthrough(sf),
 	};
 }
