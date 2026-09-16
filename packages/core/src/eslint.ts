@@ -208,6 +208,38 @@ const HTML_SINKS = new Set(['innerHTML', 'outerHTML']);
  * deliberate: the rule reports the sink so the sanitisation is visible where the
  * markup enters the DOM rather than somewhere up the call chain.
  */
+/**
+ * The initialiser of a `const` that is assigned exactly once, when `node` names
+ * one.
+ *
+ * Both halves of this rule's remaining gap are the same question asked twice: a
+ * sink named through a variable (`const prop = 'innerHTML'; host[prop] = raw`)
+ * went unreported, and a value sanitised a line earlier
+ * (`const clean = sanitizeHtml(raw); host.innerHTML = clean`) was reported as
+ * though it were raw. A `const` with one initialiser and no later writes is as
+ * statically known as the expression itself, so both resolve through here.
+ *
+ * Anything looser stays unresolved on purpose. A `let`, a parameter, or a
+ * binding written more than once could hold something else by the time the sink
+ * runs, and guessing in either direction is worse than the gap: guessing safe
+ * hides an injection, guessing unsafe trains people to disable the rule.
+ */
+function constInitialiser(
+	context: Rule.RuleContext,
+	node: { type: string },
+): { type: string; callee?: unknown; value?: unknown } | undefined {
+	if (node.type !== 'Identifier') return undefined;
+	const reference = context.sourceCode
+		.getScope(node as Rule.Node)
+		.references.find((candidate) => candidate.identifier === (node as never));
+	const variable = reference?.resolved;
+	if (!variable || variable.defs.length !== 1) return undefined;
+	const [def] = variable.defs;
+	if (def?.type !== 'Variable' || def.parent.kind !== 'const') return undefined;
+	if (variable.references.filter((candidate) => candidate.isWrite()).length !== 1) return undefined;
+	return def.node.init ?? undefined;
+}
+
 function isSanitiserCall(node: { type: string; callee?: unknown } | null | undefined): boolean {
 	if (!node || node.type !== 'CallExpression') return false;
 	const callee = (node as { callee: Callee }).callee;
@@ -244,6 +276,18 @@ function staticPropertyName(member: MemberLike): string | undefined {
 	return key.type === 'Literal' && typeof key.value === 'string' ? key.value : undefined;
 }
 
+/**
+ * The sink a computed member names when its key is a `const` string.
+ *
+ * `staticPropertyName` resolves a literal key; this resolves one hop further, so
+ * `const prop = 'innerHTML'; host[prop] = raw` is reported like the dot form.
+ */
+function constSinkName(context: Rule.RuleContext, member: MemberLike): string | undefined {
+	if (!member.computed) return undefined;
+	const init = constInitialiser(context, member.property);
+	return init?.type === 'Literal' && typeof init.value === 'string' ? init.value : undefined;
+}
+
 const noUnsanitisedHtml: Rule.RuleModule = {
 	meta: {
 		type: 'problem',
@@ -264,11 +308,12 @@ const noUnsanitisedHtml: Rule.RuleModule = {
 			AssignmentExpression(node: AssignmentExpressionNode): void {
 				const left = node.left;
 				if (left.type !== 'MemberExpression') return;
-				const sink = staticPropertyName(left);
+				const sink = staticPropertyName(left) ?? constSinkName(context, left);
 				if (sink === undefined || !HTML_SINKS.has(sink)) return;
 				// An empty string literal clears the node; it cannot carry markup.
 				if (node.right.type === 'Literal' && node.right.value === '') return;
 				if (isSanitiserCall(node.right)) return;
+				if (isSanitiserCall(constInitialiser(context, node.right))) return;
 				context.report({
 					node,
 					messageId: 'htmlSink',
@@ -283,6 +328,8 @@ const noUnsanitisedHtml: Rule.RuleModule = {
 				if (callee.type !== 'MemberExpression') return;
 				if (staticPropertyName(callee) !== 'insertAdjacentHTML') return;
 				if (isSanitiserCall(node.arguments[1])) return;
+				const arg = node.arguments[1];
+				if (arg && isSanitiserCall(constInitialiser(context, arg))) return;
 				context.report({ node, messageId: 'insertAdjacent' });
 			},
 		};

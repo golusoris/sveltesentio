@@ -219,6 +219,18 @@ describe('no-unsanitised-html rule', () => {
 				{ code: "host['innerHTML'] = sanitizeHtml(raw);" },
 				// Boundary: a computed member naming a non-sink property.
 				{ code: "host['textContent'] = raw;" },
+				// Sanitised a line earlier and passed in by name. The rule used to
+				// report this as though it were raw, which is the false accusation
+				// that trains people to disable a rule.
+				{ code: 'const clean = sanitizeHtml(raw); host.innerHTML = clean;' },
+				{ code: 'const clean = purifier.sanitize(raw); host.outerHTML = clean;' },
+				{
+					code: "const clean = sanitizeHtml(raw); host.insertAdjacentHTML('beforeend', clean);",
+				},
+				// A `let` could hold something else by the time the sink runs, so it
+				// stays unresolved — but it is the assignment that is reported, not
+				// the binding, so this is still an accusation about real markup.
+				{ code: "const safe = 'x'; host.textContent = safe;" },
 			],
 			invalid: [
 				{
@@ -262,6 +274,28 @@ describe('no-unsanitised-html rule', () => {
 				{
 					code: "host['insertAdjacentHTML']('beforeend', raw);",
 					errors: [{ messageId: 'insertAdjacent' }],
+				},
+				// The sink named through a const. This is the gap fixture's shape:
+				// bracket notation plus an indirection was a silent bypass.
+				{
+					code: "const prop = 'innerHTML'; host[prop] = raw;",
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				{
+					code: "const prop = 'outerHTML'; host[prop] = raw;",
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				// A const initialised from something that is not a sanitiser does not
+				// launder the value.
+				{
+					code: 'const dirty = escapeNothing(raw); host.innerHTML = dirty;',
+					errors: [{ messageId: 'htmlSink' }],
+				},
+				// Reassignment means the binding is not what it was initialised to,
+				// so it does not resolve and the sink is still reported.
+				{
+					code: 'let maybe = sanitizeHtml(raw); maybe = raw; host.innerHTML = maybe;',
+					errors: [{ messageId: 'htmlSink' }],
 				},
 			],
 		});
