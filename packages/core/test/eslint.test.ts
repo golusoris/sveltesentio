@@ -1,7 +1,13 @@
 import { RuleTester } from 'eslint';
 import * as svelteParser from 'svelte-eslint-parser';
 import { describe, expect, it } from 'vitest';
-import { chartA11yWrapper, noDirectTime, noUnsanitisedHtml, sentioEslint } from '../src/eslint';
+import {
+	chartA11yWrapper,
+	noDirectTime,
+	noUnsanitisedHtml,
+	noRecursion,
+	sentioEslint,
+} from '../src/eslint';
 
 const ruleTester = new RuleTester({
 	languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
@@ -260,5 +266,46 @@ describe('no-unsanitised-html rule', () => {
 			],
 		});
 		expect(sentioEslint.rules['no-unsanitised-html']).toBe(noUnsanitisedHtml);
+	});
+});
+
+describe('no-recursion rule', () => {
+	it('reports a function that calls itself and leaves everything else alone', () => {
+		ruleTester.run('no-recursion', noRecursion, {
+			valid: [
+				// Calls another function, not itself.
+				{ code: 'function a() { return b(); } function b() { return 1; }' },
+				// Called from outside its own body — that is just use, not recursion.
+				{ code: 'function a() { return 1; } a();' },
+				// A shadowing inner binding of the same name is a different variable.
+				// Name matching would report this; scope analysis does not.
+				{ code: 'function a() { const a = () => 1; return a(); }' },
+				// Mutual recursion is a cycle between functions, not a self-call. It is
+				// out of scope here and documented as such on the rule.
+				{ code: 'function a() { return b(); } function b() { return a(); }' },
+				// A parameter shares the function's shape but can never be the callee
+				// of a self-call.
+				{ code: 'function a(cb) { return cb(); }' },
+			],
+			invalid: [
+				{
+					code: 'function countdown(n) { return n <= 0 ? 0 : countdown(n - 1); }',
+					errors: [{ messageId: 'recursion' }],
+				},
+				{
+					code: 'const walk = (n) => (n <= 0 ? 0 : walk(n - 1));',
+					errors: [{ messageId: 'recursion' }],
+				},
+				// Boundary: two self-calls in one body are two findings.
+				{
+					code: 'function f(n) { if (n) return f(n - 1); return f(0); }',
+					errors: [{ messageId: 'recursion' }, { messageId: 'recursion' }],
+				},
+			],
+		});
+	});
+
+	it('is registered on the plugin', () => {
+		expect(sentioEslint.rules['no-recursion']).toBe(noRecursion);
 	});
 });

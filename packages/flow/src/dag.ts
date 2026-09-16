@@ -100,19 +100,54 @@ export function findCycles(
 	const onStack = new Set<string>();
 	const stack: string[] = [];
 
-	const visit = (id: string): void => {
-		if (onStack.has(id)) {
-			const index = stack.indexOf(id);
-			if (index >= 0) cycles.push([...stack.slice(index), id]);
-			return;
-		}
-		if (visited.has(id)) return;
+	const recordCycle = (id: string): void => {
+		const index = stack.indexOf(id);
+		if (index >= 0) cycles.push([...stack.slice(index), id]);
+	};
+	const enter = (id: string): void => {
 		visited.add(id);
 		onStack.add(id);
 		stack.push(id);
-		for (const next of outgoing.get(id) ?? []) visit(next);
+	};
+	const leave = (id: string): void => {
 		stack.pop();
 		onStack.delete(id);
+	};
+
+	// Iterative depth-first search over an explicit frame stack. The recursive
+	// form was the more readable one, but HISS-01 forbids recursion and the graph
+	// here comes from user data: a deep enough chain of nodes in the editor would
+	// have overflowed the call stack. Each frame carries its own cursor into the
+	// child list, which is what the call stack used to hold.
+	//
+	// Bounded by the node count (HISS-02): a frame is pushed only immediately
+	// after `visited` gains its id, and `visited` never shrinks, so no id can
+	// yield a second frame.
+	const visit = (start: string): void => {
+		if (onStack.has(start)) {
+			recordCycle(start);
+			return;
+		}
+		if (visited.has(start)) return;
+		enter(start);
+		const frames: { id: string; next: number }[] = [{ id: start, next: 0 }];
+		while (frames.length > 0) {
+			const frame = frames.at(-1);
+			if (frame === undefined) break;
+			const children = outgoing.get(frame.id) ?? [];
+			const child = frame.next < children.length ? children[frame.next] : undefined;
+			if (child === undefined) {
+				frames.pop();
+				leave(frame.id);
+				continue;
+			}
+			frame.next += 1;
+			if (onStack.has(child)) recordCycle(child);
+			else if (!visited.has(child)) {
+				enter(child);
+				frames.push({ id: child, next: 0 });
+			}
+		}
 	};
 
 	for (const node of nodes) visit(node.id);

@@ -290,17 +290,110 @@ const noUnsanitisedHtml: Rule.RuleModule = {
 };
 
 /** The flat-config plugin object (`plugins: { '@sveltesentio': sentioEslint }`). */
+/**
+ * HISS-01 forbids recursion: the call graph must be a Directed Acyclic Graph.
+ *
+ * Detection uses scope analysis rather than name matching. ESLint hands over the
+ * variable a function introduces and every reference to it; a reference inside
+ * the function's own range that is the callee of a call is a self-call. Going
+ * through the resolved variable means an inner binding shadowing the same name
+ * is not mistaken for recursion, and a call through an alias still resolves.
+ *
+ * Mutual recursion is not reported here — that is a cycle between functions
+ * rather than a self-call, and scripts/check-import-cycles.mjs covers the
+ * module-level form of it.
+ */
+/**
+ * The variables a self-call could resolve to for this function.
+ *
+ * A `function f()` declares its own name, so ESLint hands it over directly. An
+ * arrow or function expression does not — `const walk = () => walk()` carries
+ * its name on the enclosing VariableDeclarator, and reading only the function
+ * node misses that whole shape. The first version of this rule did exactly
+ * that, and the arrow test caught it.
+ *
+ * Parameters are dropped: they share the declaration but can never be the
+ * callee of a self-call.
+ */
+function selfNames(sourceCode: Rule.RuleContext['sourceCode'], node: Rule.Node) {
+	const own = sourceCode.getDeclaredVariables(node);
+	const parent = (node as unknown as { parent?: { type?: string; init?: unknown } }).parent;
+	const fromDeclarator =
+		parent?.type === 'VariableDeclarator' && parent.init === node
+			? sourceCode.getDeclaredVariables(parent as unknown as Rule.Node)
+			: [];
+	return [...own, ...fromDeclarator].filter(
+		(variable) => !variable.defs.some((def) => def.type === 'Parameter'),
+	);
+}
+
+/**
+ * Reports whether `identifier` is a call to `owner` from inside `owner` itself.
+ *
+ * Extracted from the rule's visitor to stay under the repository's own
+ * cyclomatic cap: the combined form measured 11 against a maximum of 10, which
+ * `complexity` caught on this very file while the rule was being written.
+ */
+function isSelfCall(
+	identifier: { parent?: unknown; range?: [number, number] | undefined },
+	owner: Rule.Node,
+): boolean {
+	const parent = identifier.parent as { type?: string; callee?: unknown } | undefined;
+	if (parent?.type !== 'CallExpression' || parent.callee !== identifier) return false;
+	const ownerRange = owner.range;
+	const at = identifier.range;
+	if (ownerRange === undefined || at === undefined) return false;
+	return at[0] >= ownerRange[0] && at[1] <= ownerRange[1];
+}
+
+const noRecursion: Rule.RuleModule = {
+	meta: {
+		type: 'problem',
+		docs: {
+			description: 'disallow a function from calling itself; the call graph must be a DAG',
+			recommended: true,
+		},
+		schema: [],
+		messages: {
+			recursion:
+				'`{{name}}` calls itself. HISS-01 requires an acyclic call graph — rewrite it as a ' +
+				'bounded loop, which also gives the depth an explicit limit (HISS-02).',
+		},
+	},
+
+	create(context: Rule.RuleContext): Rule.RuleListener {
+		const check = (node: Rule.Node): void => {
+			for (const variable of selfNames(context.sourceCode, node)) {
+				for (const reference of variable.references) {
+					if (!isSelfCall(reference.identifier, node)) continue;
+					context.report({
+						node: reference.identifier,
+						messageId: 'recursion',
+						data: { name: variable.name },
+					});
+				}
+			}
+		};
+		return {
+			FunctionDeclaration: check,
+			FunctionExpression: check,
+			ArrowFunctionExpression: check,
+		};
+	},
+};
+
 const sentioEslint = {
 	meta: { name: '@sveltesentio/core', version: '0.2.0' },
 	rules: {
 		'no-direct-time': noDirectTime,
 		'chart-a11y-wrapper': chartA11yWrapper,
 		'no-unsanitised-html': noUnsanitisedHtml,
+		'no-recursion': noRecursion,
 	},
 } satisfies {
 	meta: { name: string; version: string };
 	rules: Record<string, Rule.RuleModule>;
 };
 
-export { noDirectTime, chartA11yWrapper, noUnsanitisedHtml, sentioEslint };
+export { noDirectTime, chartA11yWrapper, noUnsanitisedHtml, noRecursion, sentioEslint };
 export default sentioEslint;
