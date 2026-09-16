@@ -14,9 +14,7 @@ const seriousViolation: AxeViolation = Object.freeze({
 	id: 'color-contrast',
 	impact: 'serious',
 	description: 'Insufficient color contrast',
-	nodes: [
-		{ target: ['.btn-ghost'], html: '<button class="btn-ghost">x</button>' },
-	],
+	nodes: [{ target: ['.btn-ghost'], html: '<button class="btn-ghost">x</button>' }],
 });
 
 const minorViolation: AxeViolation = Object.freeze({
@@ -50,9 +48,7 @@ describe('mergeAxeOptions', () => {
 	});
 
 	it('ignores undefined overrides', () => {
-		expect(mergeAxeOptions(undefined, undefined).runOnly?.values).toEqual(
-			WCAG_22_AA_TAGS,
-		);
+		expect(mergeAxeOptions(undefined, undefined).runOnly?.values).toEqual(WCAG_22_AA_TAGS);
 	});
 });
 
@@ -63,10 +59,7 @@ describe('filterViolationsByImpact', () => {
 	});
 
 	it('respects custom fail set', () => {
-		const out = filterViolationsByImpact(
-			[minorViolation, seriousViolation],
-			['minor'],
-		);
+		const out = filterViolationsByImpact([minorViolation, seriousViolation], ['minor']);
 		expect(out).toEqual([minorViolation]);
 	});
 
@@ -82,9 +75,9 @@ describe('assertNoViolations', () => {
 	});
 
 	it('throws AxeViolationsError when failing impacts present', () => {
-		expect(() =>
-			assertNoViolations({ violations: [seriousViolation, minorViolation] }),
-		).toThrow(AxeViolationsError);
+		expect(() => assertNoViolations({ violations: [seriousViolation, minorViolation] })).toThrow(
+			AxeViolationsError,
+		);
 	});
 
 	it('error includes violation rule id + impact in message', () => {

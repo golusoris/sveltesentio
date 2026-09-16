@@ -32,7 +32,7 @@ degrade-without-telling-user.
   targeting, not a column in the `tenants` table.
 - [audit-log.md](audit-log.md) — every soft-threshold crossing +
   every hard-threshold block writes an audit event for compliance
-  + customer-success visibility.
+  - customer-success visibility.
 - [observability.md](observability.md) — `quota.resource` bounded
   label, `quota.usage_pct` gauge per tenant (low-cardinality via
   bucket binning, not raw percentage).
@@ -44,7 +44,7 @@ degrade-without-telling-user.
 - [server-state.md](server-state.md) — client-side quota-remaining
   UI reads via TanStack Query; never computes locally.
 - [toast.md](toast.md) — hard-threshold block surfaces via toast
-  + modal-with-upgrade-CTA; soft-threshold via dismissible banner.
+  - modal-with-upgrade-CTA; soft-threshold via dismissible banner.
 - [principles.md §2.1](../principles.md) — Power of 10.
 - [principles.md §2.2](../principles.md) — OWASP ASVS L2 V4.
 
@@ -122,30 +122,30 @@ supabase/migrations/NNN_usage_counters.sql
 import { z } from 'zod';
 
 export const QuotaResource = z.enum([
-  'storage_bytes',
-  'api_calls',
-  'ai_tokens',
-  'ai_images',
-  'seats',
-  'projects',
-  'webhooks_per_hour',
+	'storage_bytes',
+	'api_calls',
+	'ai_tokens',
+	'ai_images',
+	'seats',
+	'projects',
+	'webhooks_per_hour',
 ]);
 export type QuotaResource = z.infer<typeof QuotaResource>;
 
 export const QuotaWindow = z.enum(['period', 'rolling_day', 'rolling_hour', 'instant']);
 
 export const QuotaLimit = z.object({
-  resource: QuotaResource,
-  limit: z.number().int().nonnegative(),
-  window: QuotaWindow,
-  softPct: z.number().min(0).max(100).default(80),
-  overage: z.enum(['block', 'meter', 'degrade']).default('block'),
+	resource: QuotaResource,
+	limit: z.number().int().nonnegative(),
+	window: QuotaWindow,
+	softPct: z.number().min(0).max(100).default(80),
+	overage: z.enum(['block', 'meter', 'degrade']).default('block'),
 });
 export type QuotaLimit = z.infer<typeof QuotaLimit>;
 
 export const QuotaPolicy = z.object({
-  planId: z.string(),
-  limits: z.array(QuotaLimit),
+	planId: z.string(),
+	limits: z.array(QuotaLimit),
 });
 export type QuotaPolicy = z.infer<typeof QuotaPolicy>;
 ```
@@ -196,43 +196,43 @@ import { now } from '$lib/clock';
 import type { QuotaResource, QuotaWindow } from './schemas';
 
 export function periodKey(window: QuotaWindow, at: Date = now()): string {
-  if (window === 'period') return at.toISOString().slice(0, 7); // YYYY-MM
-  if (window === 'rolling_day') return at.toISOString().slice(0, 10); // YYYY-MM-DD
-  if (window === 'rolling_hour') return at.toISOString().slice(0, 13); // YYYY-MM-DDTHH
-  return 'instant';
+	if (window === 'period') return at.toISOString().slice(0, 7); // YYYY-MM
+	if (window === 'rolling_day') return at.toISOString().slice(0, 10); // YYYY-MM-DD
+	if (window === 'rolling_hour') return at.toISOString().slice(0, 13); // YYYY-MM-DDTHH
+	return 'instant';
 }
 
 export async function incrementUsage(
-  tenantId: string,
-  resource: QuotaResource,
-  delta: number,
-  window: QuotaWindow,
+	tenantId: string,
+	resource: QuotaResource,
+	delta: number,
+	window: QuotaWindow,
 ): Promise<number> {
-  const key = periodKey(window);
-  const row = await db.one<{ count: string }>(
-    `INSERT INTO usage_counters (tenant_id, resource, period_key, count)
+	const key = periodKey(window);
+	const row = await db.one<{ count: string }>(
+		`INSERT INTO usage_counters (tenant_id, resource, period_key, count)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (tenant_id, resource, period_key)
        DO UPDATE SET count = usage_counters.count + EXCLUDED.count,
                      updated_at = now()
      RETURNING count`,
-    [tenantId, resource, key, delta],
-  );
-  return Number(row.count);
+		[tenantId, resource, key, delta],
+	);
+	return Number(row.count);
 }
 
 export async function getUsage(
-  tenantId: string,
-  resource: QuotaResource,
-  window: QuotaWindow,
+	tenantId: string,
+	resource: QuotaResource,
+	window: QuotaWindow,
 ): Promise<number> {
-  const key = periodKey(window);
-  const row = await db.oneOrNone<{ count: string }>(
-    `SELECT count FROM usage_counters
+	const key = periodKey(window);
+	const row = await db.oneOrNone<{ count: string }>(
+		`SELECT count FROM usage_counters
       WHERE tenant_id = $1 AND resource = $2 AND period_key = $3`,
-    [tenantId, resource, key],
-  );
-  return row ? Number(row.count) : 0;
+		[tenantId, resource, key],
+	);
+	return row ? Number(row.count) : 0;
 }
 ```
 
@@ -245,7 +245,7 @@ export async function getUsage(
    `2026-04-18` for rolling_day. Rotating periods is just picking a
    new key; old rows age out via cron.
 3. **Increment is atomic.** `INSERT … ON CONFLICT … DO UPDATE … SET
-   count = count + delta RETURNING count` gives you the post-
+count = count + delta RETURNING count` gives you the post-
    increment value in one roundtrip. Never `SELECT` then `UPDATE`
    in separate transactions — race condition.
 4. **`BIGINT` not `INTEGER`.** `storage_bytes` blows past 2^31
@@ -266,60 +266,62 @@ import { emitSoftCrossed } from './thresholds';
 import type { QuotaResource } from './schemas';
 
 export interface QuotaErrorDetail {
-  type: 'urn:sveltesentio:quota:exceeded';
-  title: 'Quota exceeded';
-  status: 402;
-  resource: QuotaResource;
-  used: number;
-  limit: number;
-  resetAt: string;
-  upgradeUrl: string;
-  overage: 'block' | 'meter' | 'degrade';
+	type: 'urn:sveltesentio:quota:exceeded';
+	title: 'Quota exceeded';
+	status: 402;
+	resource: QuotaResource;
+	used: number;
+	limit: number;
+	resetAt: string;
+	upgradeUrl: string;
+	overage: 'block' | 'meter' | 'degrade';
 }
 
 export async function enforceQuota(
-  tenantId: string,
-  planId: string,
-  resource: QuotaResource,
-  delta: number,
+	tenantId: string,
+	planId: string,
+	resource: QuotaResource,
+	delta: number,
 ): Promise<{ used: number; limit: number; remaining: number }> {
-  const policy = resolvePolicy(planId);
-  const limit = policy.limits.find((l) => l.resource === resource);
+	const policy = resolvePolicy(planId);
+	const limit = policy.limits.find((l) => l.resource === resource);
 
-  if (!limit) {
-    throw error(500, {
-      type: 'urn:sveltesentio:quota:misconfigured',
-      title: 'Quota not configured',
-      status: 500,
-      resource,
-    });
-  }
+	if (!limit) {
+		throw error(500, {
+			type: 'urn:sveltesentio:quota:misconfigured',
+			title: 'Quota not configured',
+			status: 500,
+			resource,
+		});
+	}
 
-  const current = await getUsage(tenantId, resource, limit.window);
-  const projected = current + delta;
+	const current = await getUsage(tenantId, resource, limit.window);
+	const projected = current + delta;
 
-  if (projected > limit.limit && limit.overage === 'block') {
-    throw error(402, {
-      type: 'urn:sveltesentio:quota:exceeded',
-      title: 'Quota exceeded',
-      status: 402,
-      resource,
-      used: current,
-      limit: limit.limit,
-      resetAt: resetDateFor(limit.window).toISOString(),
-      upgradeUrl: `/billing/upgrade?from=${planId}&resource=${resource}`,
-      overage: 'block',
-    } satisfies QuotaErrorDetail);
-  }
+	if (projected > limit.limit && limit.overage === 'block') {
+		throw error(402, {
+			type: 'urn:sveltesentio:quota:exceeded',
+			title: 'Quota exceeded',
+			status: 402,
+			resource,
+			used: current,
+			limit: limit.limit,
+			resetAt: resetDateFor(limit.window).toISOString(),
+			upgradeUrl: `/billing/upgrade?from=${planId}&resource=${resource}`,
+			overage: 'block',
+		} satisfies QuotaErrorDetail);
+	}
 
-  const next = await incrementUsage(tenantId, resource, delta, limit.window);
+	const next = await incrementUsage(tenantId, resource, delta, limit.window);
 
-  if (current < (limit.limit * limit.softPct) / 100 &&
-      next >= (limit.limit * limit.softPct) / 100) {
-    void emitSoftCrossed({ tenantId, resource, used: next, limit: limit.limit });
-  }
+	if (
+		current < (limit.limit * limit.softPct) / 100 &&
+		next >= (limit.limit * limit.softPct) / 100
+	) {
+		void emitSoftCrossed({ tenantId, resource, used: next, limit: limit.limit });
+	}
 
-  return { used: next, limit: limit.limit, remaining: Math.max(0, limit.limit - next) };
+	return { used: next, limit: limit.limit, remaining: Math.max(0, limit.limit - next) };
 }
 ```
 
@@ -360,23 +362,23 @@ import { CreateProjectSchema } from './schemas';
 import { enforceQuota } from '$lib/quota/enforce';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const form = await superValidate(request, zod(CreateProjectSchema));
-  if (!form.valid) return new Response(JSON.stringify(form), { status: 400 });
+	const form = await superValidate(request, zod(CreateProjectSchema));
+	if (!form.valid) return new Response(JSON.stringify(form), { status: 400 });
 
-  await enforceQuota(locals.session.tenantId, locals.session.planId, 'projects', 1);
+	await enforceQuota(locals.session.tenantId, locals.session.planId, 'projects', 1);
 
-  const project = await createProject(locals.session.tenantId, form.data);
+	const project = await createProject(locals.session.tenantId, form.data);
 
-  return new Response(JSON.stringify(project), { status: 201 });
+	return new Response(JSON.stringify(project), { status: 201 });
 };
 ```
 
 **Four enforcement-placement rules:**
 
-1. **Enforce *before* mutation.** `enforceQuota` throws on hard-
-   block *before* the DB insert. Otherwise you orphan rows then
+1. **Enforce _before_ mutation.** `enforceQuota` throws on hard-
+   block _before_ the DB insert. Otherwise you orphan rows then
    can't bill for them.
-2. **For storage-bytes, enforce *after* upload with refund-on-fail.**
+2. **For storage-bytes, enforce _after_ upload with refund-on-fail.**
    You can't know byte count before upload; increment by actual
    size post-persist, and if post-increment exceeds limit, delete
    the object and return 402. [uploads.md](uploads.md) pattern.
@@ -385,23 +387,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
    is an audit+metric emission, not a hard gate.
 4. **For `degrade` overage, route at the feature.** E.g.
    ai-tokens over-quota → switch model from `claude-opus` to
-   `claude-haiku`. The gate is *in* the AI handler, not at
+   `claude-haiku`. The gate is _in_ the AI handler, not at
    `+server.ts` boundary.
 
 ## Refund semantics — the usage-on-error trap
 
 ```typescript
 try {
-  await enforceQuota(tenantId, planId, 'ai_tokens', estimated);
-  const result = await callAI(prompt);
-  const actual = result.tokensUsed;
-  if (actual !== estimated) {
-    await incrementUsage(tenantId, 'ai_tokens', actual - estimated, 'period');
-  }
-  return result;
+	await enforceQuota(tenantId, planId, 'ai_tokens', estimated);
+	const result = await callAI(prompt);
+	const actual = result.tokensUsed;
+	if (actual !== estimated) {
+		await incrementUsage(tenantId, 'ai_tokens', actual - estimated, 'period');
+	}
+	return result;
 } catch (err) {
-  await incrementUsage(tenantId, 'ai_tokens', -estimated, 'period');
-  throw err;
+	await incrementUsage(tenantId, 'ai_tokens', -estimated, 'period');
+	throw err;
 }
 ```
 
@@ -430,28 +432,28 @@ try {
 ```svelte
 <!-- src/lib/components/QuotaBanner.svelte -->
 <script lang="ts">
-  import type { QuotaUsage } from '$lib/quota/schemas';
+	import type { QuotaUsage } from '$lib/quota/schemas';
 
-  let { usage }: { usage: QuotaUsage } = $props();
-  const pct = $derived((usage.used / usage.limit) * 100);
-  const stage = $derived(
-    pct >= 100 ? 'exceeded' : pct >= 95 ? 'critical' : pct >= 80 ? 'warning' : 'ok',
-  );
+	let { usage }: { usage: QuotaUsage } = $props();
+	const pct = $derived((usage.used / usage.limit) * 100);
+	const stage = $derived(
+		pct >= 100 ? 'exceeded' : pct >= 95 ? 'critical' : pct >= 80 ? 'warning' : 'ok',
+	);
 </script>
 
 {#if stage !== 'ok'}
-  <div role="status" aria-live="polite" class="quota-banner quota-banner--{stage}">
-    <strong>
-      {#if stage === 'exceeded'}
-        You've reached your {usage.resource} limit.
-      {:else if stage === 'critical'}
-        You've used {pct.toFixed(0)}% of your {usage.resource} quota.
-      {:else}
-        {usage.used} / {usage.limit} {usage.resource} used this period.
-      {/if}
-    </strong>
-    <a href="/billing/upgrade">Upgrade plan</a>
-  </div>
+	<div role="status" aria-live="polite" class="quota-banner quota-banner--{stage}">
+		<strong>
+			{#if stage === 'exceeded'}
+				You've reached your {usage.resource} limit.
+			{:else if stage === 'critical'}
+				You've used {pct.toFixed(0)}% of your {usage.resource} quota.
+			{:else}
+				{usage.used} / {usage.limit} {usage.resource} used this period.
+			{/if}
+		</strong>
+		<a href="/billing/upgrade">Upgrade plan</a>
+	</div>
 {/if}
 ```
 
@@ -515,16 +517,16 @@ import { verifyCronRequest } from '../_shared/authn';
 import { recomputeStorageUsage } from '$lib/quota/reconcile';
 
 export const POST: RequestHandler = async ({ request }) => {
-  verifyCronRequest(request);
+	verifyCronRequest(request);
 
-  return withCronRun('quota-recompute', async () => {
-    let processed = 0;
-    for await (const tenantId of streamTenants()) {
-      await recomputeStorageUsage(tenantId);
-      processed++;
-    }
-    return { processed, skipped: 0 };
-  });
+	return withCronRun('quota-recompute', async () => {
+		let processed = 0;
+		for await (const tenantId of streamTenants()) {
+			await recomputeStorageUsage(tenantId);
+			processed++;
+		}
+		return { processed, skipped: 0 };
+	});
 };
 ```
 
@@ -540,7 +542,7 @@ export const POST: RequestHandler = async ({ request }) => {
    billing purposes per GDPR).
 3. **Log drift before overwriting.** `counter.drift_pct` metric
    > 5% is an alert — indicates a leak (bug in increment path) or
-   reconciliation bug.
+   > reconciliation bug.
 4. **Reconciliation is additive-only by default.** Prefer
    `UPDATE … SET count = GREATEST(count, $new)` so a slow
    reconciliation doesn't undo in-flight increments from the
@@ -553,16 +555,16 @@ export const POST: RequestHandler = async ({ request }) => {
 import { stripe } from '$lib/payments/stripe';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-  const session = await stripe.billingPortal.sessions.create({
-    customer: locals.session.stripeCustomerId,
-    return_url: `${url.origin}/app?upgraded=1`,
-    flow_data: {
-      type: 'subscription_update',
-      subscription_update: { subscription: locals.session.stripeSubscriptionId },
-    },
-  });
+	const session = await stripe.billingPortal.sessions.create({
+		customer: locals.session.stripeCustomerId,
+		return_url: `${url.origin}/app?upgraded=1`,
+		flow_data: {
+			type: 'subscription_update',
+			subscription_update: { subscription: locals.session.stripeSubscriptionId },
+		},
+	});
 
-  throw redirect(303, session.url);
+	throw redirect(303, session.url);
 };
 ```
 
@@ -585,39 +587,39 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 
 ```typescript
 it('blocks mutation at hard threshold with 402', async () => {
-  seedUsage(tenant, 'projects', 9);
-  seedPolicy(tenant, { projects: 10 });
+	seedUsage(tenant, 'projects', 9);
+	seedPolicy(tenant, { projects: 10 });
 
-  const res = await app.request('/api/projects', postBody(validProject));
-  expect(res.status).toBe(201);
+	const res = await app.request('/api/projects', postBody(validProject));
+	expect(res.status).toBe(201);
 
-  const res2 = await app.request('/api/projects', postBody(validProject));
-  expect(res2.status).toBe(402);
-  const body = await res2.json();
-  expect(body.type).toBe('urn:sveltesentio:quota:exceeded');
+	const res2 = await app.request('/api/projects', postBody(validProject));
+	expect(res2.status).toBe(402);
+	const body = await res2.json();
+	expect(body.type).toBe('urn:sveltesentio:quota:exceeded');
 });
 
 it('increments and refunds atomically', async () => {
-  seedUsage(tenant, 'ai_tokens', 0);
-  mockAI({ fail: true });
+	seedUsage(tenant, 'ai_tokens', 0);
+	mockAI({ fail: true });
 
-  await expect(callAIEndpoint({ estimated: 1000 })).rejects.toThrow();
-  const usage = await getUsage(tenant, 'ai_tokens', 'period');
-  expect(usage).toBe(0);
+	await expect(callAIEndpoint({ estimated: 1000 })).rejects.toThrow();
+	const usage = await getUsage(tenant, 'ai_tokens', 'period');
+	expect(usage).toBe(0);
 });
 
 it('emits soft-crossing exactly once per threshold', async () => {
-  const spy = vi.fn();
-  subscribeAudit(spy);
-  seedUsage(tenant, 'api_calls', 79);
-  seedPolicy(tenant, { api_calls: { limit: 100, softPct: 80 } });
+	const spy = vi.fn();
+	subscribeAudit(spy);
+	seedUsage(tenant, 'api_calls', 79);
+	seedPolicy(tenant, { api_calls: { limit: 100, softPct: 80 } });
 
-  await enforceQuota(tenant, 'plan', 'api_calls', 1); // 80 -- crosses
-  await enforceQuota(tenant, 'plan', 'api_calls', 1); // 81 -- no crossing
-  await enforceQuota(tenant, 'plan', 'api_calls', 1); // 82 -- no crossing
+	await enforceQuota(tenant, 'plan', 'api_calls', 1); // 80 -- crosses
+	await enforceQuota(tenant, 'plan', 'api_calls', 1); // 81 -- no crossing
+	await enforceQuota(tenant, 'plan', 'api_calls', 1); // 82 -- no crossing
 
-  expect(spy).toHaveBeenCalledTimes(1);
-  expect(spy).toHaveBeenCalledWith(expect.objectContaining({ action: 'quota.soft_crossed' }));
+	expect(spy).toHaveBeenCalledTimes(1);
+	expect(spy).toHaveBeenCalledWith(expect.objectContaining({ action: 'quota.soft_crossed' }));
 });
 ```
 
@@ -651,7 +653,7 @@ it('emits soft-crossing exactly once per threshold', async () => {
    and handle rollback carefully).
 6. **`SELECT count THEN UPDATE count+1`.** Classic race. Use
    `INSERT … ON CONFLICT DO UPDATE SET count = count + EXCLUDED.count
-   RETURNING count`.
+RETURNING count`.
 7. **Free-form resource strings.** `"storage"` vs `"storage_bytes"`
    vs `"diskUsage"` — bounded enum, no exceptions.
 8. **No refund on failed-work.** Charging users for calls that

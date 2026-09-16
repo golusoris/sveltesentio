@@ -20,18 +20,18 @@ import { mySchema } from './schema.js';
 import type { Actions, PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
-  // server data fetching here
-  const form = await superValidate(zod(mySchema));
-  return { form };
+	// server data fetching here
+	const form = await superValidate(zod(mySchema));
+	return { form };
 };
 
 export const actions: Actions = {
-  default: async ({ request, fetch, locals }) => {
-    const form = await superValidate(request, zod(mySchema));
-    if (!form.valid) return fail(400, { form });
-    // handle action
-    return { form };
-  },
+	default: async ({ request, fetch, locals }) => {
+		const form = await superValidate(request, zod(mySchema));
+		if (!form.valid) return fail(400, { form });
+		// handle action
+		return { form };
+	},
 };
 ```
 
@@ -42,7 +42,7 @@ import { createQuery } from '@tanstack/svelte-query';
 import type { PageLoad } from './$types.js';
 
 export const load: PageLoad = async ({ data, fetch }) => {
-  return { ...data };
+	return { ...data };
 };
 ```
 
@@ -50,16 +50,16 @@ export const load: PageLoad = async ({ data, fetch }) => {
 
 ```svelte
 <script lang="ts">
-  import { superForm } from 'sveltekit-superforms';
-  import { createQuery } from '@tanstack/svelte-query';
-  import type { PageData } from './$types.js';
+	import { superForm } from 'sveltekit-superforms';
+	import { createQuery } from '@tanstack/svelte-query';
+	import type { PageData } from './$types.js';
 
-  const { data }: { data: PageData } = $props();
-  const { form, errors, enhance } = superForm(data.form);
+	const { data }: { data: PageData } = $props();
+	const { form, errors, enhance } = superForm(data.form);
 </script>
 
 <form method="POST" use:enhance>
-  <!-- fields here -->
+	<!-- fields here -->
 </form>
 ```
 
@@ -69,7 +69,7 @@ export const load: PageLoad = async ({ data, fetch }) => {
 import { z } from 'zod';
 
 export const mySchema = z.object({
-  // define fields
+	// define fields
 });
 
 export type MySchema = typeof mySchema;

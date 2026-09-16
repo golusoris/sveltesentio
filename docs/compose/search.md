@@ -77,16 +77,16 @@ Multi-tenant code-search (millions of files)                  → Zoekt / Source
 
 ## Build vs buy
 
-| Option | Host | License | Typo-tolerance | Vector | Facets | Scale | Best for |
-|---|---|---|---|---|---|---|---|
-| **Typesense** | Self-host / Cloud | Apache 2.0 | ✅ built-in | ✅ hybrid | ✅ | <50M rows single-node | Default pick |
-| **Algolia** | SaaS only | Commercial | ✅ | ✅ | ✅ | Unbounded | Enterprise / DocSearch-OSS |
-| **MeiliSearch** | Self-host / Cloud | MIT / Commercial | ✅ | ✅ | ✅ | <10M rows | Simpler ops; smaller ecosystem |
-| **OpenSearch** | Self-host / AWS | Apache 2.0 | ⚠️ plugin | ✅ | ✅ | Unbounded | Log-search heritage; complex |
-| **Elasticsearch** | Self-host / Elastic Cloud | SSPL / Elastic | ⚠️ plugin | ✅ | ✅ | Unbounded | Legacy; avoid new greenfield |
-| **Postgres FTS** | Self-host | PostgreSQL | ⚠️ via pg_trgm | ⚠️ pgvector | Manual | <500k rows comfortable | Small indexes; DB-simplicity wins |
-| **pgvector** | Self-host | PostgreSQL | n/a | ✅ HNSW | Manual | <1M vectors | Vector-only; no BM25 |
-| **Pagefind** | Static / prebuilt | MIT | ⚠️ minimal | ❌ | ❌ | Static sites | Marketing/docs sites |
+| Option            | Host                      | License          | Typo-tolerance | Vector      | Facets | Scale                  | Best for                          |
+| ----------------- | ------------------------- | ---------------- | -------------- | ----------- | ------ | ---------------------- | --------------------------------- |
+| **Typesense**     | Self-host / Cloud         | Apache 2.0       | ✅ built-in    | ✅ hybrid   | ✅     | <50M rows single-node  | Default pick                      |
+| **Algolia**       | SaaS only                 | Commercial       | ✅             | ✅          | ✅     | Unbounded              | Enterprise / DocSearch-OSS        |
+| **MeiliSearch**   | Self-host / Cloud         | MIT / Commercial | ✅             | ✅          | ✅     | <10M rows              | Simpler ops; smaller ecosystem    |
+| **OpenSearch**    | Self-host / AWS           | Apache 2.0       | ⚠️ plugin      | ✅          | ✅     | Unbounded              | Log-search heritage; complex      |
+| **Elasticsearch** | Self-host / Elastic Cloud | SSPL / Elastic   | ⚠️ plugin      | ✅          | ✅     | Unbounded              | Legacy; avoid new greenfield      |
+| **Postgres FTS**  | Self-host                 | PostgreSQL       | ⚠️ via pg_trgm | ⚠️ pgvector | Manual | <500k rows comfortable | Small indexes; DB-simplicity wins |
+| **pgvector**      | Self-host                 | PostgreSQL       | n/a            | ✅ HNSW     | Manual | <1M vectors            | Vector-only; no BM25              |
+| **Pagefind**      | Static / prebuilt         | MIT              | ⚠️ minimal     | ❌          | ❌     | Static sites           | Marketing/docs sites              |
 
 ## Install — Typesense default
 
@@ -145,22 +145,22 @@ src/routes/
 import type { CollectionCreateSchema } from 'typesense/lib/Typesense/Collections';
 
 export const productsCollection: CollectionCreateSchema = {
-  name: 'products',
-  fields: [
-    { name: 'id', type: 'string' },
-    { name: 'title', type: 'string' },
-    { name: 'description', type: 'string', optional: true },
-    { name: 'tags', type: 'string[]', facet: true },
-    { name: 'category', type: 'string', facet: true },
-    { name: 'price_cents', type: 'int32', facet: true },
-    { name: 'created_at', type: 'int64' },               // epoch sec, sortable
-    { name: 'tenant_id', type: 'string', facet: true, index: true },
-    { name: 'locale', type: 'string', facet: true },     // 'en' | 'de' | ...
-    { name: 'popularity', type: 'int32' },               // ranking tiebreaker
-  ],
-  default_sorting_field: 'popularity',
-  token_separators: ['-', '_', '/'],                     // split SKU-like tokens
-  symbols_to_index: ['+', '.'],                          // keep C++ / .NET searchable
+	name: 'products',
+	fields: [
+		{ name: 'id', type: 'string' },
+		{ name: 'title', type: 'string' },
+		{ name: 'description', type: 'string', optional: true },
+		{ name: 'tags', type: 'string[]', facet: true },
+		{ name: 'category', type: 'string', facet: true },
+		{ name: 'price_cents', type: 'int32', facet: true },
+		{ name: 'created_at', type: 'int64' }, // epoch sec, sortable
+		{ name: 'tenant_id', type: 'string', facet: true, index: true },
+		{ name: 'locale', type: 'string', facet: true }, // 'en' | 'de' | ...
+		{ name: 'popularity', type: 'int32' }, // ranking tiebreaker
+	],
+	default_sorting_field: 'popularity',
+	token_separators: ['-', '_', '/'], // split SKU-like tokens
+	symbols_to_index: ['+', '.'], // keep C++ / .NET searchable
 };
 ```
 
@@ -198,35 +198,29 @@ outbox row marked processed (or retried with backoff)
 // src/lib/search/index/products.ts
 import type Typesense from 'typesense';
 
-export async function indexProduct(
-  client: Typesense.Client,
-  product: Product,
-): Promise<void> {
-  const doc = {
-    id: product.id,
-    title: product.title,
-    description: product.description ?? undefined,
-    tags: product.tags,
-    category: product.category,
-    price_cents: product.priceCents,
-    created_at: Math.floor(product.createdAt.getTime() / 1000),
-    tenant_id: product.tenantId,
-    locale: product.locale,
-    popularity: product.popularity ?? 0,
-  };
-  await client.collections('products').documents().upsert(doc);
+export async function indexProduct(client: Typesense.Client, product: Product): Promise<void> {
+	const doc = {
+		id: product.id,
+		title: product.title,
+		description: product.description ?? undefined,
+		tags: product.tags,
+		category: product.category,
+		price_cents: product.priceCents,
+		created_at: Math.floor(product.createdAt.getTime() / 1000),
+		tenant_id: product.tenantId,
+		locale: product.locale,
+		popularity: product.popularity ?? 0,
+	};
+	await client.collections('products').documents().upsert(doc);
 }
 
-export async function deleteProduct(
-  client: Typesense.Client,
-  id: string,
-): Promise<void> {
-  try {
-    await client.collections('products').documents(id).delete();
-  } catch (err) {
-    // 404 on delete is fine — the row may have been deleted already.
-    if (!(err instanceof Typesense.Errors.ObjectNotFound)) throw err;
-  }
+export async function deleteProduct(client: Typesense.Client, id: string): Promise<void> {
+	try {
+		await client.collections('products').documents(id).delete();
+	} catch (err) {
+		// 404 on delete is fine — the row may have been deleted already.
+		if (!(err instanceof Typesense.Errors.ObjectNotFound)) throw err;
+	}
 }
 ```
 
@@ -247,7 +241,7 @@ export async function deleteProduct(
    at >5 min.
 6. **Schema migrations are explicit.** Adding a field is a new
    Typesense collection alias (`products_v2`) + re-index + alias flip
-   + delete old. Never in-place-alter a live collection.
+   - delete old. Never in-place-alter a live collection.
 
 ## SSR query — results-pre-render contract
 
@@ -259,51 +253,56 @@ import { searchClient } from '$lib/search/client';
 import { SearchQueryParams } from '$lib/search/schemas';
 
 export async function load({ url, locals }) {
-  const parsed = SearchQueryParams.safeParse(Object.fromEntries(url.searchParams));
-  if (!parsed.success) throw error(400, 'invalid_query');
+	const parsed = SearchQueryParams.safeParse(Object.fromEntries(url.searchParams));
+	if (!parsed.success) throw error(400, 'invalid_query');
 
-  const { q, page, perPage, category } = parsed.data;
+	const { q, page, perPage, category } = parsed.data;
 
-  if (!q) return { q: '', hits: [], found: 0, page: 1, perPage };
+	if (!q) return { q: '', hits: [], found: 0, page: 1, perPage };
 
-  const start = Date.now();
-  try {
-    const results = await searchClient.collections('products').documents().search({
-      q,
-      query_by: 'title,description,tags',
-      query_by_weights: '3,1,2',
-      filter_by: [
-        `tenant_id:=${locals.session?.tenantId ?? 'public'}`,
-        category ? `category:=${category}` : null,
-      ].filter(Boolean).join(' && '),
-      facet_by: 'category,tags,price_cents',
-      max_facet_values: 20,
-      per_page: perPage,
-      page,
-      sort_by: '_text_match:desc,popularity:desc',
-      typo_tokens_threshold: 1,
-      num_typos: '2,1',                          // 2 typos / 1 typo beyond 4-char tokens
-      highlight_full_fields: 'title,description',
-      highlight_start_tag: '<mark>',
-      highlight_end_tag: '</mark>',
-      use_cache: true,                           // per-node cache; 60s TTL
-      cache_ttl: 60,
-    });
+	const start = Date.now();
+	try {
+		const results = await searchClient
+			.collections('products')
+			.documents()
+			.search({
+				q,
+				query_by: 'title,description,tags',
+				query_by_weights: '3,1,2',
+				filter_by: [
+					`tenant_id:=${locals.session?.tenantId ?? 'public'}`,
+					category ? `category:=${category}` : null,
+				]
+					.filter(Boolean)
+					.join(' && '),
+				facet_by: 'category,tags,price_cents',
+				max_facet_values: 20,
+				per_page: perPage,
+				page,
+				sort_by: '_text_match:desc,popularity:desc',
+				typo_tokens_threshold: 1,
+				num_typos: '2,1', // 2 typos / 1 typo beyond 4-char tokens
+				highlight_full_fields: 'title,description',
+				highlight_start_tag: '<mark>',
+				highlight_end_tag: '</mark>',
+				use_cache: true, // per-node cache; 60s TTL
+				cache_ttl: 60,
+			});
 
-    return {
-      q,
-      hits: results.hits ?? [],
-      found: results.found,
-      page,
-      perPage,
-      facets: results.facet_counts ?? [],
-      tookMs: Date.now() - start,
-    };
-  } catch (err) {
-    // Failsoft: search outage should not 500 the page.
-    console.warn('search_failed', { err });
-    return { q, hits: [], found: 0, page, perPage, error: true };
-  }
+		return {
+			q,
+			hits: results.hits ?? [],
+			found: results.found,
+			page,
+			perPage,
+			facets: results.facet_counts ?? [],
+			tookMs: Date.now() - start,
+		};
+	} catch (err) {
+		// Failsoft: search outage should not 500 the page.
+		console.warn('search_failed', { err });
+		return { q, hits: [], found: 0, page, perPage, error: true };
+	}
 }
 ```
 
@@ -338,52 +337,54 @@ export async function load({ url, locals }) {
 ```svelte
 <!-- src/routes/search/+page.svelte -->
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import { createQuery } from '@tanstack/svelte-query';
-  import { SearchResults } from '$lib/search/SearchResults.svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createQuery } from '@tanstack/svelte-query';
+	import { SearchResults } from '$lib/search/SearchResults.svelte';
 
-  let { data } = $props();
+	let { data } = $props();
 
-  let q = $state(page.url.searchParams.get('q') ?? '');
-  let debouncedQ = $state(q);
-  let debounceTimer: ReturnType<typeof setTimeout>;
+	let q = $state(page.url.searchParams.get('q') ?? '');
+	let debouncedQ = $state(q);
+	let debounceTimer: ReturnType<typeof setTimeout>;
 
-  $effect(() => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => { debouncedQ = q; }, 250);
-    return () => clearTimeout(debounceTimer);
-  });
+	$effect(() => {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			debouncedQ = q;
+		}, 250);
+		return () => clearTimeout(debounceTimer);
+	});
 
-  const query = createQuery({
-    queryKey: () => ['search', debouncedQ],
-    queryFn: async ({ signal }) => {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(debouncedQ)}`, { signal });
-      if (!r.ok) throw new Error('search_failed');
-      return r.json();
-    },
-    enabled: debouncedQ.length >= 2,
-    placeholderData: (prev) => prev,      // flicker-free pagination
-    initialData: data.q === debouncedQ ? data : undefined,
-  });
+	const query = createQuery({
+		queryKey: () => ['search', debouncedQ],
+		queryFn: async ({ signal }) => {
+			const r = await fetch(`/api/search?q=${encodeURIComponent(debouncedQ)}`, { signal });
+			if (!r.ok) throw new Error('search_failed');
+			return r.json();
+		},
+		enabled: debouncedQ.length >= 2,
+		placeholderData: (prev) => prev, // flicker-free pagination
+		initialData: data.q === debouncedQ ? data : undefined,
+	});
 </script>
 
 <form method="GET" role="search" aria-label="Search products">
-  <label for="q" class="sr-only">Search</label>
-  <input
-    id="q"
-    name="q"
-    type="search"
-    bind:value={q}
-    autocomplete="off"
-    aria-describedby="search-count"
-  />
+	<label for="q" class="sr-only">Search</label>
+	<input
+		id="q"
+		name="q"
+		type="search"
+		bind:value={q}
+		autocomplete="off"
+		aria-describedby="search-count"
+	/>
 </form>
 
 <p id="search-count" aria-live="polite">
-  {#if $query.data?.found !== undefined}
-    {$query.data.found} result{$query.data.found === 1 ? '' : 's'}
-  {/if}
+	{#if $query.data?.found !== undefined}
+		{$query.data.found} result{$query.data.found === 1 ? '' : 's'}
+	{/if}
 </p>
 
 <SearchResults hits={$query.data?.hits ?? []} />
@@ -411,13 +412,10 @@ even if it tries:
 
 ```ts
 // src/routes/search/+page.server.ts or hook
-const scopedKey = searchClient.keys().generateScopedSearchKey(
-  TYPESENSE_SEARCH_KEY,
-  {
-    filter_by: `tenant_id:=${session.tenantId}`,
-    expires_at: Math.floor(Date.now() / 1000) + 60 * 60,  // 1-hour TTL
-  }
-);
+const scopedKey = searchClient.keys().generateScopedSearchKey(TYPESENSE_SEARCH_KEY, {
+	filter_by: `tenant_id:=${session.tenantId}`,
+	expires_at: Math.floor(Date.now() / 1000) + 60 * 60, // 1-hour TTL
+});
 return { scopedKey };
 ```
 
@@ -432,12 +430,12 @@ Ranking rules live in `ranking.ts`:
 ```ts
 // src/lib/search/ranking.ts
 export const PRODUCT_RANKING = {
-  sort_by: '_text_match:desc,popularity:desc,created_at:desc',
-  query_by_weights: '3,1,2',            // title, description, tags
-  prefix: 'true,false,true',            // prefix-search for title+tags, not description
-  num_typos: '2,1',
-  typo_tokens_threshold: 1,
-  drop_tokens_threshold: 1,             // drop tokens after this many no-match
+	sort_by: '_text_match:desc,popularity:desc,created_at:desc',
+	query_by_weights: '3,1,2', // title, description, tags
+	prefix: 'true,false,true', // prefix-search for title+tags, not description
+	num_typos: '2,1',
+	typo_tokens_threshold: 1,
+	drop_tokens_threshold: 1, // drop tokens after this many no-match
 };
 ```
 
@@ -459,19 +457,19 @@ export const PRODUCT_RANKING = {
 
 ```ts
 span.setAttributes({
-  'search.collection': 'products',
-  'search.query_length': q.length,       // bounded via URL length
-  'search.hits': found,
-  'search.page': page,
-  'search.locale': locale,
-  'search.tenant_id': tenantId,          // bounded by tenant count
-  'search.latency_ms': tookMs,
-  // NEVER: 'search.query': q (PII + unbounded cardinality)
+	'search.collection': 'products',
+	'search.query_length': q.length, // bounded via URL length
+	'search.hits': found,
+	'search.page': page,
+	'search.locale': locale,
+	'search.tenant_id': tenantId, // bounded by tenant count
+	'search.latency_ms': tookMs,
+	// NEVER: 'search.query': q (PII + unbounded cardinality)
 });
 
 metrics.searchLatency.record(tookMs, {
-  collection: 'products',
-  // No user-level labels
+	collection: 'products',
+	// No user-level labels
 });
 ```
 
@@ -501,13 +499,14 @@ CREATE INDEX idx_products_search ON products USING gin(search_vector);
 ```ts
 // src/lib/search/pg-fts.ts
 export async function searchProducts(q: string, tenantId: string) {
-  return db.selectFrom('products')
-    .where('tenant_id', '=', tenantId)
-    .where(sql`search_vector @@ websearch_to_tsquery('english', ${q})`)
-    .orderBy(sql`ts_rank(search_vector, websearch_to_tsquery('english', ${q}))`, 'desc')
-    .limit(50)
-    .selectAll()
-    .execute();
+	return db
+		.selectFrom('products')
+		.where('tenant_id', '=', tenantId)
+		.where(sql`search_vector @@ websearch_to_tsquery('english', ${q})`)
+		.orderBy(sql`ts_rank(search_vector, websearch_to_tsquery('english', ${q}))`, 'desc')
+		.limit(50)
+		.selectAll()
+		.execute();
 }
 ```
 
@@ -530,7 +529,7 @@ stay identical.
 
 - **Don't use `ILIKE '%…%'` in production.** Full-table scan on
   every search; the #1 "why is the app slow?" answer on apps with
-  >10k rows.
+  > 10k rows.
 - **Don't trust client-supplied `filter_by`.** Tenant filter must be
   appended server-side; scoped API keys for client-side calls.
 - **Don't index PII fields unnecessarily.** Names and emails appear

@@ -67,63 +67,71 @@ desktop. **Always** call `navigator.gpu?.requestAdapter()` and inspect
 import { z } from 'zod';
 
 export const GpuCapability = z.object({
-  webgpuAvailable: z.boolean(),
-  adapterName: z.string().nullable(),
-  hasTimestampQuery: z.boolean(),
-  hasShaderF16: z.boolean(),
-  hasTextureCompressionBC: z.boolean(),
-  hasTextureCompressionETC2: z.boolean(),
-  hasTextureCompressionASTC: z.boolean(),
-  // Fallback hint for the UI: which texture format do we ship?
-  preferredTextureFormat: z.enum(['ktx2-bc', 'ktx2-etc2', 'ktx2-astc', 'jpg-png-fallback']),
-  maxTextureDimension: z.number().int().positive(),
-  isFallbackAdapter: z.boolean(),
+	webgpuAvailable: z.boolean(),
+	adapterName: z.string().nullable(),
+	hasTimestampQuery: z.boolean(),
+	hasShaderF16: z.boolean(),
+	hasTextureCompressionBC: z.boolean(),
+	hasTextureCompressionETC2: z.boolean(),
+	hasTextureCompressionASTC: z.boolean(),
+	// Fallback hint for the UI: which texture format do we ship?
+	preferredTextureFormat: z.enum(['ktx2-bc', 'ktx2-etc2', 'ktx2-astc', 'jpg-png-fallback']),
+	maxTextureDimension: z.number().int().positive(),
+	isFallbackAdapter: z.boolean(),
 });
 export type GpuCapability = z.infer<typeof GpuCapability>;
 
 export async function probeGpu(): Promise<GpuCapability> {
-  if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
-    return GpuCapability.parse({
-      webgpuAvailable: false, adapterName: null,
-      hasTimestampQuery: false, hasShaderF16: false,
-      hasTextureCompressionBC: false, hasTextureCompressionETC2: false,
-      hasTextureCompressionASTC: false,
-      preferredTextureFormat: 'jpg-png-fallback',
-      maxTextureDimension: 0, isFallbackAdapter: false,
-    });
-  }
+	if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+		return GpuCapability.parse({
+			webgpuAvailable: false,
+			adapterName: null,
+			hasTimestampQuery: false,
+			hasShaderF16: false,
+			hasTextureCompressionBC: false,
+			hasTextureCompressionETC2: false,
+			hasTextureCompressionASTC: false,
+			preferredTextureFormat: 'jpg-png-fallback',
+			maxTextureDimension: 0,
+			isFallbackAdapter: false,
+		});
+	}
 
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-  if (!adapter) {
-    return GpuCapability.parse({
-      webgpuAvailable: false, adapterName: null,
-      hasTimestampQuery: false, hasShaderF16: false,
-      hasTextureCompressionBC: false, hasTextureCompressionETC2: false,
-      hasTextureCompressionASTC: false,
-      preferredTextureFormat: 'jpg-png-fallback',
-      maxTextureDimension: 0, isFallbackAdapter: false,
-    });
-  }
+	const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+	if (!adapter) {
+		return GpuCapability.parse({
+			webgpuAvailable: false,
+			adapterName: null,
+			hasTimestampQuery: false,
+			hasShaderF16: false,
+			hasTextureCompressionBC: false,
+			hasTextureCompressionETC2: false,
+			hasTextureCompressionASTC: false,
+			preferredTextureFormat: 'jpg-png-fallback',
+			maxTextureDimension: 0,
+			isFallbackAdapter: false,
+		});
+	}
 
-  const features = adapter.features;
-  return GpuCapability.parse({
-    webgpuAvailable: true,
-    adapterName: adapter.info?.description ?? adapter.info?.vendor ?? 'unknown',
-    hasTimestampQuery: features.has('timestamp-query'),
-    hasShaderF16: features.has('shader-f16'),
-    hasTextureCompressionBC: features.has('texture-compression-bc'),
-    hasTextureCompressionETC2: features.has('texture-compression-etc2'),
-    hasTextureCompressionASTC: features.has('texture-compression-astc'),
-    preferredTextureFormat: features.has('texture-compression-bc')
-      ? 'ktx2-bc'
-      : features.has('texture-compression-astc')
-        ? 'ktx2-astc'
-        : features.has('texture-compression-etc2')
-          ? 'ktx2-etc2'
-          : 'jpg-png-fallback',
-    maxTextureDimension: adapter.limits.maxTextureDimension2D,
-    isFallbackAdapter: adapter.isFallbackAdapter,
-  });
+	const features = adapter.features;
+	return GpuCapability.parse({
+		webgpuAvailable: true,
+		adapterName: adapter.info?.description ?? adapter.info?.vendor ?? 'unknown',
+		hasTimestampQuery: features.has('timestamp-query'),
+		hasShaderF16: features.has('shader-f16'),
+		hasTextureCompressionBC: features.has('texture-compression-bc'),
+		hasTextureCompressionETC2: features.has('texture-compression-etc2'),
+		hasTextureCompressionASTC: features.has('texture-compression-astc'),
+		preferredTextureFormat: features.has('texture-compression-bc')
+			? 'ktx2-bc'
+			: features.has('texture-compression-astc')
+				? 'ktx2-astc'
+				: features.has('texture-compression-etc2')
+					? 'ktx2-etc2'
+					: 'jpg-png-fallback',
+		maxTextureDimension: adapter.limits.maxTextureDimension2D,
+		isFallbackAdapter: adapter.isFallbackAdapter,
+	});
 }
 ```
 
@@ -150,44 +158,46 @@ pnpm add -F <app> @threlte/flex three-stdlib
 import { z } from 'zod';
 
 export const SceneAsset = z.object({
-  id: z.string().uuid(),
-  url: z.string().url(),
-  format: z.enum(['glb', 'gltf', 'usdz', 'obj']),
-  // SHA-256 of the bytes, verified after fetch — protects against
-  // mid-flight asset swap (CDN poisoning, MITM despite TLS).
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
-  sizeBytes: z.number().int().min(1).max(50_000_000),
-  // Bounded poly-budget — reject assets > 500k tris on mobile.
-  triangleBudget: z.number().int().min(1).max(500_000),
-  // License attribution required if non-CC0.
-  attribution: z.object({
-    author: z.string().min(1).max(200),
-    license: z.enum(['CC0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'commercial']),
-    url: z.string().url(),
-  }).nullable(),
+	id: z.string().uuid(),
+	url: z.string().url(),
+	format: z.enum(['glb', 'gltf', 'usdz', 'obj']),
+	// SHA-256 of the bytes, verified after fetch — protects against
+	// mid-flight asset swap (CDN poisoning, MITM despite TLS).
+	sha256: z.string().regex(/^[a-f0-9]{64}$/),
+	sizeBytes: z.number().int().min(1).max(50_000_000),
+	// Bounded poly-budget — reject assets > 500k tris on mobile.
+	triangleBudget: z.number().int().min(1).max(500_000),
+	// License attribution required if non-CC0.
+	attribution: z
+		.object({
+			author: z.string().min(1).max(200),
+			license: z.enum(['CC0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'commercial']),
+			url: z.string().url(),
+		})
+		.nullable(),
 });
 export type SceneAsset = z.infer<typeof SceneAsset>;
 
 export const SceneConfig = z.object({
-  asset: SceneAsset,
-  camera: z.object({
-    fov: z.number().min(10).max(120),
-    near: z.number().positive(),
-    far: z.number().positive(),
-    initialPosition: z.tuple([z.number(), z.number(), z.number()]),
-  }),
-  controls: z.enum(['orbit', 'first-person', 'none']),
-  // Render budget — frame time in ms; over budget = drop quality.
-  budget: z.object({
-    frameTimeMs: z.number().min(8).max(33),    // 30–120fps
-    maxDrawCalls: z.number().int().min(1).max(2000),
-    maxTextureMb: z.number().int().min(1).max(2048),
-  }),
+	asset: SceneAsset,
+	camera: z.object({
+		fov: z.number().min(10).max(120),
+		near: z.number().positive(),
+		far: z.number().positive(),
+		initialPosition: z.tuple([z.number(), z.number(), z.number()]),
+	}),
+	controls: z.enum(['orbit', 'first-person', 'none']),
+	// Render budget — frame time in ms; over budget = drop quality.
+	budget: z.object({
+		frameTimeMs: z.number().min(8).max(33), // 30–120fps
+		maxDrawCalls: z.number().int().min(1).max(2000),
+		maxTextureMb: z.number().int().min(1).max(2048),
+	}),
 });
 export type SceneConfig = z.infer<typeof SceneConfig>;
 ```
 
-`triangleBudget` and `frameTimeMs` are *contracts*, not soft hints —
+`triangleBudget` and `frameTimeMs` are _contracts_, not soft hints —
 the renderer aborts if the scene blows them.
 
 ## Reference patterns
@@ -197,53 +207,55 @@ the renderer aborts if the scene blows them.
 ```svelte
 <!-- src/lib/components/SceneViewer.svelte -->
 <script lang="ts">
-  import { Canvas, T } from '@threlte/core';
-  import { OrbitControls, useGltf } from '@threlte/extras';
-  import { onMount } from 'svelte';
-  import { probeGpu, type GpuCapability } from '$lib/gpu/probe';
-  import type { SceneConfig } from '$lib/gpu/scene';
+	import { Canvas, T } from '@threlte/core';
+	import { OrbitControls, useGltf } from '@threlte/extras';
+	import { onMount } from 'svelte';
+	import { probeGpu, type GpuCapability } from '$lib/gpu/probe';
+	import type { SceneConfig } from '$lib/gpu/scene';
 
-  let { config }: { config: SceneConfig } = $props();
-  let cap = $state<GpuCapability | null>(null);
-  let frameMsP95 = $state(0);
-  let prefersReducedMotion = $state(false);
+	let { config }: { config: SceneConfig } = $props();
+	let cap = $state<GpuCapability | null>(null);
+	let frameMsP95 = $state(0);
+	let prefersReducedMotion = $state(false);
 
-  onMount(async () => {
-    cap = await probeGpu();
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    prefersReducedMotion = mq.matches;
-    mq.addEventListener('change', e => prefersReducedMotion = e.matches);
-  });
+	onMount(async () => {
+		cap = await probeGpu();
+		const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+		prefersReducedMotion = mq.matches;
+		mq.addEventListener('change', (e) => (prefersReducedMotion = e.matches));
+	});
 
-  const gltf = useGltf(config.asset.url);
+	const gltf = useGltf(config.asset.url);
 </script>
 
 {#if cap === null}
-  <div role="status" aria-live="polite">Probing GPU...</div>
+	<div role="status" aria-live="polite">Probing GPU...</div>
 {:else if !cap.webgpuAvailable}
-  <!-- Static fallback: poster image + alt text. -->
-  <img src="{config.asset.url.replace(/\.glb$/, '.poster.jpg')}"
-       alt="{config.asset.attribution?.author ?? 'Untitled'} — 3D model preview"
-       loading="lazy" />
+	<!-- Static fallback: poster image + alt text. -->
+	<img
+		src={config.asset.url.replace(/\.glb$/, '.poster.jpg')}
+		alt="{config.asset.attribution?.author ?? 'Untitled'} — 3D model preview"
+		loading="lazy"
+	/>
 {:else}
-  <Canvas rendererParameters={{ antialias: !cap.isFallbackAdapter }}>
-    <T.PerspectiveCamera
-      makeDefault
-      fov={config.camera.fov}
-      near={config.camera.near}
-      far={config.camera.far}
-      position={config.camera.initialPosition}
-    >
-      {#if config.controls === 'orbit'}
-        <OrbitControls enableDamping={!prefersReducedMotion} />
-      {/if}
-    </T.PerspectiveCamera>
-    <T.AmbientLight intensity={0.6} />
-    <T.DirectionalLight intensity={1} position={[5, 10, 5]} castShadow />
-    {#await gltf.then(g => g.scene) then scene}
-      <T is={scene} />
-    {/await}
-  </Canvas>
+	<Canvas rendererParameters={{ antialias: !cap.isFallbackAdapter }}>
+		<T.PerspectiveCamera
+			makeDefault
+			fov={config.camera.fov}
+			near={config.camera.near}
+			far={config.camera.far}
+			position={config.camera.initialPosition}
+		>
+			{#if config.controls === 'orbit'}
+				<OrbitControls enableDamping={!prefersReducedMotion} />
+			{/if}
+		</T.PerspectiveCamera>
+		<T.AmbientLight intensity={0.6} />
+		<T.DirectionalLight intensity={1} position={[5, 10, 5]} castShadow />
+		{#await gltf.then((g) => g.scene) then scene}
+			<T is={scene} />
+		{/await}
+	</Canvas>
 {/if}
 ```
 
@@ -252,7 +264,7 @@ Key invariants:
 - **`probeGpu()` BEFORE constructing `<Canvas>`** — never let three.js
   pick the renderer; you've already decided.
 - **Static-image fallback** when WebGPU absent. The fallback is
-  *content-equivalent*, not a "your browser is too old" message.
+  _content-equivalent_, not a "your browser is too old" message.
 - **`prefersReducedMotion` gates damping + auto-rotation.** Vestibular
   sensitivity is real; respect it.
 - **`<Canvas>` is dynamically imported** in the route's `+page.svelte`
@@ -271,43 +283,43 @@ import { WebGPURenderer } from 'three/webgpu';
 import type { SceneConfig } from './scene';
 
 export async function createWebGpuRenderer(canvas: HTMLCanvasElement, config: SceneConfig) {
-  const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: false });
-  await renderer.init(); // explicit init — async on WebGPU path
+	const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: false });
+	await renderer.init(); // explicit init — async on WebGPU path
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    config.camera.fov,
-    canvas.clientWidth / canvas.clientHeight,
-    config.camera.near,
-    config.camera.far,
-  );
-  camera.position.set(...config.camera.initialPosition);
+	const scene = new THREE.Scene();
+	const camera = new THREE.PerspectiveCamera(
+		config.camera.fov,
+		canvas.clientWidth / canvas.clientHeight,
+		config.camera.near,
+		config.camera.far,
+	);
+	camera.position.set(...config.camera.initialPosition);
 
-  // Render budget enforcement
-  let lastFrameTime = performance.now();
-  let consecutiveOverBudget = 0;
+	// Render budget enforcement
+	let lastFrameTime = performance.now();
+	let consecutiveOverBudget = 0;
 
-  function tick() {
-    const now = performance.now();
-    const dt = now - lastFrameTime;
-    lastFrameTime = now;
+	function tick() {
+		const now = performance.now();
+		const dt = now - lastFrameTime;
+		lastFrameTime = now;
 
-    if (dt > config.budget.frameTimeMs * 1.5) {
-      consecutiveOverBudget++;
-      if (consecutiveOverBudget > 30) {
-        // Sustained over-budget for half a second @ 60fps — drop quality.
-        renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() * 0.85));
-        consecutiveOverBudget = 0;
-      }
-    } else {
-      consecutiveOverBudget = Math.max(0, consecutiveOverBudget - 1);
-    }
+		if (dt > config.budget.frameTimeMs * 1.5) {
+			consecutiveOverBudget++;
+			if (consecutiveOverBudget > 30) {
+				// Sustained over-budget for half a second @ 60fps — drop quality.
+				renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() * 0.85));
+				consecutiveOverBudget = 0;
+			}
+		} else {
+			consecutiveOverBudget = Math.max(0, consecutiveOverBudget - 1);
+		}
 
-    renderer.renderAsync(scene, camera);
-    return { dt, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
-  }
+		renderer.renderAsync(scene, camera);
+		return { dt, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+	}
 
-  return { renderer, scene, camera, tick };
+	return { renderer, scene, camera, tick };
 }
 ```
 
@@ -325,25 +337,29 @@ import * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 
 export function createParticleSystem(renderer: WebGPURenderer, count: number) {
-  const positions = new THREE.StorageBufferAttribute(count, 3);
+	const positions = new THREE.StorageBufferAttribute(count, 3);
 
-  // TSL — three.js Shading Language; transpiles to WGSL.
-  const computePosition = ComputeNode(() => {
-    const i = instanceIndex;
-    const t = time;
-    const pos = storage(positions, 'vec3', count);
-    pos.element(i).assign(vec3(
-      sin(t.add(i.mul(0.01))).mul(50),
-      cos(t.add(i.mul(0.013))).mul(50),
-      sin(t.add(i.mul(0.017))).mul(50),
-    ));
-  })().compute(count);
+	// TSL — three.js Shading Language; transpiles to WGSL.
+	const computePosition = ComputeNode(() => {
+		const i = instanceIndex;
+		const t = time;
+		const pos = storage(positions, 'vec3', count);
+		pos
+			.element(i)
+			.assign(
+				vec3(
+					sin(t.add(i.mul(0.01))).mul(50),
+					cos(t.add(i.mul(0.013))).mul(50),
+					sin(t.add(i.mul(0.017))).mul(50),
+				),
+			);
+	})().compute(count);
 
-  async function step() {
-    await renderer.computeAsync(computePosition);
-  }
+	async function step() {
+		await renderer.computeAsync(computePosition);
+	}
 
-  return { positions, step };
+	return { positions, step };
 }
 ```
 
@@ -362,14 +378,14 @@ let gpuPriority: 'render' | 'llm' | 'idle' = 'idle';
 const listeners = new Set<(p: typeof gpuPriority) => void>();
 
 export function requestGpuPriority(who: 'render' | 'llm') {
-  if (gpuPriority === who) return;
-  gpuPriority = who;
-  listeners.forEach(l => l(who));
+	if (gpuPriority === who) return;
+	gpuPriority = who;
+	listeners.forEach((l) => l(who));
 }
 
 export function onGpuPriorityChange(fn: (p: typeof gpuPriority) => void) {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+	listeners.add(fn);
+	return () => listeners.delete(fn);
 }
 ```
 
@@ -381,12 +397,12 @@ to 30fps; when LLM completes it returns to native refresh.
 - **Models**: GLB (preferred) or USDZ (Apple-flavored). Compress with
   `gltf-transform optimize --compress meshopt`.
 - **Textures**: KTX2 + Basis Universal universal-format. `gltf-transform
-  ktxtransfer` produces the BC/ETC/ASTC variants in one file; the GPU
+ktxtransfer` produces the BC/ETC/ASTC variants in one file; the GPU
   driver picks at upload.
 - **Scene budgets**: < 50 MB total assets per route, < 500k triangles
   on mobile, < 2 MB compressed textures per material.
 - **CDN**: serve with `Cache-Control: public, max-age=31536000,
-  immutable` + filename hash. See [caching.md](caching.md).
+immutable` + filename hash. See [caching.md](caching.md).
 - **CORS**: `Access-Control-Allow-Origin: <your-app>` — three.js
   texture loaders require it for `crossOrigin: 'anonymous'`.
 
@@ -402,8 +418,8 @@ import { sendBeacon } from '$lib/qoe';
 const sample = { kind: 'gpu_frame', frameTimeMs: dt, drawCalls, triangles };
 qoeBuffer.push(sample);
 if (qoeBuffer.length >= 60) {
-  sendBeacon('/api/qoe', qoeBuffer);
-  qoeBuffer.length = 0;
+	sendBeacon('/api/qoe', qoeBuffer);
+	qoeBuffer.length = 0;
 }
 ```
 

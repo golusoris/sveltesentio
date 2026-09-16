@@ -49,20 +49,20 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
 export function connectFlow(flowId: string) {
-  const doc = new Y.Doc();
-  const provider = new WebsocketProvider(
-    import.meta.env.VITE_COLLAB_WS_URL, // wss://golusoris.example/collab
-    flowId,
-    doc,
-    { connect: true },
-  );
+	const doc = new Y.Doc();
+	const provider = new WebsocketProvider(
+		import.meta.env.VITE_COLLAB_WS_URL, // wss://golusoris.example/collab
+		flowId,
+		doc,
+		{ connect: true },
+	);
 
-  provider.awareness.setLocalStateField('user', {
-    name: currentUser.name,
-    color: currentUser.color,
-  });
+	provider.awareness.setLocalStateField('user', {
+		name: currentUser.name,
+		color: currentUser.color,
+	});
 
-  return { doc, provider };
+	return { doc, provider };
 }
 ```
 
@@ -78,31 +78,31 @@ The proxy is read-only for rendering; mutations route through the Y type.
 ```svelte
 <!-- src/routes/flows/[id]/+page.svelte -->
 <script lang="ts">
-  import { createYjsStore } from '@sveltesentio/collab';
-  import { onMount, onDestroy } from 'svelte';
-  import { connectFlow } from '$lib/collab';
+	import { createYjsStore } from '@sveltesentio/collab';
+	import { onMount, onDestroy } from 'svelte';
+	import { connectFlow } from '$lib/collab';
 
-  let { data } = $props();
-  let doc: Y.Doc;
-  let provider: WebsocketProvider;
+	let { data } = $props();
+	let doc: Y.Doc;
+	let provider: WebsocketProvider;
 
-  onMount(() => {
-    ({ doc, provider } = connectFlow(data.flowId));
-  });
+	onMount(() => {
+		({ doc, provider } = connectFlow(data.flowId));
+	});
 
-  onDestroy(() => provider?.destroy());
+	onDestroy(() => provider?.destroy());
 
-  const nodes = createYjsStore<FlowNode>(() => doc.getArray<FlowNode>('nodes'));
+	const nodes = createYjsStore<FlowNode>(() => doc.getArray<FlowNode>('nodes'));
 
-  function addNode() {
-    doc.transact(() => {
-      doc.getArray<FlowNode>('nodes').push([{ id: crypto.randomUUID(), x: 0, y: 0 }]);
-    });
-  }
+	function addNode() {
+		doc.transact(() => {
+			doc.getArray<FlowNode>('nodes').push([{ id: crypto.randomUUID(), x: 0, y: 0 }]);
+		});
+	}
 </script>
 
 {#each nodes.value as node (node.id)}
-  <div style:transform="translate({node.x}px, {node.y}px)">{node.id}</div>
+	<div style:transform="translate({node.x}px, {node.y}px)">{node.id}</div>
 {/each}
 
 <button onclick={addNode}>Add node</button>
@@ -127,9 +127,9 @@ broadcast, one observer fire, atomic from peers' perspectives.
 
 ```ts
 doc.transact(() => {
-  yNodes.delete(0, 1);
-  yNodes.insert(0, [newNode]);
-  yEdges.push([{ from: newNode.id, to: 'n-42' }]);
+	yNodes.delete(0, 1);
+	yNodes.insert(0, [newNode]);
+	yEdges.push([{ from: newNode.id, to: 'n-42' }]);
 }, 'local'); // origin tag — filter in observers to skip own edits
 ```
 
@@ -143,20 +143,24 @@ import { onDestroy } from 'svelte';
 import type { Awareness } from 'y-protocols/awareness';
 
 export function usePresence(awareness: Awareness) {
-  let peers = $state<PresenceState[]>([]);
+	let peers = $state<PresenceState[]>([]);
 
-  $effect(() => {
-    const onUpdate = () => {
-      peers = [...awareness.getStates().entries()]
-        .filter(([id]) => id !== awareness.clientID)
-        .map(([id, s]) => ({ id, ...(s.user ?? {}) }));
-    };
-    awareness.on('change', onUpdate);
-    onUpdate();
-    return () => awareness.off('change', onUpdate);
-  });
+	$effect(() => {
+		const onUpdate = () => {
+			peers = [...awareness.getStates().entries()]
+				.filter(([id]) => id !== awareness.clientID)
+				.map(([id, s]) => ({ id, ...(s.user ?? {}) }));
+		};
+		awareness.on('change', onUpdate);
+		onUpdate();
+		return () => awareness.off('change', onUpdate);
+	});
 
-  return { get peers() { return peers; } };
+	return {
+		get peers() {
+			return peers;
+		},
+	};
 }
 ```
 
@@ -171,13 +175,13 @@ Call `awareness.setLocalStateField('cursor', { x, y })` on pointermove
 import * as Y from 'yjs';
 
 const undoManager = new Y.UndoManager(yNodes, {
-  trackedOrigins: new Set(['local']),
-  captureTimeout: 500,
+	trackedOrigins: new Set(['local']),
+	captureTimeout: 500,
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'z') undoManager.undo();
-  if (e.ctrlKey && e.key === 'y') undoManager.redo();
+	if (e.ctrlKey && e.key === 'z') undoManager.undo();
+	if (e.ctrlKey && e.key === 'y') undoManager.redo();
 });
 ```
 
@@ -194,7 +198,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 
 const persistence = new IndexeddbPersistence(`flow:${flowId}`, doc);
 persistence.once('synced', () => {
-  console.warn('[collab] IndexedDB restored');
+	console.warn('[collab] IndexedDB restored');
 });
 ```
 
@@ -208,8 +212,8 @@ Yjs is client-only. Guard with `browser` from `$app/environment`:
 import { browser } from '$app/environment';
 
 onMount(() => {
-  if (!browser) return;
-  ({ doc, provider } = connectFlow(data.flowId));
+	if (!browser) return;
+	({ doc, provider } = connectFlow(data.flowId));
 });
 ```
 

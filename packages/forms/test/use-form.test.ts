@@ -2,12 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { effect_root, flush } from 'svelte/internal/client';
 import { get, writable, type Writable } from 'svelte/store';
 import type { SuperForm } from 'sveltekit-superforms';
-import {
-	useForm,
-	type FormError,
-	type SuperFormFn,
-	type UseForm,
-} from '../src/use-form.svelte.js';
+import { useForm, type FormError, type SuperFormFn, type UseForm } from '../src/use-form.svelte.js';
 
 /**
  * `useForm` is a runes module: it subscribes to each `superForm` store inside an

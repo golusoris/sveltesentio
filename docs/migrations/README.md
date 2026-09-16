@@ -4,18 +4,18 @@ Migration guides for adopting or upgrading `@sveltesentio/*` releases.
 
 ## How this directory is organised
 
-- **`downstream-antipatterns-v<MAJOR.MINOR>.md`** — issued *once per release* before the version ships. Lists the patterns existing apps must remediate before pulling that release. Authoritative checklist for downstream maintainers.
-- **`v<MAJOR.MINOR>.md`** — issued *with each release* (target version in the filename). Covers the framework-level breaking changes between the previous release and this one, plus the codemods that automate the rewrite where automation is possible.
+- **`downstream-antipatterns-v<MAJOR.MINOR>.md`** — issued _once per release_ before the version ships. Lists the patterns existing apps must remediate before pulling that release. Authoritative checklist for downstream maintainers.
+- **`v<MAJOR.MINOR>.md`** — issued _with each release_ (target version in the filename). Covers the framework-level breaking changes between the previous release and this one, plus the codemods that automate the rewrite where automation is possible.
 
 Both files use the same severity legend: `security` · `correctness` · `maintenance` · `dead`.
 
 ## Index
 
-| File | Purpose | Status |
-|---|---|---|
-| [downstream-antipatterns-v0.1.md](downstream-antipatterns-v0.1.md) | Pre-v0.1 remediation checklist for downstream apps (`golusoris/app-{arca,revenge,subdo,lurkarr}`) | Active — covers v0.1 adoption |
-| [v0.2.md](v0.2.md) | Template: framework-level breaking changes + codemods between v0.1.x and v0.2.0 | Template — populate at v0.2.0 release time |
-| [zod-v3-to-v4.md](zod-v3-to-v4.md) | Mechanical Zod v3 → v4 path (hard prerequisite for adopting `core` + `forms`, [ADR-0001](../adr/0001-zod-v4-floor.md)) | Active — required for v0.1 adoption |
+| File                                                               | Purpose                                                                                                                | Status                                     |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [downstream-antipatterns-v0.1.md](downstream-antipatterns-v0.1.md) | Pre-v0.1 remediation checklist for downstream apps (`golusoris/app-{arca,revenge,subdo,lurkarr}`)                      | Active — covers v0.1 adoption              |
+| [v0.2.md](v0.2.md)                                                 | Template: framework-level breaking changes + codemods between v0.1.x and v0.2.0                                        | Template — populate at v0.2.0 release time |
+| [zod-v3-to-v4.md](zod-v3-to-v4.md)                                 | Mechanical Zod v3 → v4 path (hard prerequisite for adopting `core` + `forms`, [ADR-0001](../adr/0001-zod-v4-floor.md)) | Active — required for v0.1 adoption        |
 
 ## Conventions
 

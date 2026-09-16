@@ -116,7 +116,9 @@ export function fontFaceCss(
 export function fontPreloadLink(
 	preset: FontPresetId | FontPreset,
 	url: string,
-): { rel: 'preload'; as: 'font'; type: 'font/woff2'; href: string; crossorigin: 'anonymous' } | undefined {
+):
+	| { rel: 'preload'; as: 'font'; type: 'font/woff2'; href: string; crossorigin: 'anonymous' }
+	| undefined {
 	const resolved = typeof preset === 'string' ? fontPresets[preset] : preset;
 	if (!resolved.variable) return undefined;
 	return { rel: 'preload', as: 'font', type: 'font/woff2', href: url, crossorigin: 'anonymous' };

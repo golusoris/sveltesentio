@@ -66,9 +66,7 @@ describe('assertCaptionsContract', () => {
 			expect(err).toBeInstanceOf(ProblemError);
 			const problem = err as ProblemError;
 			expect(problem.status).toBe(500);
-			expect(problem.type).toBe(
-				'https://sveltesentio.dev/problems/media/captions-required',
-			);
+			expect(problem.type).toBe('https://sveltesentio.dev/problems/media/captions-required');
 		}
 	});
 });

@@ -25,7 +25,7 @@ error-tracking.
   ops-focused; audit is compliance-focused. Both emit for the same
   event but land in **different sinks with different retention**.
 - [opentelemetry-logs.md](opentelemetry-logs.md) — log records may
-  *reference* the audit record by `audit.id` but never *replace* it.
+  _reference_ the audit record by `audit.id` but never _replace_ it.
 - [sentry-or-equivalent.md](sentry-or-equivalent.md) — error-tracking
   is third per-error sink, not an audit sink. `Sentry.captureException`
   is not auditing.
@@ -100,86 +100,91 @@ because audit records outlive code.
 import { z } from 'zod';
 
 export const AuditAction = z.enum([
-  // Auth
-  'auth.login.succeeded',
-  'auth.login.failed',
-  'auth.logout',
-  'auth.session.rotated',
-  'auth.mfa.challenged',
-  'auth.mfa.verified',
-  'auth.mfa.failed',
-  'auth.password.reset_requested',
-  'auth.password.reset_completed',
-  'auth.passkey.registered',
-  'auth.passkey.removed',
-  // Permissions
-  'permissions.role.granted',
-  'permissions.role.revoked',
-  'permissions.admin_viewed_user_data',
-  // Data
-  'data.resource.created',
-  'data.resource.updated',
-  'data.resource.deleted',
-  'data.export.requested',
-  'data.export.completed',
-  'data.deletion.requested',
-  'data.deletion.completed',
-  // Billing
-  'billing.subscription.created',
-  'billing.subscription.canceled',
-  'billing.subscription.upgraded',
-  'billing.webhook.received',
-  // Security
-  'security.lockout.triggered',
-  'security.admin.impersonation_started',
-  'security.admin.impersonation_ended',
+	// Auth
+	'auth.login.succeeded',
+	'auth.login.failed',
+	'auth.logout',
+	'auth.session.rotated',
+	'auth.mfa.challenged',
+	'auth.mfa.verified',
+	'auth.mfa.failed',
+	'auth.password.reset_requested',
+	'auth.password.reset_completed',
+	'auth.passkey.registered',
+	'auth.passkey.removed',
+	// Permissions
+	'permissions.role.granted',
+	'permissions.role.revoked',
+	'permissions.admin_viewed_user_data',
+	// Data
+	'data.resource.created',
+	'data.resource.updated',
+	'data.resource.deleted',
+	'data.export.requested',
+	'data.export.completed',
+	'data.deletion.requested',
+	'data.deletion.completed',
+	// Billing
+	'billing.subscription.created',
+	'billing.subscription.canceled',
+	'billing.subscription.upgraded',
+	'billing.webhook.received',
+	// Security
+	'security.lockout.triggered',
+	'security.admin.impersonation_started',
+	'security.admin.impersonation_ended',
 ]);
 export type AuditAction = z.infer<typeof AuditAction>;
 
 export const AuditEvent = z.object({
-  id: z.string().uuid(),                    // UUIDv7 → time-sortable
-  timestamp: z.string().datetime(),         // ISO 8601 server clock
+	id: z.string().uuid(), // UUIDv7 → time-sortable
+	timestamp: z.string().datetime(), // ISO 8601 server clock
 
-  // WHO
-  actor: z.object({
-    type: z.enum(['user', 'system', 'admin', 'service']),
-    id: z.string().nullable(),              // user/admin UUID; null for unauth (e.g. failed login)
-    label: z.string().nullable(),           // denormalized: email/name at time of event
-  }),
-  onBehalfOf: z.object({                    // for admin impersonation / service-acting-as-user
-    type: z.enum(['user']),
-    id: z.string(),
-    label: z.string().nullable(),
-  }).nullable(),
+	// WHO
+	actor: z.object({
+		type: z.enum(['user', 'system', 'admin', 'service']),
+		id: z.string().nullable(), // user/admin UUID; null for unauth (e.g. failed login)
+		label: z.string().nullable(), // denormalized: email/name at time of event
+	}),
+	onBehalfOf: z
+		.object({
+			// for admin impersonation / service-acting-as-user
+			type: z.enum(['user']),
+			id: z.string(),
+			label: z.string().nullable(),
+		})
+		.nullable(),
 
-  // WHAT
-  action: AuditAction,
-  target: z.object({
-    type: z.string(),                       // 'project' / 'user' / 'invoice' / ...
-    id: z.string().nullable(),
-    label: z.string().nullable(),           // denormalized
-  }).nullable(),
+	// WHAT
+	action: AuditAction,
+	target: z
+		.object({
+			type: z.string(), // 'project' / 'user' / 'invoice' / ...
+			id: z.string().nullable(),
+			label: z.string().nullable(), // denormalized
+		})
+		.nullable(),
 
-  // HOW / WHERE
-  source: z.object({
-    ip: z.string().nullable(),              // anonymize per retention policy (last-octet-zero)
-    userAgent: z.string().nullable(),
-    requestId: z.string(),                  // correlation.id UUIDv7 → joins OTel
-    origin: z.enum(['web', 'api', 'webhook', 'cron', 'admin-tool']),
-  }),
+	// HOW / WHERE
+	source: z.object({
+		ip: z.string().nullable(), // anonymize per retention policy (last-octet-zero)
+		userAgent: z.string().nullable(),
+		requestId: z.string(), // correlation.id UUIDv7 → joins OTel
+		origin: z.enum(['web', 'api', 'webhook', 'cron', 'admin-tool']),
+	}),
 
-  // RESULT
-  outcome: z.enum(['success', 'failure', 'denied']),
-  reason: z.string().nullable(),            // e.g. 'mfa_required' / 'rate_limited' / 'invalid_credentials'
+	// RESULT
+	outcome: z.enum(['success', 'failure', 'denied']),
+	reason: z.string().nullable(), // e.g. 'mfa_required' / 'rate_limited' / 'invalid_credentials'
 
-  // CONTEXT (bounded: no free-form PII)
-  metadata: z.record(z.string(), z.union([
-    z.string(), z.number(), z.boolean(), z.null(),
-  ])).default({}),
+	// CONTEXT (bounded: no free-form PII)
+	metadata: z
+		.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+		.default({}),
 
-  // TAMPER EVIDENCE
-  prevHash: z.string().nullable(),          // sha256(prev.id + prev.timestamp + prev.hash) — null for first row
-  hash: z.string(),                         // sha256(canonical-json of this event minus `hash`)
+	// TAMPER EVIDENCE
+	prevHash: z.string().nullable(), // sha256(prev.id + prev.timestamp + prev.hash) — null for first row
+	hash: z.string(), // sha256(canonical-json of this event minus `hash`)
 });
 export type AuditEvent = z.infer<typeof AuditEvent>;
 ```
@@ -202,7 +207,7 @@ export type AuditEvent = z.infer<typeof AuditEvent>;
    compliance narratives.
 6. **`onBehalfOf` is mandatory for impersonation.** Admin viewing a
    user's data is two events: `security.admin.impersonation_started`
-   *and* every subsequent action with `actor.type=admin` +
+   _and_ every subsequent action with `actor.type=admin` +
    `onBehalfOf.id=userId`.
 7. **Hash chain** links each record to its predecessor; any gap or
    mutation is detectable at export time.
@@ -259,44 +264,43 @@ import { uuidv7 } from '@sveltesentio/core';
 import { AuditEvent, type AuditEvent as AuditEventT } from './schema';
 
 export async function emit(
-  partial: Omit<AuditEventT, 'id' | 'timestamp' | 'prevHash' | 'hash'>,
+	partial: Omit<AuditEventT, 'id' | 'timestamp' | 'prevHash' | 'hash'>,
 ): Promise<{ id: string }> {
-  const id = uuidv7();
-  const timestamp = new Date().toISOString();
+	const id = uuidv7();
+	const timestamp = new Date().toISOString();
 
-  // Atomically: fetch the latest hash, compute this row's hash, insert.
-  // Single transaction prevents hash-chain race under concurrent writes.
-  return db.transaction().execute(async (tx) => {
-    const prev = await tx.selectFrom('audit_log')
-      .select(['hash'])
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-      .executeTakeFirst();
+	// Atomically: fetch the latest hash, compute this row's hash, insert.
+	// Single transaction prevents hash-chain race under concurrent writes.
+	return db.transaction().execute(async (tx) => {
+		const prev = await tx
+			.selectFrom('audit_log')
+			.select(['hash'])
+			.orderBy('timestamp', 'desc')
+			.limit(1)
+			.executeTakeFirst();
 
-    const prevHash = prev?.hash ?? null;
-    const unhashed = { id, timestamp, prevHash, ...partial };
-    const hash = createHash('sha256')
-      .update(canonicalJson(unhashed))
-      .digest('hex');
+		const prevHash = prev?.hash ?? null;
+		const unhashed = { id, timestamp, prevHash, ...partial };
+		const hash = createHash('sha256').update(canonicalJson(unhashed)).digest('hex');
 
-    const row: AuditEventT = { ...unhashed, hash };
-    const validated = AuditEvent.parse(row);
+		const row: AuditEventT = { ...unhashed, hash };
+		const validated = AuditEvent.parse(row);
 
-    await tx.insertInto('audit_log').values(rowToDb(validated)).execute();
+		await tx.insertInto('audit_log').values(rowToDb(validated)).execute();
 
-    // Thread to OTel for ops-side visibility (the audit row is authoritative).
-    trace.getActiveSpan()?.setAttributes({
-      'audit.id': id,
-      'audit.action': partial.action,
-      'audit.outcome': partial.outcome,
-    });
-    return { id };
-  });
+		// Thread to OTel for ops-side visibility (the audit row is authoritative).
+		trace.getActiveSpan()?.setAttributes({
+			'audit.id': id,
+			'audit.action': partial.action,
+			'audit.outcome': partial.outcome,
+		});
+		return { id };
+	});
 }
 
 function canonicalJson(obj: unknown): string {
-  // Deterministic JSON: sort keys, no whitespace — critical for hash stability.
-  return JSON.stringify(obj, Object.keys(obj as object).sort());
+	// Deterministic JSON: sort keys, no whitespace — critical for hash stability.
+	return JSON.stringify(obj, Object.keys(obj as object).sort());
 }
 ```
 
@@ -330,31 +334,34 @@ In request handlers, after the action completes (success or denial):
 import { emit } from '@sveltesentio/audit';
 
 export async function POST({ params, locals, request }) {
-  const { session, correlationId } = locals;
-  requireAdmin(session);  // throws 403 if not admin
+	const { session, correlationId } = locals;
+	requireAdmin(session); // throws 403 if not admin
 
-  const target = await db.selectFrom('users').where('id', '=', params.id)
-    .select(['id', 'email']).executeTakeFirstOrThrow();
+	const target = await db
+		.selectFrom('users')
+		.where('id', '=', params.id)
+		.select(['id', 'email'])
+		.executeTakeFirstOrThrow();
 
-  const impersonationToken = await issueImpersonationToken(session.adminId, target.id);
+	const impersonationToken = await issueImpersonationToken(session.adminId, target.id);
 
-  await emit({
-    actor: { type: 'admin', id: session.adminId, label: session.email },
-    onBehalfOf: null,
-    action: 'security.admin.impersonation_started',
-    target: { type: 'user', id: target.id, label: target.email },
-    source: {
-      ip: anonymizeIp(request.headers.get('x-forwarded-for')),
-      userAgent: request.headers.get('user-agent'),
-      requestId: correlationId,
-      origin: 'admin-tool',
-    },
-    outcome: 'success',
-    reason: null,
-    metadata: { reason_code: 'support_ticket', ticket_id: request.headers.get('x-ticket') ?? '' },
-  });
+	await emit({
+		actor: { type: 'admin', id: session.adminId, label: session.email },
+		onBehalfOf: null,
+		action: 'security.admin.impersonation_started',
+		target: { type: 'user', id: target.id, label: target.email },
+		source: {
+			ip: anonymizeIp(request.headers.get('x-forwarded-for')),
+			userAgent: request.headers.get('user-agent'),
+			requestId: correlationId,
+			origin: 'admin-tool',
+		},
+		outcome: 'success',
+		reason: null,
+		metadata: { reason_code: 'support_ticket', ticket_id: request.headers.get('x-ticket') ?? '' },
+	});
 
-  return json({ token: impersonationToken });
+	return json({ token: impersonationToken });
 }
 ```
 
@@ -363,14 +370,14 @@ In `hooks.server.ts` for pervasive events (login success/failure):
 ```ts
 // After auth-oidc.md session-issue:
 await emit({
-  actor: { type: 'user', id: user.id, label: user.email },
-  onBehalfOf: null,
-  action: 'auth.login.succeeded',
-  target: null,
-  source: { ip: anonymizeIp(ip), userAgent: ua, requestId: correlationId, origin: 'web' },
-  outcome: 'success',
-  reason: null,
-  metadata: { method: 'passkey' },  // or 'password' / 'oidc' / 'mfa_totp'
+	actor: { type: 'user', id: user.id, label: user.email },
+	onBehalfOf: null,
+	action: 'auth.login.succeeded',
+	target: null,
+	source: { ip: anonymizeIp(ip), userAgent: ua, requestId: correlationId, origin: 'web' },
+	outcome: 'success',
+	reason: null,
+	metadata: { method: 'passkey' }, // or 'password' / 'oidc' / 'mfa_totp'
 });
 ```
 
@@ -383,34 +390,37 @@ verification.
 ```ts
 // packages/audit/src/export.ts
 export async function exportForSubject(
-  subjectId: string,
-  window: { from: Date; to: Date },
+	subjectId: string,
+	window: { from: Date; to: Date },
 ): Promise<{ ndjson: string; verified: boolean; gaps: string[] }> {
-  const rows = await db.selectFrom('audit_log')
-    .where((eb) => eb.or([
-      eb('actor_id', '=', subjectId),
-      eb('on_behalf_of_id', '=', subjectId),
-      eb(eb.and([eb('target_type', '=', 'user'), eb('target_id', '=', subjectId)])),
-    ]))
-    .where('timestamp', '>=', window.from)
-    .where('timestamp', '<=', window.to)
-    .orderBy('timestamp', 'asc')
-    .selectAll()
-    .execute();
+	const rows = await db
+		.selectFrom('audit_log')
+		.where((eb) =>
+			eb.or([
+				eb('actor_id', '=', subjectId),
+				eb('on_behalf_of_id', '=', subjectId),
+				eb(eb.and([eb('target_type', '=', 'user'), eb('target_id', '=', subjectId)])),
+			]),
+		)
+		.where('timestamp', '>=', window.from)
+		.where('timestamp', '<=', window.to)
+		.orderBy('timestamp', 'asc')
+		.selectAll()
+		.execute();
 
-  const gaps: string[] = [];
-  let expectedPrev: string | null = rows[0]?.prev_hash ?? null;
-  for (const row of rows) {
-    const recomputed = createHash('sha256')
-      .update(canonicalJson(rowMinusHash(row)))
-      .digest('hex');
-    if (recomputed !== row.hash) gaps.push(`hash_mismatch:${row.id}`);
-    if (row.prev_hash !== expectedPrev) gaps.push(`chain_break:${row.id}`);
-    expectedPrev = row.hash;
-  }
+	const gaps: string[] = [];
+	let expectedPrev: string | null = rows[0]?.prev_hash ?? null;
+	for (const row of rows) {
+		const recomputed = createHash('sha256')
+			.update(canonicalJson(rowMinusHash(row)))
+			.digest('hex');
+		if (recomputed !== row.hash) gaps.push(`hash_mismatch:${row.id}`);
+		if (row.prev_hash !== expectedPrev) gaps.push(`chain_break:${row.id}`);
+		expectedPrev = row.hash;
+	}
 
-  const ndjson = rows.map((r) => JSON.stringify(r)).join('\n');
-  return { ndjson, verified: gaps.length === 0, gaps };
+	const ndjson = rows.map((r) => JSON.stringify(r)).join('\n');
+	return { ndjson, verified: gaps.length === 0, gaps };
 }
 ```
 
@@ -425,14 +435,14 @@ export async function exportForSubject(
 
 ## Retention + anonymization
 
-| Record class | Retention | Anonymization trigger |
-|---|---|---|
-| Auth (login/logout/MFA) | 13 months | User-deletion → actor_label=null, source_ip=null |
-| Permissions (grants/revokes) | 7 years | Never (compliance requires full trail) |
-| Data (resource lifecycle) | 7 years for billing-linked; 25 months others | User-deletion → target_label=null |
-| Billing | 7 years (SOC 2 + tax) | Never |
-| Security (lockout/impersonation) | 7 years | Never |
-| Admin impersonation | 7 years | Never |
+| Record class                     | Retention                                    | Anonymization trigger                            |
+| -------------------------------- | -------------------------------------------- | ------------------------------------------------ |
+| Auth (login/logout/MFA)          | 13 months                                    | User-deletion → actor_label=null, source_ip=null |
+| Permissions (grants/revokes)     | 7 years                                      | Never (compliance requires full trail)           |
+| Data (resource lifecycle)        | 7 years for billing-linked; 25 months others | User-deletion → target_label=null                |
+| Billing                          | 7 years (SOC 2 + tax)                        | Never                                            |
+| Security (lockout/impersonation) | 7 years                                      | Never                                            |
+| Admin impersonation              | 7 years                                      | Never                                            |
 
 Retention is enforced by a **privileged cron job** (not application
 code) that `ANONYMIZE`s rather than `DELETE`s — the row structure +
@@ -479,7 +489,7 @@ annotation are not chain-breaks.)
   and breaks queryability. If you need a shape, add a bounded
   top-level field.
 - **Don't log permission checks** (every request). Audit every
-  permission *grant/revoke* (admin action) and every *denied* access
+  permission _grant/revoke_ (admin action) and every _denied_ access
   to sensitive resources. Successful reads of normal resources are
   noise at audit volume.
 - **Don't forget admin impersonation.** Admin-as-user is the highest-

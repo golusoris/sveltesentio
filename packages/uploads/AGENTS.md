@@ -4,11 +4,11 @@
 
 ## Scope
 
-| Concern | Library | Pin | Role |
-|---|---|---|---|
-| Resumable transfer | `tus-js-client` | `^4.3.1` | Wire-protocol client against Golusoris `storage/tus` |
-| EXIF strip | `exifr` | `^7.1.3` | Privacy-by-default metadata removal before upload |
-| Content sniff | `file-type` | `^22.0.1` | Magic-byte content-type validation (never trust `File.type`) |
+| Concern            | Library         | Pin       | Role                                                         |
+| ------------------ | --------------- | --------- | ------------------------------------------------------------ |
+| Resumable transfer | `tus-js-client` | `^4.3.1`  | Wire-protocol client against Golusoris `storage/tus`         |
+| EXIF strip         | `exifr`         | `^7.1.3`  | Privacy-by-default metadata removal before upload            |
+| Content sniff      | `file-type`     | `^22.0.1` | Magic-byte content-type validation (never trust `File.type`) |
 
 This package ships three separable primitives — `validateUpload`, `stripExif`, `createResumableUpload` — each usable independently.
 
@@ -34,10 +34,10 @@ This package does **not**:
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/uploads typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/uploads test` |
+| Task       | Command                                         |
+| ---------- | ----------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/uploads typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/uploads test`      |
 
 ## Related
 

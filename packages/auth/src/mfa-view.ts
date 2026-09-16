@@ -64,7 +64,13 @@ export function deriveMfaChallengeView(
 
 	switch (state.kind) {
 		case 'mfa-invalid':
-			return { ...base, error: copy.invalid, hasError: true, disabled: false, retryAfter: undefined };
+			return {
+				...base,
+				error: copy.invalid,
+				hasError: true,
+				disabled: false,
+				retryAfter: undefined,
+			};
 		case 'mfa-rate-limited': {
 			const error =
 				state.retryAfter === undefined

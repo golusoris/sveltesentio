@@ -5,8 +5,9 @@ Add a Storybook story for a component.
 > Replaces the former `add-histoire` skill: Histoire cannot build Svelte 5
 > components (its runtime imports `svelte/internal`, forbidden in Svelte 5; peers
 > cap at Svelte 4 / Vite 7). The repo uses **Storybook 10** (`@storybook/svelte-vite`
-> + `@storybook/addon-a11y` + `@storybook/addon-svelte-csf`), set up in
-> `apps/storybook/`.
+>
+> - `@storybook/addon-a11y` + `@storybook/addon-svelte-csf`), set up in
+>   `apps/storybook/`.
 
 ## When to use
 

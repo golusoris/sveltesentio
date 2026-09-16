@@ -1,9 +1,6 @@
 import type * as Y from 'yjs';
 
-export type YjsMapObserver<V> = (
-	event: Y.YMapEvent<V>,
-	transaction: Y.Transaction,
-) => void;
+export type YjsMapObserver<V> = (event: Y.YMapEvent<V>, transaction: Y.Transaction) => void;
 
 export function snapshotYjsMap<V>(yMap: Y.Map<V>): Record<string, V> {
 	const out: Record<string, V> = {};
@@ -15,10 +12,7 @@ export function snapshotYjsMapEntries<V>(yMap: Y.Map<V>): [string, V][] {
 	return Array.from(yMap.entries());
 }
 
-export function observeYjsMap<V>(
-	yMap: Y.Map<V>,
-	listener: YjsMapObserver<V>,
-): () => void {
+export function observeYjsMap<V>(yMap: Y.Map<V>, listener: YjsMapObserver<V>): () => void {
 	yMap.observe(listener);
 	return () => yMap.unobserve(listener);
 }

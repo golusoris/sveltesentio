@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	PLATFORM_CORES,
-	knownCores,
-	normaliseSlug,
-	resolveCore,
-} from '../src/cores.js';
+import { PLATFORM_CORES, knownCores, normaliseSlug, resolveCore } from '../src/cores.js';
 
 describe('normaliseSlug', () => {
 	it('lowercases and strips non-alphanumerics', () => {

@@ -12,12 +12,12 @@ WCAG 2.2 AA:
 - The `<Handle>`s carry off-screen labels (left = incoming, right = outgoing).
 -->
 <script lang="ts">
-  import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-  import { deriveNodeView, type ExampleNodeData } from '../node-view.js';
-  import NodeBody from './NodeBody.svelte';
+	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+	import { deriveNodeView, type ExampleNodeData } from '../node-view.js';
+	import NodeBody from './NodeBody.svelte';
 
-  const { id, data, selected }: NodeProps = $props();
-  const view = $derived(deriveNodeView('data', (data ?? {}) as ExampleNodeData));
+	const { id, data, selected }: NodeProps = $props();
+	const view = $derived(deriveNodeView('data', (data ?? {}) as ExampleNodeData));
 </script>
 
 <Handle type="target" position={Position.Left} aria-label="Incoming connection" />

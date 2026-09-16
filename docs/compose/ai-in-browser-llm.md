@@ -34,15 +34,15 @@ Related: [ai-on-device.md](ai-on-device.md) (small-model sibling),
 
 ## When to use WebLLM
 
-| Need | Tool |
-|---|---|
-| Small classifier / embedder | [ai-on-device.md](ai-on-device.md) |
-| Full LLM chat, online | Server-proxy ([ai-audit-hook.md](ai-audit-hook.md)) |
-| Full LLM chat, offline-capable | **WebLLM (this recipe)** |
-| Privacy-critical: prompt never leaves device | **WebLLM** |
-| Frontier capability (Claude, GPT-4) | Server-proxy — frontier weights aren't public |
-| Mobile-first app | ⚠️ WebLLM brutal on phone battery; prefer server |
-| Bundle ≤ 200 KB target | ❌ WebLLM ~600 KB code + GBs of weights |
+| Need                                         | Tool                                                |
+| -------------------------------------------- | --------------------------------------------------- |
+| Small classifier / embedder                  | [ai-on-device.md](ai-on-device.md)                  |
+| Full LLM chat, online                        | Server-proxy ([ai-audit-hook.md](ai-audit-hook.md)) |
+| Full LLM chat, offline-capable               | **WebLLM (this recipe)**                            |
+| Privacy-critical: prompt never leaves device | **WebLLM**                                          |
+| Frontier capability (Claude, GPT-4)          | Server-proxy — frontier weights aren't public       |
+| Mobile-first app                             | ⚠️ WebLLM brutal on phone battery; prefer server    |
+| Bundle ≤ 200 KB target                       | ❌ WebLLM ~600 KB code + GBs of weights             |
 
 Default to server-proxy. Reach for WebLLM when offline + privacy
 together justify the cost.
@@ -61,29 +61,29 @@ generally compatible.
 
 ## Browser support
 
-| Browser | WebLLM |
-|---|---|
-| Chrome / Edge ≥ 121 (desktop) | ✅ |
-| Safari 17.4+ (desktop) | ✅ slower; smaller models only |
-| Firefox 141+ (Windows) | ⚠️ partial; not recommended |
+| Browser                         | WebLLM                          |
+| ------------------------------- | ------------------------------- |
+| Chrome / Edge ≥ 121 (desktop)   | ✅                              |
+| Safari 17.4+ (desktop)          | ✅ slower; smaller models only  |
+| Firefox 141+ (Windows)          | ⚠️ partial; not recommended     |
 | Mobile Chrome (Android, recent) | ⚠️ thermal-throttle; ≤ 3B param |
-| Mobile Safari (iOS 17.4+) | ⚠️ memory-capped; ≤ 1.5B param |
-| WebGPU not supported | ❌ no fallback |
+| Mobile Safari (iOS 17.4+)       | ⚠️ memory-capped; ≤ 1.5B param  |
+| WebGPU not supported            | ❌ no fallback                  |
 
 Detect first. Show a server-proxy fallback for unsupported users —
 don't hide the feature, surface the choice.
 
 ```ts
 async function webLLMSupported(): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return false;
-  try {
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) return false;
-    const gb = (adapter.limits?.maxBufferSize ?? 0) / 1e9;
-    return gb >= 2;                          // 2 GB minimum for 3B-param models
-  } catch {
-    return false;
-  }
+	if (typeof navigator === 'undefined' || !('gpu' in navigator)) return false;
+	try {
+		const adapter = await navigator.gpu.requestAdapter();
+		if (!adapter) return false;
+		const gb = (adapter.limits?.maxBufferSize ?? 0) / 1e9;
+		return gb >= 2; // 2 GB minimum for 3B-param models
+	} catch {
+		return false;
+	}
 }
 ```
 
@@ -92,15 +92,15 @@ async function webLLMSupported(): Promise<boolean> {
 WebLLM's built-in `prebuiltAppConfig` lists supported models. Pick
 the smallest that meets your task:
 
-| Model | Quantised size | Budget |
-|---|---|---|
-| `Phi-3.5-mini-instruct-q4f16_1-MLC` | ~2.0 GB | Mobile-friendly |
-| `Llama-3.2-1B-Instruct-q4f16_1-MLC` | ~0.9 GB | Mobile / fastest |
-| `Llama-3.2-3B-Instruct-q4f16_1-MLC` | ~1.9 GB | Desktop default |
-| `Llama-3.1-8B-Instruct-q4f32_1-MLC` | ~4.4 GB | Desktop, 8 GB+ GPU |
-| `Mistral-7B-Instruct-v0.3-q4f16_1-MLC` | ~4.0 GB | Desktop, multilingual |
-| `Qwen2.5-7B-Instruct-q4f16_1-MLC` | ~4.4 GB | Desktop, code-aware |
-| `gemma-2-2b-it-q4f16_1-MLC` | ~1.5 GB | Mobile / safety-tuned |
+| Model                                  | Quantised size | Budget                |
+| -------------------------------------- | -------------- | --------------------- |
+| `Phi-3.5-mini-instruct-q4f16_1-MLC`    | ~2.0 GB        | Mobile-friendly       |
+| `Llama-3.2-1B-Instruct-q4f16_1-MLC`    | ~0.9 GB        | Mobile / fastest      |
+| `Llama-3.2-3B-Instruct-q4f16_1-MLC`    | ~1.9 GB        | Desktop default       |
+| `Llama-3.1-8B-Instruct-q4f32_1-MLC`    | ~4.4 GB        | Desktop, 8 GB+ GPU    |
+| `Mistral-7B-Instruct-v0.3-q4f16_1-MLC` | ~4.0 GB        | Desktop, multilingual |
+| `Qwen2.5-7B-Instruct-q4f16_1-MLC`      | ~4.4 GB        | Desktop, code-aware   |
+| `gemma-2-2b-it-q4f16_1-MLC`            | ~1.5 GB        | Mobile / safety-tuned |
 
 Quantisation suffixes:
 
@@ -120,14 +120,14 @@ of OOM on integrated GPUs.
 import { CreateMLCEngine, MLCEngine } from '@mlc-ai/web-llm';
 
 export interface LoadOptions {
-  model: string;                             // model_id from prebuiltAppConfig
-  onProgress?: (info: { progress: number; text: string }) => void;
+	model: string; // model_id from prebuiltAppConfig
+	onProgress?: (info: { progress: number; text: string }) => void;
 }
 
 export async function loadEngine(opts: LoadOptions): Promise<MLCEngine> {
-  return CreateMLCEngine(opts.model, {
-    initProgressCallback: opts.onProgress,
-  });
+	return CreateMLCEngine(opts.model, {
+		initProgressCallback: opts.onProgress,
+	});
 }
 ```
 
@@ -140,113 +140,129 @@ reconstruction means re-download check + recompile.
 ```svelte
 <!-- src/lib/ai/Chat.svelte -->
 <script lang="ts">
-  import { loadEngine, webLLMSupported } from '@sveltesentio/ai/llm-browser';
-  import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
-  import { onAudit } from '$lib/ai/audit';
-  import type { MLCEngine } from '@mlc-ai/web-llm';
+	import { loadEngine, webLLMSupported } from '@sveltesentio/ai/llm-browser';
+	import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
+	import { onAudit } from '$lib/ai/audit';
+	import type { MLCEngine } from '@mlc-ai/web-llm';
 
-  type Msg = { role: 'user' | 'assistant'; content: string };
+	type Msg = { role: 'user' | 'assistant'; content: string };
 
-  let messages = $state<Msg[]>([]);
-  let input = $state('');
-  let status = $state<'unsupported' | 'idle' | 'loading' | 'ready' | 'streaming' | 'error'>('idle');
-  let progress = $state(0);
-  let progressText = $state('');
-  let engine: MLCEngine | null = null;
+	let messages = $state<Msg[]>([]);
+	let input = $state('');
+	let status = $state<'unsupported' | 'idle' | 'loading' | 'ready' | 'streaming' | 'error'>('idle');
+	let progress = $state(0);
+	let progressText = $state('');
+	let engine: MLCEngine | null = null;
 
-  const MODEL = 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
+	const MODEL = 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
 
-  $effect(() => {
-    void webLLMSupported().then((ok) => {
-      if (!ok) status = 'unsupported';
-    });
-  });
+	$effect(() => {
+		void webLLMSupported().then((ok) => {
+			if (!ok) status = 'unsupported';
+		});
+	});
 
-  async function warm() {
-    status = 'loading';
-    try {
-      engine = await loadEngine({
-        model: MODEL,
-        onProgress: ({ progress: p, text }) => {
-          progress = p;
-          progressText = text;
-        },
-      });
-      status = 'ready';
-    } catch (err) {
-      status = 'error';
-      console.error('[ai.llm-browser] engine load failed', err);
-    }
-  }
+	async function warm() {
+		status = 'loading';
+		try {
+			engine = await loadEngine({
+				model: MODEL,
+				onProgress: ({ progress: p, text }) => {
+					progress = p;
+					progressText = text;
+				},
+			});
+			status = 'ready';
+		} catch (err) {
+			status = 'error';
+			console.error('[ai.llm-browser] engine load failed', err);
+		}
+	}
 
-  async function send() {
-    if (!engine || !input.trim()) return;
-    const userMsg: Msg = { role: 'user', content: input };
-    messages.push(userMsg);
-    input = '';
-    status = 'streaming';
+	async function send() {
+		if (!engine || !input.trim()) return;
+		const userMsg: Msg = { role: 'user', content: input };
+		messages.push(userMsg);
+		input = '';
+		status = 'streaming';
 
-    const correlationId = crypto.randomUUID();
-    onAudit({
-      kind: 'prompt', correlationId, model: MODEL, provider: 'webllm',
-      timestamp: new Date().toISOString(),
-    });
+		const correlationId = crypto.randomUUID();
+		onAudit({
+			kind: 'prompt',
+			correlationId,
+			model: MODEL,
+			provider: 'webllm',
+			timestamp: new Date().toISOString(),
+		});
 
-    const assistantMsg: Msg = { role: 'assistant', content: '' };
-    messages.push(assistantMsg);
-    const idx = messages.length - 1;
+		const assistantMsg: Msg = { role: 'assistant', content: '' };
+		messages.push(assistantMsg);
+		const idx = messages.length - 1;
 
-    try {
-      const stream = await engine.chat.completions.create({
-        messages: messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
-        stream: true,
-      });
+		try {
+			const stream = await engine.chat.completions.create({
+				messages: messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
+				stream: true,
+			});
 
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content ?? '';
-        if (delta) messages[idx].content += delta;
-      }
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta?.content ?? '';
+				if (delta) messages[idx].content += delta;
+			}
 
-      onAudit({
-        kind: 'response', correlationId, model: MODEL, provider: 'webllm',
-        timestamp: new Date().toISOString(),
-      });
-      status = 'ready';
-    } catch (err) {
-      onAudit({
-        kind: 'error', correlationId, model: MODEL, provider: 'webllm',
-        timestamp: new Date().toISOString(),
-        metadata: { message: String(err) },
-      });
-      status = 'error';
-    }
-  }
+			onAudit({
+				kind: 'response',
+				correlationId,
+				model: MODEL,
+				provider: 'webllm',
+				timestamp: new Date().toISOString(),
+			});
+			status = 'ready';
+		} catch (err) {
+			onAudit({
+				kind: 'error',
+				correlationId,
+				model: MODEL,
+				provider: 'webllm',
+				timestamp: new Date().toISOString(),
+				metadata: { message: String(err) },
+			});
+			status = 'error';
+		}
+	}
 </script>
 
 {#if status === 'unsupported'}
-  <p>This browser doesn't support on-device LLM. <a href="/chat-cloud">Use cloud chat instead.</a></p>
+	<p>
+		This browser doesn't support on-device LLM. <a href="/chat-cloud">Use cloud chat instead.</a>
+	</p>
 {:else if status === 'idle'}
-  <button onclick={warm}>Load model (~1.9 GB · one-time download)</button>
+	<button onclick={warm}>Load model (~1.9 GB · one-time download)</button>
 {:else if status === 'loading'}
-  <progress value={progress} max="1" aria-label="Loading model"></progress>
-  <span role="status">{progressText} ({Math.round(progress * 100)}%)</span>
+	<progress value={progress} max="1" aria-label="Loading model"></progress>
+	<span role="status">{progressText} ({Math.round(progress * 100)}%)</span>
 {:else}
-  <ol role="log" aria-live="polite" aria-relevant="additions">
-    {#each messages as msg, i (i)}
-      <li class={msg.role}>
-        {#if msg.role === 'assistant'}
-          {@html sanitizeMarkdown(msg.content)}
-        {:else}
-          {msg.content}
-        {/if}
-      </li>
-    {/each}
-  </ol>
+	<ol role="log" aria-live="polite" aria-relevant="additions">
+		{#each messages as msg, i (i)}
+			<li class={msg.role}>
+				{#if msg.role === 'assistant'}
+					{@html sanitizeMarkdown(msg.content)}
+				{:else}
+					{msg.content}
+				{/if}
+			</li>
+		{/each}
+	</ol>
 
-  <form onsubmit={(e) => { e.preventDefault(); send(); }}>
-    <input bind:value={input} disabled={status === 'streaming'} />
-    <button type="submit" disabled={status === 'streaming'}>Send</button>
-  </form>
+	<form
+		onsubmit={(e) => {
+			e.preventDefault();
+			send();
+		}}
+	>
+		<input bind:value={input} disabled={status === 'streaming'} />
+		<button type="submit" disabled={status === 'streaming'}>Send</button>
+	</form>
 {/if}
 ```
 
@@ -275,7 +291,7 @@ Survives tab close. Request persistence so eviction can't wipe a
 
 ```ts
 if ('storage' in navigator && 'persist' in navigator.storage) {
-  await navigator.storage.persist();
+	await navigator.storage.persist();
 }
 
 const usage = await navigator.storage.estimate();
@@ -290,16 +306,16 @@ Eviction control:
 
 ```ts
 export async function purgeWebLLMCache() {
-  const dbs = await indexedDB.databases();
-  for (const db of dbs) {
-    if (db.name?.startsWith('webllm/')) {
-      indexedDB.deleteDatabase(db.name);
-    }
-  }
-  if ('caches' in window) {
-    const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k.startsWith('webllm/')).map((k) => caches.delete(k)));
-  }
+	const dbs = await indexedDB.databases();
+	for (const db of dbs) {
+		if (db.name?.startsWith('webllm/')) {
+			indexedDB.deleteDatabase(db.name);
+		}
+	}
+	if ('caches' in window) {
+		const keys = await caches.keys();
+		await Promise.all(keys.filter((k) => k.startsWith('webllm/')).map((k) => caches.delete(k)));
+	}
 }
 ```
 
@@ -315,7 +331,9 @@ WebLLM ships an optional service-worker variant
 import { CreateServiceWorkerMLCEngine } from '@mlc-ai/web-llm';
 
 const engine = await CreateServiceWorkerMLCEngine(MODEL, {
-  initProgressCallback: ({ progress }) => { /* … */ },
+	initProgressCallback: ({ progress }) => {
+		/* … */
+	},
 });
 ```
 
@@ -350,14 +368,17 @@ ID per ADR-0023:
 import { emit } from '@sveltesentio/ai/audit';
 
 const correlationId = crypto.randomUUID();
-await emit({
-  timestamp: new Date().toISOString(),
-  kind: 'prompt',
-  provider: 'webllm',
-  model: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
-  correlationId,
-  userId: session?.user.id,
-}, onAudit);
+await emit(
+	{
+		timestamp: new Date().toISOString(),
+		kind: 'prompt',
+		provider: 'webllm',
+		model: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
+		correlationId,
+		userId: session?.user.id,
+	},
+	onAudit,
+);
 ```
 
 EU AI Act Art. 12 logging is about system behaviour, not runtime
@@ -379,13 +400,13 @@ LLM output is external data. Two boundaries:
 
 ```ts
 const Plan = z.object({
-  steps: z.array(z.string()).min(1).max(20),
-  estimateMinutes: z.number().int().positive(),
+	steps: z.array(z.string()).min(1).max(20),
+	estimateMinutes: z.number().int().positive(),
 });
 
 const completion = await engine.chat.completions.create({
-  messages: [{ role: 'user', content: 'Output JSON: a 5-step weekend trip plan…' }],
-  response_format: { type: 'json_object' },
+	messages: [{ role: 'user', content: 'Output JSON: a 5-step weekend trip plan…' }],
+	response_format: { type: 'json_object' },
 });
 
 const parsed = Plan.safeParse(JSON.parse(completion.choices[0].message.content));
@@ -401,8 +422,8 @@ Either:
 import { browser } from '$app/environment';
 
 if (browser) {
-  const { loadEngine } = await import('@sveltesentio/ai/llm-browser');
-  engine = await loadEngine({ model: MODEL });
+	const { loadEngine } = await import('@sveltesentio/ai/llm-browser');
+	engine = await loadEngine({ model: MODEL });
 }
 ```
 
@@ -430,13 +451,15 @@ WebLLM doesn't run in jsdom (no WebGPU). Real-browser only:
 import { test, expect } from '@playwright/test';
 
 test('llm chat completes', async ({ page }) => {
-  test.skip(({ browserName }) => browserName !== 'chromium', 'WebGPU stable on Chromium');
-  await page.goto('/chat-local');
-  await page.click('button:has-text("Load model")');
-  await expect(page.getByRole('status')).toContainText('100%', { timeout: 120_000 });
-  await page.fill('input', 'Reply with the word ready');
-  await page.click('button:has-text("Send")');
-  await expect(page.locator('[role=log] li.assistant').last()).toContainText(/ready/i, { timeout: 30_000 });
+	test.skip(({ browserName }) => browserName !== 'chromium', 'WebGPU stable on Chromium');
+	await page.goto('/chat-local');
+	await page.click('button:has-text("Load model")');
+	await expect(page.getByRole('status')).toContainText('100%', { timeout: 120_000 });
+	await page.fill('input', 'Reply with the word ready');
+	await page.click('button:has-text("Send")');
+	await expect(page.locator('[role=log] li.assistant').last()).toContainText(/ready/i, {
+		timeout: 30_000,
+	});
 });
 ```
 

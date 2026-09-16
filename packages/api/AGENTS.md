@@ -7,12 +7,12 @@ is where the typed client lives.
 
 ## Landed (v0.1.0)
 
-| Export | Purpose |
-|---|---|
-| `createClient<Paths>(options)` | openapi-fetch client; auto-applies `problemMiddleware` so problem+json throws `ProblemError`. `problem: false` opts out; `middlewares: []` adds more |
-| `ApiClient<Paths>` | `ReturnType<typeof createClient<Paths>>` |
-| re-exports | `ClientOptions`, `Middleware`, `PathsWithMethod` from openapi-fetch |
-| `./codegen` → `generateTypes(deps, opts)` | wraps openapi-typescript (`openapiTS` + `astToString`, injected) → typed `paths` source with a generated banner; `runCodegen`/`parseCodegenArgs` drive the `sveltesentio-codegen` bin |
+| Export                                                     | Purpose                                                                                                                                                                                                            |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createClient<Paths>(options)`                             | openapi-fetch client; auto-applies `problemMiddleware` so problem+json throws `ProblemError`. `problem: false` opts out; `middlewares: []` adds more                                                               |
+| `ApiClient<Paths>`                                         | `ReturnType<typeof createClient<Paths>>`                                                                                                                                                                           |
+| re-exports                                                 | `ClientOptions`, `Middleware`, `PathsWithMethod` from openapi-fetch                                                                                                                                                |
+| `./codegen` → `generateTypes(deps, opts)`                  | wraps openapi-typescript (`openapiTS` + `astToString`, injected) → typed `paths` source with a generated banner; `runCodegen`/`parseCodegenArgs` drive the `sveltesentio-codegen` bin                              |
 | `./auth-middleware` → `authMiddleware({ store, refresh })` | openapi-fetch Middleware preset: attaches a bearer token (injectable `TokenStore`) and refreshes once on 401, retrying the original request; refresh failures map to `ProblemError`. Add after `problemMiddleware` |
 
 ## Invariants

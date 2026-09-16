@@ -42,6 +42,7 @@ switch, table, tabs, textarea, toast, toggle, toggle-group, tooltip
 ## Design token mapping
 
 shadcn-svelte uses CSS custom properties that map to sveltesentio tokens:
+
 - `--background` → `--surface`
 - `--foreground` → `--text-primary`
 - `--primary` → `--color-primary`

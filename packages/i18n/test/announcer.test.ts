@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-	announceNavigation,
-	ensureAnnouncerRegion,
-	restoreFocus,
-} from '../src/announcer.js';
+import { announceNavigation, ensureAnnouncerRegion, restoreFocus } from '../src/announcer.js';
 
 afterEach(() => {
 	document.body.innerHTML = '';

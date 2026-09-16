@@ -7,8 +7,10 @@ import {
 	type SseEventLike,
 } from './sse-client.js';
 
-export interface UseSseOptions
-	extends Omit<SseClientOptions, 'onOpen' | 'onMessage' | 'onError' | 'onStateChange'> {
+export interface UseSseOptions extends Omit<
+	SseClientOptions,
+	'onOpen' | 'onMessage' | 'onError' | 'onStateChange'
+> {
 	/** Open the connection from inside an `$effect` on mount (default `true`). */
 	autoConnect?: boolean;
 	/**

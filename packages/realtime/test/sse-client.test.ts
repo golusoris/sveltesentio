@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	SseClient,
-	type EventSourceLike,
-	type SseClientState,
-} from '../src/sse-client.js';
+import { SseClient, type EventSourceLike, type SseClientState } from '../src/sse-client.js';
 
 type Listener = (event: unknown) => void;
 
@@ -128,8 +124,6 @@ describe('SseClient', () => {
 	});
 
 	it('throws when no factory + no global EventSource present', () => {
-		expect(
-			() => new SseClient({ url: '/s' }),
-		).toThrow(/eventSourceFactory/);
+		expect(() => new SseClient({ url: '/s' })).toThrow(/eventSourceFactory/);
 	});
 });

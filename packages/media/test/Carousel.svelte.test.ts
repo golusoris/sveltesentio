@@ -38,9 +38,7 @@ describe('Carousel', () => {
 
 	it('degrades to a native scroll-snap viewport when no embla action is provided', () => {
 		const { container } = render(Harness, { label: 'Featured titles' });
-		expect(
-			container.querySelector('.ssentio-carousel__viewport--native'),
-		).toBeInTheDocument();
+		expect(container.querySelector('.ssentio-carousel__viewport--native')).toBeInTheDocument();
 	});
 
 	it('is axe-clean (WCAG 2.2 AA)', async () => {

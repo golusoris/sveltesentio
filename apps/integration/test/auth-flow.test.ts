@@ -49,11 +49,7 @@ describe('auth buildAuthorizationUrl composition', () => {
 
 describe('auth handleCsrf composition', () => {
 	it('accepts a matching, verifying token on an unsafe method', async () => {
-		const reason = await decideCsrf(
-			csrfEvent('POST', 'tok-aaa', 'tok-aaa'),
-			context,
-			alwaysValid,
-		);
+		const reason = await decideCsrf(csrfEvent('POST', 'tok-aaa', 'tok-aaa'), context, alwaysValid);
 		expect(reason).toBeUndefined();
 	});
 
@@ -63,11 +59,7 @@ describe('auth handleCsrf composition', () => {
 	});
 
 	it('rejects when the cookie and header tokens differ', async () => {
-		const reason = await decideCsrf(
-			csrfEvent('POST', 'tok-aaa', 'tok-bbb'),
-			context,
-			alwaysValid,
-		);
+		const reason = await decideCsrf(csrfEvent('POST', 'tok-aaa', 'tok-bbb'), context, alwaysValid);
 		expect(reason).toBe('token-mismatch');
 	});
 

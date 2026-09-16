@@ -34,7 +34,7 @@
 - [i18n-runtime-strategy.md](i18n-runtime-strategy.md) — Paraglide
   runs server-side so no-JS pages are already localized
 - [image-optimization.md](image-optimization.md) — responsive `<img
-  srcset>` is progressive enhancement for bandwidth, not JS
+srcset>` is progressive enhancement for bandwidth, not JS
 - [pwa.md](pwa.md) — service worker augments the stack; the
   underlying site must work without the SW
 - [a11y-audit-runbook.md](a11y-audit-runbook.md) — no-JS mode is the
@@ -103,10 +103,10 @@ SvelteKit + Superforms (already in stack). No additional dependencies.
 import { z } from 'zod';
 
 export const UpdateProfile = z.object({
-  name: z.string().trim().min(1).max(120),
-  email: z.string().email().max(320),
-  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
-  marketingOptIn: z.coerce.boolean(),
+	name: z.string().trim().min(1).max(120),
+	email: z.string().email().max(320),
+	locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/),
+	marketingOptIn: z.coerce.boolean(),
 });
 export type UpdateProfile = z.infer<typeof UpdateProfile>;
 ```
@@ -128,30 +128,31 @@ import { UpdateProfile } from './schema';
 import { updateUserProfile } from '$lib/server/users';
 
 export async function load({ locals }) {
-  if (!locals.user) throw redirect(303, '/login?next=/account');
-  const form = await superValidate(locals.user, zod(UpdateProfile));
-  return { form };
+	if (!locals.user) throw redirect(303, '/login?next=/account');
+	const form = await superValidate(locals.user, zod(UpdateProfile));
+	return { form };
 }
 
 export const actions = {
-  default: async ({ request, locals }) => {
-    if (!locals.user) throw redirect(303, '/login');
-    const form = await superValidate(request, zod(UpdateProfile));
-    if (!form.valid) return fail(400, { form });
-    try {
-      await updateUserProfile(locals.user.id, form.data);
-    } catch (e) {
-      if (e instanceof Error && e.message === 'email_taken') {
-        return message(form, { kind: 'error', text: 'Email already in use' }, { status: 409 });
-      }
-      throw e;
-    }
-    throw redirect(303, '/account?updated=1');
-  },
+	default: async ({ request, locals }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const form = await superValidate(request, zod(UpdateProfile));
+		if (!form.valid) return fail(400, { form });
+		try {
+			await updateUserProfile(locals.user.id, form.data);
+		} catch (e) {
+			if (e instanceof Error && e.message === 'email_taken') {
+				return message(form, { kind: 'error', text: 'Email already in use' }, { status: 409 });
+			}
+			throw e;
+		}
+		throw redirect(303, '/account?updated=1');
+	},
 };
 ```
 
 Key decisions:
+
 - **Redirect on success (303)** — browser navigates; no JS required to
   show the updated page. With `use:enhance` the navigation is
   intercepted and the destination is loaded via `invalidate`.
@@ -166,61 +167,69 @@ Key decisions:
 ```svelte
 <!-- src/routes/account/+page.svelte -->
 <script lang="ts">
-  import { superForm } from 'sveltekit-superforms/client';
-  import { zod } from 'sveltekit-superforms/adapters';
-  import { UpdateProfile } from './schema';
-  import type { PageData } from './$types';
+	import { superForm } from 'sveltekit-superforms/client';
+	import { zod } from 'sveltekit-superforms/adapters';
+	import { UpdateProfile } from './schema';
+	import type { PageData } from './$types';
 
-  let { data }: { data: PageData } = $props();
+	let { data }: { data: PageData } = $props();
 
-  const { form, errors, enhance, message, submitting } = superForm(data.form, {
-    validators: zod(UpdateProfile),
-    taintedMessage: 'You have unsaved changes. Leave anyway?',
-  });
+	const { form, errors, enhance, message, submitting } = superForm(data.form, {
+		validators: zod(UpdateProfile),
+		taintedMessage: 'You have unsaved changes. Leave anyway?',
+	});
 </script>
 
 <h1>Account settings</h1>
 
 {#if $message}
-  <aside role="status" aria-live="polite" class="msg msg-{$message.kind}">
-    {$message.text}
-  </aside>
+	<aside role="status" aria-live="polite" class="msg msg-{$message.kind}">
+		{$message.text}
+	</aside>
 {/if}
 
 <form method="POST" action="?/default" use:enhance>
-  <label>
-    Name
-    <input name="name" type="text" bind:value={$form.name} required maxlength="120" aria-invalid={$errors.name ? 'true' : undefined} />
-    {#if $errors.name}<span class="err">{$errors.name}</span>{/if}
-  </label>
+	<label>
+		Name
+		<input
+			name="name"
+			type="text"
+			bind:value={$form.name}
+			required
+			maxlength="120"
+			aria-invalid={$errors.name ? 'true' : undefined}
+		/>
+		{#if $errors.name}<span class="err">{$errors.name}</span>{/if}
+	</label>
 
-  <label>
-    Email
-    <input name="email" type="email" bind:value={$form.email} required maxlength="320" />
-    {#if $errors.email}<span class="err">{$errors.email}</span>{/if}
-  </label>
+	<label>
+		Email
+		<input name="email" type="email" bind:value={$form.email} required maxlength="320" />
+		{#if $errors.email}<span class="err">{$errors.email}</span>{/if}
+	</label>
 
-  <label>
-    Language
-    <select name="locale" bind:value={$form.locale}>
-      <option value="en">English</option>
-      <option value="de">Deutsch</option>
-      <option value="fr">Français</option>
-    </select>
-  </label>
+	<label>
+		Language
+		<select name="locale" bind:value={$form.locale}>
+			<option value="en">English</option>
+			<option value="de">Deutsch</option>
+			<option value="fr">Français</option>
+		</select>
+	</label>
 
-  <label>
-    <input name="marketingOptIn" type="checkbox" bind:checked={$form.marketingOptIn} />
-    Send me product updates
-  </label>
+	<label>
+		<input name="marketingOptIn" type="checkbox" bind:checked={$form.marketingOptIn} />
+		Send me product updates
+	</label>
 
-  <button type="submit" disabled={$submitting} aria-busy={$submitting}>
-    {$submitting ? 'Saving…' : 'Save'}
-  </button>
+	<button type="submit" disabled={$submitting} aria-busy={$submitting}>
+		{$submitting ? 'Saving…' : 'Save'}
+	</button>
 </form>
 ```
 
 **`use:enhance` without arguments = the good default.** It:
+
 - Prevents the full navigation.
 - Handles the response (`fail`, `redirect`, `success`).
 - Updates the form state.
@@ -240,38 +249,49 @@ import { superValidate } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 
 const Login = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-  next: z.string().max(500).optional(),
+	email: z.string().email(),
+	password: z.string().min(1),
+	next: z.string().max(500).optional(),
 });
 
 export async function load({ locals, url }) {
-  if (locals.user) throw redirect(303, url.searchParams.get('next') ?? '/');
-  const form = await superValidate(zod(Login));
-  return { form, next: url.searchParams.get('next') };
+	if (locals.user) throw redirect(303, url.searchParams.get('next') ?? '/');
+	const form = await superValidate(zod(Login));
+	return { form, next: url.searchParams.get('next') };
 }
 
 export const actions = {
-  default: async ({ request, locals, cookies }) => {
-    const form = await superValidate(request, zod(Login));
-    if (!form.valid) return fail(400, { form });
-    const session = await authenticate(form.data.email, form.data.password);
-    if (!session) return fail(401, { form, bad: true });
-    cookies.set('__Host-session', session.token, {
-      path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7,
-    });
-    throw redirect(303, form.data.next ?? '/');
-  },
+	default: async ({ request, locals, cookies }) => {
+		const form = await superValidate(request, zod(Login));
+		if (!form.valid) return fail(400, { form });
+		const session = await authenticate(form.data.email, form.data.password);
+		if (!session) return fail(401, { form, bad: true });
+		cookies.set('__Host-session', session.token, {
+			path: '/',
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 24 * 7,
+		});
+		throw redirect(303, form.data.next ?? '/');
+	},
 };
 ```
 
 ```svelte
 <!-- src/routes/login/+page.svelte -->
 <form method="POST" use:enhance>
-  <input type="hidden" name="next" value={data.next ?? ''} />
-  <label>Email<input name="email" type="email" required autocomplete="email" /></label>
-  <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
-  <button>Sign in</button>
+	<input type="hidden" name="next" value={data.next ?? ''} />
+	<label>Email<input name="email" type="email" required autocomplete="email" /></label>
+	<label
+		>Password<input
+			name="password"
+			type="password"
+			required
+			autocomplete="current-password"
+		/></label
+	>
+	<button>Sign in</button>
 </form>
 ```
 
@@ -283,36 +303,36 @@ first paint before any hydration. That is the point.
 ```svelte
 <!-- src/routes/posts/+page.svelte -->
 <script lang="ts">
-  import type { PageData } from './$types';
-  let { data }: { data: PageData } = $props();
+	import type { PageData } from './$types';
+	let { data }: { data: PageData } = $props();
 </script>
 
 <ul>
-  {#each data.posts as post}
-    <li><a href="/posts/{post.slug}">{post.title}</a></li>
-  {/each}
+	{#each data.posts as post}
+		<li><a href="/posts/{post.slug}">{post.title}</a></li>
+	{/each}
 </ul>
 
 <nav aria-label="Pagination">
-  {#if data.prevPage}
-    <a href="?page={data.prevPage}" rel="prev">Previous</a>
-  {/if}
-  {#if data.nextPage}
-    <a href="?page={data.nextPage}" rel="next">Next</a>
-  {/if}
+	{#if data.prevPage}
+		<a href="?page={data.prevPage}" rel="prev">Previous</a>
+	{/if}
+	{#if data.nextPage}
+		<a href="?page={data.nextPage}" rel="next">Next</a>
+	{/if}
 </nav>
 ```
 
 ```ts
 // src/routes/posts/+page.server.ts
 export async function load({ url }) {
-  const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
-  const { posts, total } = await fetchPosts({ page, pageSize: 20 });
-  return {
-    posts,
-    prevPage: page > 1 ? page - 1 : null,
-    nextPage: page * 20 < total ? page + 1 : null,
-  };
+	const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
+	const { posts, total } = await fetchPosts({ page, pageSize: 20 });
+	return {
+		posts,
+		prevPage: page > 1 ? page - 1 : null,
+		nextPage: page * 20 < total ? page + 1 : null,
+	};
 }
 ```
 
@@ -325,24 +345,24 @@ behavior. If JS is off, the link still works.
 ```svelte
 <!-- src/routes/account/delete/+page.svelte -->
 <form method="POST" action="?/delete" use:enhance>
-  <p>This will permanently delete your account after 30 days.</p>
-  <label>
-    Type <strong>DELETE</strong> to confirm
-    <input name="confirm" required pattern="DELETE" />
-  </label>
-  <button class="btn-danger">Delete account</button>
+	<p>This will permanently delete your account after 30 days.</p>
+	<label>
+		Type <strong>DELETE</strong> to confirm
+		<input name="confirm" required pattern="DELETE" />
+	</label>
+	<button class="btn-danger">Delete account</button>
 </form>
 ```
 
 ```ts
 // src/routes/account/delete/+page.server.ts
 export const actions = {
-  delete: async ({ request, locals }) => {
-    const data = await request.formData();
-    if (data.get('confirm') !== 'DELETE') return fail(400, { message: 'Type DELETE to confirm' });
-    await scheduleAccountDeletion(locals.user.id);
-    throw redirect(303, '/account/deletion-scheduled');
-  },
+	delete: async ({ request, locals }) => {
+		const data = await request.formData();
+		if (data.get('confirm') !== 'DELETE') return fail(400, { message: 'Type DELETE to confirm' });
+		await scheduleAccountDeletion(locals.user.id);
+		throw redirect(303, '/account/deletion-scheduled');
+	},
 };
 ```
 
@@ -355,17 +375,17 @@ a session trace.
 ```svelte
 <!-- src/routes/search/+page.svelte -->
 <form method="GET" action="/search">
-  <label>
-    Search
-    <input name="q" value={data.query ?? ''} type="search" autocomplete="off" />
-  </label>
-  <button>Search</button>
+	<label>
+		Search
+		<input name="q" value={data.query ?? ''} type="search" autocomplete="off" />
+	</label>
+	<button>Search</button>
 </form>
 
 <ul>
-  {#each data.results as r}
-    <li><a href={r.url}>{r.title}</a></li>
-  {/each}
+	{#each data.results as r}
+		<li><a href={r.url}>{r.title}</a></li>
+	{/each}
 </ul>
 ```
 
@@ -377,18 +397,18 @@ that JS-only search UIs break.
 ```svelte
 <!-- src/routes/realtime/chat/+page.svelte -->
 <script lang="ts">
-  import { browser } from '$app/environment';
+	import { browser } from '$app/environment';
 </script>
 
 <noscript>
-  <aside role="alert" class="noscript-notice">
-    The real-time chat requires JavaScript. Enable JS or open
-    <a href="/messages">the message archive</a> for read-only access.
-  </aside>
+	<aside role="alert" class="noscript-notice">
+		The real-time chat requires JavaScript. Enable JS or open
+		<a href="/messages">the message archive</a> for read-only access.
+	</aside>
 </noscript>
 
 {#if browser}
-  <!-- render the realtime chat -->
+	<!-- render the realtime chat -->
 {/if}
 ```
 
@@ -400,30 +420,30 @@ pointed at the static archive. Silent blank pages are hostile.
 ```svelte
 <!-- src/lib/components/YouTubeEmbed.svelte -->
 <script lang="ts">
-  let { videoId, title }: { videoId: string; title: string } = $props();
-  let loaded = $state(false);
+	let { videoId, title }: { videoId: string; title: string } = $props();
+	let loaded = $state(false);
 </script>
 
 {#if loaded}
-  <iframe
-    src="https://www.youtube-nocookie.com/embed/{videoId}?rel=0"
-    {title}
-    loading="lazy"
-    allow="fullscreen"
-    referrerpolicy="strict-origin-when-cross-origin"
-  ></iframe>
+	<iframe
+		src="https://www.youtube-nocookie.com/embed/{videoId}?rel=0"
+		{title}
+		loading="lazy"
+		allow="fullscreen"
+		referrerpolicy="strict-origin-when-cross-origin"
+	></iframe>
 {:else}
-  <a
-    class="yt-placeholder"
-    href="https://www.youtube.com/watch?v={videoId}"
-    onclick={(e) => {
-      e.preventDefault();
-      loaded = true;
-    }}
-  >
-    <img src="https://i.ytimg.com/vi/{videoId}/hqdefault.jpg" alt="" aria-hidden="true" />
-    <span>{title} (plays on YouTube)</span>
-  </a>
+	<a
+		class="yt-placeholder"
+		href="https://www.youtube.com/watch?v={videoId}"
+		onclick={(e) => {
+			e.preventDefault();
+			loaded = true;
+		}}
+	>
+		<img src="https://i.ytimg.com/vi/{videoId}/hqdefault.jpg" alt="" aria-hidden="true" />
+		<span>{title} (plays on YouTube)</span>
+	</a>
 {/if}
 ```
 
@@ -468,26 +488,29 @@ iframe activation + privacy benefit (no cookies until they click).
 import { test, expect } from '@playwright/test';
 
 test.describe('Progressive enhancement', () => {
-  test('login works without JavaScript', async ({ browser }) => {
-    const context = await browser.newContext({ javaScriptEnabled: false });
-    const page = await context.newPage();
-    await page.goto('/login');
-    await page.fill('input[name=email]', 'user@example.com');
-    await page.fill('input[name=password]', 'correct-horse-battery-staple');
-    await page.click('button[type=submit]');
-    await expect(page).toHaveURL('/');
-    await context.close();
-  });
+	test('login works without JavaScript', async ({ browser }) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.goto('/login');
+		await page.fill('input[name=email]', 'user@example.com');
+		await page.fill('input[name=password]', 'correct-horse-battery-staple');
+		await page.click('button[type=submit]');
+		await expect(page).toHaveURL('/');
+		await context.close();
+	});
 
-  test('account update works without JavaScript', async ({ browser }) => {
-    const context = await browser.newContext({ javaScriptEnabled: false, storageState: 'tests/auth.json' });
-    const page = await context.newPage();
-    await page.goto('/account');
-    await page.fill('input[name=name]', 'New Name');
-    await page.click('button[type=submit]');
-    await expect(page).toHaveURL(/\/account\?updated=1/);
-    await context.close();
-  });
+	test('account update works without JavaScript', async ({ browser }) => {
+		const context = await browser.newContext({
+			javaScriptEnabled: false,
+			storageState: 'tests/auth.json',
+		});
+		const page = await context.newPage();
+		await page.goto('/account');
+		await page.fill('input[name=name]', 'New Name');
+		await page.click('button[type=submit]');
+		await expect(page).toHaveURL(/\/account\?updated=1/);
+		await context.close();
+	});
 });
 ```
 
@@ -505,7 +528,7 @@ form regresses.
 1. **`<button onclick={() => fetch(...)}>`** for a mutation — dead
    without JS. Use a form action.
 2. **`<a href="javascript:..." />`** or `<a href="#"
-   onclick="...">` — violates basic progressive enhancement and
+onclick="...">` — violates basic progressive enhancement and
    breaks middle-click-to-open-in-tab.
 3. **Modals that have no URL** — can't be shared, can't be bookmarked,
    lost on reload. Use SvelteKit routing.

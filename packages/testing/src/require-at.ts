@@ -13,9 +13,7 @@
 export function requireAt<T>(items: readonly T[], index: number, what = 'element'): T {
 	const item = items[index];
 	if (item === undefined) {
-		throw new Error(
-			`expected ${what} at index ${index}, but the query returned ${items.length}`,
-		);
+		throw new Error(`expected ${what} at index ${index}, but the query returned ${items.length}`);
 	}
 	return item;
 }

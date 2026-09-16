@@ -71,21 +71,21 @@ Operator broadcast to one tenant                   → notification center, oper
 import { z } from 'zod';
 
 export const NotificationType = z.enum([
-  'comment.mentioned',
-  'comment.replied',
-  'item.assigned',
-  'item.shared',
-  'invite.received',
-  'invite.accepted',
-  'export.ready',
-  'report.ready',
-  'security.new_login',
-  'security.password_changed',
-  'security.mfa_changed',
-  'billing.payment_failed',
-  'billing.renewal_upcoming',
-  'system.maintenance',
-  'marketing.product_update',
+	'comment.mentioned',
+	'comment.replied',
+	'item.assigned',
+	'item.shared',
+	'invite.received',
+	'invite.accepted',
+	'export.ready',
+	'report.ready',
+	'security.new_login',
+	'security.password_changed',
+	'security.mfa_changed',
+	'billing.payment_failed',
+	'billing.renewal_upcoming',
+	'system.maintenance',
+	'marketing.product_update',
 ]);
 export type NotificationType = z.infer<typeof NotificationType>;
 
@@ -96,31 +96,28 @@ export const Priority = z.enum(['low', 'normal', 'high', 'critical']);
 export type Priority = z.infer<typeof Priority>;
 
 export const NotificationEvent = z.object({
-  id: z.string().uuid(),
-  type: NotificationType,
-  recipientId: z.string().uuid(),
-  actorId: z.string().uuid().optional(),
-  targetId: z.string().optional(),
-  meta: z.record(z.unknown()).refine(
-    (m) => JSON.stringify(m).length <= 4096,
-    'meta exceeds 4KB',
-  ),
-  dedupeKey: z.string().min(8).max(128),
-  priority: Priority,
-  createdAt: z.string().datetime(),
+	id: z.string().uuid(),
+	type: NotificationType,
+	recipientId: z.string().uuid(),
+	actorId: z.string().uuid().optional(),
+	targetId: z.string().optional(),
+	meta: z.record(z.unknown()).refine((m) => JSON.stringify(m).length <= 4096, 'meta exceeds 4KB'),
+	dedupeKey: z.string().min(8).max(128),
+	priority: Priority,
+	createdAt: z.string().datetime(),
 });
 export type NotificationEvent = z.infer<typeof NotificationEvent>;
 
 export const InAppRow = z.object({
-  id: z.string().uuid(),
-  eventId: z.string().uuid(),
-  recipientId: z.string().uuid(),
-  readAt: z.string().datetime().nullable(),
-  dismissedAt: z.string().datetime().nullable(),
-  deliveredAt: z.string().datetime(),
-  type: NotificationType,
-  priority: Priority,
-  groupKey: z.string().optional(),
+	id: z.string().uuid(),
+	eventId: z.string().uuid(),
+	recipientId: z.string().uuid(),
+	readAt: z.string().datetime().nullable(),
+	dismissedAt: z.string().datetime().nullable(),
+	deliveredAt: z.string().datetime(),
+	type: NotificationType,
+	priority: Priority,
+	groupKey: z.string().optional(),
 });
 export type InAppRow = z.infer<typeof InAppRow>;
 ```
@@ -151,20 +148,22 @@ Seven shape rules:
 ```ts
 // packages/notifications/src/preferences.ts
 export const DeliveryRule = z.object({
-  type: NotificationType,
-  channels: z.array(Channel).min(1),
-  mode: z.enum(['instant', 'batched_15m', 'batched_hourly', 'daily_digest', 'off']),
+	type: NotificationType,
+	channels: z.array(Channel).min(1),
+	mode: z.enum(['instant', 'batched_15m', 'batched_hourly', 'daily_digest', 'off']),
 });
 
 export const UserPreferences = z.object({
-  userId: z.string().uuid(),
-  timezone: z.string(),
-  quietHours: z.object({
-    start: z.string().regex(/^\d{2}:\d{2}$/),
-    end: z.string().regex(/^\d{2}:\d{2}$/),
-  }).optional(),
-  rules: z.array(DeliveryRule),
-  marketingOptIn: z.boolean().default(false),
+	userId: z.string().uuid(),
+	timezone: z.string(),
+	quietHours: z
+		.object({
+			start: z.string().regex(/^\d{2}:\d{2}$/),
+			end: z.string().regex(/^\d{2}:\d{2}$/),
+		})
+		.optional(),
+	rules: z.array(DeliveryRule),
+	marketingOptIn: z.boolean().default(false),
 });
 ```
 
@@ -204,45 +203,45 @@ import { NotificationEvent, UserPreferences } from './types';
 import { z } from 'zod';
 
 const Payload = z.object({
-  event: NotificationEvent,
-  preferences: UserPreferences,
+	event: NotificationEvent,
+	preferences: UserPreferences,
 });
 
 export const fanoutWorker = makeWorker(
-  'notifications.fanout',
-  Payload,
-  async ({ event, preferences }) => {
-    const existing = await db.notifications.findByDedupeKey(event.dedupeKey);
-    if (existing) return { skipped: 'duplicate' };
+	'notifications.fanout',
+	Payload,
+	async ({ event, preferences }) => {
+		const existing = await db.notifications.findByDedupeKey(event.dedupeKey);
+		if (existing) return { skipped: 'duplicate' };
 
-    const rule = preferences.rules.find((r) => r.type === event.type);
-    if (!rule || rule.mode === 'off') {
-      return { skipped: 'user_opt_out' };
-    }
+		const rule = preferences.rules.find((r) => r.type === event.type);
+		if (!rule || rule.mode === 'off') {
+			return { skipped: 'user_opt_out' };
+		}
 
-    const inQuiet = inQuietHours(preferences, clock.now());
-    const isCritical = event.priority === 'critical';
+		const inQuiet = inQuietHours(preferences, clock.now());
+		const isCritical = event.priority === 'critical';
 
-    const channels = rule.channels;
-    const delays = channels.map((c) => scheduleFor(c, rule.mode, inQuiet, isCritical));
+		const channels = rule.channels;
+		const delays = channels.map((c) => scheduleFor(c, rule.mode, inQuiet, isCritical));
 
-    await db.transaction(async (tx) => {
-      if (channels.includes('in_app')) {
-        await tx.notifications.insertInApp(event);
-      }
-      await tx.notificationEvents.insert({ ...event, fannedOutAt: clock.now().toISOString() });
-    });
+		await db.transaction(async (tx) => {
+			if (channels.includes('in_app')) {
+				await tx.notifications.insertInApp(event);
+			}
+			await tx.notificationEvents.insert({ ...event, fannedOutAt: clock.now().toISOString() });
+		});
 
-    for (const { channel, delayMs } of delays) {
-      await queue.enqueue(`notifications.deliver.${channel}`, event, {
-        jobId: `${channel}:${event.dedupeKey}`,
-        delay: delayMs,
-      });
-    }
+		for (const { channel, delayMs } of delays) {
+			await queue.enqueue(`notifications.deliver.${channel}`, event, {
+				jobId: `${channel}:${event.dedupeKey}`,
+				delay: delayMs,
+			});
+		}
 
-    await emitUnreadCountUpdate(event.recipientId);
-    return { delivered: channels };
-  },
+		await emitUnreadCountUpdate(event.recipientId);
+		return { delivered: channels };
+	},
 );
 ```
 
@@ -258,7 +257,7 @@ Eight fan-out rules:
    events, payment failures).
 4. **Per-channel enqueue with `jobId` dedupe** — email + push +
    in-app each have their own downstream job; `${channel}:
-   ${dedupeKey}` makes re-execution safe.
+${dedupeKey}` makes re-execution safe.
 5. **In-app row written atomically with event write** — same DB
    tx. The UI must never see a phantom event without its in-app
    row.
@@ -298,17 +297,17 @@ import { produce } from '$lib/server/sse';
 import { db } from '$lib/server/db';
 
 export async function GET({ locals }) {
-  const user = requireUser(locals);
-  return produce(async ({ emit, close, signal }) => {
-    const initial = await db.notifications.unreadCount(user.id);
-    emit({ event: 'unread_count', data: String(initial) });
+	const user = requireUser(locals);
+	return produce(async ({ emit, close, signal }) => {
+		const initial = await db.notifications.unreadCount(user.id);
+		emit({ event: 'unread_count', data: String(initial) });
 
-    const sub = await db.notifications.subscribe(user.id, signal);
-    for await (const update of sub) {
-      emit({ event: 'update', data: JSON.stringify(update) });
-    }
-    close();
-  });
+		const sub = await db.notifications.subscribe(user.id, signal);
+		for await (const update of sub) {
+			emit({ event: 'update', data: JSON.stringify(update) });
+		}
+		close();
+	});
 }
 ```
 
@@ -335,49 +334,59 @@ Six realtime rules:
 import { on } from 'svelte/events';
 
 export function useNotifications() {
-  let unreadCount = $state(0);
-  let items = $state<InAppRow[]>([]);
-  let open = $state(false);
+	let unreadCount = $state(0);
+	let items = $state<InAppRow[]>([]);
+	let open = $state(false);
 
-  $effect(() => {
-    const es = new EventSource('/api/notifications/stream');
-    const offCount = on(es, 'unread_count', (e) => {
-      unreadCount = Number((e as MessageEvent).data);
-    });
-    const offUpdate = on(es, 'update', (e) => {
-      const row = InAppRow.parse(JSON.parse((e as MessageEvent).data));
-      items = [row, ...items];
-    });
-    return () => { offCount(); offUpdate(); es.close(); };
-  });
+	$effect(() => {
+		const es = new EventSource('/api/notifications/stream');
+		const offCount = on(es, 'unread_count', (e) => {
+			unreadCount = Number((e as MessageEvent).data);
+		});
+		const offUpdate = on(es, 'update', (e) => {
+			const row = InAppRow.parse(JSON.parse((e as MessageEvent).data));
+			items = [row, ...items];
+		});
+		return () => {
+			offCount();
+			offUpdate();
+			es.close();
+		};
+	});
 
-  async function markRead(id: string) {
-    await fetch('/api/notifications/' + id + '/read', { method: 'POST' });
-    items = items.map((r) => r.id === id ? { ...r, readAt: new Date().toISOString() } : r);
-    unreadCount = Math.max(0, unreadCount - 1);
-  }
+	async function markRead(id: string) {
+		await fetch('/api/notifications/' + id + '/read', { method: 'POST' });
+		items = items.map((r) => (r.id === id ? { ...r, readAt: new Date().toISOString() } : r));
+		unreadCount = Math.max(0, unreadCount - 1);
+	}
 
-  async function markAllRead() {
-    await fetch('/api/notifications/read-all', { method: 'POST' });
-    const now = new Date().toISOString();
-    items = items.map((r) => r.readAt ? r : { ...r, readAt: now });
-    unreadCount = 0;
-  }
+	async function markAllRead() {
+		await fetch('/api/notifications/read-all', { method: 'POST' });
+		const now = new Date().toISOString();
+		items = items.map((r) => (r.readAt ? r : { ...r, readAt: now }));
+		unreadCount = 0;
+	}
 
-  async function dismiss(id: string) {
-    await fetch('/api/notifications/' + id + '/dismiss', { method: 'POST' });
-    items = items.filter((r) => r.id !== id);
-  }
+	async function dismiss(id: string) {
+		await fetch('/api/notifications/' + id + '/dismiss', { method: 'POST' });
+		items = items.filter((r) => r.id !== id);
+	}
 
-  return {
-    get unreadCount() { return unreadCount; },
-    get items() { return items; },
-    get open() { return open; },
-    toggle: () => open = !open,
-    markRead,
-    markAllRead,
-    dismiss,
-  };
+	return {
+		get unreadCount() {
+			return unreadCount;
+		},
+		get items() {
+			return items;
+		},
+		get open() {
+			return open;
+		},
+		toggle: () => (open = !open),
+		markRead,
+		markAllRead,
+		dismiss,
+	};
 }
 ```
 
@@ -406,22 +415,22 @@ Six rune rules:
 import * as m from '$lib/paraglide/messages';
 
 export function renderNotification(row: InAppRow): { title: string; href: string } {
-  switch (row.type) {
-    case 'comment.mentioned':
-      return {
-        title: m.notif_comment_mentioned({
-          actor: row.meta.actorName as string,
-          doc: row.meta.docTitle as string,
-        }),
-        href: `/documents/${row.meta.docId}#comment-${row.meta.commentId}`,
-      };
-    case 'item.assigned':
-      return {
-        title: m.notif_item_assigned({ item: row.meta.itemTitle as string }),
-        href: `/items/${row.meta.itemId}`,
-      };
-    // exhaustive over NotificationType — TS errors on missing case
-  }
+	switch (row.type) {
+		case 'comment.mentioned':
+			return {
+				title: m.notif_comment_mentioned({
+					actor: row.meta.actorName as string,
+					doc: row.meta.docTitle as string,
+				}),
+				href: `/documents/${row.meta.docId}#comment-${row.meta.commentId}`,
+			};
+		case 'item.assigned':
+			return {
+				title: m.notif_item_assigned({ item: row.meta.itemTitle as string }),
+				href: `/items/${row.meta.itemId}`,
+			};
+		// exhaustive over NotificationType — TS errors on missing case
+	}
 }
 ```
 
@@ -446,14 +455,14 @@ Five render rules:
 ```ts
 // packages/notifications/src/group.ts
 export function collapse(items: InAppRow[]): Group[] {
-  const out: Record<string, Group> = {};
-  for (const row of items) {
-    const key = row.groupKey ?? row.id;
-    const g = out[key] ??= { key, items: [], latestAt: row.deliveredAt };
-    g.items.push(row);
-    if (row.deliveredAt > g.latestAt) g.latestAt = row.deliveredAt;
-  }
-  return Object.values(out).sort((a, b) => b.latestAt.localeCompare(a.latestAt));
+	const out: Record<string, Group> = {};
+	for (const row of items) {
+		const key = row.groupKey ?? row.id;
+		const g = (out[key] ??= { key, items: [], latestAt: row.deliveredAt });
+		g.items.push(row);
+		if (row.deliveredAt > g.latestAt) g.latestAt = row.deliveredAt;
+	}
+	return Object.values(out).sort((a, b) => b.latestAt.localeCompare(a.latestAt));
 }
 ```
 
@@ -496,7 +505,7 @@ Seven a11y rules:
 Five interaction rules:
 
 1. **Center row is always written** for non-ephemeral events;
-   toast is an optional *additional* surface for the same event
+   toast is an optional _additional_ surface for the same event
    when the user is live in-app.
 2. **Push is a user-permission feature** — never assumed; the app
    never asks for notification permission until the user has
@@ -535,12 +544,12 @@ Bounded attributes only:
 
 ```ts
 export const NOTIFICATION_ATTRIBUTES = [
-  'notification.type',            // ≤20 values, enum
-  'notification.channel',         // in_app | email | push | sms
-  'notification.priority',        // low | normal | high | critical
-  'notification.outcome',         // delivered | skipped_opt_out | skipped_dup | failed
-  'notification.batch_mode',      // instant | batched_15m | batched_hourly | daily_digest | off
-  'notification.group_collapsed', // 1 | 2-5 | 6-20 | 21+
+	'notification.type', // ≤20 values, enum
+	'notification.channel', // in_app | email | push | sms
+	'notification.priority', // low | normal | high | critical
+	'notification.outcome', // delivered | skipped_opt_out | skipped_dup | failed
+	'notification.batch_mode', // instant | batched_15m | batched_hourly | daily_digest | off
+	'notification.group_collapsed', // 1 | 2-5 | 6-20 | 21+
 ] as const;
 ```
 
@@ -576,7 +585,7 @@ Six testing lanes:
 ## Anti-patterns
 
 1. **Rendered strings in the event** — `"John mentioned you in
-   Docs/Q2 Plan"` stored in DB. Translates wrong, rots when names
+Docs/Q2 Plan"` stored in DB. Translates wrong, rots when names
    change, leaks in backups.
 2. **Free-form `type` field** — cardinality explodes in OTel;
    translation table becomes unbounded; render switch impossible

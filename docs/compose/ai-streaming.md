@@ -82,90 +82,117 @@ import { emit } from '@sveltesentio/ai/audit';
 const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const ChatRequest = z.object({
-  messages: z.array(z.object({
-    role: z.enum(['user', 'assistant']),
-    content: z.string().min(1).max(10_000),
-  })).min(1).max(50),
-  model: z.literal('claude-opus-4-7').default('claude-opus-4-7'),
+	messages: z
+		.array(
+			z.object({
+				role: z.enum(['user', 'assistant']),
+				content: z.string().min(1).max(10_000),
+			}),
+		)
+		.min(1)
+		.max(50),
+	model: z.literal('claude-opus-4-7').default('claude-opus-4-7'),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const session = locals.session;
-  if (!session) return new Response('Unauthorized', { status: 401 });
+	const session = locals.session;
+	if (!session) return new Response('Unauthorized', { status: 401 });
 
-  const body = await request.json();
-  const parsed = ChatRequest.safeParse(body);
-  if (!parsed.success) {
-    return new Response(JSON.stringify({
-      type: 'urn:sveltesentio:ai:invalid-request',
-      title: 'Invalid request', status: 400,
-      detail: parsed.error.message,
-      extensions: { correlationId: locals.correlationId },
-    }), { status: 400, headers: { 'Content-Type': 'application/problem+json' } });
-  }
+	const body = await request.json();
+	const parsed = ChatRequest.safeParse(body);
+	if (!parsed.success) {
+		return new Response(
+			JSON.stringify({
+				type: 'urn:sveltesentio:ai:invalid-request',
+				title: 'Invalid request',
+				status: 400,
+				detail: parsed.error.message,
+				extensions: { correlationId: locals.correlationId },
+			}),
+			{ status: 400, headers: { 'Content-Type': 'application/problem+json' } },
+		);
+	}
 
-  const correlationId = uuidv7();
-  await emit({
-    timestamp: new Date().toISOString(),
-    kind: 'prompt', provider: 'anthropic', model: parsed.data.model,
-    correlationId, userId: session.user.id,
-  }, locals.onAudit);
+	const correlationId = uuidv7();
+	await emit(
+		{
+			timestamp: new Date().toISOString(),
+			kind: 'prompt',
+			provider: 'anthropic',
+			model: parsed.data.model,
+			correlationId,
+			userId: session.user.id,
+		},
+		locals.onAudit,
+	);
 
-  const stream = await anthropic.messages.stream({
-    model: parsed.data.model,
-    max_tokens: 4096,
-    messages: parsed.data.messages,
-  });
+	const stream = await anthropic.messages.stream({
+		model: parsed.data.model,
+		max_tokens: 4096,
+		messages: parsed.data.messages,
+	});
 
-  const enc = new TextEncoder();
-  let seq = 0;
+	const enc = new TextEncoder();
+	let seq = 0;
 
-  const body$ = new ReadableStream({
-    async start(controller) {
-      const send = (data: unknown, event = 'message') => {
-        controller.enqueue(enc.encode(
-          `id: ${++seq}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
-        ));
-      };
+	const body$ = new ReadableStream({
+		async start(controller) {
+			const send = (data: unknown, event = 'message') => {
+				controller.enqueue(
+					enc.encode(`id: ${++seq}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+				);
+			};
 
-      try {
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            send({ kind: 'token', text: chunk.delta.text });
-          }
-        }
-        send({ kind: 'done' }, 'done');
-        await emit({
-          timestamp: new Date().toISOString(),
-          kind: 'response', provider: 'anthropic', model: parsed.data.model,
-          correlationId, userId: session.user.id,
-        }, locals.onAudit);
-      } catch (err) {
-        send({ kind: 'error', message: 'provider failed' }, 'error');
-        await emit({
-          timestamp: new Date().toISOString(),
-          kind: 'error', provider: 'anthropic', model: parsed.data.model,
-          correlationId, userId: session.user.id,
-          metadata: { message: String(err) },
-        }, locals.onAudit);
-      } finally {
-        controller.close();
-      }
-    },
-    cancel() {
-      stream.controller?.abort();             // honour client disconnect
-    },
-  });
+			try {
+				for await (const chunk of stream) {
+					if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+						send({ kind: 'token', text: chunk.delta.text });
+					}
+				}
+				send({ kind: 'done' }, 'done');
+				await emit(
+					{
+						timestamp: new Date().toISOString(),
+						kind: 'response',
+						provider: 'anthropic',
+						model: parsed.data.model,
+						correlationId,
+						userId: session.user.id,
+					},
+					locals.onAudit,
+				);
+			} catch (err) {
+				send({ kind: 'error', message: 'provider failed' }, 'error');
+				await emit(
+					{
+						timestamp: new Date().toISOString(),
+						kind: 'error',
+						provider: 'anthropic',
+						model: parsed.data.model,
+						correlationId,
+						userId: session.user.id,
+						metadata: { message: String(err) },
+					},
+					locals.onAudit,
+				);
+			} finally {
+				controller.close();
+			}
+		},
+		cancel() {
+			stream.controller?.abort(); // honour client disconnect
+		},
+	});
 
-  return new Response(body$, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'X-Accel-Buffering': 'no',
-      Connection: 'keep-alive',
-      'X-Correlation-Id': correlationId,
-    },
-  });
+	return new Response(body$, {
+		headers: {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache, no-transform',
+			'X-Accel-Buffering': 'no',
+			Connection: 'keep-alive',
+			'X-Correlation-Id': correlationId,
+		},
+	});
 };
 ```
 
@@ -198,78 +225,90 @@ Eight invariants, each tied to a sibling recipe:
 ```svelte
 <!-- src/lib/ai/Chat.svelte -->
 <script lang="ts">
-  import { useSSE } from '@sveltesentio/realtime/sse';
-  import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
-  import { z } from 'zod';
+	import { useSSE } from '@sveltesentio/realtime/sse';
+	import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
+	import { z } from 'zod';
 
-  type Msg = { role: 'user' | 'assistant'; content: string };
-  let messages = $state<Msg[]>([]);
-  let composer = $state('');
-  let streaming = $state(false);
+	type Msg = { role: 'user' | 'assistant'; content: string };
+	let messages = $state<Msg[]>([]);
+	let composer = $state('');
+	let streaming = $state(false);
 
-  const Frame = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('token'), text: z.string() }),
-    z.object({ kind: z.literal('done') }),
-    z.object({ kind: z.literal('error'), message: z.string() }),
-  ]);
+	const Frame = z.discriminatedUnion('kind', [
+		z.object({ kind: z.literal('token'), text: z.string() }),
+		z.object({ kind: z.literal('done') }),
+		z.object({ kind: z.literal('error'), message: z.string() }),
+	]);
 
-  let sse: ReturnType<typeof useSSE> | null = null;
+	let sse: ReturnType<typeof useSSE> | null = null;
 
-  function send() {
-    if (!composer.trim() || streaming) return;
-    const userMsg: Msg = { role: 'user', content: composer };
-    messages.push(userMsg);
-    const assistantMsg: Msg = { role: 'assistant', content: '' };
-    messages.push(assistantMsg);
-    const idx = messages.length - 1;
-    composer = '';
-    streaming = true;
+	function send() {
+		if (!composer.trim() || streaming) return;
+		const userMsg: Msg = { role: 'user', content: composer };
+		messages.push(userMsg);
+		const assistantMsg: Msg = { role: 'assistant', content: '' };
+		messages.push(assistantMsg);
+		const idx = messages.length - 1;
+		composer = '';
+		streaming = true;
 
-    // POST messages then connect to SSE — two-step keeps payload off the URL
-    fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: messages.slice(0, -1) }),
-    }).then((r) => {
-      if (!r.body) throw new Error('no stream');
-      const reader = r.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
+		// POST messages then connect to SSE — two-step keeps payload off the URL
+		fetch('/api/ai/chat', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ messages: messages.slice(0, -1) }),
+		})
+			.then((r) => {
+				if (!r.body) throw new Error('no stream');
+				const reader = r.body.getReader();
+				const dec = new TextDecoder();
+				let buf = '';
 
-      function pump(): Promise<void> {
-        return reader.read().then(({ done, value }) => {
-          if (done) { streaming = false; return; }
-          buf += dec.decode(value, { stream: true });
-          for (const event of parseSSE(buf)) {
-            const f = Frame.safeParse(JSON.parse(event.data));
-            if (!f.success) continue;
-            if (f.data.kind === 'token') messages[idx].content += f.data.text;
-            else if (f.data.kind === 'error') console.error('[ai-stream]', f.data.message);
-          }
-          buf = buf.slice(buf.lastIndexOf('\n\n') + 2);
-          return pump();
-        });
-      }
-      return pump();
-    }).catch(() => { streaming = false; });
-  }
+				function pump(): Promise<void> {
+					return reader.read().then(({ done, value }) => {
+						if (done) {
+							streaming = false;
+							return;
+						}
+						buf += dec.decode(value, { stream: true });
+						for (const event of parseSSE(buf)) {
+							const f = Frame.safeParse(JSON.parse(event.data));
+							if (!f.success) continue;
+							if (f.data.kind === 'token') messages[idx].content += f.data.text;
+							else if (f.data.kind === 'error') console.error('[ai-stream]', f.data.message);
+						}
+						buf = buf.slice(buf.lastIndexOf('\n\n') + 2);
+						return pump();
+					});
+				}
+				return pump();
+			})
+			.catch(() => {
+				streaming = false;
+			});
+	}
 </script>
 
 <ol role="log" aria-live="polite" aria-relevant="additions">
-  {#each messages as m, i (i)}
-    <li class={m.role}>
-      {#if m.role === 'assistant'}
-        {@html sanitizeMarkdown(m.content)}
-      {:else}
-        {m.content}
-      {/if}
-    </li>
-  {/each}
+	{#each messages as m, i (i)}
+		<li class={m.role}>
+			{#if m.role === 'assistant'}
+				{@html sanitizeMarkdown(m.content)}
+			{:else}
+				{m.content}
+			{/if}
+		</li>
+	{/each}
 </ol>
 
-<form onsubmit={(e) => { e.preventDefault(); send(); }}>
-  <textarea bind:value={composer} disabled={streaming}></textarea>
-  <button type="submit" disabled={streaming}>Send</button>
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		send();
+	}}
+>
+	<textarea bind:value={composer} disabled={streaming}></textarea>
+	<button type="submit" disabled={streaming}>Send</button>
 </form>
 ```
 
@@ -277,9 +316,9 @@ Note: this uses `fetch` + `ReadableStream` rather than
 `new EventSource()` because **`EventSource` is GET-only** — a chat
 prompt is too big for a query string. Two patterns address this:
 
-| Pattern | When |
-|---|---|
-| `fetch(POST) + ReadableStream` reading `text/event-stream` | Long prompts; this recipe |
+| Pattern                                                                          | When                           |
+| -------------------------------------------------------------------------------- | ------------------------------ |
+| `fetch(POST) + ReadableStream` reading `text/event-stream`                       | Long prompts; this recipe      |
 | `POST /api/ai/chat/start` returning a `chatId` then `useSSE('/api/ai/chat/:id')` | Resume on reconnect; multi-tab |
 
 The two-step ID pattern wins when `Last-Event-ID` resume matters.
@@ -291,18 +330,22 @@ problem responses with `extensions.correlationId`:
 
 ```ts
 // inside +server.ts catch
-return new Response(JSON.stringify({
-  type: 'urn:sveltesentio:ai:provider-failed',
-  title: 'AI provider failure', status: 502,
-  detail: 'Upstream model temporarily unavailable',
-  extensions: { correlationId, providerCode: err.status ?? null },
-}), {
-  status: 502,
-  headers: {
-    'Content-Type': 'application/problem+json',
-    'X-Correlation-Id': correlationId,
-  },
-});
+return new Response(
+	JSON.stringify({
+		type: 'urn:sveltesentio:ai:provider-failed',
+		title: 'AI provider failure',
+		status: 502,
+		detail: 'Upstream model temporarily unavailable',
+		extensions: { correlationId, providerCode: err.status ?? null },
+	}),
+	{
+		status: 502,
+		headers: {
+			'Content-Type': 'application/problem+json',
+			'X-Correlation-Id': correlationId,
+		},
+	},
+);
 ```
 
 Never leak provider error messages verbatim — they may include
@@ -316,13 +359,13 @@ request:
 
 ```ts
 // at request entry
-await emit({ kind: 'prompt', correlationId, /* … */ }, onAudit);
+await emit({ kind: 'prompt', correlationId /* … */ }, onAudit);
 
 // after stream completes
-await emit({ kind: 'response', correlationId, /* … */ }, onAudit);
+await emit({ kind: 'response', correlationId /* … */ }, onAudit);
 
 // in catch
-await emit({ kind: 'error', correlationId, /* … */ }, onAudit);
+await emit({ kind: 'error', correlationId /* … */ }, onAudit);
 ```
 
 `retain: 'none'` is the default — neither prompt nor response stored.
@@ -330,11 +373,16 @@ Override per route with `retain: 'hash'` (compliance / debugging) or
 `retain: 'full'` (requires documented lawful basis):
 
 ```ts
-await emit({
-  kind: 'prompt', correlationId, /* … */
-  input: parsed.data.messages.map((m) => m.content).join('\n'),
-  // emit() respects opts.retain to hash or drop
-}, onAudit, { retain: 'hash', reason: 'EU AI Act Art. 12 — high-risk system' });
+await emit(
+	{
+		kind: 'prompt',
+		correlationId /* … */,
+		input: parsed.data.messages.map((m) => m.content).join('\n'),
+		// emit() respects opts.retain to hash or drop
+	},
+	onAudit,
+	{ retain: 'hash', reason: 'EU AI Act Art. 12 — high-risk system' },
+);
 ```
 
 ## Backpressure + abuse
@@ -342,13 +390,16 @@ await emit({
 Per-user rate limit is mandatory (provider bills you):
 
 ```ts
-import { ratelimit } from '$lib/ratelimit';   // your impl
+import { ratelimit } from '$lib/ratelimit'; // your impl
 
 const rl = await ratelimit.check(`ai:${session.user.id}`, { window: '1m', limit: 10 });
 if (!rl.ok) {
-  return new Response('Too many requests', { status: 429, headers: {
-    'Retry-After': String(rl.resetSeconds),
-  }});
+	return new Response('Too many requests', {
+		status: 429,
+		headers: {
+			'Retry-After': String(rl.resetSeconds),
+		},
+	});
 }
 ```
 
@@ -370,13 +421,13 @@ Same shape, different SDK:
 import ollama from 'ollama';
 
 const stream = await ollama.chat({
-  model: 'llama3.2',
-  messages: parsed.data.messages,
-  stream: true,
+	model: 'llama3.2',
+	messages: parsed.data.messages,
+	stream: true,
 });
 
 for await (const chunk of stream) {
-  send({ kind: 'token', text: chunk.message.content });
+	send({ kind: 'token', text: chunk.message.content });
 }
 ```
 
@@ -402,16 +453,16 @@ Server-side: mock the provider SDK:
 import { vi } from 'vitest';
 
 vi.mock('@anthropic-ai/sdk', () => ({
-  default: class {
-    messages = {
-      stream: async () => ({
-        async *[Symbol.asyncIterator]() {
-          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'hello ' } };
-          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'world' } };
-        },
-      }),
-    };
-  },
+	default: class {
+		messages = {
+			stream: async () => ({
+				async *[Symbol.asyncIterator]() {
+					yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'hello ' } };
+					yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'world' } };
+				},
+			}),
+		};
+	},
 }));
 ```
 
@@ -419,13 +470,13 @@ Hit the route with a real fetch + read the SSE stream:
 
 ```ts
 test('ai chat streams tokens', async () => {
-  const res = await fetch('/api/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }),
-  });
-  const text = await res.text();
-  expect(text).toMatch(/"kind":"token","text":"hello "/);
-  expect(text).toMatch(/event: done/);
+	const res = await fetch('/api/ai/chat', {
+		method: 'POST',
+		body: JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] }),
+	});
+	const text = await res.text();
+	expect(text).toMatch(/"kind":"token","text":"hello "/);
+	expect(text).toMatch(/event: done/);
 });
 ```
 

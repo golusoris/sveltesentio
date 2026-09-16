@@ -44,11 +44,11 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { withTheme } from '@sveltesentio/ui/theme';
 
 export const handle = sequence(
-  withTheme({
-    cookie: 'theme',            // cookie name — default 'sv_theme'
-    default: 'system',          // fallback when nothing resolved
-    dbPreferenceKey: 'theme',   // optional — reads event.locals.user?.prefs[key]
-  }),
+	withTheme({
+		cookie: 'theme', // cookie name — default 'sv_theme'
+		default: 'system', // fallback when nothing resolved
+		dbPreferenceKey: 'theme', // optional — reads event.locals.user?.prefs[key]
+	}),
 );
 ```
 
@@ -72,14 +72,14 @@ must have a `%sveltekit.head%`-style marker for the attribute injection:
 <!-- src/app.html -->
 <!DOCTYPE html>
 <html lang="en" data-theme="%sveltekit.theme%">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="color-scheme" content="light dark" />
-    %sveltekit.head%
-  </head>
-  <body data-sveltekit-preload-data="hover">
-    <div style="display: contents">%sveltekit.body%</div>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="color-scheme" content="light dark" />
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
 </html>
 ```
 
@@ -97,7 +97,7 @@ can read it without re-running the hook:
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-  return { theme: locals.theme }; // 'dark' | 'light' | 'system'
+	return { theme: locals.theme }; // 'dark' | 'light' | 'system'
 };
 ```
 
@@ -106,20 +106,20 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 ```svelte
 <!-- src/lib/components/ThemeToggle.svelte -->
 <script lang="ts">
-  import { toggleMode, mode } from 'mode-watcher';
-  import { Sun, Moon } from 'lucide-svelte';
+	import { toggleMode, mode } from 'mode-watcher';
+	import { Sun, Moon } from 'lucide-svelte';
 </script>
 
 <button
-  type="button"
-  onclick={toggleMode}
-  aria-label={$mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+	type="button"
+	onclick={toggleMode}
+	aria-label={$mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
 >
-  {#if $mode === 'dark'}
-    <Moon />
-  {:else}
-    <Sun />
-  {/if}
+	{#if $mode === 'dark'}
+		<Moon />
+	{:else}
+		<Sun />
+	{/if}
 </button>
 ```
 
@@ -136,14 +136,14 @@ update so the choice follows the user across devices:
 
 ```svelte
 <script lang="ts">
-  import { toggleMode, mode } from 'mode-watcher';
-  import { api } from '$lib/api';
+	import { toggleMode, mode } from 'mode-watcher';
+	import { api } from '$lib/api';
 
-  async function toggle() {
-    toggleMode();
-    // Fire-and-forget DB update; cookie already reflects the new value.
-    await api.PATCH('/user/prefs', { body: { theme: $mode } }).catch(() => {});
-  }
+	async function toggle() {
+		toggleMode();
+		// Fire-and-forget DB update; cookie already reflects the new value.
+		await api.PATCH('/user/prefs', { body: { theme: $mode } }).catch(() => {});
+	}
 </script>
 
 <button onclick={toggle}>Toggle</button>
@@ -178,20 +178,20 @@ When the cookie value is `system`, the resolved theme follows
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { setMode } from 'mode-watcher';
+	import { onMount } from 'svelte';
+	import { setMode } from 'mode-watcher';
 
-  onMount(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => {
-      // Only re-apply when user chose 'system'
-      if (getCookie('sv_theme') === 'system') {
-        setMode(mq.matches ? 'dark' : 'light', { persist: false });
-      }
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  });
+	onMount(() => {
+		const mq = window.matchMedia('(prefers-color-scheme: dark)');
+		const onChange = () => {
+			// Only re-apply when user chose 'system'
+			if (getCookie('sv_theme') === 'system') {
+				setMode(mq.matches ? 'dark' : 'light', { persist: false });
+			}
+		};
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
 </script>
 ```
 
@@ -204,31 +204,29 @@ Playwright assertion:
 
 ```ts
 test('no flash on cold load', async ({ page, context }) => {
-  await context.addCookies([
-    { name: 'sv_theme', value: 'dark', domain: 'localhost', path: '/' },
-  ]);
+	await context.addCookies([{ name: 'sv_theme', value: 'dark', domain: 'localhost', path: '/' }]);
 
-  // Capture first paint: the HTML must already have data-theme="dark"
-  await page.goto('/');
-  const theme = await page.evaluate(() => document.documentElement.dataset.theme);
-  expect(theme).toBe('dark');
+	// Capture first paint: the HTML must already have data-theme="dark"
+	await page.goto('/');
+	const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+	expect(theme).toBe('dark');
 
-  // No subsequent class swap in the first 100ms (would indicate client-side flip)
-  const observed = await page.evaluate(() => {
-    return new Promise<string[]>((resolve) => {
-      const seen: string[] = [];
-      const obs = new MutationObserver((records) => {
-        for (const r of records) {
-          if (r.attributeName === 'data-theme') {
-            seen.push(document.documentElement.dataset.theme ?? '');
-          }
-        }
-      });
-      obs.observe(document.documentElement, { attributes: true });
-      setTimeout(() => resolve(seen), 100);
-    });
-  });
-  expect(observed).toEqual([]); // zero class swaps
+	// No subsequent class swap in the first 100ms (would indicate client-side flip)
+	const observed = await page.evaluate(() => {
+		return new Promise<string[]>((resolve) => {
+			const seen: string[] = [];
+			const obs = new MutationObserver((records) => {
+				for (const r of records) {
+					if (r.attributeName === 'data-theme') {
+						seen.push(document.documentElement.dataset.theme ?? '');
+					}
+				}
+			});
+			obs.observe(document.documentElement, { attributes: true });
+			setTimeout(() => resolve(seen), 100);
+		});
+	});
+	expect(observed).toEqual([]); // zero class swaps
 });
 ```
 
@@ -257,10 +255,10 @@ subset; the two compose:
 
 ```css
 :root[data-theme='dark'] {
-  --color-accent: oklch(0.78 0.14 250);
+	--color-accent: oklch(0.78 0.14 250);
 }
 :root[data-theme='dark'][data-tenant='acme'] {
-  --color-accent: oklch(0.78 0.14 200); /* acme cyan, dark variant */
+	--color-accent: oklch(0.78 0.14 200); /* acme cyan, dark variant */
 }
 ```
 

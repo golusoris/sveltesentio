@@ -39,7 +39,7 @@ describe('resources against the real docs/ tree', () => {
 
 		it('throws when an ADR number has no matching file', async () => {
 			await expect(client.readResource({ uri: 'adr://9999' })).rejects.toThrow(
-				/ADR 9999 not found/
+				/ADR 9999 not found/,
 			);
 		});
 	});
@@ -71,14 +71,14 @@ describe('resources against the real docs/ tree', () => {
 
 		it('rejects path-traversal slugs containing ".."', async () => {
 			await expect(client.readResource({ uri: 'compliance://..' })).rejects.toThrow(
-				/Invalid compliance slug/
+				/Invalid compliance slug/,
 			);
 		});
 
 		it('surfaces ENOENT when a well-formed slug has no file', async () => {
-			await expect(
-				client.readResource({ uri: 'compliance://no-such-checklist' })
-			).rejects.toThrow(/ENOENT/);
+			await expect(client.readResource({ uri: 'compliance://no-such-checklist' })).rejects.toThrow(
+				/ENOENT/,
+			);
 		});
 	});
 
@@ -104,7 +104,7 @@ describe('resources against the real docs/ tree', () => {
 
 		it('rejects slugs containing ".." via the handler guard', async () => {
 			await expect(client.readResource({ uri: 'compose://a..b' })).rejects.toThrow(
-				/Invalid compose slug/
+				/Invalid compose slug/,
 			);
 		});
 

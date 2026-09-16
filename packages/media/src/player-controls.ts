@@ -65,7 +65,6 @@ export function actionForKey(event: {
 	return KEY_ACTIONS[event.key.toLowerCase()];
 }
 
-
 /**
  * Applies the actions that only move the media element: play/pause, seek, volume.
  *

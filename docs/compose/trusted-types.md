@@ -98,72 +98,72 @@ pnpm add -D @types/dompurify
 import DOMPurify from 'dompurify';
 
 type PolicyMap = {
-  dompurify: TrustedTypePolicy;
-  svg: TrustedTypePolicy;
-  default: TrustedTypePolicy;
+	dompurify: TrustedTypePolicy;
+	svg: TrustedTypePolicy;
+	default: TrustedTypePolicy;
 };
 
 const policies: Partial<PolicyMap> = {};
 
 export function initTrustedTypes(): void {
-  if (typeof window === 'undefined') return;
-  if (!window.trustedTypes?.createPolicy) return;
+	if (typeof window === 'undefined') return;
+	if (!window.trustedTypes?.createPolicy) return;
 
-  if (!policies.dompurify) {
-    policies.dompurify = trustedTypes.createPolicy('sveltesentio-dompurify', {
-      createHTML: (input) =>
-        DOMPurify.sanitize(input, {
-          USE_PROFILES: { html: true },
-          ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|data:image):/i,
-          ADD_ATTR: ['target', 'rel'],
-          FORBID_TAGS: ['style', 'script', 'iframe'],
-          FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
-        }),
-    });
-  }
+	if (!policies.dompurify) {
+		policies.dompurify = trustedTypes.createPolicy('sveltesentio-dompurify', {
+			createHTML: (input) =>
+				DOMPurify.sanitize(input, {
+					USE_PROFILES: { html: true },
+					ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|data:image):/i,
+					ADD_ATTR: ['target', 'rel'],
+					FORBID_TAGS: ['style', 'script', 'iframe'],
+					FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover'],
+				}),
+		});
+	}
 
-  if (!policies.svg) {
-    policies.svg = trustedTypes.createPolicy('sveltesentio-svg', {
-      createHTML: (input) =>
-        DOMPurify.sanitize(input, {
-          USE_PROFILES: { svg: true, svgFilters: true },
-          FORBID_TAGS: ['script', 'foreignObject'],
-        }),
-    });
-  }
+	if (!policies.svg) {
+		policies.svg = trustedTypes.createPolicy('sveltesentio-svg', {
+			createHTML: (input) =>
+				DOMPurify.sanitize(input, {
+					USE_PROFILES: { svg: true, svgFilters: true },
+					FORBID_TAGS: ['script', 'foreignObject'],
+				}),
+		});
+	}
 
-  if (!policies.default) {
-    policies.default = trustedTypes.createPolicy('sveltesentio-default', {
-      createHTML: (input, sink) => {
-        console.warn('[TT] default policy used:', { sink });
-        return DOMPurify.sanitize(input, { USE_PROFILES: { html: true } });
-      },
-      createScript: (input) => {
-        throw new Error('[TT] script injection blocked: ' + input.slice(0, 80));
-      },
-      createScriptURL: (input) => {
-        const url = new URL(input, location.href);
-        if (url.origin !== location.origin) {
-          throw new Error('[TT] cross-origin script URL blocked: ' + url.href);
-        }
-        return input;
-      },
-    });
-  }
+	if (!policies.default) {
+		policies.default = trustedTypes.createPolicy('sveltesentio-default', {
+			createHTML: (input, sink) => {
+				console.warn('[TT] default policy used:', { sink });
+				return DOMPurify.sanitize(input, { USE_PROFILES: { html: true } });
+			},
+			createScript: (input) => {
+				throw new Error('[TT] script injection blocked: ' + input.slice(0, 80));
+			},
+			createScriptURL: (input) => {
+				const url = new URL(input, location.href);
+				if (url.origin !== location.origin) {
+					throw new Error('[TT] cross-origin script URL blocked: ' + url.href);
+				}
+				return input;
+			},
+		});
+	}
 }
 
 export function sanitizeHTML(html: string): TrustedHTML {
-  if (!policies.dompurify) {
-    throw new Error('Trusted Types not initialized');
-  }
-  return policies.dompurify.createHTML(html);
+	if (!policies.dompurify) {
+		throw new Error('Trusted Types not initialized');
+	}
+	return policies.dompurify.createHTML(html);
 }
 
 export function sanitizeSVG(svg: string): TrustedHTML {
-  if (!policies.svg) {
-    throw new Error('Trusted Types not initialized');
-  }
-  return policies.svg.createHTML(svg);
+	if (!policies.svg) {
+		throw new Error('Trusted Types not initialized');
+	}
+	return policies.svg.createHTML(svg);
 }
 ```
 
@@ -184,15 +184,15 @@ Three invariants in this module:
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { browser } from '$app/environment';
-  import { initTrustedTypes } from '$lib/security/trusted-types';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import { initTrustedTypes } from '$lib/security/trusted-types';
 
-  if (browser) initTrustedTypes();
+	if (browser) initTrustedTypes();
 
-  onMount(() => {
-    /* other client-only init */
-  });
+	onMount(() => {
+		/* other client-only init */
+	});
 </script>
 ```
 
@@ -207,11 +207,11 @@ Replace raw `{@html userHtml}` with `{@html sanitizeHTML(userHtml)}`:
 ```svelte
 <!-- src/lib/markdown/Markdown.svelte -->
 <script lang="ts">
-  import { marked } from 'marked';
-  import { sanitizeHTML } from '$lib/security/trusted-types';
+	import { marked } from 'marked';
+	import { sanitizeHTML } from '$lib/security/trusted-types';
 
-  let { source }: { source: string } = $props();
-  const html = $derived(sanitizeHTML(marked.parse(source) as string));
+	let { source }: { source: string } = $props();
+	const html = $derived(sanitizeHTML(marked.parse(source) as string));
 </script>
 
 <div class="prose">{@html html}</div>
@@ -227,11 +227,11 @@ call sites where TT is required.
 ```svelte
 <!-- src/lib/ai/Message.svelte -->
 <script lang="ts">
-  import { sanitizeHTML } from '$lib/security/trusted-types';
-  import { marked } from 'marked';
+	import { sanitizeHTML } from '$lib/security/trusted-types';
+	import { marked } from 'marked';
 
-  let { content }: { content: string } = $props();
-  const html = $derived(sanitizeHTML(marked.parse(content) as string));
+	let { content }: { content: string } = $props();
+	const html = $derived(sanitizeHTML(marked.parse(content) as string));
 </script>
 
 <article>{@html html}</article>
@@ -248,10 +248,10 @@ User-uploaded SVG (logos, diagrams, decorative icons) goes through
 
 ```svelte
 <script lang="ts">
-  import { sanitizeSVG } from '$lib/security/trusted-types';
+	import { sanitizeSVG } from '$lib/security/trusted-types';
 
-  let { source }: { source: string } = $props();
-  const svg = $derived(sanitizeSVG(source));
+	let { source }: { source: string } = $props();
+	const svg = $derived(sanitizeSVG(source));
 </script>
 
 <figure>{@html svg}</figure>
@@ -293,10 +293,10 @@ breaks HMR. Wire the policy only in prod builds:
 ```ts
 // src/lib/security/trusted-types.ts (extension)
 export function initTrustedTypes(): void {
-  if (typeof window === 'undefined') return;
-  if (import.meta.env.DEV) return;
-  if (!window.trustedTypes?.createPolicy) return;
-  // … create policies
+	if (typeof window === 'undefined') return;
+	if (import.meta.env.DEV) return;
+	if (!window.trustedTypes?.createPolicy) return;
+	// … create policies
 }
 ```
 
@@ -312,28 +312,28 @@ import type { RequestHandler } from './$types';
 import { z } from 'zod';
 
 const ReportSchema = z.object({
-  'csp-report': z.object({
-    'document-uri': z.string().url(),
-    'violated-directive': z.string(),
-    'blocked-uri': z.string().optional(),
-    'source-file': z.string().optional(),
-    'line-number': z.number().optional(),
-    'script-sample': z.string().optional(),
-  }),
+	'csp-report': z.object({
+		'document-uri': z.string().url(),
+		'violated-directive': z.string(),
+		'blocked-uri': z.string().optional(),
+		'source-file': z.string().optional(),
+		'line-number': z.number().optional(),
+		'script-sample': z.string().optional(),
+	}),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const body = await request.text();
-  const parsed = ReportSchema.safeParse(JSON.parse(body));
-  if (!parsed.success) return new Response(null, { status: 204 });
+	const body = await request.text();
+	const parsed = ReportSchema.safeParse(JSON.parse(body));
+	if (!parsed.success) return new Response(null, { status: 204 });
 
-  locals.log.warn('csp-violation', {
-    directive: parsed.data['csp-report']['violated-directive'],
-    blockedUri: parsed.data['csp-report']['blocked-uri'],
-    sourceFile: parsed.data['csp-report']['source-file'],
-    sample: parsed.data['csp-report']['script-sample']?.slice(0, 200),
-  });
-  return new Response(null, { status: 204 });
+	locals.log.warn('csp-violation', {
+		directive: parsed.data['csp-report']['violated-directive'],
+		blockedUri: parsed.data['csp-report']['blocked-uri'],
+		sourceFile: parsed.data['csp-report']['source-file'],
+		sample: parsed.data['csp-report']['script-sample']?.slice(0, 200),
+	});
+	return new Response(null, { status: 204 });
 };
 ```
 
@@ -352,24 +352,24 @@ import DOMPurify from 'dompurify';
 import { sanitizeHTML, initTrustedTypes } from '$lib/security/trusted-types';
 
 beforeAll(() => {
-  // jsdom has no trustedTypes; stub it for tests.
-  if (!(globalThis as any).trustedTypes) {
-    (globalThis as any).trustedTypes = {
-      createPolicy: (name: string, opts: any) => ({
-        name,
-        createHTML: (s: string) => opts.createHTML(s),
-        createScript: (s: string) => opts.createScript?.(s),
-        createScriptURL: (s: string) => opts.createScriptURL?.(s),
-      }),
-    };
-  }
-  initTrustedTypes();
+	// jsdom has no trustedTypes; stub it for tests.
+	if (!(globalThis as any).trustedTypes) {
+		(globalThis as any).trustedTypes = {
+			createPolicy: (name: string, opts: any) => ({
+				name,
+				createHTML: (s: string) => opts.createHTML(s),
+				createScript: (s: string) => opts.createScript?.(s),
+				createScriptURL: (s: string) => opts.createScriptURL?.(s),
+			}),
+		};
+	}
+	initTrustedTypes();
 });
 
 test('sanitizeHTML strips script tags', () => {
-  const dirty = '<p>hi</p><script>alert(1)</script>';
-  const clean = sanitizeHTML(dirty);
-  expect(String(clean)).not.toContain('<script>');
+	const dirty = '<p>hi</p><script>alert(1)</script>';
+	const clean = sanitizeHTML(dirty);
+	expect(String(clean)).not.toContain('<script>');
 });
 ```
 
@@ -377,20 +377,20 @@ E2E with Playwright + real Chromium:
 
 ```ts
 test('CSP blocks raw innerHTML', async ({ page }) => {
-  const violations: string[] = [];
-  page.on('console', (msg) => {
-    if (msg.text().includes('Trusted Types')) violations.push(msg.text());
-  });
-  await page.goto('/');
-  await page.evaluate(() => {
-    const el = document.createElement('div');
-    try {
-      el.innerHTML = '<p>raw</p>';
-    } catch (e) {
-      /* expected */
-    }
-  });
-  expect(violations.length).toBeGreaterThan(0);
+	const violations: string[] = [];
+	page.on('console', (msg) => {
+		if (msg.text().includes('Trusted Types')) violations.push(msg.text());
+	});
+	await page.goto('/');
+	await page.evaluate(() => {
+		const el = document.createElement('div');
+		try {
+			el.innerHTML = '<p>raw</p>';
+		} catch (e) {
+			/* expected */
+		}
+	});
+	expect(violations.length).toBeGreaterThan(0);
 });
 ```
 

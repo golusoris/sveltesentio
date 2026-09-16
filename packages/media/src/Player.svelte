@@ -57,9 +57,7 @@ thin, a11y-correct view.
 	// svelte-ignore state_referenced_locally
 	let muted = $state(autoplay);
 
-	const timeLabel = $derived(
-		`${formatMediaTime(currentTime)} / ${formatMediaTime(duration)}`,
-	);
+	const timeLabel = $derived(`${formatMediaTime(currentTime)} / ${formatMediaTime(duration)}`);
 
 	function dispatch(key: KeyboardEvent): void {
 		const el = media;

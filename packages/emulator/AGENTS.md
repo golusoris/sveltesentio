@@ -4,13 +4,13 @@
 
 ## Landed (v0.1.0)
 
-| Sub-export | Contents |
-|---|---|
-| `.` | Barrel re-export of everything below |
-| `./cores` | `resolveCore(slug)` / `knownCores()` / `normaliseSlug()` / `PLATFORM_CORES` — audited platform-slug → EmulatorJS core map (~25 platforms). PURE, unit-tested |
-| `./loader` | `buildEmulatorConfig(opts)` → the `EJS_*` globals (pure); `injectEmulatorScript(opts, {document, window})` → sets globals + injects `loader.js`, returns `cleanup()`. Injectable DOM so it is unit-testable in Node. `UnknownPlatformError` for bad slugs |
-| `./csp` | `emulatorCspDirectives(opts)` → the CSP additions EmulatorJS needs (WASM `'wasm-unsafe-eval'`, `blob:` script/worker/child, data-origin connect/img/media); `mergeCspDirectives(base, additions)` unions onto a strict base; `originOf(url)`. PURE, unit-tested |
-| `./Emulator.svelte` | Thin Svelte 5 component: `BROWSER`-guarded `injectEmulatorScript` into a mount `<div>`, `cleanup` on destroy. UNTESTED (per repo precedent — logic is in `./loader`) |
+| Sub-export          | Contents                                                                                                                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`                 | Barrel re-export of everything below                                                                                                                                                                                                                            |
+| `./cores`           | `resolveCore(slug)` / `knownCores()` / `normaliseSlug()` / `PLATFORM_CORES` — audited platform-slug → EmulatorJS core map (~25 platforms). PURE, unit-tested                                                                                                    |
+| `./loader`          | `buildEmulatorConfig(opts)` → the `EJS_*` globals (pure); `injectEmulatorScript(opts, {document, window})` → sets globals + injects `loader.js`, returns `cleanup()`. Injectable DOM so it is unit-testable in Node. `UnknownPlatformError` for bad slugs       |
+| `./csp`             | `emulatorCspDirectives(opts)` → the CSP additions EmulatorJS needs (WASM `'wasm-unsafe-eval'`, `blob:` script/worker/child, data-origin connect/img/media); `mergeCspDirectives(base, additions)` unions onto a strict base; `originOf(url)`. PURE, unit-tested |
+| `./Emulator.svelte` | Thin Svelte 5 component: `BROWSER`-guarded `injectEmulatorScript` into a mount `<div>`, `cleanup` on destroy. UNTESTED (per repo precedent — logic is in `./loader`)                                                                                            |
 
 Ships `src/runes-ambient.d.ts` so plain `tsc --noEmit` typechecks `.svelte`-adjacent code until the monorepo adopts `svelte-check` globally.
 
@@ -47,11 +47,11 @@ This package does **not**:
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/emulator typecheck` |
-| Lint | `pnpm --filter @sveltesentio/emulator lint` |
-| Unit tests | `pnpm --filter @sveltesentio/emulator test` |
+| Task       | Command                                          |
+| ---------- | ------------------------------------------------ |
+| Typecheck  | `pnpm --filter @sveltesentio/emulator typecheck` |
+| Lint       | `pnpm --filter @sveltesentio/emulator lint`      |
+| Unit tests | `pnpm --filter @sveltesentio/emulator test`      |
 
 ## Related
 

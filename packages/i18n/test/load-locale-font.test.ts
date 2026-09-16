@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-	loadLocaleFont,
-	type LocaleFontMap,
-} from '../src/load-locale-font.js';
+import { loadLocaleFont, type LocaleFontMap } from '../src/load-locale-font.js';
 
 afterEach(() => {
 	document.head.innerHTML = '';
@@ -106,9 +103,7 @@ describe('loadLocaleFont — cleanup', () => {
 			document,
 			marker: 'data-x-font',
 		});
-		expect(
-			document.head.querySelectorAll('link[data-x-font]'),
-		).toHaveLength(2);
+		expect(document.head.querySelectorAll('link[data-x-font]')).toHaveLength(2);
 		expect(injectedLinks()).toHaveLength(0);
 		cleanup();
 		expect(document.head.querySelectorAll('link[data-x-font]')).toHaveLength(0);

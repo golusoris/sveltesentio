@@ -11,11 +11,7 @@ fades out. Above-the-fold heroes pass `priority="high"` for eager
 The tested logic lives in `./image` + `./lqip`; this file is a thin view.
 -->
 <script lang="ts">
-	import {
-		buildResponsiveImage,
-		type SizesRule,
-		type SrcWidthTemplate,
-	} from './image.js';
+	import { buildResponsiveImage, type SizesRule, type SrcWidthTemplate } from './image.js';
 	import {
 		buildPlaceholderStyle,
 		resolveAspectRatio,
@@ -73,10 +69,7 @@ The tested logic lives in `./image` + `./lqip`; this file is a thin view.
 	let loaded = $state(false);
 </script>
 
-<div
-	class={['ssentio-image', className]}
-	style:aspect-ratio={ratio}
->
+<div class={['ssentio-image', className]} style:aspect-ratio={ratio}>
 	{#if placeholderStyle && !loaded}
 		<span class="ssentio-image__lqip" style={placeholderStyle} aria-hidden="true"></span>
 	{/if}

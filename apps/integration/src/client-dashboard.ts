@@ -28,8 +28,7 @@ export function renameItem(id: string, rename: (title: string) => Promise<Item>)
 	return useOptimistic<Item, string, Item>({
 		queryKey: ['items', id],
 		mutationFn: (title) => rename(title),
-		optimisticUpdate: (previous, title) =>
-			previous ? { ...previous, title } : { id, title },
+		optimisticUpdate: (previous, title) => (previous ? { ...previous, title } : { id, title }),
 	});
 }
 

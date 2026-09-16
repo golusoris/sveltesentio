@@ -83,6 +83,7 @@ jobs:
       - run: pnpm check:exports
       - run: pnpm check:cycles
       - run: pnpm lint:scripts
+      - run: pnpm format:check
 
   typecheck:
     name: Type check

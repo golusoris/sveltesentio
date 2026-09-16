@@ -30,15 +30,18 @@ Both decisions were effectively made in practice before being recorded. By 2026-
 ## Consequences
 
 **Positive**:
+
 - Aligns framework home with backend (`golusoris/golusoris`) + downstream apps (`golusoris/app-*`) under one org — single CODEOWNERS, single branch-protection policy, single secret-scanning org.
 - `@sveltesentio/*` scope is short, memorable, and scannable by supply-chain tooling (e.g. GitHub secret scanning partner program, npm provenance attestation).
 - No repo transfer required — state already matches this decision.
 
 **Negative / trade-offs**:
+
 - Contributors submitting PRs need `golusoris/` org membership or fork-and-PR flow. This is standard open-source behaviour; not a regression.
 - npm-scope registration requires a dedicated `@sveltesentio` npm org with its own 2FA policy — one-time setup, covered by [issue #31](https://github.com/golusoris/sveltesentio/issues/31).
 
 **Documentation obligations**:
+
 - `.workingdir/PLAN.md` §1 Mission + §7 Org/repo settings updated (done 2026-04-18).
 - `.workingdir/STATE.md` packages table + Repo line updated (done 2026-04-18).
 - `.workingdir/research/decisions-still-open.md` — D1 + D2 marked closed by this ADR (done via this amendment).

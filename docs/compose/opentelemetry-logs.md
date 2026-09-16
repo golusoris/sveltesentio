@@ -77,23 +77,23 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { env } from '$env/dynamic/private';
 
 const provider = new LoggerProvider({
-  resource: resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? 'sveltesentio-app',
-    [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? '0.0.0',
-    'deployment.environment': env.DEPLOYMENT_ENV ?? 'development',
-  }),
-  processors: [
-    new BatchLogRecordProcessor(
-      new OTLPLogExporter({
-        url: env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ?? 'http://localhost:4318/v1/logs',
-      }),
-      {
-        maxQueueSize: 2048,
-        maxExportBatchSize: 512,
-        scheduledDelayMillis: 5000,
-      },
-    ),
-  ],
+	resource: resourceFromAttributes({
+		[ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? 'sveltesentio-app',
+		[ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? '0.0.0',
+		'deployment.environment': env.DEPLOYMENT_ENV ?? 'development',
+	}),
+	processors: [
+		new BatchLogRecordProcessor(
+			new OTLPLogExporter({
+				url: env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ?? 'http://localhost:4318/v1/logs',
+			}),
+			{
+				maxQueueSize: 2048,
+				maxExportBatchSize: 512,
+				scheduledDelayMillis: 5000,
+			},
+		),
+	],
 });
 
 logs.setGlobalLoggerProvider(provider);
@@ -122,21 +122,21 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 import { trace } from '@opentelemetry/api';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const correlationId = locals.correlationId;
-  const tier = locals.session?.tier ?? 'anonymous';
+	const correlationId = locals.correlationId;
+	const tier = locals.session?.tier ?? 'anonymous';
 
-  logger.emit({
-    severityNumber: SeverityNumber.INFO,
-    severityText: 'INFO',
-    body: 'order placed',
-    attributes: {
-      'correlation.id': correlationId,
-      'order.tier': tier,
-      'order.payment_method': order.paymentMethod,
-    },
-  });
+	logger.emit({
+		severityNumber: SeverityNumber.INFO,
+		severityText: 'INFO',
+		body: 'order placed',
+		attributes: {
+			'correlation.id': correlationId,
+			'order.tier': tier,
+			'order.payment_method': order.paymentMethod,
+		},
+	});
 
-  return json({ ok: true });
+	return json({ ok: true });
 };
 ```
 
@@ -183,14 +183,14 @@ import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
 
 registerInstrumentations({
-  instrumentations: [
-    new PinoInstrumentation({
-      logHook: (_span, record) => {
-        record['service.name'] = 'sveltesentio-app';
-      },
-      disableLogSending: false,
-    }),
-  ],
+	instrumentations: [
+		new PinoInstrumentation({
+			logHook: (_span, record) => {
+				record['service.name'] = 'sveltesentio-app';
+			},
+			disableLogSending: false,
+		}),
+	],
 });
 ```
 
@@ -213,21 +213,21 @@ import { ProblemError } from '$lib/errors/problem';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 export function logProblem(err: ProblemError, correlationId: string): void {
-  const span = trace.getActiveSpan();
-  span?.setStatus({ code: SpanStatusCode.ERROR, message: err.title });
-  span?.recordException(err);
+	const span = trace.getActiveSpan();
+	span?.setStatus({ code: SpanStatusCode.ERROR, message: err.title });
+	span?.recordException(err);
 
-  logger.emit({
-    severityNumber: SeverityNumber.ERROR,
-    severityText: 'ERROR',
-    body: err.title,
-    attributes: {
-      'correlation.id': correlationId,
-      'problem.type': err.type,
-      'problem.status': err.status,
-      'http.route': span?.spanContext().traceId ? undefined : 'unknown',
-    },
-  });
+	logger.emit({
+		severityNumber: SeverityNumber.ERROR,
+		severityText: 'ERROR',
+		body: err.title,
+		attributes: {
+			'correlation.id': correlationId,
+			'problem.type': err.type,
+			'problem.status': err.status,
+			'http.route': span?.spanContext().traceId ? undefined : 'unknown',
+		},
+	});
 }
 ```
 
@@ -245,40 +245,40 @@ import { logger } from '$lib/observability/logs';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 const Report = z.object({
-  age: z.number().optional(),
-  type: z.string(),
-  url: z.string(),
-  body: z.object({
-    documentURL: z.string().optional(),
-    referrer: z.string().optional(),
-    blockedURL: z.string().optional(),
-    effectiveDirective: z.string().optional(),
-    originalPolicy: z.string().optional(),
-    sourceFile: z.string().optional(),
-    sample: z.string().optional(),
-    disposition: z.enum(['report', 'enforce']).optional(),
-    statusCode: z.number().optional(),
-  }),
+	age: z.number().optional(),
+	type: z.string(),
+	url: z.string(),
+	body: z.object({
+		documentURL: z.string().optional(),
+		referrer: z.string().optional(),
+		blockedURL: z.string().optional(),
+		effectiveDirective: z.string().optional(),
+		originalPolicy: z.string().optional(),
+		sourceFile: z.string().optional(),
+		sample: z.string().optional(),
+		disposition: z.enum(['report', 'enforce']).optional(),
+		statusCode: z.number().optional(),
+	}),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const reports = z.array(Report).safeParse(await request.json());
-  if (!reports.success) return json({ ignored: true });
+	const reports = z.array(Report).safeParse(await request.json());
+	if (!reports.success) return json({ ignored: true });
 
-  for (const r of reports.data) {
-    logger.emit({
-      severityNumber: SeverityNumber.WARN,
-      severityText: 'WARN',
-      body: 'csp violation',
-      attributes: {
-        'correlation.id': locals.correlationId,
-        'csp.directive': r.body.effectiveDirective ?? 'unknown',
-        'csp.disposition': r.body.disposition ?? 'enforce',
-        'csp.blocked_url_host': hostnameOnly(r.body.blockedURL),
-      },
-    });
-  }
-  return json({ ok: true });
+	for (const r of reports.data) {
+		logger.emit({
+			severityNumber: SeverityNumber.WARN,
+			severityText: 'WARN',
+			body: 'csp violation',
+			attributes: {
+				'correlation.id': locals.correlationId,
+				'csp.directive': r.body.effectiveDirective ?? 'unknown',
+				'csp.disposition': r.body.disposition ?? 'enforce',
+				'csp.blocked_url_host': hostnameOnly(r.body.blockedURL),
+			},
+		});
+	}
+	return json({ ok: true });
 };
 ```
 
@@ -306,30 +306,34 @@ control is via:
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
-import { LoggerProvider, InMemoryLogRecordExporter, SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import {
+	LoggerProvider,
+	InMemoryLogRecordExporter,
+	SimpleLogRecordProcessor,
+} from '@opentelemetry/sdk-logs';
 
 let exporter: InMemoryLogRecordExporter;
 
 beforeEach(() => {
-  exporter = new InMemoryLogRecordExporter();
-  const provider = new LoggerProvider({
-    processors: [new SimpleLogRecordProcessor(exporter)],
-  });
-  logs.setGlobalLoggerProvider(provider);
+	exporter = new InMemoryLogRecordExporter();
+	const provider = new LoggerProvider({
+		processors: [new SimpleLogRecordProcessor(exporter)],
+	});
+	logs.setGlobalLoggerProvider(provider);
 });
 
 describe('order log emission', () => {
-  it('emits INFO with bounded attributes', async () => {
-    await placeOrder({ tier: 'pro', paymentMethod: 'card' });
-    const records = exporter.getFinishedLogRecords();
-    expect(records).toHaveLength(1);
-    expect(records[0].severityNumber).toBe(SeverityNumber.INFO);
-    expect(records[0].attributes).toMatchObject({
-      'order.tier': 'pro',
-      'order.payment_method': 'card',
-    });
-    expect(records[0].attributes).not.toHaveProperty('user.email');
-  });
+	it('emits INFO with bounded attributes', async () => {
+		await placeOrder({ tier: 'pro', paymentMethod: 'card' });
+		const records = exporter.getFinishedLogRecords();
+		expect(records).toHaveLength(1);
+		expect(records[0].severityNumber).toBe(SeverityNumber.INFO);
+		expect(records[0].attributes).toMatchObject({
+			'order.tier': 'pro',
+			'order.payment_method': 'card',
+		});
+		expect(records[0].attributes).not.toHaveProperty('user.email');
+	});
 });
 ```
 
@@ -345,9 +349,9 @@ log({ level: 'info', message: 'order placed', traceId, spanId, correlationId, ti
 
 // after — native Logs API
 logger.emit({
-  severityNumber: SeverityNumber.INFO,
-  body: 'order placed',
-  attributes: { 'correlation.id': correlationId, 'order.tier': tier },
+	severityNumber: SeverityNumber.INFO,
+	body: 'order placed',
+	attributes: { 'correlation.id': correlationId, 'order.tier': tier },
 });
 ```
 

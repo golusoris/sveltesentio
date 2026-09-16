@@ -72,10 +72,10 @@ export function createElkLayout(
 		...layoutOptions,
 	};
 
-	return async function layout<
-		N extends SizedNode,
-		E extends DagEdgeLike,
-	>(nodes: readonly N[], edges: readonly E[]): Promise<ElkLayoutResult<E>> {
+	return async function layout<N extends SizedNode, E extends DagEdgeLike>(
+		nodes: readonly N[],
+		edges: readonly E[],
+	): Promise<ElkLayoutResult<E>> {
 		const elk = await factory();
 		const graph: ElkNode = {
 			id: 'root',

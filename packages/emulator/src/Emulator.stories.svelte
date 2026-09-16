@@ -30,10 +30,16 @@
 </script>
 
 <!-- Default SNES shell: the labelled `role="application"` mount region. -->
-<Story name="Default" args={{ core: 'snes', gameUrl: '/roms/sample.sfc', gameName: 'Sample Cartridge' }} />
+<Story
+	name="Default"
+	args={{ core: 'snes', gameUrl: '/roms/sample.sfc', gameName: 'Sample Cartridge' }}
+/>
 
 <!-- A different platform slug resolves to a different EmulatorJS core. -->
-<Story name="PlayStation" args={{ core: 'playstation', gameUrl: '/roms/sample.bin', gameName: 'PS1 Demo' }} />
+<Story
+	name="PlayStation"
+	args={{ core: 'playstation', gameUrl: '/roms/sample.bin', gameName: 'PS1 Demo' }}
+/>
 
 <!-- Self-hosted data directory + UI accent colour passed through to EmulatorJS. -->
 <Story

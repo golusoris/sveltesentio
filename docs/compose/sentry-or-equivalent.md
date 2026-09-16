@@ -64,13 +64,13 @@ enough. Most production apps need at least the first three.
 
 ## Buy vs. self-host matrix
 
-| Option | Hosting | Pricing model | Session replay | OTel ingest | Sourcemap UX | EU residency | Best for |
-|---|---|---|---|---|---|---|---|
-| **Sentry SaaS** | sentry.io | Per-event tiers + replay seats | ✅ industry-leading | ✅ (OTLP HTTP) | ✅ CLI + Vite plugin | EU region available | Default for non-compliance-blocked teams; deepest SDK + integration ecosystem |
-| **Sentry self-host** | Docker compose, k8s | OSS license (BSL post v25) | ✅ | ✅ | ✅ | ✅ wherever you host | Compliance-blocked teams that want the full Sentry feature set; ops-heavy |
-| **GlitchTip** | Docker / `pip install` | OSS (MIT) — free self-host | ❌ no replay | ⚠️ partial | ✅ Sentry-CLI compatible | ✅ wherever you host | Solo / OSS / cost-sensitive; uses Sentry SDK clients (drop-in) |
-| **Highlight (self-host)** | Docker compose, k8s | OSS (Apache 2.0) | ✅ | ✅ first-class OTel | ✅ | ✅ | Teams that want session replay + OTel without Sentry licensing |
-| **Bugsnag / Rollbar / Raygun** | SaaS | Per-event | varies | varies | ✅ | varies | Niche stacks; default to Sentry/Highlight unless org-wide commitment |
+| Option                         | Hosting                | Pricing model                  | Session replay      | OTel ingest         | Sourcemap UX             | EU residency         | Best for                                                                      |
+| ------------------------------ | ---------------------- | ------------------------------ | ------------------- | ------------------- | ------------------------ | -------------------- | ----------------------------------------------------------------------------- |
+| **Sentry SaaS**                | sentry.io              | Per-event tiers + replay seats | ✅ industry-leading | ✅ (OTLP HTTP)      | ✅ CLI + Vite plugin     | EU region available  | Default for non-compliance-blocked teams; deepest SDK + integration ecosystem |
+| **Sentry self-host**           | Docker compose, k8s    | OSS license (BSL post v25)     | ✅                  | ✅                  | ✅                       | ✅ wherever you host | Compliance-blocked teams that want the full Sentry feature set; ops-heavy     |
+| **GlitchTip**                  | Docker / `pip install` | OSS (MIT) — free self-host     | ❌ no replay        | ⚠️ partial          | ✅ Sentry-CLI compatible | ✅ wherever you host | Solo / OSS / cost-sensitive; uses Sentry SDK clients (drop-in)                |
+| **Highlight (self-host)**      | Docker compose, k8s    | OSS (Apache 2.0)               | ✅                  | ✅ first-class OTel | ✅                       | ✅                   | Teams that want session replay + OTel without Sentry licensing                |
+| **Bugsnag / Rollbar / Raygun** | SaaS                   | Per-event                      | varies              | varies              | ✅                       | varies               | Niche stacks; default to Sentry/Highlight unless org-wide commitment          |
 
 Three rules from the matrix:
 
@@ -104,20 +104,17 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { env } from '$env/dynamic/private';
 
 Sentry.init({
-  dsn: env.SENTRY_DSN,
-  environment: env.DEPLOYMENT_ENV,
-  release: env.SENTRY_RELEASE,
-  tracesSampleRate: 0,
-  profilesSampleRate: 0,
-  beforeSend(event, hint) {
-    return scrubPii(event);
-  },
+	dsn: env.SENTRY_DSN,
+	environment: env.DEPLOYMENT_ENV,
+	release: env.SENTRY_RELEASE,
+	tracesSampleRate: 0,
+	profilesSampleRate: 0,
+	beforeSend(event, hint) {
+		return scrubPii(event);
+	},
 });
 
-export const handle = sequence(
-  Sentry.sentryHandle(),
-  yourOtherHandle,
-);
+export const handle = sequence(Sentry.sentryHandle(), yourOtherHandle);
 
 export const handleError = Sentry.handleErrorWithSentry();
 ```
@@ -147,22 +144,22 @@ import * as Sentry from '@sentry/sveltekit';
 import { env as publicEnv } from '$env/dynamic/public';
 
 Sentry.init({
-  dsn: publicEnv.PUBLIC_SENTRY_DSN,
-  environment: publicEnv.PUBLIC_DEPLOYMENT_ENV,
-  release: publicEnv.PUBLIC_SENTRY_RELEASE,
-  tracesSampleRate: 0,
-  replaysSessionSampleRate: 0,
-  replaysOnErrorSampleRate: 0.1,
-  integrations: [
-    Sentry.replayIntegration({
-      maskAllText: true,
-      blockAllMedia: true,
-      networkDetailAllowUrls: [],
-    }),
-  ],
-  beforeSend(event) {
-    return clientScrubPii(event);
-  },
+	dsn: publicEnv.PUBLIC_SENTRY_DSN,
+	environment: publicEnv.PUBLIC_DEPLOYMENT_ENV,
+	release: publicEnv.PUBLIC_SENTRY_RELEASE,
+	tracesSampleRate: 0,
+	replaysSessionSampleRate: 0,
+	replaysOnErrorSampleRate: 0.1,
+	integrations: [
+		Sentry.replayIntegration({
+			maskAllText: true,
+			blockAllMedia: true,
+			networkDetailAllowUrls: [],
+		}),
+	],
+	beforeSend(event) {
+		return clientScrubPii(event);
+	},
 });
 
 export const handleError = Sentry.handleErrorWithSentry();
@@ -194,18 +191,18 @@ Five client invariants:
 import { sentrySvelteKit } from '@sentry/sveltekit/vite';
 
 export default defineConfig({
-  plugins: [
-    sentrySvelteKit({
-      sourceMapsUploadOptions: {
-        org: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT,
-        authToken: process.env.SENTRY_AUTH_TOKEN,
-        telemetry: false,
-      },
-      autoInstrument: false,
-    }),
-    sveltekit(),
-  ],
+	plugins: [
+		sentrySvelteKit({
+			sourceMapsUploadOptions: {
+				org: process.env.SENTRY_ORG,
+				project: process.env.SENTRY_PROJECT,
+				authToken: process.env.SENTRY_AUTH_TOKEN,
+				telemetry: false,
+			},
+			autoInstrument: false,
+		}),
+		sveltekit(),
+	],
 });
 ```
 
@@ -227,23 +224,23 @@ import * as Sentry from '@sentry/sveltekit';
 import type { ProblemError } from '$lib/errors/problem';
 
 export function captureProblem(err: ProblemError, correlationId: string): void {
-  Sentry.captureException(err, {
-    tags: {
-      'problem.type': err.type,
-      'problem.status': String(err.status),
-    },
-    contexts: {
-      problem: {
-        type: err.type,
-        title: err.title,
-        status: err.status,
-      },
-    },
-    extra: {
-      correlationId,
-    },
-    fingerprint: ['{{ default }}', err.type],
-  });
+	Sentry.captureException(err, {
+		tags: {
+			'problem.type': err.type,
+			'problem.status': String(err.status),
+		},
+		contexts: {
+			problem: {
+				type: err.type,
+				title: err.title,
+				status: err.status,
+			},
+		},
+		extra: {
+			correlationId,
+		},
+		fingerprint: ['{{ default }}', err.type],
+	});
 }
 ```
 
@@ -272,9 +269,9 @@ const span = trace.getActiveSpan();
 const ctx = span?.spanContext();
 
 Sentry.setContext('otel', {
-  trace_id: ctx?.traceId,
-  span_id: ctx?.spanId,
-  correlation_id: locals.correlationId,
+	trace_id: ctx?.traceId,
+	span_id: ctx?.spanId,
+	correlation_id: locals.correlationId,
 });
 ```
 

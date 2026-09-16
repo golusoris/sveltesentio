@@ -33,36 +33,38 @@ import type { Node, Edge, XYPosition } from '@xyflow/svelte';
 type HandleId = 'top' | 'right' | 'bottom' | 'left';
 
 const HANDLE_POSITIONS: Record<HandleId, (n: Node) => XYPosition> = {
-  top:    (n) => ({ x: n.position.x + (n.width ?? 0) / 2, y: n.position.y }),
-  right:  (n) => ({ x: n.position.x + (n.width ?? 0),     y: n.position.y + (n.height ?? 0) / 2 }),
-  bottom: (n) => ({ x: n.position.x + (n.width ?? 0) / 2, y: n.position.y + (n.height ?? 0) }),
-  left:   (n) => ({ x: n.position.x,                      y: n.position.y + (n.height ?? 0) / 2 }),
+	top: (n) => ({ x: n.position.x + (n.width ?? 0) / 2, y: n.position.y }),
+	right: (n) => ({ x: n.position.x + (n.width ?? 0), y: n.position.y + (n.height ?? 0) / 2 }),
+	bottom: (n) => ({ x: n.position.x + (n.width ?? 0) / 2, y: n.position.y + (n.height ?? 0) }),
+	left: (n) => ({ x: n.position.x, y: n.position.y + (n.height ?? 0) / 2 }),
 };
 
 function dist(a: XYPosition, b: XYPosition) {
-  const dx = a.x - b.x, dy = a.y - b.y;
-  return dx * dx + dy * dy;
+	const dx = a.x - b.x,
+		dy = a.y - b.y;
+	return dx * dx + dy * dy;
 }
 
-export function routeSmartEdge(
-  edge: Edge,
-  nodes: Node[],
-): Edge {
-  const source = nodes.find((n) => n.id === edge.source);
-  const target = nodes.find((n) => n.id === edge.target);
-  if (!source || !target) return edge;
+export function routeSmartEdge(edge: Edge, nodes: Node[]): Edge {
+	const source = nodes.find((n) => n.id === edge.source);
+	const target = nodes.find((n) => n.id === edge.target);
+	if (!source || !target) return edge;
 
-  const handles: HandleId[] = ['top', 'right', 'bottom', 'left'];
-  let best = { src: edge.sourceHandle as HandleId, tgt: edge.targetHandle as HandleId, d: Infinity };
+	const handles: HandleId[] = ['top', 'right', 'bottom', 'left'];
+	let best = {
+		src: edge.sourceHandle as HandleId,
+		tgt: edge.targetHandle as HandleId,
+		d: Infinity,
+	};
 
-  for (const src of handles) {
-    for (const tgt of handles) {
-      const d = dist(HANDLE_POSITIONS[src](source), HANDLE_POSITIONS[tgt](target));
-      if (d < best.d) best = { src, tgt, d };
-    }
-  }
+	for (const src of handles) {
+		for (const tgt of handles) {
+			const d = dist(HANDLE_POSITIONS[src](source), HANDLE_POSITIONS[tgt](target));
+			if (d < best.d) best = { src, tgt, d };
+		}
+	}
 
-  return { ...edge, sourceHandle: best.src, targetHandle: best.tgt };
+	return { ...edge, sourceHandle: best.src, targetHandle: best.tgt };
 }
 ```
 
@@ -99,41 +101,42 @@ import type { Node, XYPosition } from '@xyflow/svelte';
 export type Size = { width: number; height: number };
 
 function intersects(a: Node, b: { position: XYPosition } & Size) {
-  const aw = a.width ?? 0, ah = a.height ?? 0;
-  return (
-    a.position.x < b.position.x + b.width &&
-    a.position.x + aw > b.position.x &&
-    a.position.y < b.position.y + b.height &&
-    a.position.y + ah > b.position.y
-  );
+	const aw = a.width ?? 0,
+		ah = a.height ?? 0;
+	return (
+		a.position.x < b.position.x + b.width &&
+		a.position.x + aw > b.position.x &&
+		a.position.y < b.position.y + b.height &&
+		a.position.y + ah > b.position.y
+	);
 }
 
 export function resolveDrop(
-  candidate: XYPosition,
-  size: Size,
-  nodes: Node[],
-  grid = 16,
+	candidate: XYPosition,
+	size: Size,
+	nodes: Node[],
+	grid = 16,
 ): XYPosition {
-  const snapped = {
-    x: Math.round(candidate.x / grid) * grid,
-    y: Math.round(candidate.y / grid) * grid,
-  };
+	const snapped = {
+		x: Math.round(candidate.x / grid) * grid,
+		y: Math.round(candidate.y / grid) * grid,
+	};
 
-  const conflicts = nodes.filter((n) => intersects(n, { position: snapped, ...size }));
-  if (conflicts.length === 0) return snapped;
+	const conflicts = nodes.filter((n) => intersects(n, { position: snapped, ...size }));
+	if (conflicts.length === 0) return snapped;
 
-  // Spiral out in grid steps until free.
-  for (let r = 1; r < 20; r++) {
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
-        const trial = { x: snapped.x + dx * grid, y: snapped.y + dy * grid };
-        const hit = nodes.some((n) => intersects(n, { position: trial, ...size }));
-        if (!hit) return trial;
-      }
-    }
-  }
-  return snapped; // give up — user can drag to reposition
+	// Spiral out in grid steps until free.
+	for (let r = 1; r < 20; r++) {
+		for (let dy = -r; dy <= r; dy++) {
+			for (let dx = -r; dx <= r; dx++) {
+				if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+				const trial = { x: snapped.x + dx * grid, y: snapped.y + dy * grid };
+				const hit = nodes.some((n) => intersects(n, { position: trial, ...size }));
+				if (!hit) return trial;
+			}
+		}
+	}
+	return snapped; // give up — user can drag to reposition
 }
 ```
 
@@ -141,22 +144,22 @@ Integration:
 
 ```svelte
 <script lang="ts">
-  import { resolveDrop } from '$lib/flow/aabb-drop';
-  import { useSvelteFlow } from '@xyflow/svelte';
+	import { resolveDrop } from '$lib/flow/aabb-drop';
+	import { useSvelteFlow } from '@xyflow/svelte';
 
-  const { screenToFlowPosition } = useSvelteFlow();
+	const { screenToFlowPosition } = useSvelteFlow();
 
-  function ondrop(e: DragEvent) {
-    e.preventDefault();
-    const spec = JSON.parse(e.dataTransfer!.getData('application/flow-node'));
-    const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    const position = resolveDrop(raw, { width: 160, height: 80 }, nodes);
-    nodes.push({ id: crypto.randomUUID(), type: spec.type, position, data: spec.data });
-  }
+	function ondrop(e: DragEvent) {
+		e.preventDefault();
+		const spec = JSON.parse(e.dataTransfer!.getData('application/flow-node'));
+		const raw = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+		const position = resolveDrop(raw, { width: 160, height: 80 }, nodes);
+		nodes.push({ id: crypto.randomUUID(), type: spec.type, position, data: spec.data });
+	}
 </script>
 
 <div role="region" aria-label="Flow canvas" ondragover={(e) => e.preventDefault()} {ondrop}>
-  <SvelteFlow bind:nodes …/>
+	<SvelteFlow bind:nodes … />
 </div>
 ```
 
@@ -168,7 +171,7 @@ Announce nudges to SR users:
 
 ```ts
 if (trial.x !== snapped.x || trial.y !== snapped.y) {
-  announce('Node placed near drop target to avoid overlap.');
+	announce('Node placed near drop target to avoid overlap.');
 }
 ```
 
@@ -188,30 +191,34 @@ import type { Node, Edge } from '@xyflow/svelte';
 type Snapshot = { nodes: Node[]; edges: Edge[]; label: string; ts: number };
 
 export function createHistory(limit = 50) {
-  const past = $state<Snapshot[]>([]);
-  const future = $state<Snapshot[]>([]);
+	const past = $state<Snapshot[]>([]);
+	const future = $state<Snapshot[]>([]);
 
-  return {
-    get canUndo() { return past.length > 0; },
-    get canRedo() { return future.length > 0; },
-    push(snap: Omit<Snapshot, 'ts'>) {
-      past.push({ ...snap, ts: Date.now() });
-      if (past.length > limit) past.shift();
-      future.length = 0;
-    },
-    undo(current: Snapshot): Snapshot | null {
-      const prev = past.pop();
-      if (!prev) return null;
-      future.push(current);
-      return prev;
-    },
-    redo(current: Snapshot): Snapshot | null {
-      const next = future.pop();
-      if (!next) return null;
-      past.push(current);
-      return next;
-    },
-  };
+	return {
+		get canUndo() {
+			return past.length > 0;
+		},
+		get canRedo() {
+			return future.length > 0;
+		},
+		push(snap: Omit<Snapshot, 'ts'>) {
+			past.push({ ...snap, ts: Date.now() });
+			if (past.length > limit) past.shift();
+			future.length = 0;
+		},
+		undo(current: Snapshot): Snapshot | null {
+			const prev = past.pop();
+			if (!prev) return null;
+			future.push(current);
+			return prev;
+		},
+		redo(current: Snapshot): Snapshot | null {
+			const next = future.pop();
+			if (!next) return null;
+			past.push(current);
+			return next;
+		},
+	};
 }
 ```
 
@@ -220,25 +227,33 @@ Wire keyboard shortcuts via tinykeys (see
 
 ```svelte
 <script lang="ts">
-  import tinykeys from 'tinykeys';
-  import { createHistory } from '$lib/flow/history';
+	import tinykeys from 'tinykeys';
+	import { createHistory } from '$lib/flow/history';
 
-  const history = createHistory();
+	const history = createHistory();
 
-  function snap(label: string) {
-    history.push({ nodes: structuredClone(nodes), edges: structuredClone(edges), label });
-  }
+	function snap(label: string) {
+		history.push({ nodes: structuredClone(nodes), edges: structuredClone(edges), label });
+	}
 
-  onMount(() => tinykeys(window, {
-    '$mod+z': () => {
-      const prev = history.undo({ nodes, edges, label: 'current', ts: Date.now() });
-      if (prev) { nodes = prev.nodes; edges = prev.edges; }
-    },
-    '$mod+Shift+z': () => {
-      const next = history.redo({ nodes, edges, label: 'current', ts: Date.now() });
-      if (next) { nodes = next.nodes; edges = next.edges; }
-    },
-  }));
+	onMount(() =>
+		tinykeys(window, {
+			'$mod+z': () => {
+				const prev = history.undo({ nodes, edges, label: 'current', ts: Date.now() });
+				if (prev) {
+					nodes = prev.nodes;
+					edges = prev.edges;
+				}
+			},
+			'$mod+Shift+z': () => {
+				const next = history.redo({ nodes, edges, label: 'current', ts: Date.now() });
+				if (next) {
+					nodes = next.nodes;
+					edges = next.edges;
+				}
+			},
+		}),
+	);
 </script>
 ```
 
@@ -258,14 +273,14 @@ the behavior or gate undo to solo sessions.
 Pure drag-based flow editing fails WCAG 2.1.1. Wire keyboard
 equivalents:
 
-| Intent | Shortcut | Notes |
-|---|---|---|
-| Select node | `Tab` | Rely on xyflow's `tabIndex` default |
-| Move selected | `Arrow` (+`Shift` fast) | Your handler |
-| Delete selected | `Delete` / `Backspace` | xyflow default |
-| Connect | Enter-menu "Connect to…" | List reachable nodes |
-| Undo / redo | `$mod+z` / `$mod+Shift+z` | history above |
-| Palette search | `/` | Filter palette focus |
+| Intent          | Shortcut                  | Notes                               |
+| --------------- | ------------------------- | ----------------------------------- |
+| Select node     | `Tab`                     | Rely on xyflow's `tabIndex` default |
+| Move selected   | `Arrow` (+`Shift` fast)   | Your handler                        |
+| Delete selected | `Delete` / `Backspace`    | xyflow default                      |
+| Connect         | Enter-menu "Connect to…"  | List reachable nodes                |
+| Undo / redo     | `$mod+z` / `$mod+Shift+z` | history above                       |
+| Palette search  | `/`                       | Filter palette focus                |
 
 The Connect-via-menu pattern is the hardest — surface it as a
 context-menu item triggered by `Enter` on a focused node. See
@@ -277,18 +292,27 @@ primitive.
 ```ts
 // smart-handles.test.ts
 test('route picks closest pair', () => {
-  const a: Node = { id: 'a', position: { x: 0, y: 0 }, width: 100, height: 50 } as Node;
-  const b: Node = { id: 'b', position: { x: 300, y: 0 }, width: 100, height: 50 } as Node;
-  const edge = { id: 'e', source: 'a', target: 'b', sourceHandle: 'top', targetHandle: 'bottom' } as Edge;
-  expect(routeSmartEdge(edge, [a, b])).toMatchObject({ sourceHandle: 'right', targetHandle: 'left' });
+	const a: Node = { id: 'a', position: { x: 0, y: 0 }, width: 100, height: 50 } as Node;
+	const b: Node = { id: 'b', position: { x: 300, y: 0 }, width: 100, height: 50 } as Node;
+	const edge = {
+		id: 'e',
+		source: 'a',
+		target: 'b',
+		sourceHandle: 'top',
+		targetHandle: 'bottom',
+	} as Edge;
+	expect(routeSmartEdge(edge, [a, b])).toMatchObject({
+		sourceHandle: 'right',
+		targetHandle: 'left',
+	});
 });
 
 // aabb-drop.test.ts
 test('resolves overlap to nearest free cell', () => {
-  const blocker: Node = { id: 'x', position: { x: 0, y: 0 }, width: 100, height: 50 } as Node;
-  const pos = resolveDrop({ x: 16, y: 16 }, { width: 100, height: 50 }, [blocker]);
-  expect(pos).not.toEqual({ x: 16, y: 16 });
-  expect(Math.abs(pos.x - 16) % 16).toBe(0);
+	const blocker: Node = { id: 'x', position: { x: 0, y: 0 }, width: 100, height: 50 } as Node;
+	const pos = resolveDrop({ x: 16, y: 16 }, { width: 100, height: 50 }, [blocker]);
+	expect(pos).not.toEqual({ x: 16, y: 16 });
+	expect(Math.abs(pos.x - 16) % 16).toBe(0);
 });
 ```
 
@@ -296,10 +320,10 @@ Playwright keyboard navigation:
 
 ```ts
 test('keyboard delete removes selected node', async ({ page }) => {
-  await page.goto('/flows/demo');
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Delete');
-  await expect(page.locator('.svelte-flow__node')).toHaveCount(0);
+	await page.goto('/flows/demo');
+	await page.keyboard.press('Tab');
+	await page.keyboard.press('Delete');
+	await expect(page.locator('.svelte-flow__node')).toHaveCount(0);
 });
 ```
 

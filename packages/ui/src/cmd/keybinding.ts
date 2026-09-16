@@ -27,7 +27,10 @@ export interface KeyBinding {
 	readonly key: string;
 }
 
-const MODIFIER_ALIASES: Record<string, keyof Pick<KeyBinding, 'ctrl' | 'meta' | 'alt' | 'shift' | 'mod'>> = {
+const MODIFIER_ALIASES: Record<
+	string,
+	keyof Pick<KeyBinding, 'ctrl' | 'meta' | 'alt' | 'shift' | 'mod'>
+> = {
 	$mod: 'mod',
 	mod: 'mod',
 	control: 'ctrl',
@@ -106,11 +109,7 @@ export function matchesBinding(
 }
 
 /** Parse `"$mod+K"` and test an event in one call. */
-export function matchesShortcut(
-	event: KeyEventLike,
-	combo: string,
-	apple?: boolean,
-): boolean {
+export function matchesShortcut(event: KeyEventLike, combo: string, apple?: boolean): boolean {
 	return matchesBinding(event, parseBinding(combo), apple);
 }
 

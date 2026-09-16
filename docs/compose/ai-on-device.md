@@ -17,15 +17,15 @@ boundaries), `docs/compliance/eu-ai-act.md`.
 
 ## When to run on-device
 
-| Consideration | On-device (this recipe) | Server-proxied (ADR-0043) |
-|---|---|---|
-| Latency-critical (< 50 ms) | ✅ | ❌ network RTT |
-| Privacy-sensitive input | ✅ never leaves device | ⚠️ server sees prompt |
-| Offline / flaky network | ✅ | ❌ |
-| Large models (>1 GB) | ❌ download cost | ✅ |
-| Frontier LLMs (Claude / GPT-4) | ❌ weights not public | ✅ |
-| Cost per request | Free after download | $ per call |
-| Battery / mobile CPU | ⚠️ WASM fallback drains | ✅ |
+| Consideration                  | On-device (this recipe) | Server-proxied (ADR-0043) |
+| ------------------------------ | ----------------------- | ------------------------- |
+| Latency-critical (< 50 ms)     | ✅                      | ❌ network RTT            |
+| Privacy-sensitive input        | ✅ never leaves device  | ⚠️ server sees prompt     |
+| Offline / flaky network        | ✅                      | ❌                        |
+| Large models (>1 GB)           | ❌ download cost        | ✅                        |
+| Frontier LLMs (Claude / GPT-4) | ❌ weights not public   | ✅                        |
+| Cost per request               | Free after download     | $ per call                |
+| Battery / mobile CPU           | ⚠️ WASM fallback drains | ✅                        |
 
 Rule of thumb: classification, embeddings, small translation, ASR,
 OCR → on-device. Open-ended LLM chat → server. Ambiguous cases (<1B
@@ -55,17 +55,17 @@ Models load from the HF hub by default (`https://huggingface.co/<org>/<model>`).
 Size is the first-order constraint: a 50 MB model downloads in
 seconds on cable, tens of minutes on 3G.
 
-| Task | Recommended model | Size (quantised) |
-|---|---|---|
-| Sentence embeddings | `Xenova/all-MiniLM-L6-v2` | ~25 MB |
-| Multilingual embeddings | `Xenova/paraphrase-multilingual-MiniLM-L12-v2` | ~120 MB |
-| Sentiment / classification | `Xenova/distilbert-base-uncased-finetuned-sst-2-english` | ~65 MB |
-| Zero-shot classification | `Xenova/nli-deberta-v3-xsmall` | ~75 MB |
-| Translation (small) | `Xenova/nllb-200-distilled-600M` | ~250 MB |
-| ASR (speech → text) | `Xenova/whisper-tiny.en` | ~75 MB |
-| Whisper multilingual | `Xenova/whisper-base` | ~145 MB |
-| Token classification (NER) | `Xenova/bert-base-NER` | ~110 MB |
-| Image classification | `Xenova/vit-base-patch16-224` | ~85 MB |
+| Task                       | Recommended model                                        | Size (quantised) |
+| -------------------------- | -------------------------------------------------------- | ---------------- |
+| Sentence embeddings        | `Xenova/all-MiniLM-L6-v2`                                | ~25 MB           |
+| Multilingual embeddings    | `Xenova/paraphrase-multilingual-MiniLM-L12-v2`           | ~120 MB          |
+| Sentiment / classification | `Xenova/distilbert-base-uncased-finetuned-sst-2-english` | ~65 MB           |
+| Zero-shot classification   | `Xenova/nli-deberta-v3-xsmall`                           | ~75 MB           |
+| Translation (small)        | `Xenova/nllb-200-distilled-600M`                         | ~250 MB          |
+| ASR (speech → text)        | `Xenova/whisper-tiny.en`                                 | ~75 MB           |
+| Whisper multilingual       | `Xenova/whisper-base`                                    | ~145 MB          |
+| Token classification (NER) | `Xenova/bert-base-NER`                                   | ~110 MB          |
+| Image classification       | `Xenova/vit-base-patch16-224`                            | ~85 MB           |
 
 (HF mirrors the Xenova namespace — paths unchanged after transfer.)
 
@@ -79,17 +79,17 @@ quantised at 1-4 GB.
 // @sveltesentio/ai/on-device
 import { pipeline, env } from '@huggingface/transformers';
 
-env.allowRemoteModels = true;            // HF hub
-env.allowLocalModels = true;             // `public/models/...` self-host
+env.allowRemoteModels = true; // HF hub
+env.allowLocalModels = true; // `public/models/...` self-host
 env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency ?? 4;
 
 export async function loadPipeline<T extends PipelineTask>(
-  task: T,
-  model: string,
-  options?: PipelineOptions,
+	task: T,
+	model: string,
+	options?: PipelineOptions,
 ): Promise<Pipeline<T>> {
-  const device = await pickDevice();     // 'webgpu' | 'wasm'
-  return pipeline(task, model, { device, ...options });
+	const device = await pickDevice(); // 'webgpu' | 'wasm'
+	return pipeline(task, model, { device, ...options });
 }
 ```
 
@@ -101,29 +101,29 @@ rebuild per call; downloads redo otherwise.
 ```ts
 // @sveltesentio/ai/on-device/device
 export async function pickDevice(): Promise<'webgpu' | 'wasm'> {
-  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'wasm';
-  try {
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) return 'wasm';
-    // Optional: sniff limits to reject tiny integrated GPUs
-    if ((adapter.limits?.maxBufferSize ?? 0) < 256 * 1024 * 1024) return 'wasm';
-    return 'webgpu';
-  } catch {
-    return 'wasm';
-  }
+	if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'wasm';
+	try {
+		const adapter = await navigator.gpu.requestAdapter();
+		if (!adapter) return 'wasm';
+		// Optional: sniff limits to reject tiny integrated GPUs
+		if ((adapter.limits?.maxBufferSize ?? 0) < 256 * 1024 * 1024) return 'wasm';
+		return 'webgpu';
+	} catch {
+		return 'wasm';
+	}
 }
 ```
 
 Browser support matrix (2026-04):
 
-| Browser | WebGPU | Fallback |
-|---|---|---|
-| Chrome/Edge ≥ 113 | ✅ | WASM |
-| Safari 17+ | ✅ | WASM |
-| Firefox 141+ | ⚠️ partial (Windows only stable) | WASM |
-| Mobile Chrome ≥ 121 | ✅ | WASM |
-| Mobile Safari 17.4+ | ✅ | WASM |
-| Older / no WebGPU | ❌ | WASM only |
+| Browser             | WebGPU                           | Fallback  |
+| ------------------- | -------------------------------- | --------- |
+| Chrome/Edge ≥ 113   | ✅                               | WASM      |
+| Safari 17+          | ✅                               | WASM      |
+| Firefox 141+        | ⚠️ partial (Windows only stable) | WASM      |
+| Mobile Chrome ≥ 121 | ✅                               | WASM      |
+| Mobile Safari 17.4+ | ✅                               | WASM      |
+| Older / no WebGPU   | ❌                               | WASM only |
 
 WASM is ~3-10× slower than WebGPU for transformer workloads — budget
 accordingly. Very large models may exceed mobile RAM in WASM; gate by
@@ -134,69 +134,87 @@ accordingly. Very large models may exceed mobile RAM in WASM; gate by
 ```svelte
 <!-- src/lib/ai/Classifier.svelte -->
 <script lang="ts">
-  import { loadPipeline } from '@sveltesentio/ai/on-device';
-  import { onAudit } from '$lib/ai/audit';
+	import { loadPipeline } from '@sveltesentio/ai/on-device';
+	import { onAudit } from '$lib/ai/audit';
 
-  let { initialText = '' }: { initialText?: string } = $props();
-  let text = $state(initialText);
-  let result = $state<null | { label: string; score: number }>(null);
-  let status = $state<'idle' | 'loading' | 'ready' | 'inferring' | 'error'>('idle');
-  let progress = $state(0);
+	let { initialText = '' }: { initialText?: string } = $props();
+	let text = $state(initialText);
+	let result = $state<null | { label: string; score: number }>(null);
+	let status = $state<'idle' | 'loading' | 'ready' | 'inferring' | 'error'>('idle');
+	let progress = $state(0);
 
-  let classifier: Awaited<ReturnType<typeof loadPipeline>> | null = null;
+	let classifier: Awaited<ReturnType<typeof loadPipeline>> | null = null;
 
-  async function warm() {
-    status = 'loading';
-    try {
-      classifier = await loadPipeline('text-classification',
-        'Xenova/distilbert-base-uncased-finetuned-sst-2-english', {
-        progress_callback: (p: { progress?: number }) => {
-          if (typeof p.progress === 'number') progress = p.progress;
-        },
-      });
-      status = 'ready';
-    } catch (err) {
-      status = 'error';
-      console.error('[ai.on-device] load failed', err);
-    }
-  }
+	async function warm() {
+		status = 'loading';
+		try {
+			classifier = await loadPipeline(
+				'text-classification',
+				'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+				{
+					progress_callback: (p: { progress?: number }) => {
+						if (typeof p.progress === 'number') progress = p.progress;
+					},
+				},
+			);
+			status = 'ready';
+		} catch (err) {
+			status = 'error';
+			console.error('[ai.on-device] load failed', err);
+		}
+	}
 
-  async function classify() {
-    if (!classifier) return;
-    status = 'inferring';
-    const correlationId = crypto.randomUUID();
-    onAudit({ kind: 'prompt', correlationId, model: 'distilbert-sst2',
-              provider: 'on-device', timestamp: new Date().toISOString() });
-    try {
-      const [out] = await classifier(text) as Array<{ label: string; score: number }>;
-      result = out;
-      onAudit({ kind: 'response', correlationId, model: 'distilbert-sst2',
-                provider: 'on-device', timestamp: new Date().toISOString() });
-      status = 'ready';
-    } catch (err) {
-      onAudit({ kind: 'error', correlationId, model: 'distilbert-sst2',
-                provider: 'on-device', timestamp: new Date().toISOString(),
-                metadata: { message: String(err) } });
-      status = 'error';
-    }
-  }
+	async function classify() {
+		if (!classifier) return;
+		status = 'inferring';
+		const correlationId = crypto.randomUUID();
+		onAudit({
+			kind: 'prompt',
+			correlationId,
+			model: 'distilbert-sst2',
+			provider: 'on-device',
+			timestamp: new Date().toISOString(),
+		});
+		try {
+			const [out] = (await classifier(text)) as Array<{ label: string; score: number }>;
+			result = out;
+			onAudit({
+				kind: 'response',
+				correlationId,
+				model: 'distilbert-sst2',
+				provider: 'on-device',
+				timestamp: new Date().toISOString(),
+			});
+			status = 'ready';
+		} catch (err) {
+			onAudit({
+				kind: 'error',
+				correlationId,
+				model: 'distilbert-sst2',
+				provider: 'on-device',
+				timestamp: new Date().toISOString(),
+				metadata: { message: String(err) },
+			});
+			status = 'error';
+		}
+	}
 </script>
 
 <div>
-  {#if status === 'idle'}
-    <button onclick={warm}>Load model (~65 MB)</button>
-  {:else if status === 'loading'}
-    <progress value={progress} max="1" aria-label="Loading model" />
-    <span role="status">Downloading model: {Math.round(progress * 100)}%</span>
-  {:else}
-    <textarea bind:value={text} rows="3"></textarea>
-    <button onclick={classify} disabled={status === 'inferring'}>Classify</button>
-    {#if result}
-      <output aria-live="polite">
-        {result.label} ({(result.score * 100).toFixed(1)}%)
-      </output>
-    {/if}
-  {/if}
+	{#if status === 'idle'}
+		<button onclick={warm}>Load model (~65 MB)</button>
+	{:else if status === 'loading'}
+		<progress value={progress} max="1" aria-label="Loading model" />
+		<span role="status">Downloading model: {Math.round(progress * 100)}%</span>
+	{:else}
+		<textarea bind:value={text} rows="3"></textarea>
+		<button onclick={classify} disabled={status === 'inferring'}>Classify</button>
+		{#if result}
+			<output aria-live="polite">
+				{result.label} ({(result.score * 100).toFixed(1)}%)
+			</output>
+		{/if}
+	{/if}
 </div>
 ```
 
@@ -218,15 +236,15 @@ Expose as async iterables — natural fit with `await … of` + runes:
 ```ts
 // @sveltesentio/ai/on-device/stream
 export async function* transcribeStream(
-  audio: ArrayBuffer | Float32Array,
-  model = 'Xenova/whisper-tiny.en',
+	audio: ArrayBuffer | Float32Array,
+	model = 'Xenova/whisper-tiny.en',
 ): AsyncIterable<{ text: string; done: boolean }> {
-  const asr = await loadPipeline('automatic-speech-recognition', model);
-  const chunks = chunk(audio, { seconds: 10 });
-  for (const [i, c] of chunks.entries()) {
-    const out = await asr(c);
-    yield { text: (out as { text: string }).text, done: i === chunks.length - 1 };
-  }
+	const asr = await loadPipeline('automatic-speech-recognition', model);
+	const chunks = chunk(audio, { seconds: 10 });
+	for (const [i, c] of chunks.entries()) {
+		const out = await asr(c);
+		yield { text: (out as { text: string }).text, done: i === chunks.length - 1 };
+	}
 }
 ```
 
@@ -234,15 +252,15 @@ Consumer:
 
 ```svelte
 <script lang="ts">
-  import { transcribeStream } from '@sveltesentio/ai/on-device/stream';
+	import { transcribeStream } from '@sveltesentio/ai/on-device/stream';
 
-  let transcript = $state('');
+	let transcript = $state('');
 
-  async function run(audio: ArrayBuffer) {
-    for await (const { text, done } of transcribeStream(audio)) {
-      transcript += text + (done ? '' : ' ');
-    }
-  }
+	async function run(audio: ArrayBuffer) {
+		for await (const { text, done } of transcribeStream(audio)) {
+			transcript += text + (done ? '' : ' ');
+		}
+	}
 </script>
 
 <output role="log" aria-live="polite">{transcript}</output>
@@ -261,7 +279,7 @@ user IPs to a third party.
 import { env } from '@huggingface/transformers';
 
 env.allowRemoteModels = false;
-env.localModelPath = '/models/';       // served from your origin
+env.localModelPath = '/models/'; // served from your origin
 ```
 
 Mirror the HF repo structure: `/models/Xenova/<model>/<files>`. A
@@ -278,11 +296,11 @@ Raw model outputs are `unknown` shapes — wrap with Zod before consuming
 import { z } from 'zod';
 
 const ClassificationResult = z.object({
-  label: z.string(),
-  score: z.number().min(0).max(1),
+	label: z.string(),
+	score: z.number().min(0).max(1),
 });
 
-const [raw] = await classifier(text) as unknown[];
+const [raw] = (await classifier(text)) as unknown[];
 const parsed = ClassificationResult.parse(raw);
 ```
 
@@ -298,22 +316,22 @@ internal cache). Hundreds of MB accumulate across tabs / sites.
 ```ts
 import { env } from '@huggingface/transformers';
 
-env.useBrowserCache = true;            // default; IndexedDB-backed
-env.useFSCache = false;                // Node-only; no-op in browser
-env.cacheDir = undefined;              // default
+env.useBrowserCache = true; // default; IndexedDB-backed
+env.useFSCache = false; // Node-only; no-op in browser
+env.cacheDir = undefined; // default
 ```
 
 Eviction controls:
 
 ```ts
 export async function purgeModels() {
-  if (!('storage' in navigator)) return;
-  const dbs = await indexedDB.databases();
-  for (const db of dbs) {
-    if (db.name?.startsWith('transformers-cache')) {
-      indexedDB.deleteDatabase(db.name);
-    }
-  }
+	if (!('storage' in navigator)) return;
+	const dbs = await indexedDB.databases();
+	for (const db of dbs) {
+		if (db.name?.startsWith('transformers-cache')) {
+			indexedDB.deleteDatabase(db.name);
+		}
+	}
 }
 ```
 
@@ -324,7 +342,7 @@ Request persistent storage so cached models survive eviction:
 
 ```ts
 if ('storage' in navigator && 'persist' in navigator.storage) {
-  await navigator.storage.persist();
+	await navigator.storage.persist();
 }
 ```
 
@@ -339,14 +357,17 @@ same `onAudit` from [ai-audit-hook.md](ai-audit-hook.md):
 import { emit } from '@sveltesentio/ai/audit';
 
 const correlationId = crypto.randomUUID();
-await emit({
-  timestamp: new Date().toISOString(),
-  kind: 'prompt',
-  provider: 'on-device',                       // distinguishes from anthropic/ollama
-  model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-  correlationId,
-  userId: session?.user.id,
-}, onAudit);
+await emit(
+	{
+		timestamp: new Date().toISOString(),
+		kind: 'prompt',
+		provider: 'on-device', // distinguishes from anthropic/ollama
+		model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+		correlationId,
+		userId: session?.user.id,
+	},
+	onAudit,
+);
 ```
 
 Client-side `onAudit` ships to your server-proxy — or buffers + flushes
@@ -362,8 +383,8 @@ WebAssembly. Gate every import:
 import { browser } from '$app/environment';
 
 if (browser) {
-  const { loadPipeline } = await import('@sveltesentio/ai/on-device');
-  classifier = await loadPipeline('text-classification', 'Xenova/…');
+	const { loadPipeline } = await import('@sveltesentio/ai/on-device');
+	classifier = await loadPipeline('text-classification', 'Xenova/…');
 }
 ```
 
@@ -379,13 +400,13 @@ guarding every import.
 
 ## Migration from `@xenova/transformers`
 
-| Before | After |
-|---|---|
-| `pnpm add @xenova/transformers` | `pnpm add @huggingface/transformers` |
+| Before                                            | After                                                  |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm add @xenova/transformers`                   | `pnpm add @huggingface/transformers`                   |
 | `import { pipeline } from '@xenova/transformers'` | `import { pipeline } from '@huggingface/transformers'` |
-| `env` API | Unchanged |
-| Model paths (`Xenova/…`) | Unchanged (HF mirrored the namespace) |
-| Peer dep: ONNX Runtime Web 1.17 | Bumped to 1.19+ (WebGPU mature) |
+| `env` API                                         | Unchanged                                              |
+| Model paths (`Xenova/…`)                          | Unchanged (HF mirrored the namespace)                  |
+| Peer dep: ONNX Runtime Web 1.17                   | Bumped to 1.19+ (WebGPU mature)                        |
 
 Codemod:
 
@@ -411,7 +432,7 @@ compatible; any drift surfaces through Zod at the boundary.
   repos is quantised; only override with `quantized: false` when
   accuracy is critical.
 - **WebGPU warm-up cost is real.** First WebGPU call spins up adapter
-  + shaders (~200 ms). Budget it into UX.
+  - shaders (~200 ms). Budget it into UX.
 
 ## Testing
 
@@ -421,11 +442,13 @@ Unit tests run in Node via the WASM backend (no WebGPU in jsdom):
 import { pipeline } from '@huggingface/transformers';
 
 test('classifier returns a label', async () => {
-  const classifier = await pipeline('text-classification',
-    'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-    { device: 'wasm', quantized: true });
-  const [out] = await classifier('I love this!');
-  expect(out).toMatchObject({ label: 'POSITIVE', score: expect.any(Number) });
+	const classifier = await pipeline(
+		'text-classification',
+		'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+		{ device: 'wasm', quantized: true },
+	);
+	const [out] = await classifier('I love this!');
+	expect(out).toMatchObject({ label: 'POSITIVE', score: expect.any(Number) });
 }, 60_000); // model download + warm-up
 ```
 

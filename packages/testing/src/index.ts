@@ -21,11 +21,7 @@ export {
 	AxeViolationsError,
 } from './a11y.js';
 
-export type {
-	PlaywrightAxeConfig,
-	AxeConfigOverrides,
-	AxeBuilderLike,
-} from './playwright-axe.js';
+export type { PlaywrightAxeConfig, AxeConfigOverrides, AxeBuilderLike } from './playwright-axe.js';
 export {
 	playwrightAxeDefaults,
 	axeConfig,

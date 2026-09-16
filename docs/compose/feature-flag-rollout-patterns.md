@@ -57,22 +57,22 @@ Emergency disable                                     → kill-switch (separate 
 import { z } from 'zod';
 
 export const RolloutStage = z.object({
-  name: z.enum(['dark', 'internal', 'beta', 'canary', 'gradual', 'ga']),
-  percent: z.number().min(0).max(100),
-  minDurationHours: z.number().int().min(1).max(720),
-  sloGuards: z.array(z.string()).min(1),   // metric ids
+	name: z.enum(['dark', 'internal', 'beta', 'canary', 'gradual', 'ga']),
+	percent: z.number().min(0).max(100),
+	minDurationHours: z.number().int().min(1).max(720),
+	sloGuards: z.array(z.string()).min(1), // metric ids
 });
 
 export const RolloutPlan = z.object({
-  flagKey: z.string().regex(/^[a-z0-9-]+$/),
-  owner: z.string().min(2),
-  stages: z.array(RolloutStage).min(2),
-  killSwitchKey: z.string().regex(/^[a-z0-9-]+$/),
-  rollbackTrigger: z.object({
-    sloBreachMinutes: z.number().int().min(5).max(60),
-    errorRateThresholdPct: z.number().min(0.5).max(20),
-  }),
-  expiresAt: z.string().datetime(),         // flag MUST expire
+	flagKey: z.string().regex(/^[a-z0-9-]+$/),
+	owner: z.string().min(2),
+	stages: z.array(RolloutStage).min(2),
+	killSwitchKey: z.string().regex(/^[a-z0-9-]+$/),
+	rollbackTrigger: z.object({
+		sloBreachMinutes: z.number().int().min(5).max(60),
+		errorRateThresholdPct: z.number().min(0.5).max(20),
+	}),
+	expiresAt: z.string().datetime(), // flag MUST expire
 });
 export type RolloutPlan = z.infer<typeof RolloutPlan>;
 ```
@@ -93,14 +93,14 @@ Six plan rules:
 
 ## Five canonical stages
 
-| Stage | Audience | Min duration | SLO guard example |
-|---|---|---|---|
-| `dark` | No users; logs + metrics only | 24 h | No new errors vs baseline |
-| `internal` | Company employees | 48 h | Error rate < 0.5 % |
-| `beta` | Opt-in beta cohort | 72 h | P95 latency within 10 % of baseline |
-| `canary` | 1 % of eligible prod | 24 h | Error rate < 1 %, INP within 10 % |
-| `gradual` | 5 % → 25 % → 50 % | 12 h per step | Error + latency + business KPI |
-| `ga` | 100 % | — | Stable for ≥ 7 days before flag removal |
+| Stage      | Audience                      | Min duration  | SLO guard example                       |
+| ---------- | ----------------------------- | ------------- | --------------------------------------- |
+| `dark`     | No users; logs + metrics only | 24 h          | No new errors vs baseline               |
+| `internal` | Company employees             | 48 h          | Error rate < 0.5 %                      |
+| `beta`     | Opt-in beta cohort            | 72 h          | P95 latency within 10 % of baseline     |
+| `canary`   | 1 % of eligible prod          | 24 h          | Error rate < 1 %, INP within 10 %       |
+| `gradual`  | 5 % → 25 % → 50 %             | 12 h per step | Error + latency + business KPI          |
+| `ga`       | 100 %                         | —             | Stable for ≥ 7 days before flag removal |
 
 Five stage-discipline rules:
 
@@ -121,16 +121,12 @@ Five stage-discipline rules:
 // src/lib/flags/bucketing.ts
 import { createHash } from 'node:crypto';
 
-export function isUserInPercent(
-  flagKey: string,
-  userId: string,
-  percent: number,
-): boolean {
-  if (percent <= 0) return false;
-  if (percent >= 100) return true;
-  const hash = createHash('sha256').update(`${flagKey}:${userId}`).digest();
-  const bucket = hash.readUInt32BE(0) % 10000;
-  return bucket < percent * 100; // 0..9999 for sub-percent precision
+export function isUserInPercent(flagKey: string, userId: string, percent: number): boolean {
+	if (percent <= 0) return false;
+	if (percent >= 100) return true;
+	const hash = createHash('sha256').update(`${flagKey}:${userId}`).digest();
+	const bucket = hash.readUInt32BE(0) % 10000;
+	return bucket < percent * 100; // 0..9999 for sub-percent precision
 }
 ```
 
@@ -172,17 +168,17 @@ Five cohort rules:
 import { z } from 'zod';
 
 export const TargetingRule = z.object({
-  attribute: z.enum([
-    'user.role',
-    'user.plan',
-    'tenant.id',
-    'tenant.tier',
-    'user.country',
-    'session.device_class',
-  ]),
-  op: z.enum(['in', 'eq', 'regex_match', 'before', 'after']),
-  values: z.array(z.string()).min(1),
-  priority: z.number().int().min(0).max(100),
+	attribute: z.enum([
+		'user.role',
+		'user.plan',
+		'tenant.id',
+		'tenant.tier',
+		'user.country',
+		'session.device_class',
+	]),
+	op: z.enum(['in', 'eq', 'regex_match', 'before', 'after']),
+	values: z.array(z.string()).min(1),
+	priority: z.number().int().min(0).max(100),
 });
 ```
 
@@ -205,13 +201,13 @@ Six targeting rules:
 ```ts
 // src/lib/flags/kill-switch.ts
 export async function evaluateWithKillSwitch(
-  flagKey: string,
-  killKey: string,
-  ctx: EvalContext,
+	flagKey: string,
+	killKey: string,
+	ctx: EvalContext,
 ): Promise<boolean> {
-  const killed = await flags.getBooleanValue(killKey, false, ctx);
-  if (killed) return false;
-  return flags.getBooleanValue(flagKey, false, ctx);
+	const killed = await flags.getBooleanValue(killKey, false, ctx);
+	if (killed) return false;
+	return flags.getBooleanValue(flagKey, false, ctx);
 }
 ```
 
@@ -255,29 +251,29 @@ Six rollback rules:
 ```ts
 // src/lib/flags/slo-guard.ts
 export type SloGuard = {
-  metric: 'error_rate' | 'p95_latency_ms' | 'inp_ms' | 'cls';
-  baselineWindowMin: number;
-  deltaPct: number;        // e.g. 10 = alert at 10% worse than baseline
-  minSamples: number;      // avoid tripping on tiny windows
+	metric: 'error_rate' | 'p95_latency_ms' | 'inp_ms' | 'cls';
+	baselineWindowMin: number;
+	deltaPct: number; // e.g. 10 = alert at 10% worse than baseline
+	minSamples: number; // avoid tripping on tiny windows
 };
 
 export async function evaluateGuard(
-  guard: SloGuard,
-  flagKey: string,
+	guard: SloGuard,
+	flagKey: string,
 ): Promise<'ok' | 'warn' | 'breach'> {
-  const baseline = await queryMetric(guard.metric, guard.baselineWindowMin, {
-    flag: flagKey,
-    variant: 'control',
-  });
-  const treatment = await queryMetric(guard.metric, guard.baselineWindowMin, {
-    flag: flagKey,
-    variant: 'treatment',
-  });
-  if (treatment.n < guard.minSamples) return 'ok';
-  const ratio = treatment.value / baseline.value;
-  if (ratio > 1 + guard.deltaPct / 100) return 'breach';
-  if (ratio > 1 + guard.deltaPct / 200) return 'warn';
-  return 'ok';
+	const baseline = await queryMetric(guard.metric, guard.baselineWindowMin, {
+		flag: flagKey,
+		variant: 'control',
+	});
+	const treatment = await queryMetric(guard.metric, guard.baselineWindowMin, {
+		flag: flagKey,
+		variant: 'treatment',
+	});
+	if (treatment.n < guard.minSamples) return 'ok';
+	const ratio = treatment.value / baseline.value;
+	if (ratio > 1 + guard.deltaPct / 100) return 'breach';
+	if (ratio > 1 + guard.deltaPct / 200) return 'warn';
+	return 'ok';
 }
 ```
 
@@ -312,18 +308,14 @@ Five distinction rules:
 
 ```ts
 // src/lib/flags/expose.ts
-export async function expose(
-  flagKey: string,
-  variant: string,
-  ctx: EvalContext,
-): Promise<void> {
-  await analytics.track('flag_exposed', {
-    flag: flagKey,
-    variant,
-    stage: ctx.stage,
-    tenant_tier: ctx.tenant.tier,
-    session_id: ctx.sessionId,
-  });
+export async function expose(flagKey: string, variant: string, ctx: EvalContext): Promise<void> {
+	await analytics.track('flag_exposed', {
+		flag: flagKey,
+		variant,
+		stage: ctx.stage,
+		tenant_tier: ctx.tenant.tier,
+		session_id: ctx.sessionId,
+	});
 }
 ```
 

@@ -15,51 +15,47 @@ with `@sveltesentio/core`'s `strictCsp` so the WASM/worker/blob needs are
 allowed under an otherwise-strict policy.
 -->
 <script lang="ts">
-  import { BROWSER } from 'esm-env';
-  import { injectEmulatorScript, type BuildEmulatorConfigOptions } from './loader.js';
+	import { BROWSER } from 'esm-env';
+	import { injectEmulatorScript, type BuildEmulatorConfigOptions } from './loader.js';
 
-  interface Props extends Omit<BuildEmulatorConfigOptions, 'player'> {
-    /** DOM id of the mount element. EmulatorJS targets `#${mountId}`. */
-    mountId?: string;
-    /** Accessible label for the emulator region. */
-    label?: string;
-  }
+	interface Props extends Omit<BuildEmulatorConfigOptions, 'player'> {
+		/** DOM id of the mount element. EmulatorJS targets `#${mountId}`. */
+		mountId?: string;
+		/** Accessible label for the emulator region. */
+		label?: string;
+	}
 
-  const {
-    mountId = 'sveltesentio-emulator',
-    label = 'Game emulator',
-    ...config
-  }: Props = $props();
+	const { mountId = 'sveltesentio-emulator', label = 'Game emulator', ...config }: Props = $props();
 
-  let host = $state<HTMLDivElement | null>(null);
+	let host = $state<HTMLDivElement | null>(null);
 
-  $effect(() => {
-    if (!BROWSER || !host) return;
-    const { cleanup } = injectEmulatorScript(
-      { ...config, player: `#${mountId}` },
-      { document, window: globalThis as unknown as Record<string, unknown> },
-    );
-    return cleanup;
-  });
+	$effect(() => {
+		if (!BROWSER || !host) return;
+		const { cleanup } = injectEmulatorScript(
+			{ ...config, player: `#${mountId}` },
+			{ document, window: globalThis as unknown as Record<string, unknown> },
+		);
+		return cleanup;
+	});
 </script>
 
 <div
-  bind:this={host}
-  id={mountId}
-  class="ssentio-emulator"
-  role="application"
-  aria-label={label}
+	bind:this={host}
+	id={mountId}
+	class="ssentio-emulator"
+	role="application"
+	aria-label={label}
 ></div>
 
 <style>
-  .ssentio-emulator {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    background: #000;
-  }
+	.ssentio-emulator {
+		width: 100%;
+		aspect-ratio: 4 / 3;
+		background: #000;
+	}
 
-  .ssentio-emulator :global(canvas) {
-    width: 100%;
-    height: 100%;
-  }
+	.ssentio-emulator :global(canvas) {
+		width: 100%;
+		height: 100%;
+	}
 </style>

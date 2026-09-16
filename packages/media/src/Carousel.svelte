@@ -39,13 +39,7 @@ The tested logic lives in `./carousel`; this file is a thin, a11y-correct view.
 		emblaAction?: Action<HTMLElement, EmblaOptionsLike>;
 	}
 
-	const {
-		label,
-		children,
-		preset = 'desktop',
-		emblaAction,
-		...optionsInput
-	}: Props = $props();
+	const { label, children, preset = 'desktop', emblaAction, ...optionsInput }: Props = $props();
 
 	const options = $derived(buildCarouselOptions(optionsInput as CarouselOptionsInput));
 	const targetPx = $derived(navButtonTargetPx(preset));
@@ -54,17 +48,16 @@ The tested logic lives in `./carousel`; this file is a thin, a11y-correct view.
 	function scrollByPage(direction: -1 | 1): void {
 		const el = viewport;
 		if (!el) return;
-		el.scrollBy({ left: direction * el.clientWidth, behavior: options.duration === 0 ? 'auto' : 'smooth' });
+		el.scrollBy({
+			left: direction * el.clientWidth,
+			behavior: options.duration === 0 ? 'auto' : 'smooth',
+		});
 	}
 </script>
 
 <!-- A named <section> is an implicit landmark `region`; aria-roledescription
 	relabels it as a carousel per the WAI-ARIA carousel pattern. -->
-<section
-	class="ssentio-carousel"
-	aria-roledescription="carousel"
-	aria-label={label}
->
+<section class="ssentio-carousel" aria-roledescription="carousel" aria-label={label}>
 	{#if emblaAction}
 		<div class="ssentio-carousel__viewport" bind:this={viewport} use:emblaAction={options}>
 			<div class="ssentio-carousel__container">{@render children()}</div>
@@ -81,15 +74,15 @@ The tested logic lives in `./carousel`; this file is a thin, a11y-correct view.
 			class="ssentio-carousel__btn"
 			style="min-width:{targetPx}px;min-height:{targetPx}px"
 			aria-label="Previous slide"
-			onclick={() => scrollByPage(-1)}
-		>‹</button>
+			onclick={() => scrollByPage(-1)}>‹</button
+		>
 		<button
 			type="button"
 			class="ssentio-carousel__btn"
 			style="min-width:{targetPx}px;min-height:{targetPx}px"
 			aria-label="Next slide"
-			onclick={() => scrollByPage(1)}
-		>›</button>
+			onclick={() => scrollByPage(1)}>›</button
+		>
 	</div>
 </section>
 

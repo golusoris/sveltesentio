@@ -1,9 +1,9 @@
 // Framework-agnostic playback reducer + MediaSession metadata.
 import {
-  playbackReducer,
-  initialPlaybackState,
-  buildMediaSessionMetadata,
-  pickRendition,
+	playbackReducer,
+	initialPlaybackState,
+	buildMediaSessionMetadata,
+	pickRendition,
 } from '@sveltesentio/media';
 
 let state = initialPlaybackState;

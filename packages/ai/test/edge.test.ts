@@ -10,8 +10,7 @@ describe('loadEdgePipeline', () => {
 	it('loads a pipeline through the injected factory and runs inference', async () => {
 		const pipelineFn = vi.fn(async (input: unknown) => ({ label: 'POSITIVE', input }));
 		const pipeline = vi.fn(async () => pipelineFn);
-		const factory: TransformersFactory = async () =>
-			({ pipeline } satisfies TransformersModule);
+		const factory: TransformersFactory = async () => ({ pipeline }) satisfies TransformersModule;
 
 		const handle = await loadEdgePipeline('text-classification', {
 			model: 'Xenova/distilbert-base-uncased',
@@ -21,11 +20,9 @@ describe('loadEdgePipeline', () => {
 
 		expect(handle.task).toBe('text-classification');
 		expect(handle.model).toBe('Xenova/distilbert-base-uncased');
-		expect(pipeline).toHaveBeenCalledWith(
-			'text-classification',
-			'Xenova/distilbert-base-uncased',
-			{ device: 'webgpu' },
-		);
+		expect(pipeline).toHaveBeenCalledWith('text-classification', 'Xenova/distilbert-base-uncased', {
+			device: 'webgpu',
+		});
 
 		const out = await handle.run('great product', { topk: 1 });
 		expect(out).toEqual({ label: 'POSITIVE', input: 'great product' });

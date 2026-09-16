@@ -76,6 +76,7 @@
 		height: 720,
 		priority: 'high',
 		widths: [640, 960, 1280],
-		template: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg?w={w}',
+		template:
+			'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg?w={w}',
 	}}
 />

@@ -4,12 +4,12 @@
 
 ## Scope
 
-| Sub-export | Contents | Status |
-|---|---|---|
+| Sub-export       | Contents                                                                               | Status |
+| ---------------- | -------------------------------------------------------------------------------------- | ------ |
 | `./device-class` | `classifyDevice()` → `desktop` / `handheld` / `10foot`; SSR-safe `readDeviceSignals()` | v0.1.0 |
-| `./dpad` | `computeNextFocus()` + key/gamepad mappers + `dpadNavigation` action | v0.1.0 |
-| `./safe-area` | `safeAreaInset()` / `cssVars()` / logical-property padding helpers | v0.1.0 |
-| `./pwa` | `registerSW()` over the optional `virtual:pwa-register` module | v0.1.0 |
+| `./dpad`         | `computeNextFocus()` + key/gamepad mappers + `dpadNavigation` action                   | v0.1.0 |
+| `./safe-area`    | `safeAreaInset()` / `cssVars()` / logical-property padding helpers                     | v0.1.0 |
+| `./pwa`          | `registerSW()` over the optional `virtual:pwa-register` module                         | v0.1.0 |
 
 This package:
 
@@ -36,16 +36,16 @@ This package does **not**:
 
 ## Layout
 
-| File | Role | Coverage |
-|---|---|---|
-| `src/device-class.ts` | Pure classification + SSR-safe signal read | unit-tested |
-| `src/dpad.ts` | Pure focus geometry + key/gamepad/axis mappers + `resolveNextFocus` | unit-tested |
-| `src/dpad-action.ts` | `dpadNavigation` Svelte `use:` action (DOM/timer-bound) | excluded — delegates to tested core |
-| `src/dpad-index.ts` | `./dpad` barrel (pure + action) | excluded (barrel) |
-| `src/safe-area.ts` | CSS-var emitters + logical-property helpers | unit-tested |
-| `src/pwa.ts` | Lazy `registerSW` wrapper | excluded (DOM/dynamic-import) |
-| `src/virtual-pwa.d.ts` | Ambient stub for `virtual:pwa-register` | n/a |
-| `src/index.ts` | Root barrel | excluded (barrel) |
+| File                   | Role                                                                | Coverage                            |
+| ---------------------- | ------------------------------------------------------------------- | ----------------------------------- |
+| `src/device-class.ts`  | Pure classification + SSR-safe signal read                          | unit-tested                         |
+| `src/dpad.ts`          | Pure focus geometry + key/gamepad/axis mappers + `resolveNextFocus` | unit-tested                         |
+| `src/dpad-action.ts`   | `dpadNavigation` Svelte `use:` action (DOM/timer-bound)             | excluded — delegates to tested core |
+| `src/dpad-index.ts`    | `./dpad` barrel (pure + action)                                     | excluded (barrel)                   |
+| `src/safe-area.ts`     | CSS-var emitters + logical-property helpers                         | unit-tested                         |
+| `src/pwa.ts`           | Lazy `registerSW` wrapper                                           | excluded (DOM/dynamic-import)       |
+| `src/virtual-pwa.d.ts` | Ambient stub for `virtual:pwa-register`                             | n/a                                 |
+| `src/index.ts`         | Root barrel                                                         | excluded (barrel)                   |
 
 ## Test policy
 
@@ -56,11 +56,11 @@ This package does **not**:
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/shell typecheck` |
-| Lint | `pnpm --filter @sveltesentio/shell lint` |
-| Unit tests | `pnpm --filter @sveltesentio/shell test` |
+| Task       | Command                                       |
+| ---------- | --------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/shell typecheck` |
+| Lint       | `pnpm --filter @sveltesentio/shell lint`      |
+| Unit tests | `pnpm --filter @sveltesentio/shell test`      |
 
 ## Related
 

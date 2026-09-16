@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	BUTTON_BASE,
-	BUTTON_SIZES,
-	BUTTON_VARIANTS,
-	buttonClass,
-} from '../src/button/variants.js';
+import { BUTTON_BASE, BUTTON_SIZES, BUTTON_VARIANTS, buttonClass } from '../src/button/variants.js';
 
 describe('buttonClass', () => {
 	it('defaults to the default variant + default size', () => {

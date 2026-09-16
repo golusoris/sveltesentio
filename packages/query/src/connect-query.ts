@@ -29,8 +29,11 @@ export type UnaryMethodSelector<T extends DescService, TData> = (
  */
 export type ConnectErrorMapper = (reason: unknown) => ProblemError;
 
-export interface ConnectQueryOptions<T extends DescService, TData, TKey extends QueryKey = QueryKey>
-	extends Omit<CreateQueryOptions<TData, ProblemError, TData, TKey>, 'queryFn'> {
+export interface ConnectQueryOptions<
+	T extends DescService,
+	TData,
+	TKey extends QueryKey = QueryKey,
+> extends Omit<CreateQueryOptions<TData, ProblemError, TData, TKey>, 'queryFn'> {
 	queryKey: TKey;
 	/** Typed Connect client; inject a `createRouterTransport(...)`-backed one in tests. */
 	client: Client<T>;

@@ -88,9 +88,9 @@ describe('resolveSessionLocals', () => {
 			throw boom;
 		};
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
-		await expect(
-			resolveSessionLocals(event, { resolve, onResolveError: 'rethrow' }),
-		).rejects.toBe(boom);
+		await expect(resolveSessionLocals(event, { resolve, onResolveError: 'rethrow' })).rejects.toBe(
+			boom,
+		);
 	});
 
 	it('always rethrows a ProblemError verbatim, even under passthrough', async () => {

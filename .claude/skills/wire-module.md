@@ -23,28 +23,28 @@ packages/<name>/
 
 ```json
 {
-  "name": "@sveltesentio/<name>",
-  "version": "0.0.1",
-  "type": "module",
-  "private": false,
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "peerDependencies": {},
-  "devDependencies": {
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
-  }
+	"name": "@sveltesentio/<name>",
+	"version": "0.0.1",
+	"type": "module",
+	"private": false,
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"peerDependencies": {},
+	"devDependencies": {
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.4"
+	}
 }
 ```
 
@@ -52,12 +52,12 @@ packages/<name>/
 
 ```json
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*"]
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist"
+	},
+	"include": ["src/**/*"]
 }
 ```
 
@@ -70,11 +70,13 @@ export {};
 ```
 
 5. Add to `release-please-config.json` packages section:
+
 ```json
 "packages/<name>": { "package-name": "@sveltesentio/<name>" }
 ```
 
 6. Add to `.release-please-manifest.json`:
+
 ```json
 "packages/<name>": "0.0.1"
 ```

@@ -22,15 +22,15 @@ Related: [schemas.md](schemas.md) (Zod v4), [http-client.md](http-client.md)
 import { z } from 'zod';
 
 export const AiAuditEvent = z.object({
-  timestamp: z.iso.datetime(),                // ISO 8601
-  kind: z.enum(['prompt', 'response', 'error']),
-  provider: z.string(),                       // 'anthropic' | 'ollama' | 'huggingface' | custom
-  model: z.string(),                          // 'claude-opus-4-7' | 'llama-3.2-3b' | …
-  correlationId: z.uuid(),                    // UUIDv7 per ADR-0023
-  userId: z.string().optional(),              // consumer-supplied; optional for anon flows
-  input: z.string().optional(),               // redacted by default
-  output: z.string().optional(),              // redacted by default
-  metadata: z.record(z.string(), z.unknown()).optional(),
+	timestamp: z.iso.datetime(), // ISO 8601
+	kind: z.enum(['prompt', 'response', 'error']),
+	provider: z.string(), // 'anthropic' | 'ollama' | 'huggingface' | custom
+	model: z.string(), // 'claude-opus-4-7' | 'llama-3.2-3b' | …
+	correlationId: z.uuid(), // UUIDv7 per ADR-0023
+	userId: z.string().optional(), // consumer-supplied; optional for anon flows
+	input: z.string().optional(), // redacted by default
+	output: z.string().optional(), // redacted by default
+	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type AiAuditEvent = z.infer<typeof AiAuditEvent>;
@@ -52,11 +52,11 @@ Three invariants:
 ```ts
 // src/app.d.ts
 declare global {
-  namespace App {
-    interface Locals {
-      ai: AiClient;
-    }
-  }
+	namespace App {
+		interface Locals {
+			ai: AiClient;
+		}
+	}
 }
 
 // src/hooks.server.ts
@@ -64,18 +64,18 @@ import { createAiClient } from '@sveltesentio/ai';
 import { sequence } from '@sveltejs/kit/hooks';
 
 const aiHandle = ({ event, resolve }) => {
-  event.locals.ai = createAiClient({
-    provider: 'anthropic',
-    apiKey: env.ANTHROPIC_API_KEY,
-    onAudit: async (e) => {
-      // consumer sink — see below
-      await auditSink.insert(e);
-    },
-  });
-  return resolve(event);
+	event.locals.ai = createAiClient({
+		provider: 'anthropic',
+		apiKey: env.ANTHROPIC_API_KEY,
+		onAudit: async (e) => {
+			// consumer sink — see below
+			await auditSink.insert(e);
+		},
+	});
+	return resolve(event);
 };
 
-export const handle = sequence(aiHandle, /* … */);
+export const handle = sequence(aiHandle /* … */);
 ```
 
 Client-side:
@@ -85,13 +85,13 @@ Client-side:
 import { createAiClient } from '@sveltesentio/ai/client';
 
 export const aiClient = createAiClient({
-  endpoint: '/api/ai',         // server-proxied per ADR-0043
-  onAudit: (e) => {
-    // Client-side sinks must be cautious:
-    // - don't ship input/output over the wire if server already logs
-    // - keep metadata local (telemetry, not compliance)
-    track('ai.event', { kind: e.kind, model: e.model, correlationId: e.correlationId });
-  },
+	endpoint: '/api/ai', // server-proxied per ADR-0043
+	onAudit: (e) => {
+		// Client-side sinks must be cautious:
+		// - don't ship input/output over the wire if server already logs
+		// - keep metadata local (telemetry, not compliance)
+		track('ai.event', { kind: e.kind, model: e.model, correlationId: e.correlationId });
+	},
 });
 ```
 
@@ -113,13 +113,13 @@ Implementation shape:
 ```ts
 // @sveltesentio/ai/audit
 export async function emit(event: AiAuditEvent, onAudit?: OnAudit) {
-  if (!onAudit) return;
-  try {
-    const parsed = AiAuditEvent.parse(event);
-    await onAudit(parsed);
-  } catch (err) {
-    console.error('[ai-audit] sink failed', { correlationId: event.correlationId, err });
-  }
+	if (!onAudit) return;
+	try {
+		const parsed = AiAuditEvent.parse(event);
+		await onAudit(parsed);
+	} catch (err) {
+		console.error('[ai-audit] sink failed', { correlationId: event.correlationId, err });
+	}
 }
 ```
 
@@ -133,21 +133,21 @@ Opt-in retention via `retain`:
 
 ```ts
 const result = await event.locals.ai.complete({
-  model: 'claude-opus-4-7',
-  messages: [{ role: 'user', content: userMessage }],
-  retain: {
-    input: 'hash',             // 'none' | 'hash' | 'full'
-    output: 'hash',
-    reason: 'EU AI Act Art. 12 — high-risk system',
-  },
+	model: 'claude-opus-4-7',
+	messages: [{ role: 'user', content: userMessage }],
+	retain: {
+		input: 'hash', // 'none' | 'hash' | 'full'
+		output: 'hash',
+		reason: 'EU AI Act Art. 12 — high-risk system',
+	},
 });
 ```
 
-| `retain` value | What the audit sees |
-|---|---|
-| `'none'` (default) | No `input` / `output` fields |
-| `'hash'` | SHA-256 hex of the text — join key, no content |
-| `'full'` | Raw text — requires documented lawful basis |
+| `retain` value     | What the audit sees                            |
+| ------------------ | ---------------------------------------------- |
+| `'none'` (default) | No `input` / `output` fields                   |
+| `'hash'`           | SHA-256 hex of the text — join key, no content |
+| `'full'`           | Raw text — requires documented lawful basis    |
 
 `reason` is required when `retain !== 'none'` — forces consumers to
 document why. Sinks can alert on absence.
@@ -163,17 +163,17 @@ const tracer = trace.getTracer('ai');
 const counter = metrics.getMeter('ai').createCounter('ai.events');
 
 export const otelSink: OnAudit = (event) => {
-  counter.add(1, { kind: event.kind, provider: event.provider, model: event.model });
+	counter.add(1, { kind: event.kind, provider: event.provider, model: event.model });
 
-  if (event.kind === 'error') {
-    tracer.startActiveSpan(`ai.${event.kind}`, (span) => {
-      span.setAttribute('correlation.id', event.correlationId);
-      span.setAttribute('ai.provider', event.provider);
-      span.setAttribute('ai.model', event.model);
-      span.setStatus({ code: 2 });
-      span.end();
-    });
-  }
+	if (event.kind === 'error') {
+		tracer.startActiveSpan(`ai.${event.kind}`, (span) => {
+			span.setAttribute('correlation.id', event.correlationId);
+			span.setAttribute('ai.provider', event.provider);
+			span.setAttribute('ai.model', event.model);
+			span.setStatus({ code: 2 });
+			span.end();
+		});
+	}
 };
 ```
 
@@ -188,21 +188,23 @@ import { createClient } from '@clickhouse/client';
 const ch = createClient({ url: env.CLICKHOUSE_URL, database: 'compliance' });
 
 export const clickhouseSink: OnAudit = async (event) => {
-  await ch.insert({
-    table: 'ai_audit_events',
-    values: [{
-      timestamp: event.timestamp,
-      kind: event.kind,
-      provider: event.provider,
-      model: event.model,
-      correlation_id: event.correlationId,
-      user_id: event.userId ?? null,
-      input_hash: event.input ?? null,     // store hashes, not plaintext
-      output_hash: event.output ?? null,
-      metadata: JSON.stringify(event.metadata ?? {}),
-    }],
-    format: 'JSONEachRow',
-  });
+	await ch.insert({
+		table: 'ai_audit_events',
+		values: [
+			{
+				timestamp: event.timestamp,
+				kind: event.kind,
+				provider: event.provider,
+				model: event.model,
+				correlation_id: event.correlationId,
+				user_id: event.userId ?? null,
+				input_hash: event.input ?? null, // store hashes, not plaintext
+				output_hash: event.output ?? null,
+				metadata: JSON.stringify(event.metadata ?? {}),
+			},
+		],
+		format: 'JSONEachRow',
+	});
 };
 ```
 
@@ -235,7 +237,7 @@ classification.
 import { sql } from '$lib/db';
 
 export const pgSink: OnAudit = async (event) => {
-  await sql`
+	await sql`
     insert into ai_audit_events
       (timestamp, kind, provider, model, correlation_id, user_id, input_hash, output_hash, metadata)
     values
@@ -259,9 +261,9 @@ The `correlationId` is the join key for:
 - Application logs (structured log field).
 - Frontend telemetry (track event metadata).
 
-This lets compliance auditors reconstruct: *"On 2026-04-17 14:23Z,
+This lets compliance auditors reconstruct: _"On 2026-04-17 14:23Z,
 user X's prompt to claude-opus-4-7 produced error Y, visible in
-trace Z."*
+trace Z."_
 
 ## Schema evolution
 
@@ -279,13 +281,13 @@ Never rename fields in-place. Add new + deprecate old.
 
 ```ts
 export const resilientSink: OnAudit = async (event) => {
-  try {
-    await clickhouseSink(event);
-  } catch (err) {
-    // Fall back to local disk queue; drain later.
-    await appendToSpoolFile(event);
-    metrics.ai_audit_spooled.inc();
-  }
+	try {
+		await clickhouseSink(event);
+	} catch (err) {
+		// Fall back to local disk queue; drain later.
+		await appendToSpoolFile(event);
+		metrics.ai_audit_spooled.inc();
+	}
 };
 ```
 
@@ -300,22 +302,25 @@ spool → primary. Document the SLA ("events spooled ≤24h reach sink
 import { emit, AiAuditEvent } from '@sveltesentio/ai/audit';
 
 test('sink receives valid event', async () => {
-  const sink = vi.fn();
-  await emit({
-    timestamp: new Date().toISOString(),
-    kind: 'prompt',
-    provider: 'anthropic',
-    model: 'claude-opus-4-7',
-    correlationId: crypto.randomUUID(),
-  }, sink);
-  expect(sink).toHaveBeenCalledOnce();
-  expect(sink.mock.calls[0][0].kind).toBe('prompt');
+	const sink = vi.fn();
+	await emit(
+		{
+			timestamp: new Date().toISOString(),
+			kind: 'prompt',
+			provider: 'anthropic',
+			model: 'claude-opus-4-7',
+			correlationId: crypto.randomUUID(),
+		},
+		sink,
+	);
+	expect(sink).toHaveBeenCalledOnce();
+	expect(sink.mock.calls[0][0].kind).toBe('prompt');
 });
 
 test('schema-invalid event does not reach sink', async () => {
-  const sink = vi.fn();
-  await emit({ kind: 'invalid' } as any, sink);
-  expect(sink).not.toHaveBeenCalled();
+	const sink = vi.fn();
+	await emit({ kind: 'invalid' } as any, sink);
+	expect(sink).not.toHaveBeenCalled();
 });
 ```
 

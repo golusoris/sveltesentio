@@ -46,11 +46,11 @@ without pulling a Svelte component.
 
 ```ts
 import {
-  pickRendition,
-  buildMediaSessionMetadata,
-  playbackReducer,
-  initialPlaybackState,
-  createHlsAttachment,
+	pickRendition,
+	buildMediaSessionMetadata,
+	playbackReducer,
+	initialPlaybackState,
+	createHlsAttachment,
 } from '@sveltesentio/media/player';
 
 // Separate-rendition (un-muxed) quality switching: prefer HEVC, cap at 1080p.
@@ -74,8 +74,8 @@ const handle = createHlsAttachment(Hls).attach(videoEl, manifestUrl);
 import { buildResponsiveImage } from '@sveltesentio/media/image';
 
 const attrs = buildResponsiveImage('/images/poster/{path}', [320, 640, 1280], {
-  template: '/images/poster/w{w}/abc.avif',
-  sizes: [{ condition: '(min-width: 768px)', size: '33vw' }],
+	template: '/images/poster/w{w}/abc.avif',
+	sizes: [{ condition: '(min-width: 768px)', size: '33vw' }],
 });
 // → { src, srcset, sizes } — spread onto <img>.
 ```

@@ -14,9 +14,9 @@ import { createYjsStore, createYjsMap, connectProvider } from '@sveltesentio/col
 
 const doc = new Y.Doc();
 const { provider } = connectProvider({
-  url: 'wss://collab.example.com',
-  room: 'doc-42',
-  doc,
+	url: 'wss://collab.example.com',
+	room: 'doc-42',
+	doc,
 });
 
 const items = createYjsStore(doc.getArray<Item>('items'));

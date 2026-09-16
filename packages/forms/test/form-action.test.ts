@@ -24,9 +24,7 @@ function makeForm(valid: boolean, data: Out): SuperValidated<Out> {
 	} as SuperValidated<Out>;
 }
 
-type FailSpy = ReturnType<
-	typeof vi.fn<(status: number, data: unknown) => ActionFailure<unknown>>
->;
+type FailSpy = ReturnType<typeof vi.fn<(status: number, data: unknown) => ActionFailure<unknown>>>;
 
 /** Builds a config whose `superValidate` always returns the given form. */
 function config(form: SuperValidated<Out>): FormActionConfig & { fail: FailSpy } {
@@ -59,7 +57,7 @@ describe('formAction', () => {
 	it('fails without running the handler when the form is invalid', async () => {
 		const form = makeForm(false, { email: '', age: 0 });
 		const cfg = config(form);
-		const handler = vi.fn(async () => ({ ok: true } as const));
+		const handler = vi.fn(async () => ({ ok: true }) as const);
 
 		const action = formAction<Out, typeof event, { ok: true }>(schema, handler, cfg);
 		const result = (await action(event)) as ActionFailure<FailData>;

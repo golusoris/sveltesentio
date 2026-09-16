@@ -46,31 +46,31 @@ change a security decision.
 
 ```ts
 import {
-  createAuthorizationRequest,
-  exchangeAuthorizationCode,
-  handleCsrf,
-  handleAuthError,
-  registerPasskey,
-  authenticatePasskey,
+	createAuthorizationRequest,
+	exchangeAuthorizationCode,
+	handleCsrf,
+	handleAuthError,
+	registerPasskey,
+	authenticatePasskey,
 } from '@sveltesentio/auth';
 
 // 1. Build the authorize URL (fresh PKCE + state + nonce).
 const req = await createAuthorizationRequest({
-  issuer: 'https://app.example/auth/oidc', // first-party IdP adapter point
-  clientId: 'web',
-  redirectUri: 'https://app.example/callback',
-  scope: 'openid profile',
+	issuer: 'https://app.example/auth/oidc', // first-party IdP adapter point
+	clientId: 'web',
+	redirectUri: 'https://app.example/callback',
+	scope: 'openid profile',
 });
 // persist req.state / req.nonce / req.codeVerifier in the __Host-login-nonce cookie, then redirect to req.url
 
 // 2. Exchange the code (inject event.fetch in SvelteKit; throws ProblemError on non-2xx).
 const tokens = await exchangeAuthorizationCode({
-  tokenEndpoint: 'https://app.example/auth/oidc/token',
-  clientId: 'web',
-  redirectUri: 'https://app.example/callback',
-  code,
-  codeVerifier: req.codeVerifier,
-  fetch: event.fetch,
+	tokenEndpoint: 'https://app.example/auth/oidc/token',
+	clientId: 'web',
+	redirectUri: 'https://app.example/callback',
+	code,
+	codeVerifier: req.codeVerifier,
+	fetch: event.fetch,
 });
 ```
 

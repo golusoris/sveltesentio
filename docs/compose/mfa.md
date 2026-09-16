@@ -17,23 +17,23 @@ decision. Related: [ADR-0019](../adr/0019-openapi-fetch-rfc9457.md)
 
 Golusoris emits three typed errors for MFA:
 
-| Type | Status | Meaning |
-|---|---|---|
-| `urn:golusoris:auth:mfa_required` | 401 | MFA challenge needed before this request proceeds |
-| `urn:golusoris:auth:mfa_invalid` | 401 | Submitted code / assertion was wrong |
-| `urn:golusoris:auth:mfa_rate_limited` | 429 | Too many failed attempts; back off |
+| Type                                  | Status | Meaning                                           |
+| ------------------------------------- | ------ | ------------------------------------------------- |
+| `urn:golusoris:auth:mfa_required`     | 401    | MFA challenge needed before this request proceeds |
+| `urn:golusoris:auth:mfa_invalid`      | 401    | Submitted code / assertion was wrong              |
+| `urn:golusoris:auth:mfa_rate_limited` | 429    | Too many failed attempts; back off                |
 
 Each error carries `extensions` per RFC 9457:
 
 ```ts
 type MfaRequiredExtensions = {
-  challengeId: string;                    // short-lived opaque token
-  allowedMethods: Array<'totp' | 'webauthn' | 'recovery'>;
-  expiresAt: string;                      // ISO 8601
+	challengeId: string; // short-lived opaque token
+	allowedMethods: Array<'totp' | 'webauthn' | 'recovery'>;
+	expiresAt: string; // ISO 8601
 };
 
 type MfaRateLimitedExtensions = {
-  retryAfter: number;                     // seconds
+	retryAfter: number; // seconds
 };
 ```
 
@@ -54,24 +54,24 @@ import { handleAuthError, type AuthErrorState } from '@sveltesentio/auth';
 import type { ProblemError } from '@sveltesentio/core/http';
 
 export async function doProtectedAction() {
-  try {
-    await api.POST('/thing', { body });
-  } catch (err) {
-    const state = handleAuthError(err);
-    switch (state.kind) {
-      case 'mfa_required':
-        openMfaChallenge(state.challengeId, state.allowedMethods);
-        return;
-      case 'mfa_rate_limited':
-        toast.error(`Too many attempts. Try again in ${state.retryAfter}s.`);
-        return;
-      case 'unauthenticated':
-        await goto('/auth/start');
-        return;
-      case 'other':
-        throw state.error; // re-throw for the generic error boundary
-    }
-  }
+	try {
+		await api.POST('/thing', { body });
+	} catch (err) {
+		const state = handleAuthError(err);
+		switch (state.kind) {
+			case 'mfa_required':
+				openMfaChallenge(state.challengeId, state.allowedMethods);
+				return;
+			case 'mfa_rate_limited':
+				toast.error(`Too many attempts. Try again in ${state.retryAfter}s.`);
+				return;
+			case 'unauthenticated':
+				await goto('/auth/start');
+				return;
+			case 'other':
+				throw state.error; // re-throw for the generic error boundary
+		}
+	}
 }
 ```
 
@@ -84,10 +84,14 @@ Never do:
 
 ```ts
 // DON'T — substring match on error.message
-if (err.message.includes('mfa')) { /* … */ }
+if (err.message.includes('mfa')) {
+	/* … */
+}
 
 // DON'T — status-code match
-if (err.status === 401) { /* assume MFA */ }
+if (err.status === 401) {
+	/* assume MFA */
+}
 ```
 
 A server-side i18n change silently breaks substring matching. A 401
@@ -98,19 +102,19 @@ without a type code could also mean "session expired" — different UX.
 ```svelte
 <!-- src/routes/app/+layout.svelte -->
 <script lang="ts">
-  import { MfaChallenge } from '@sveltesentio/auth';
-  import { mfaState } from '$lib/mfaStore.svelte';
+	import { MfaChallenge } from '@sveltesentio/auth';
+	import { mfaState } from '$lib/mfaStore.svelte';
 </script>
 
 {@render children()}
 
 {#if mfaState.current}
-  <MfaChallenge
-    challengeId={mfaState.current.challengeId}
-    allowedMethods={mfaState.current.allowedMethods}
-    onsuccess={() => mfaState.clear()}
-    oncancel={() => mfaState.clear()}
-  />
+	<MfaChallenge
+		challengeId={mfaState.current.challengeId}
+		allowedMethods={mfaState.current.allowedMethods}
+		onsuccess={() => mfaState.clear()}
+		oncancel={() => mfaState.clear()}
+	/>
 {/if}
 ```
 
@@ -119,19 +123,21 @@ without a type code could also mean "session expired" — different UX.
 import type { AuthErrorState } from '@sveltesentio/auth';
 
 export const mfaState = {
-  current: $state<{
-    challengeId: string;
-    allowedMethods: Array<'totp' | 'webauthn' | 'recovery'>;
-  } | null>(null),
+	current: $state<{
+		challengeId: string;
+		allowedMethods: Array<'totp' | 'webauthn' | 'recovery'>;
+	} | null>(null),
 
-  open(state: Extract<AuthErrorState, { kind: 'mfa_required' }>) {
-    this.current = {
-      challengeId: state.challengeId,
-      allowedMethods: state.allowedMethods,
-    };
-  },
+	open(state: Extract<AuthErrorState, { kind: 'mfa_required' }>) {
+		this.current = {
+			challengeId: state.challengeId,
+			allowedMethods: state.allowedMethods,
+		};
+	},
 
-  clear() { this.current = null; },
+	clear() {
+		this.current = null;
+	},
 };
 ```
 
@@ -158,9 +164,9 @@ MFA interrupts a user action. After `onsuccess`, the caller re-submits:
 import { retryWithMfa } from '@sveltesentio/auth';
 
 export async function doProtectedActionWithRetry() {
-  return retryWithMfa(async () => {
-    return api.POST('/thing', { body });
-  });
+	return retryWithMfa(async () => {
+		return api.POST('/thing', { body });
+	});
 }
 ```
 
@@ -179,16 +185,16 @@ completes. No intent storage, no route reload.
 ```svelte
 <!-- src/routes/account/security/+page.svelte -->
 <script lang="ts">
-  import { MfaEnroll } from '@sveltesentio/auth';
-  import { toast } from '@sveltesentio/ui/toast';
+	import { MfaEnroll } from '@sveltesentio/auth';
+	import { toast } from '@sveltesentio/ui/toast';
 </script>
 
 <section>
-  <h2>Two-factor authentication</h2>
-  <MfaEnroll
-    methods={['totp', 'webauthn']}
-    onsuccess={(e) => toast.success(`Added ${e.detail.method}`)}
-  />
+	<h2>Two-factor authentication</h2>
+	<MfaEnroll
+		methods={['totp', 'webauthn']}
+		onsuccess={(e) => toast.success(`Added ${e.detail.method}`)}
+	/>
 </section>
 ```
 
@@ -202,7 +208,7 @@ completes. No intent storage, no route reload.
   download/print them before closing.
 - All tabs write via Golusoris `POST /auth/mfa/enroll/{method}`.
 
-Each method is independent — users can enroll TOTP *and* a passkey.
+Each method is independent — users can enroll TOTP _and_ a passkey.
 Recovery codes are mandatory once any method is enrolled.
 
 ## Recovery codes
@@ -211,8 +217,8 @@ Recovery is a fallback-only factor. The UI downplays it:
 
 ```svelte
 <details>
-  <summary class="text-muted-fg text-sm">Lost your device? Use a recovery code.</summary>
-  <!-- form scoped to method=recovery -->
+	<summary class="text-muted-fg text-sm">Lost your device? Use a recovery code.</summary>
+	<!-- form scoped to method=recovery -->
 </details>
 ```
 
@@ -226,15 +232,15 @@ All component copy flows through Paraglide (see
 [ADR-0017](../adr/0017-paraglide-v2-i18n-default.md)). Keys are
 stable — safe for substring-match-free logic:
 
-| Key | English |
-|---|---|
-| `mfa.challenge.title` | Two-factor authentication |
-| `mfa.challenge.totp.label` | Authenticator code |
-| `mfa.challenge.webauthn.prompt` | Use your passkey |
-| `mfa.challenge.recovery.prompt` | Enter a recovery code |
-| `mfa.enroll.totp.confirm` | Enter the 6-digit code to confirm |
-| `mfa.error.invalid` | That code didn't match. Try again. |
-| `mfa.error.rate_limited` | Too many attempts. Try again in {seconds}s. |
+| Key                             | English                                     |
+| ------------------------------- | ------------------------------------------- |
+| `mfa.challenge.title`           | Two-factor authentication                   |
+| `mfa.challenge.totp.label`      | Authenticator code                          |
+| `mfa.challenge.webauthn.prompt` | Use your passkey                            |
+| `mfa.challenge.recovery.prompt` | Enter a recovery code                       |
+| `mfa.enroll.totp.confirm`       | Enter the 6-digit code to confirm           |
+| `mfa.error.invalid`             | That code didn't match. Try again.          |
+| `mfa.error.rate_limited`        | Too many attempts. Try again in {seconds}s. |
 
 Override via app-level Paraglide catalogue.
 
@@ -254,19 +260,19 @@ Mock `handleAuthError` in unit tests; Playwright for the full flow:
 
 ```ts
 test('mfa challenge after protected action', async ({ page }) => {
-  await signIn(page); // pre-seeded session
-  await page.goto('/account/delete');
-  await page.getByRole('button', { name: /delete account/i }).click();
+	await signIn(page); // pre-seeded session
+	await page.goto('/account/delete');
+	await page.getByRole('button', { name: /delete account/i }).click();
 
-  const dialog = page.getByRole('dialog', { name: /two-factor/i });
-  await expect(dialog).toBeVisible();
+	const dialog = page.getByRole('dialog', { name: /two-factor/i });
+	await expect(dialog).toBeVisible();
 
-  await dialog.getByLabel(/authenticator code/i).fill('123456');
-  await dialog.getByRole('button', { name: /verify/i }).click();
+	await dialog.getByLabel(/authenticator code/i).fill('123456');
+	await dialog.getByRole('button', { name: /verify/i }).click();
 
-  await expect(dialog).toBeHidden();
-  // Original delete retried — page should be at /goodbye
-  await page.waitForURL('/goodbye');
+	await expect(dialog).toBeHidden();
+	// Original delete retried — page should be at /goodbye
+	await page.waitForURL('/goodbye');
 });
 ```
 
@@ -280,7 +286,7 @@ Legacy pattern (from revenge):
 ```ts
 // DON'T
 if (error.message.includes('mfa') || error.message.includes('2fa')) {
-  showMfaDialog();
+	showMfaDialog();
 }
 ```
 
@@ -290,7 +296,7 @@ Replacement:
 import { handleAuthError } from '@sveltesentio/auth';
 const state = handleAuthError(error);
 if (state.kind === 'mfa_required') {
-  mfaState.open(state);
+	mfaState.open(state);
 }
 ```
 

@@ -55,16 +55,16 @@ Mirrors Golusoris's auth endpoints 1:1. **Do not** wrap openid-client, oidc-clie
 import { redirect } from '@sveltejs/kit';
 
 export const load = async ({ locals }) => {
-  if (!locals.session) redirect(302, '/login');
-  return { permissions: locals.session.permissions };
+	if (!locals.session) redirect(302, '/login');
+	return { permissions: locals.session.permissions };
 };
 ```
 
 ```svelte
 <!-- +page.svelte -->
 <script lang="ts">
-  import { usePermissions } from '@sveltesentio/auth';
-  const { can } = usePermissions();
+	import { usePermissions } from '@sveltesentio/auth';
+	const { can } = usePermissions();
 </script>
 
 {#if can('billing.read')}<BillingPanel />{/if}

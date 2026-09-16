@@ -43,7 +43,7 @@ every SCIM mutation**.
 - [cron-jobs.md](cron-jobs.md) — daily cert-expiry check; 30-day
   warning before IdP signing cert expires.
 - [secrets-management.md](secrets-management.md) — SP signing key
-  + SCIM bearer tokens live in the secrets manager, never DB.
+  - SCIM bearer tokens live in the secrets manager, never DB.
 - [principles.md §2.2](../principles.md) — OWASP ASVS L2 V8.
 
 ## When to reach for SAML
@@ -74,14 +74,14 @@ Federal / HIPAA / FINRA customers         → sso-saml.md + attestation
 
 ## Build-vs-buy matrix
 
-| Option | Use when | Avoid when |
-|---|---|---|
-| **WorkOS** (DEFAULT new) | Want zero-SAML-library-code; per-tenant IdP via WorkOS dashboard | Data residency outside WorkOS regions; budget-constrained |
-| **Ory Hydra + Ory Kratos** (ESCAPE self-host) | Full self-host; OSS; willing to operate | Small team; want managed |
-| **`@node-saml/passport-saml`** | Need direct SAML lib integration | Don't want to own XML-DSIG edge cases |
-| **`samlify`** | TypeScript-native SAML lib | Same as above |
-| **Auth0 / Okta as SP** | Already on Auth0 | New projects prefer WorkOS or Hydra |
-| **Build your own XML-DSIG** | Never | Always |
+| Option                                        | Use when                                                         | Avoid when                                                |
+| --------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------- |
+| **WorkOS** (DEFAULT new)                      | Want zero-SAML-library-code; per-tenant IdP via WorkOS dashboard | Data residency outside WorkOS regions; budget-constrained |
+| **Ory Hydra + Ory Kratos** (ESCAPE self-host) | Full self-host; OSS; willing to operate                          | Small team; want managed                                  |
+| **`@node-saml/passport-saml`**                | Need direct SAML lib integration                                 | Don't want to own XML-DSIG edge cases                     |
+| **`samlify`**                                 | TypeScript-native SAML lib                                       | Same as above                                             |
+| **Auth0 / Okta as SP**                        | Already on Auth0                                                 | New projects prefer WorkOS or Hydra                       |
+| **Build your own XML-DSIG**                   | Never                                                            | Always                                                    |
 
 **Three provider rules:**
 
@@ -172,7 +172,7 @@ CREATE INDEX scim_tokens_tenant_idx ON scim_tokens (tenant_id) WHERE revoked_at 
 
 1. **`workos_connection_id`** is the per-tenant foreign-key into
    WorkOS. Self-host: replace with `sp_entity_id` + `idp_metadata_url`
-   + `x509_cert` columns.
+   - `x509_cert` columns.
 2. **`enforced: true` blocks password + OIDC login.** Enterprise
    customers want "only SAML works" so user accounts can't be
    created outside IdP control.
@@ -199,17 +199,17 @@ import { WorkOS } from '@workos-inc/node';
 const workos = new WorkOS(WORKOS_API_KEY);
 
 export const GET: RequestHandler = async ({ params }) => {
-  const connection = await workos.sso.getConnection(params.connection_id);
-  const metadata = buildSPMetadata({
-    entityId: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}`,
-    acsUrl: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/callback`,
-    sloUrl: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/logout`,
-    nameIdFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
-  });
+	const connection = await workos.sso.getConnection(params.connection_id);
+	const metadata = buildSPMetadata({
+		entityId: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}`,
+		acsUrl: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/callback`,
+		sloUrl: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/logout`,
+		nameIdFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+	});
 
-  return new Response(metadata, {
-    headers: { 'content-type': 'application/samlmetadata+xml' },
-  });
+	return new Response(metadata, {
+		headers: { 'content-type': 'application/samlmetadata+xml' },
+	});
 };
 ```
 
@@ -240,21 +240,21 @@ import { db } from '$lib/db';
 const workos = new WorkOS(WORKOS_API_KEY);
 
 export const GET: RequestHandler = async ({ params, url }) => {
-  const config = await db.oneOrNone(
-    `SELECT workos_connection_id FROM tenant_saml_configs WHERE tenant_id = $1`,
-    [params.tenant],
-  );
-  if (!config) throw redirect(303, '/login?error=saml_not_configured');
+	const config = await db.oneOrNone(
+		`SELECT workos_connection_id FROM tenant_saml_configs WHERE tenant_id = $1`,
+		[params.tenant],
+	);
+	if (!config) throw redirect(303, '/login?error=saml_not_configured');
 
-  const next = url.searchParams.get('next') ?? '/';
+	const next = url.searchParams.get('next') ?? '/';
 
-  const authorizationUrl = workos.sso.getAuthorizationUrl({
-    connection: config.workos_connection_id,
-    redirectUri: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/callback`,
-    state: signState({ tenantId: params.tenant, next }),
-  });
+	const authorizationUrl = workos.sso.getAuthorizationUrl({
+		connection: config.workos_connection_id,
+		redirectUri: `${PUBLIC_ORIGIN}/api/auth/saml/${params.tenant}/callback`,
+		state: signState({ tenantId: params.tenant, next }),
+	});
 
-  throw redirect(303, authorizationUrl);
+	throw redirect(303, authorizationUrl);
 };
 ```
 
@@ -284,37 +284,37 @@ import { recordAudit } from '$lib/audit';
 const workos = new WorkOS(WORKOS_API_KEY);
 
 export const GET: RequestHandler = async ({ params, url, cookies, getClientAddress }) => {
-  const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-  if (!code || !state) throw redirect(303, '/login?error=saml_missing_code');
+	const code = url.searchParams.get('code');
+	const state = url.searchParams.get('state');
+	if (!code || !state) throw redirect(303, '/login?error=saml_missing_code');
 
-  const verified = verifyState(state);
-  if (!verified || verified.tenantId !== params.tenant) {
-    throw redirect(303, '/login?error=saml_state_mismatch');
-  }
+	const verified = verifyState(state);
+	if (!verified || verified.tenantId !== params.tenant) {
+		throw redirect(303, '/login?error=saml_state_mismatch');
+	}
 
-  const { profile } = await workos.sso.getProfileAndToken({ code });
+	const { profile } = await workos.sso.getProfileAndToken({ code });
 
-  const user = await jitProvisionUser({
-    tenantId: params.tenant,
-    externalId: profile.id,
-    email: profile.email,
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    groups: profile.groups ?? [],
-  });
+	const user = await jitProvisionUser({
+		tenantId: params.tenant,
+		externalId: profile.id,
+		email: profile.email,
+		firstName: profile.firstName,
+		lastName: profile.lastName,
+		groups: profile.groups ?? [],
+	});
 
-  await createSession(cookies, user);
+	await createSession(cookies, user);
 
-  await recordAudit({
-    actor: `saml:${profile.idp}`,
-    action: 'auth.saml.login',
-    targetUserId: user.id,
-    tenantId: params.tenant,
-    metadata: { ip: getClientAddress(), idp: profile.idp },
-  });
+	await recordAudit({
+		actor: `saml:${profile.idp}`,
+		action: 'auth.saml.login',
+		targetUserId: user.id,
+		tenantId: params.tenant,
+		metadata: { ip: getClientAddress(), idp: profile.idp },
+	});
 
-  throw redirect(303, sanitizeNext(verified.next));
+	throw redirect(303, sanitizeNext(verified.next));
 };
 ```
 
@@ -336,7 +336,7 @@ export const GET: RequestHandler = async ({ params, url, cookies, getClientAddre
    get admin role.
 6. **Session cookie same as OIDC path.** [cookies-authoritative.md](cookies-authoritative.md)
    contract — `__Host-session`, `httpOnly`, `secure`, `sameSite:
-   lax`.
+lax`.
 7. **Audit with `actor: 'saml:<idp>'`** not user-actor. The user
    didn't authorize themselves; the IdP did. Makes audit
    queries sensible.
@@ -350,66 +350,75 @@ import { uuidv7 } from '$lib/observability';
 import { now } from '$lib/clock';
 
 interface JITInput {
-  tenantId: string;
-  externalId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  groups: string[];
+	tenantId: string;
+	externalId: string;
+	email: string;
+	firstName: string;
+	lastName: string;
+	groups: string[];
 }
 
 export async function jitProvisionUser(input: JITInput): Promise<User> {
-  return db.tx(async (t) => {
-    const existing = await t.oneOrNone<User>(
-      `SELECT * FROM users
+	return db.tx(async (t) => {
+		const existing = await t.oneOrNone<User>(
+			`SELECT * FROM users
         WHERE tenant_id = $1 AND (external_id = $2 OR email = $3)`,
-      [input.tenantId, input.externalId, input.email.toLowerCase()],
-    );
+			[input.tenantId, input.externalId, input.email.toLowerCase()],
+		);
 
-    if (existing) {
-      await t.none(
-        `UPDATE users SET
+		if (existing) {
+			await t.none(
+				`UPDATE users SET
             external_id = $1,
             first_name = $2,
             last_name = $3,
             last_login_at = $4
           WHERE id = $5`,
-        [input.externalId, input.firstName, input.lastName, now(), existing.id],
-      );
-    }
+				[input.externalId, input.firstName, input.lastName, now(), existing.id],
+			);
+		}
 
-    const config = await t.one(
-      `SELECT default_role, group_mappings FROM tenant_saml_configs WHERE tenant_id = $1`,
-      [input.tenantId],
-    );
+		const config = await t.one(
+			`SELECT default_role, group_mappings FROM tenant_saml_configs WHERE tenant_id = $1`,
+			[input.tenantId],
+		);
 
-    const role = resolveRole(config.default_role, config.group_mappings, input.groups);
+		const role = resolveRole(config.default_role, config.group_mappings, input.groups);
 
-    if (existing) {
-      await t.none(`UPDATE users SET role = $1 WHERE id = $2`, [role, existing.id]);
-      return { ...existing, role };
-    }
+		if (existing) {
+			await t.none(`UPDATE users SET role = $1 WHERE id = $2`, [role, existing.id]);
+			return { ...existing, role };
+		}
 
-    const id = uuidv7();
-    await t.none(
-      `INSERT INTO users (id, tenant_id, email, external_id, first_name, last_name, role, created_at, last_login_at)
+		const id = uuidv7();
+		await t.none(
+			`INSERT INTO users (id, tenant_id, email, external_id, first_name, last_name, role, created_at, last_login_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)`,
-      [id, input.tenantId, input.email.toLowerCase(), input.externalId, input.firstName, input.lastName, role, now()],
-    );
+			[
+				id,
+				input.tenantId,
+				input.email.toLowerCase(),
+				input.externalId,
+				input.firstName,
+				input.lastName,
+				role,
+				now(),
+			],
+		);
 
-    return { id, tenantId: input.tenantId, email: input.email, role, externalId: input.externalId };
-  });
+		return { id, tenantId: input.tenantId, email: input.email, role, externalId: input.externalId };
+	});
 }
 
 function resolveRole(
-  defaultRole: string,
-  mappings: Array<{ samlGroup: string; internalRole: string }>,
-  samlGroups: string[],
+	defaultRole: string,
+	mappings: Array<{ samlGroup: string; internalRole: string }>,
+	samlGroups: string[],
 ): string {
-  for (const m of mappings) {
-    if (samlGroups.includes(m.samlGroup)) return m.internalRole;
-  }
-  return defaultRole;
+	for (const m of mappings) {
+		if (samlGroups.includes(m.samlGroup)) return m.internalRole;
+	}
+	return defaultRole;
 }
 ```
 
@@ -437,27 +446,24 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/db';
 import { createHash } from 'node:crypto';
 
-export async function verifyScimToken(
-  request: Request,
-  tenantId: string,
-): Promise<void> {
-  const auth = request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) {
-    throw error(401, { type: 'urn:sveltesentio:scim:unauthorized', title: 'Unauthorized' });
-  }
+export async function verifyScimToken(request: Request, tenantId: string): Promise<void> {
+	const auth = request.headers.get('authorization');
+	if (!auth?.startsWith('Bearer ')) {
+		throw error(401, { type: 'urn:sveltesentio:scim:unauthorized', title: 'Unauthorized' });
+	}
 
-  const token = auth.slice('Bearer '.length);
-  const hash = createHash('sha256').update(token).digest('hex');
+	const token = auth.slice('Bearer '.length);
+	const hash = createHash('sha256').update(token).digest('hex');
 
-  const row = await db.oneOrNone(
-    `SELECT id FROM scim_tokens
+	const row = await db.oneOrNone(
+		`SELECT id FROM scim_tokens
       WHERE tenant_id = $1 AND token_hash = $2 AND revoked_at IS NULL`,
-    [tenantId, hash],
-  );
+		[tenantId, hash],
+	);
 
-  if (!row) throw error(401, { type: 'urn:sveltesentio:scim:unauthorized', title: 'Unauthorized' });
+	if (!row) throw error(401, { type: 'urn:sveltesentio:scim:unauthorized', title: 'Unauthorized' });
 
-  await db.none(`UPDATE scim_tokens SET last_used_at = now() WHERE id = $1`, [row.id]);
+	await db.none(`UPDATE scim_tokens SET last_used_at = now() WHERE id = $1`, [row.id]);
 }
 ```
 
@@ -480,25 +486,25 @@ import { verifyScimToken } from '$lib/auth/scim/authn';
 import { scimCreate, scimList } from '$lib/auth/scim/handlers';
 
 export const GET: RequestHandler = async ({ request, locals, url }) => {
-  await verifyScimToken(request, locals.tenantId);
-  const filter = url.searchParams.get('filter');
-  const result = await scimList(locals.tenantId, { filter });
-  return new Response(JSON.stringify(result), {
-    headers: { 'content-type': 'application/scim+json' },
-  });
+	await verifyScimToken(request, locals.tenantId);
+	const filter = url.searchParams.get('filter');
+	const result = await scimList(locals.tenantId, { filter });
+	return new Response(JSON.stringify(result), {
+		headers: { 'content-type': 'application/scim+json' },
+	});
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  await verifyScimToken(request, locals.tenantId);
-  const body = await request.json();
-  const user = await scimCreate(locals.tenantId, body);
-  return new Response(JSON.stringify(user), {
-    status: 201,
-    headers: {
-      'content-type': 'application/scim+json',
-      location: `/api/auth/scim/v2/Users/${user.id}`,
-    },
-  });
+	await verifyScimToken(request, locals.tenantId);
+	const body = await request.json();
+	const user = await scimCreate(locals.tenantId, body);
+	return new Response(JSON.stringify(user), {
+		status: 201,
+		headers: {
+			'content-type': 'application/scim+json',
+			location: `/api/auth/scim/v2/Users/${user.id}`,
+		},
+	});
 };
 ```
 
@@ -509,7 +515,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 2. **`application/scim+json` content-type** (not
    `application/json`). IdP SCIM clients check the header.
 3. **Filter support minimum: `userName eq "..."`** + `externalId
-   eq "..."`. Okta/Azure use these for dedup before CREATE.
+eq "..."`. Okta/Azure use these for dedup before CREATE.
 4. **Soft-delete on DELETE.** SCIM DELETE = user deactivated;
    their data stays for audit. Restore via PUT active=true.
 5. **Partial update via PATCH.** SCIM PATCH is a mini-DSL
@@ -528,8 +534,8 @@ import { redirect } from '@sveltejs/kit';
 import { destroySession } from '$lib/auth/session';
 
 export const POST: RequestHandler = async ({ cookies }) => {
-  await destroySession(cookies);
-  throw redirect(303, '/?logged_out=1');
+	await destroySession(cookies);
+	throw redirect(303, '/?logged_out=1');
 };
 
 export const GET = POST;
@@ -556,27 +562,27 @@ import { daysUntil } from '$lib/time';
 import { sendEmail } from '$lib/email/send';
 
 export const POST: RequestHandler = async ({ request }) => {
-  verifyCronRequest(request);
+	verifyCronRequest(request);
 
-  return withCronRun('saml-cert-expiry', async () => {
-    const configs = await db.manyOrNone(
-      `SELECT tenant_id, idp_x509_cert, idp_cert_expires_at FROM tenant_saml_configs`,
-    );
+	return withCronRun('saml-cert-expiry', async () => {
+		const configs = await db.manyOrNone(
+			`SELECT tenant_id, idp_x509_cert, idp_cert_expires_at FROM tenant_saml_configs`,
+		);
 
-    let warned = 0;
-    for (const c of configs) {
-      const days = daysUntil(c.idp_cert_expires_at);
-      if ([30, 14, 7, 1].includes(days)) {
-        await notifyTenantAdmins(c.tenant_id, {
-          template: 'saml_cert_expiring',
-          data: { days, certExpiresAt: c.idp_cert_expires_at },
-        });
-        warned++;
-      }
-    }
+		let warned = 0;
+		for (const c of configs) {
+			const days = daysUntil(c.idp_cert_expires_at);
+			if ([30, 14, 7, 1].includes(days)) {
+				await notifyTenantAdmins(c.tenant_id, {
+					template: 'saml_cert_expiring',
+					data: { days, certExpiresAt: c.idp_cert_expires_at },
+				});
+				warned++;
+			}
+		}
 
-    return { processed: configs.length, skipped: 0, details: { warned } };
-  });
+		return { processed: configs.length, skipped: 0, details: { warned } };
+	});
 };
 ```
 
@@ -671,7 +677,7 @@ scim.token.usage                counter, labels: token_label (bounded, ≤10 per
 - [auth-oidc.md](auth-oidc.md) — sibling OIDC recipe.
 - [audit-log.md](audit-log.md) — SAML + SCIM audit.
 - [secrets-management.md](secrets-management.md) — SP signing key
-  + SCIM token storage.
+  - SCIM token storage.
 - [observability.md](observability.md) — bounded auth labels.
 - [cron-jobs.md](cron-jobs.md) — cert-expiry monitoring.
 - [OASIS SAML 2.0 Core](http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf) — spec reference.

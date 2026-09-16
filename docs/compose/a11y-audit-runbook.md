@@ -35,27 +35,27 @@ pnpm test:contrast      # token-pair test
 
 ```json
 {
-  "id": "color-contrast",
-  "impact": "serious",
-  "description": "Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds",
-  "helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast",
-  "nodes": [
-    {
-      "html": "<button class=\"ghost\">Cancel</button>",
-      "target": [".dialog > button.ghost"],
-      "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.2 (foreground color: #6b7280, background color: #ffffff, font size: 14.0pt, font weight: normal). Expected contrast ratio of 4.5:1"
-    }
-  ]
+	"id": "color-contrast",
+	"impact": "serious",
+	"description": "Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds",
+	"helpUrl": "https://dequeuniversity.com/rules/axe/4.10/color-contrast",
+	"nodes": [
+		{
+			"html": "<button class=\"ghost\">Cancel</button>",
+			"target": [".dialog > button.ghost"],
+			"failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.2 (foreground color: #6b7280, background color: #ffffff, font size: 14.0pt, font weight: normal). Expected contrast ratio of 4.5:1"
+		}
+	]
 }
 ```
 
 Four fields matter for triage:
 
-| Field | Use |
-|---|---|
-| `id` | Look up rule semantics + fix strategies |
-| `impact` | `critical` > `serious` > `moderate` > `minor` — fix order |
-| `target` | CSS selector; paste into devtools to find the element |
+| Field            | Use                                                          |
+| ---------------- | ------------------------------------------------------------ |
+| `id`             | Look up rule semantics + fix strategies                      |
+| `impact`         | `critical` > `serious` > `moderate` > `minor` — fix order    |
+| `target`         | CSS selector; paste into devtools to find the element        |
 | `failureSummary` | The "why"; often tells you the exact delta (e.g. 3.2 vs 4.5) |
 
 ## Impact → priority
@@ -75,9 +75,9 @@ default. Override in `playwright.config.ts`:
 ```ts
 import { axeConfig } from '@sveltesentio/testing/playwright-axe';
 export default defineConfig({
-  use: {
-    ...axeConfig({ impactsFail: ['critical', 'serious', 'moderate'] }),
-  },
+	use: {
+		...axeConfig({ impactsFail: ['critical', 'serious', 'moderate'] }),
+	},
 });
 ```
 
@@ -102,13 +102,13 @@ import { computeContrast } from '@sveltesentio/ui/contrast';
 import { tokens } from '@sveltesentio/ui/tokens';
 
 for (const [fg, bg] of [
-  ['fg', 'bg'],
-  ['muted-fg', 'bg'],
-  ['accent-fg', 'accent'],
-  ['danger-fg', 'danger'],
+	['fg', 'bg'],
+	['muted-fg', 'bg'],
+	['accent-fg', 'accent'],
+	['danger-fg', 'danger'],
 ]) {
-  const ratio = computeContrast(tokens[fg], tokens[bg]);
-  if (ratio < 4.5) throw new Error(`${fg} on ${bg}: ${ratio.toFixed(2)}`);
+	const ratio = computeContrast(tokens[fg], tokens[bg]);
+	if (ratio < 4.5) throw new Error(`${fg} on ${bg}: ${ratio.toFixed(2)}`);
 }
 ```
 
@@ -129,7 +129,7 @@ Fix:
 
 ```svelte
 <button aria-label="Close dialog">
-  <X aria-hidden="true" class="size-4" />
+	<X aria-hidden="true" class="size-4" />
 </button>
 ```
 
@@ -150,7 +150,8 @@ Fix: Formsnap + Superforms wire this automatically — see
 
 `aria-label` is acceptable for inputs inside a visual context that
 already explains the purpose (e.g. search icon + "Search" placeholder
-+ `aria-label="Search"`), but prefer visible labels.
+
+- `aria-label="Search"`), but prefer visible labels.
 
 ### `landmark-unique`
 
@@ -170,8 +171,11 @@ render dynamically:
 
 ```svelte
 <script lang="ts">
-  let { headingLevel = 2, title } = $props<{ headingLevel?: 1|2|3|4|5|6; title: string }>();
-  const Tag = `h${headingLevel}` as const;
+	let { headingLevel = 2, title } = $props<{
+		headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
+		title: string;
+	}>();
+	const Tag = `h${headingLevel}` as const;
 </script>
 
 <svelte:element this={Tag} class="text-lg font-semibold">{title}</svelte:element>
@@ -192,13 +196,13 @@ in component source.
 import { test, expect } from '@sveltesentio/testing/playwright-axe';
 
 test.describe('routes pass axe', () => {
-  for (const route of ['/', '/login', '/flows/demo', '/settings']) {
-    test(`${route} is axe-clean`, async ({ page, axeBuilder }) => {
-      await page.goto(route);
-      const results = await axeBuilder().analyze();
-      expect(results.violations).toEqual([]);
-    });
-  }
+	for (const route of ['/', '/login', '/flows/demo', '/settings']) {
+		test(`${route} is axe-clean`, async ({ page, axeBuilder }) => {
+			await page.goto(route);
+			const results = await axeBuilder().analyze();
+			expect(results.violations).toEqual([]);
+		});
+	}
 });
 ```
 
@@ -208,9 +212,9 @@ Extend per-test:
 
 ```ts
 const results = await axeBuilder()
-  .disableRules(['landmark-one-main'])  // intentional: this is a widget page
-  .include('.feature-under-test')
-  .analyze();
+	.disableRules(['landmark-one-main']) // intentional: this is a widget page
+	.include('.feature-under-test')
+	.analyze();
 ```
 
 Disabling rules requires a comment explaining why — reviewable trail.
@@ -225,8 +229,8 @@ import { toHaveNoViolations } from 'jest-axe';
 expect.extend(toHaveNoViolations);
 
 test('Dialog is axe-clean in open state', async () => {
-  const { container } = render(Dialog, { props: { open: true, title: 'T' } });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(Dialog, { props: { open: true, title: 'T' } });
+	expect(await axe(container)).toHaveNoViolations();
 });
 ```
 
@@ -238,15 +242,15 @@ regions announce the wrong thing).
 
 axe covers ~30-40% of WCAG criteria mechanically. The rest is manual:
 
-| Criterion | Manual check |
-|---|---|
-| 2.4.3 Focus order | Tab through the page; order should mirror visual flow |
-| 2.4.7 Focus visible | Every focusable element has a visible ring |
-| 3.2.1 On focus | Focusing doesn't trigger unexpected navigation |
-| 3.3.1 Error identification | Every form error is announced + visible + describes fix |
-| 1.4.10 Reflow | Viewport 320px × 256px: no horizontal scroll, no loss of content |
+| Criterion                     | Manual check                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| 2.4.3 Focus order             | Tab through the page; order should mirror visual flow                         |
+| 2.4.7 Focus visible           | Every focusable element has a visible ring                                    |
+| 3.2.1 On focus                | Focusing doesn't trigger unexpected navigation                                |
+| 3.3.1 Error identification    | Every form error is announced + visible + describes fix                       |
+| 1.4.10 Reflow                 | Viewport 320px × 256px: no horizontal scroll, no loss of content              |
 | 1.4.13 Content on hover/focus | Tooltips dismissible (ESC), hoverable (can move cursor into them), persistent |
-| 2.5.5 Target size | Touch targets ≥24×24 CSS px (2.2 AA) or 44×44 (2.5.5 AAA) |
+| 2.5.5 Target size             | Touch targets ≥24×24 CSS px (2.2 AA) or 44×44 (2.5.5 AAA)                     |
 
 Run a **monthly** manual pass on the top 5 user flows. Log findings
 against the WCAG checklist in
@@ -260,12 +264,12 @@ WCAG contrast for every documented pair. Shape:
 ```ts
 // @sveltesentio/testing/contrast
 export const pairs: Array<[string, string, number]> = [
-  ['fg', 'bg', 7.0],              // body text, AAA aspiration
-  ['muted-fg', 'bg', 4.5],
-  ['accent-fg', 'accent', 4.5],
-  ['danger-fg', 'danger', 4.5],
-  ['border', 'bg', 3.0],          // UI element contrast
-  ['ring', 'bg', 3.0],            // focus ring
+	['fg', 'bg', 7.0], // body text, AAA aspiration
+	['muted-fg', 'bg', 4.5],
+	['accent-fg', 'accent', 4.5],
+	['danger-fg', 'danger', 4.5],
+	['border', 'bg', 3.0], // UI element contrast
+	['ring', 'bg', 3.0], // focus ring
 ];
 ```
 
@@ -308,8 +312,8 @@ Suppression format:
 
 ```ts
 await axeBuilder()
-  .disableRules(['aria-required-children']) // intentional: log role, not grid — ADR-0011 note
-  .analyze();
+	.disableRules(['aria-required-children']) // intentional: log role, not grid — ADR-0011 note
+	.analyze();
 ```
 
 Include an ADR / issue reference in the comment. Every `disableRules`

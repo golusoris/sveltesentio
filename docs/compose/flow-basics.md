@@ -26,7 +26,7 @@ or `app.html`):
 
 ```svelte
 <script lang="ts">
-  import '@xyflow/svelte/dist/style.css';
+	import '@xyflow/svelte/dist/style.css';
 </script>
 ```
 
@@ -35,29 +35,29 @@ or `app.html`):
 ```svelte
 <!-- src/routes/flows/[id]/+page.svelte -->
 <script lang="ts">
-  import { SvelteFlow, Controls, Background, MiniMap } from '@xyflow/svelte';
-  import { Node, Edge, FlowProvider } from '@sveltesentio/flow';
-  import type { NodeSpec, EdgeSpec } from '@sveltesentio/flow';
+	import { SvelteFlow, Controls, Background, MiniMap } from '@xyflow/svelte';
+	import { Node, Edge, FlowProvider } from '@sveltesentio/flow';
+	import type { NodeSpec, EdgeSpec } from '@sveltesentio/flow';
 
-  let { data } = $props();
-  let nodes = $state<NodeSpec[]>(data.nodes);
-  let edges = $state<EdgeSpec[]>(data.edges);
+	let { data } = $props();
+	let nodes = $state<NodeSpec[]>(data.nodes);
+	let edges = $state<EdgeSpec[]>(data.edges);
 </script>
 
 <FlowProvider>
-  <SvelteFlow
-    bind:nodes
-    bind:edges
-    nodeTypes={{ task: Node.Task, gateway: Node.Gateway }}
-    edgeTypes={{ default: Edge.Default }}
-    fitView
-    minZoom={0.2}
-    maxZoom={2}
-  >
-    <Background gap={16} />
-    <Controls position="bottom-right" />
-    <MiniMap pannable zoomable position="top-right" />
-  </SvelteFlow>
+	<SvelteFlow
+		bind:nodes
+		bind:edges
+		nodeTypes={{ task: Node.Task, gateway: Node.Gateway }}
+		edgeTypes={{ default: Edge.Default }}
+		fitView
+		minZoom={0.2}
+		maxZoom={2}
+	>
+		<Background gap={16} />
+		<Controls position="bottom-right" />
+		<MiniMap pannable zoomable position="top-right" />
+	</SvelteFlow>
 </FlowProvider>
 ```
 
@@ -77,19 +77,19 @@ Custom node types extend `Node.Base`:
 ```svelte
 <!-- src/lib/flow/MyNode.svelte -->
 <script lang="ts">
-  import { Node } from '@sveltesentio/flow';
-  import type { NodeProps } from '@xyflow/svelte';
+	import { Node } from '@sveltesentio/flow';
+	import type { NodeProps } from '@xyflow/svelte';
 
-  let { id, data, selected }: NodeProps<{ title: string; status: 'ok' | 'failed' }> = $props();
+	let { id, data, selected }: NodeProps<{ title: string; status: 'ok' | 'failed' }> = $props();
 </script>
 
 <Node.Base {id} {selected} ariaLabel={data.title}>
-  <div class="rounded-md border border-border bg-bg px-3 py-2">
-    <p class="font-medium text-fg">{data.title}</p>
-    <p class="text-muted-fg text-sm">
-      {data.status === 'ok' ? '✅' : '❌'}
-    </p>
-  </div>
+	<div class="rounded-md border border-border bg-bg px-3 py-2">
+		<p class="font-medium text-fg">{data.title}</p>
+		<p class="text-muted-fg text-sm">
+			{data.status === 'ok' ? '✅' : '❌'}
+		</p>
+	</div>
 </Node.Base>
 ```
 
@@ -103,13 +103,13 @@ Handles (connection anchors) are xyflow primitives:
 
 ```svelte
 <script lang="ts">
-  import { Handle, Position } from '@xyflow/svelte';
+	import { Handle, Position } from '@xyflow/svelte';
 </script>
 
 <Node.Base {id} {selected}>
-  <Handle type="target" position={Position.Left} />
-  <!-- node content -->
-  <Handle type="source" position={Position.Right} />
+	<Handle type="target" position={Position.Left} />
+	<!-- node content -->
+	<Handle type="source" position={Position.Right} />
 </Node.Base>
 ```
 
@@ -122,26 +122,26 @@ position by geometry), see [flow-advanced.md](flow-advanced.md).
 `Edge.Default`, `Edge.Conditional`, `Edge.Error` cover the common
 semantic categories. Colors bind to oklch tokens:
 
-| Edge type | Token |
-|---|---|
-| `Edge.Default` | `--color-border` |
+| Edge type          | Token                     |
+| ------------------ | ------------------------- |
+| `Edge.Default`     | `--color-border`          |
 | `Edge.Conditional` | `--color-accent` (dashed) |
-| `Edge.Error` | `--color-danger` |
+| `Edge.Error`       | `--color-danger`          |
 
 Custom edges compose `Edge.Base`:
 
 ```svelte
 <script lang="ts">
-  import { Edge } from '@sveltesentio/flow';
-  import { BaseEdge, getBezierPath } from '@xyflow/svelte';
-  import type { EdgeProps } from '@xyflow/svelte';
+	import { Edge } from '@sveltesentio/flow';
+	import { BaseEdge, getBezierPath } from '@xyflow/svelte';
+	import type { EdgeProps } from '@xyflow/svelte';
 
-  let props: EdgeProps = $props();
-  const [path] = $derived(getBezierPath(props));
+	let props: EdgeProps = $props();
+	const [path] = $derived(getBezierPath(props));
 </script>
 
 <Edge.Base {...props}>
-  <BaseEdge {path} class="stroke-[var(--color-accent)]" />
+	<BaseEdge {path} class="stroke-[var(--color-accent)]" />
 </Edge.Base>
 ```
 
@@ -159,12 +159,12 @@ algorithm is Sugiyama layered + ORTHOGONAL edge routing:
 import { layoutGraph } from '@sveltesentio/flow';
 
 async function autoLayout() {
-  const laid = await layoutGraph(nodes, edges, {
-    direction: 'RIGHT',     // DOWN | RIGHT | UP | LEFT — default RIGHT
-    spacing: { node: 40, layer: 80 },
-    routing: 'ORTHOGONAL',  // ORTHOGONAL | SPLINES | POLYLINE
-  });
-  nodes = laid;
+	const laid = await layoutGraph(nodes, edges, {
+		direction: 'RIGHT', // DOWN | RIGHT | UP | LEFT — default RIGHT
+		spacing: { node: 40, layer: 80 },
+		routing: 'ORTHOGONAL', // ORTHOGONAL | SPLINES | POLYLINE
+	});
+	nodes = laid;
 }
 ```
 
@@ -185,27 +185,25 @@ chunking the layout or pre-computing on the server.
 
 ```svelte
 <script lang="ts">
-  import { Palette, type PaletteCategory } from '@sveltesentio/flow';
+	import { Palette, type PaletteCategory } from '@sveltesentio/flow';
 
-  const categories: PaletteCategory[] = [
-    {
-      id: 'actions',
-      label: 'Actions',
-      tone: 'accent',
-      items: [
-        { type: 'task', label: 'HTTP request', data: { kind: 'http' } },
-        { type: 'task', label: 'DB query', data: { kind: 'db' } },
-      ],
-    },
-    {
-      id: 'control',
-      label: 'Control flow',
-      tone: 'muted',
-      items: [
-        { type: 'gateway', label: 'Branch', data: { kind: 'if' } },
-      ],
-    },
-  ];
+	const categories: PaletteCategory[] = [
+		{
+			id: 'actions',
+			label: 'Actions',
+			tone: 'accent',
+			items: [
+				{ type: 'task', label: 'HTTP request', data: { kind: 'http' } },
+				{ type: 'task', label: 'DB query', data: { kind: 'db' } },
+			],
+		},
+		{
+			id: 'control',
+			label: 'Control flow',
+			tone: 'muted',
+			items: [{ type: 'gateway', label: 'Branch', data: { kind: 'if' } }],
+		},
+	];
 </script>
 
 <Palette {categories} />
@@ -227,9 +225,9 @@ import { connectFlow } from '$lib/collab'; // from collab.md
 const { doc, provider } = connectFlow(data.flowId);
 
 const { nodes, edges, cleanup } = syncWithYjs({
-  doc,
-  nodes: doc.getArray('nodes'),
-  edges: doc.getArray('edges'),
+	doc,
+	nodes: doc.getArray('nodes'),
+	edges: doc.getArray('edges'),
 });
 
 onDestroy(cleanup);
@@ -260,12 +258,11 @@ Unit tests with Testing Library; Playwright for interaction:
 ```ts
 // Playwright: drag a palette item onto the canvas
 test('palette drop creates a node', async ({ page }) => {
-  await page.goto('/flows/new');
-  await page.getByRole('button', { name: /http request/i }).dragTo(
-    page.locator('[data-testid="flow-canvas"]'),
-    { targetPosition: { x: 200, y: 200 } },
-  );
-  await expect(page.getByText('HTTP request')).toBeVisible();
+	await page.goto('/flows/new');
+	await page
+		.getByRole('button', { name: /http request/i })
+		.dragTo(page.locator('[data-testid="flow-canvas"]'), { targetPosition: { x: 200, y: 200 } });
+	await expect(page.getByText('HTTP request')).toBeVisible();
 });
 ```
 

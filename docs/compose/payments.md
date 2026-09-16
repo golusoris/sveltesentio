@@ -140,10 +140,10 @@ import Stripe from 'stripe';
 import { STRIPE_SECRET_KEY, STRIPE_API_VERSION } from '$env/static/private';
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
-  maxNetworkRetries: 2,
-  timeout: 10_000,
-  telemetry: false,  // don't leak user-agent-level metrics to Stripe
+	apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
+	maxNetworkRetries: 2,
+	timeout: 10_000,
+	telemetry: false, // don't leak user-agent-level metrics to Stripe
 });
 ```
 
@@ -161,32 +161,39 @@ import { getOrCreateStripeCustomer } from '$lib/payments/customer';
 import { uuidv7 } from '@sveltesentio/core';
 
 export async function POST({ request, locals, url }) {
-  const session = locals.session ?? (() => { throw error(401); })();
+	const session =
+		locals.session ??
+		(() => {
+			throw error(401);
+		})();
 
-  const body = await request.json();
-  const { priceId } = CheckoutRequest.parse(body);  // Zod — bounded price IDs
+	const body = await request.json();
+	const { priceId } = CheckoutRequest.parse(body); // Zod — bounded price IDs
 
-  const customerId = await getOrCreateStripeCustomer(session.userId);
+	const customerId = await getOrCreateStripeCustomer(session.userId);
 
-  const idempotencyKey = request.headers.get('idempotency-key') ?? uuidv7();
+	const idempotencyKey = request.headers.get('idempotency-key') ?? uuidv7();
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${url.origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${url.origin}/billing/cancel`,
-    client_reference_id: session.userId,    // stamp into session → webhook
-    metadata: {
-      correlationId: locals.correlationId,  // UUIDv7 for trace-join
-      userId: session.userId,
-    },
-    allow_promotion_codes: true,
-    automatic_tax: { enabled: true },
-    billing_address_collection: 'required',
-  }, { idempotencyKey });
+	const checkoutSession = await stripe.checkout.sessions.create(
+		{
+			customer: customerId,
+			mode: 'subscription',
+			line_items: [{ price: priceId, quantity: 1 }],
+			success_url: `${url.origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: `${url.origin}/billing/cancel`,
+			client_reference_id: session.userId, // stamp into session → webhook
+			metadata: {
+				correlationId: locals.correlationId, // UUIDv7 for trace-join
+				userId: session.userId,
+			},
+			allow_promotion_codes: true,
+			automatic_tax: { enabled: true },
+			billing_address_collection: 'required',
+		},
+		{ idempotencyKey },
+	);
 
-  throw redirect(303, checkoutSession.url!);
+	throw redirect(303, checkoutSession.url!);
 }
 ```
 
@@ -215,8 +222,8 @@ on `cancel_url`.
 ```svelte
 <!-- src/routes/(app)/billing/+page.svelte -->
 <form method="POST" action="/billing/checkout">
-  <input type="hidden" name="priceId" value={plan.priceId} />
-  <button type="submit">Subscribe</button>
+	<input type="hidden" name="priceId" value={plan.priceId} />
+	<button type="submit">Subscribe</button>
 </form>
 ```
 
@@ -240,31 +247,31 @@ import { STRIPE_WEBHOOK_SECRET } from '$env/static/private';
 import { reconcile } from '$lib/payments/reconcile';
 
 export async function POST({ request }) {
-  const sig = request.headers.get('stripe-signature');
-  if (!sig) throw error(400, 'missing_signature');
+	const sig = request.headers.get('stripe-signature');
+	if (!sig) throw error(400, 'missing_signature');
 
-  const raw = await request.text();   // MANDATORY: raw body for signature
+	const raw = await request.text(); // MANDATORY: raw body for signature
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(raw, sig, STRIPE_WEBHOOK_SECRET);
-  } catch {
-    throw error(401, 'signature_invalid');
-  }
+	let event: Stripe.Event;
+	try {
+		event = stripe.webhooks.constructEvent(raw, sig, STRIPE_WEBHOOK_SECRET);
+	} catch {
+		throw error(401, 'signature_invalid');
+	}
 
-  // Dedup by Stripe event.id — at-least-once delivery.
-  const alreadySeen = await seenEvent(event.id);
-  if (alreadySeen) return json({ received: true, duplicate: true }, { status: 200 });
+	// Dedup by Stripe event.id — at-least-once delivery.
+	const alreadySeen = await seenEvent(event.id);
+	if (alreadySeen) return json({ received: true, duplicate: true }, { status: 200 });
 
-  try {
-    await reconcile(event);
-    await markSeen(event.id, event.type);
-    return json({ received: true }, { status: 200 });
-  } catch (err) {
-    // 5xx → Stripe retries with backoff. Only use for transient errors
-    // that retry will resolve. Permanent shape errors → return 200 + alert.
-    throw error(500, 'reconcile_failed');
-  }
+	try {
+		await reconcile(event);
+		await markSeen(event.id, event.type);
+		return json({ received: true }, { status: 200 });
+	} catch (err) {
+		// 5xx → Stripe retries with backoff. Only use for transient errors
+		// that retry will resolve. Permanent shape errors → return 200 + alert.
+		throw error(500, 'reconcile_failed');
+	}
 }
 ```
 
@@ -273,7 +280,7 @@ Stripe specifics):
 
 1. **`stripe.webhooks.constructEvent(raw, sig, secret)`** — never
    parse the body yourself. Stripe's SDK bundles signature verification
-   + timestamp tolerance (5 min default).
+   - timestamp tolerance (5 min default).
 2. **Dedup on `event.id`.** At-least-once delivery means duplicates
    are normal, not errors. Return 200 on duplicate — a 4xx triggers
    retry storms.
@@ -297,78 +304,83 @@ import type Stripe from 'stripe';
 import { emit as audit } from '@sveltesentio/audit';
 
 export async function reconcile(event: Stripe.Event): Promise<void> {
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.client_reference_id;
-      if (!userId) throw new Error('checkout_missing_user_ref');
+	switch (event.type) {
+		case 'checkout.session.completed': {
+			const session = event.data.object as Stripe.Checkout.Session;
+			const userId = session.client_reference_id;
+			if (!userId) throw new Error('checkout_missing_user_ref');
 
-      await db.transaction().execute(async (tx) => {
-        await tx.insertInto('subscriptions').values({
-          id: session.subscription as string,
-          user_id: userId,
-          customer_id: session.customer as string,
-          status: 'active',
-          price_id: session.line_items?.data[0]?.price?.id ?? null,
-          created_at: new Date(event.created * 1000),
-        }).onConflict((oc) => oc.column('id').doUpdateSet({ status: 'active' }))
-          .execute();
-      });
+			await db.transaction().execute(async (tx) => {
+				await tx
+					.insertInto('subscriptions')
+					.values({
+						id: session.subscription as string,
+						user_id: userId,
+						customer_id: session.customer as string,
+						status: 'active',
+						price_id: session.line_items?.data[0]?.price?.id ?? null,
+						created_at: new Date(event.created * 1000),
+					})
+					.onConflict((oc) => oc.column('id').doUpdateSet({ status: 'active' }))
+					.execute();
+			});
 
-      await audit({
-        actor: { type: 'user', id: userId, label: null },
-        onBehalfOf: null,
-        action: 'billing.subscription.created',
-        target: { type: 'subscription', id: session.subscription as string, label: null },
-        source: { ip: null, userAgent: null, requestId: event.id, origin: 'webhook' },
-        outcome: 'success',
-        reason: null,
-        metadata: { priceId: session.line_items?.data[0]?.price?.id ?? '' },
-      });
-      break;
-    }
+			await audit({
+				actor: { type: 'user', id: userId, label: null },
+				onBehalfOf: null,
+				action: 'billing.subscription.created',
+				target: { type: 'subscription', id: session.subscription as string, label: null },
+				source: { ip: null, userAgent: null, requestId: event.id, origin: 'webhook' },
+				outcome: 'success',
+				reason: null,
+				metadata: { priceId: session.line_items?.data[0]?.price?.id ?? '' },
+			});
+			break;
+		}
 
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted': {
-      const sub = event.data.object as Stripe.Subscription;
-      await db.updateTable('subscriptions')
-        .set({
-          status: sub.status,
-          cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000) : null,
-          canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
-        })
-        .where('id', '=', sub.id)
-        .execute();
+		case 'customer.subscription.updated':
+		case 'customer.subscription.deleted': {
+			const sub = event.data.object as Stripe.Subscription;
+			await db
+				.updateTable('subscriptions')
+				.set({
+					status: sub.status,
+					cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000) : null,
+					canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
+				})
+				.where('id', '=', sub.id)
+				.execute();
 
-      if (event.type === 'customer.subscription.deleted') {
-        await audit({
-          actor: { type: 'system', id: null, label: 'stripe' },
-          onBehalfOf: { type: 'user', id: sub.metadata.userId ?? '', label: null },
-          action: 'billing.subscription.canceled',
-          target: { type: 'subscription', id: sub.id, label: null },
-          source: { ip: null, userAgent: null, requestId: event.id, origin: 'webhook' },
-          outcome: 'success',
-          reason: sub.cancellation_details?.reason ?? null,
-          metadata: {},
-        });
-      }
-      break;
-    }
+			if (event.type === 'customer.subscription.deleted') {
+				await audit({
+					actor: { type: 'system', id: null, label: 'stripe' },
+					onBehalfOf: { type: 'user', id: sub.metadata.userId ?? '', label: null },
+					action: 'billing.subscription.canceled',
+					target: { type: 'subscription', id: sub.id, label: null },
+					source: { ip: null, userAgent: null, requestId: event.id, origin: 'webhook' },
+					outcome: 'success',
+					reason: sub.cancellation_details?.reason ?? null,
+					metadata: {},
+				});
+			}
+			break;
+		}
 
-    case 'invoice.payment_failed': {
-      const invoice = event.data.object as Stripe.Invoice;
-      await db.updateTable('subscriptions')
-        .set({ status: 'past_due' })
-        .where('id', '=', invoice.subscription as string)
-        .execute();
-      // Trigger email via structured-emails.md
-      break;
-    }
+		case 'invoice.payment_failed': {
+			const invoice = event.data.object as Stripe.Invoice;
+			await db
+				.updateTable('subscriptions')
+				.set({ status: 'past_due' })
+				.where('id', '=', invoice.subscription as string)
+				.execute();
+			// Trigger email via structured-emails.md
+			break;
+		}
 
-    default:
-      // UNHANDLED event type — log + 200. Never error on unexpected events.
-      console.warn('unhandled_stripe_event', { type: event.type, id: event.id });
-  }
+		default:
+			// UNHANDLED event type — log + 200. Never error on unexpected events.
+			console.warn('unhandled_stripe_event', { type: event.type, id: event.id });
+	}
 }
 ```
 
@@ -400,16 +412,20 @@ portal session and redirect:
 ```ts
 // src/routes/(app)/billing/portal/+server.ts
 export async function POST({ locals, url }) {
-  const session = locals.session ?? (() => { throw error(401); })();
-  const customerId = await getStripeCustomer(session.userId);
+	const session =
+		locals.session ??
+		(() => {
+			throw error(401);
+		})();
+	const customerId = await getStripeCustomer(session.userId);
 
-  const portal = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${url.origin}/billing`,
-    configuration: env.STRIPE_PORTAL_CONFIG_ID,
-  });
+	const portal = await stripe.billingPortal.sessions.create({
+		customer: customerId,
+		return_url: `${url.origin}/billing`,
+		configuration: env.STRIPE_PORTAL_CONFIG_ID,
+	});
 
-  throw redirect(303, portal.url);
+	throw redirect(303, portal.url);
 }
 ```
 
@@ -422,31 +438,31 @@ webhook.
 ```svelte
 <!-- src/lib/payments/StripeCardForm.svelte -->
 <script lang="ts">
-  import { Elements, PaymentElement } from 'svelte-stripe';
-  import { loadStripe } from '@stripe/stripe-js';
-  import { PUBLIC_STRIPE_PUBLISHABLE_KEY } from '$env/static/public';
+	import { Elements, PaymentElement } from 'svelte-stripe';
+	import { loadStripe } from '@stripe/stripe-js';
+	import { PUBLIC_STRIPE_PUBLISHABLE_KEY } from '$env/static/public';
 
-  let { clientSecret }: { clientSecret: string } = $props();
-  const stripe = loadStripe(PUBLIC_STRIPE_PUBLISHABLE_KEY);
+	let { clientSecret }: { clientSecret: string } = $props();
+	const stripe = loadStripe(PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
-  async function onSubmit(ev: SubmitEvent) {
-    ev.preventDefault();
-    const s = await stripe;
-    const { error: confirmErr } = await s!.confirmPayment({
-      elements: elementsInstance,
-      confirmParams: { return_url: `${window.location.origin}/billing/success` },
-    });
-    if (confirmErr) {
-      // Show user the error; DO NOT mark success.
-    }
-  }
+	async function onSubmit(ev: SubmitEvent) {
+		ev.preventDefault();
+		const s = await stripe;
+		const { error: confirmErr } = await s!.confirmPayment({
+			elements: elementsInstance,
+			confirmParams: { return_url: `${window.location.origin}/billing/success` },
+		});
+		if (confirmErr) {
+			// Show user the error; DO NOT mark success.
+		}
+	}
 </script>
 
-<Elements stripe={stripe} clientSecret={clientSecret}>
-  <form onsubmit={onSubmit}>
-    <PaymentElement />
-    <button type="submit">Pay</button>
-  </form>
+<Elements {stripe} {clientSecret}>
+	<form onsubmit={onSubmit}>
+		<PaymentElement />
+		<button type="submit">Pay</button>
+	</form>
 </Elements>
 ```
 
@@ -482,11 +498,11 @@ Span attributes on every payment-related route:
 
 ```ts
 span.setAttributes({
-  'payment.provider': 'stripe',
-  'payment.intent.status': intent.status,      // bounded enum from Stripe
-  'payment.mode': 'subscription',              // or 'payment' | 'setup'
-  'payment.currency': intent.currency,         // 3-letter ISO
-  'correlation.id': correlationId,
+	'payment.provider': 'stripe',
+	'payment.intent.status': intent.status, // bounded enum from Stripe
+	'payment.mode': 'subscription', // or 'payment' | 'setup'
+	'payment.currency': intent.currency, // 3-letter ISO
+	'correlation.id': correlationId,
 });
 ```
 
@@ -537,8 +553,8 @@ Never write an e2e test that hits real Stripe with real amounts.
   Stripe Tax handle it unless you have a tax accountant telling you
   otherwise.
 - **Don't build your own "plans/pricing" table.** Let Stripe Products
-  + Prices be the source of truth; reference `price_id` in your DB
-  but never denormalize the price amount. Prices change.
+  - Prices be the source of truth; reference `price_id` in your DB
+    but never denormalize the price amount. Prices change.
 - **Don't skip dunning emails on `invoice.payment_failed`.** Customers
   whose card expired need retry + notification. This is where Stripe
   Billing's built-in dunning helps; triple-check it's enabled.

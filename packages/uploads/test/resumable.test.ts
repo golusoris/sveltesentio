@@ -1,11 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
 import { createResumableUpload } from '../src/resumable.js';
-import type {
-	TusUpload,
-	TusUploadConstructor,
-	TusUploadOptions,
-} from '../src/resumable.js';
+import type { TusUpload, TusUploadConstructor, TusUploadOptions } from '../src/resumable.js';
 
 // Fake tus `Upload`: records the options it was constructed with and exposes the
 // captured callbacks so a test can drive progress/success/error with no network.

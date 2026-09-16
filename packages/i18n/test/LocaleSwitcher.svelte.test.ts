@@ -49,16 +49,8 @@ describe('<LocaleSwitcher>', () => {
 	it('renders one option per locale in display order', () => {
 		renderSwitcher();
 		const options = screen.getAllByRole('option');
-		expect(options.map((o) => o.textContent)).toEqual([
-			'English',
-			'Deutsch',
-			'العربية',
-		]);
-		expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual([
-			'en-US',
-			'de-AT',
-			'ar',
-		]);
+		expect(options.map((o) => o.textContent)).toEqual(['English', 'Deutsch', 'العربية']);
+		expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(['en-US', 'de-AT', 'ar']);
 	});
 
 	it('reflects the controlled `current` value as the selected option', () => {

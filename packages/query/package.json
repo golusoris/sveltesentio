@@ -1,82 +1,82 @@
 {
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "description": "TanStack Query wrappers for SvelteKit \u2014 load helpers, optimistic updates, SSR hydration",
-  "devDependencies": {
-    "@bufbuild/protobuf": "^2.14.1",
-    "@connectrpc/connect": "^2.2.0",
-    "@tanstack/svelte-query": "^6.1.48",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./connect": {
-      "import": "./src/connect-query.ts",
-      "types": "./src/connect-query.ts"
-    },
-    "./hydration": {
-      "import": "./src/hydration.ts",
-      "types": "./src/hydration.ts"
-    },
-    "./infinite": {
-      "import": "./src/infinite.ts",
-      "types": "./src/infinite.ts"
-    },
-    "./mutation": {
-      "import": "./src/mutation.ts",
-      "types": "./src/mutation.ts"
-    },
-    "./query": {
-      "import": "./src/query.ts",
-      "types": "./src/query.ts"
-    },
-    "./query-client": {
-      "import": "./src/query-client.ts",
-      "types": "./src/query-client.ts"
-    }
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ],
-  "keywords": [
-    "sveltesentio",
-    "tanstack-query",
-    "sveltekit",
-    "data-fetching"
-  ],
-  "name": "@sveltesentio/query",
-  "peerDependencies": {
-    "@bufbuild/protobuf": ">=2.0.0",
-    "@connectrpc/connect": ">=2.0.0",
-    "@sveltejs/kit": ">=2.0.0",
-    "@tanstack/svelte-query": ">=6.0.0",
-    "svelte": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@bufbuild/protobuf": {
-      "optional": true
-    },
-    "@connectrpc/connect": {
-      "optional": true
-    }
-  },
-  "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
-  },
-  "sideEffects": false,
-  "type": "module",
-  "version": "0.3.0"
+	"dependencies": {
+		"@sveltesentio/core": "workspace:*"
+	},
+	"description": "TanStack Query wrappers for SvelteKit \u2014 load helpers, optimistic updates, SSR hydration",
+	"devDependencies": {
+		"@bufbuild/protobuf": "^2.14.1",
+		"@connectrpc/connect": "^2.2.0",
+		"@tanstack/svelte-query": "^6.1.48",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.11"
+	},
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		},
+		"./connect": {
+			"import": "./src/connect-query.ts",
+			"types": "./src/connect-query.ts"
+		},
+		"./hydration": {
+			"import": "./src/hydration.ts",
+			"types": "./src/hydration.ts"
+		},
+		"./infinite": {
+			"import": "./src/infinite.ts",
+			"types": "./src/infinite.ts"
+		},
+		"./mutation": {
+			"import": "./src/mutation.ts",
+			"types": "./src/mutation.ts"
+		},
+		"./query": {
+			"import": "./src/query.ts",
+			"types": "./src/query.ts"
+		},
+		"./query-client": {
+			"import": "./src/query-client.ts",
+			"types": "./src/query-client.ts"
+		}
+	},
+	"files": [
+		"src",
+		"CHANGELOG.md"
+	],
+	"keywords": [
+		"sveltesentio",
+		"tanstack-query",
+		"sveltekit",
+		"data-fetching"
+	],
+	"name": "@sveltesentio/query",
+	"peerDependencies": {
+		"@bufbuild/protobuf": ">=2.0.0",
+		"@connectrpc/connect": ">=2.0.0",
+		"@sveltejs/kit": ">=2.0.0",
+		"@tanstack/svelte-query": ">=6.0.0",
+		"svelte": ">=5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@bufbuild/protobuf": {
+			"optional": true
+		},
+		"@connectrpc/connect": {
+			"optional": true
+		}
+	},
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"test": "vitest run --coverage",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"version": "0.3.0"
 }

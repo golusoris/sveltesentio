@@ -1,4 +1,5 @@
 # Monorepo releases — release-please per-package, Conventional Commits,
+
 # SemVer + provenance
 
 sveltesentio ships 12 `@sveltesentio/*` packages from a single pnpm
@@ -21,7 +22,7 @@ This recipe documents the end-to-end flow:
 - [principles.md §2.5](../principles.md) — supply chain invariants
   (SBOM, provenance, `pnpm audit` clean).
 - [principles.md §2.7](../principles.md) — Conventional Commits
-  + SemVer + release-please.
+  - SemVer + release-please.
 - [AGENTS.md](../../AGENTS.md) — repo layout referencing the
   release-please workflow.
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — contributor-facing release
@@ -60,36 +61,36 @@ for this workspace.
 ```json
 // release-please-config.json
 {
-  "release-type": "node",
-  "bump-minor-pre-major": true,
-  "bump-patch-for-minor-pre-major": false,
-  "include-v-in-tag": true,
-  "changelog-path": "CHANGELOG.md",
-  "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "revert", "section": "Reverts" },
-    { "type": "refactor", "section": "Code Refactoring" },
-    { "type": "deps", "section": "Dependencies" },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "ci", "section": "CI", "hidden": true },
-    { "type": "build", "section": "Build", "hidden": true },
-    { "type": "chore", "section": "Chores", "hidden": true }
-  ],
-  "packages": {
-    "packages/core": { "package-name": "@sveltesentio/core" },
-    "packages/ui":   { "package-name": "@sveltesentio/ui" }
-  }
+	"release-type": "node",
+	"bump-minor-pre-major": true,
+	"bump-patch-for-minor-pre-major": false,
+	"include-v-in-tag": true,
+	"changelog-path": "CHANGELOG.md",
+	"changelog-sections": [
+		{ "type": "feat", "section": "Features" },
+		{ "type": "fix", "section": "Bug Fixes" },
+		{ "type": "perf", "section": "Performance" },
+		{ "type": "revert", "section": "Reverts" },
+		{ "type": "refactor", "section": "Code Refactoring" },
+		{ "type": "deps", "section": "Dependencies" },
+		{ "type": "docs", "section": "Documentation", "hidden": true },
+		{ "type": "test", "section": "Tests", "hidden": true },
+		{ "type": "ci", "section": "CI", "hidden": true },
+		{ "type": "build", "section": "Build", "hidden": true },
+		{ "type": "chore", "section": "Chores", "hidden": true }
+	],
+	"packages": {
+		"packages/core": { "package-name": "@sveltesentio/core" },
+		"packages/ui": { "package-name": "@sveltesentio/ui" }
+	}
 }
 ```
 
 ```json
 // .release-please-manifest.json
 {
-  "packages/core": "0.0.1",
-  "packages/ui":   "0.0.1"
+	"packages/core": "0.0.1",
+	"packages/ui": "0.0.1"
 }
 ```
 
@@ -180,14 +181,14 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write    # npm provenance
+  id-token: write # npm provenance
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.rp.outputs.releases_created }}
-      paths_released:   ${{ steps.rp.outputs.paths_released }}
+      paths_released: ${{ steps.rp.outputs.paths_released }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: rp
@@ -265,7 +266,7 @@ Three supply-chain invariants per [principles.md §2.5](../principles.md):
 
 1. **`npm publish --provenance`** — SLSA provenance attestation
    published to the npm registry, verifiable via `npm audit signatures`
-   + `gh attestation verify`.
+   - `gh attestation verify`.
 2. **CycloneDX SBOM** — generated per package, attested via
    `actions/attest-sbom`, uploaded as workflow artifact.
 3. **cosign-signable releases** — the GitHub Release already includes
@@ -297,7 +298,7 @@ listed package to the same version — not what we want here). Instead:
 - Package deps use `"^0.1.0"` ranges (semver-compatible).
 - release-please does **not** auto-bump downstream ranges on patch.
 - On minor bump of an upstream, open a follow-up PR with the range bump
-  + integration test:
+  - integration test:
 
 ```text
 deps(forms): bump @sveltesentio/ui to ^0.2.0
@@ -331,13 +332,13 @@ config:
 
 ```json
 {
-  "packages": {
-    "packages/ui": {
-      "package-name": "@sveltesentio/ui",
-      "prerelease": true,
-      "prerelease-type": "rc"
-    }
-  }
+	"packages": {
+		"packages/ui": {
+			"package-name": "@sveltesentio/ui",
+			"prerelease": true,
+			"prerelease-type": "rc"
+		}
+	}
 }
 ```
 
@@ -371,21 +372,41 @@ or malware. Unpublishing breaks consumers that already installed.
 ```js
 // commitlint.config.js
 export default {
-  extends: ['@commitlint/config-conventional'],
-  rules: {
-    'type-enum': [2, 'always', [
-      'feat', 'fix', 'perf', 'revert', 'refactor',
-      'deps', 'docs', 'test', 'ci', 'build', 'chore',
-    ]],
-    'scope-enum': [2, 'always', [
-      'core', 'ui', 'query', 'forms', 'i18n',
-      'auth', 'realtime', 'flow', 'media', 'charts',
-      'ai', 'testing', 'ipc-sockmap', 'shell', 'uploads',
-      'collab', 'ci', 'deps', 'repo',
-    ]],
-    'scope-empty': [2, 'never'],
-    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
-  },
+	extends: ['@commitlint/config-conventional'],
+	rules: {
+		'type-enum': [
+			2,
+			'always',
+			['feat', 'fix', 'perf', 'revert', 'refactor', 'deps', 'docs', 'test', 'ci', 'build', 'chore'],
+		],
+		'scope-enum': [
+			2,
+			'always',
+			[
+				'core',
+				'ui',
+				'query',
+				'forms',
+				'i18n',
+				'auth',
+				'realtime',
+				'flow',
+				'media',
+				'charts',
+				'ai',
+				'testing',
+				'ipc-sockmap',
+				'shell',
+				'uploads',
+				'collab',
+				'ci',
+				'deps',
+				'repo',
+			],
+		],
+		'scope-empty': [2, 'never'],
+		'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+	},
 };
 ```
 

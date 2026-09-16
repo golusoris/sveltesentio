@@ -222,9 +222,7 @@ describe('createConnectStream', () => {
 					return {
 						next(): Promise<IteratorResult<number>> {
 							return new Promise((_resolve, reject) => {
-								signal.addEventListener('abort', () =>
-									reject(new Error('aborted')),
-								);
+								signal.addEventListener('abort', () => reject(new Error('aborted')));
 							});
 						},
 					};

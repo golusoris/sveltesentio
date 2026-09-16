@@ -78,6 +78,7 @@ sk_live_01JC3R...abc123      ← shown to the user, stored hashed
 ```
 
 **Why the `sk_live_` prefix is non-negotiable:**
+
 - GitHub secret-scanning, GitLeaks, TruffleHog, AWS Secret Scanner all
   key off prefixes. A token that looks like a UUID is unscannable.
 - Operators grepping logs can recognize "this is a live secret" at a
@@ -98,38 +99,52 @@ export type KeyKind = z.infer<typeof KeyKind>;
 export const KeyEnvironment = z.enum(['live', 'test']);
 
 export const KeyScope = z.enum([
-  'read:profile', 'write:profile',
-  'read:data', 'write:data',
-  'read:admin',
-  // `admin:*` and `write:admin` are NEVER tokenable — require session + MFA.
+	'read:profile',
+	'write:profile',
+	'read:data',
+	'write:data',
+	'read:admin',
+	// `admin:*` and `write:admin` are NEVER tokenable — require session + MFA.
 ]);
 
 export const ApiKey = z.object({
-  id: z.string().uuid(),                                   // UUIDv7
-  kind: KeyKind,
-  environment: KeyEnvironment,
-  // First 12 chars of the token — safe to display + index.
-  // Never the full secret.
-  prefix: z.string().regex(/^(sk|svc)_(live|test)_[A-Z0-9]{5}$/),
-  // sha256(full token). Lookup key. Never reversible.
-  secretHash: z.string().regex(/^[a-f0-9]{64}$/),
-  ownerKind: z.enum(['user', 'tenant']),
-  ownerId: z.string().uuid(),
-  createdBy: z.string().uuid(),
-  name: z.string().trim().min(1).max(80),                  // human label
-  scopes: z.array(KeyScope).min(1).max(20),
-  createdAt: z.string().datetime({ offset: true }),
-  lastUsedAt: z.string().datetime({ offset: true }).nullable(),
-  expiresAt: z.string().datetime({ offset: true }).nullable(), // nullable = never expires (discouraged)
-  revokedAt: z.string().datetime({ offset: true }).nullable(),
-  revokedReason: z.enum(['user_rotation', 'leaked_detected', 'owner_offboarded', 'tenant_disabled', 'admin_action']).nullable(),
-  // IP allowlist (optional). CIDR list.
-  ipAllowlist: z.array(z.string().regex(/^[0-9a-f.:\/]+$/i)).max(20).default([]),
+	id: z.string().uuid(), // UUIDv7
+	kind: KeyKind,
+	environment: KeyEnvironment,
+	// First 12 chars of the token — safe to display + index.
+	// Never the full secret.
+	prefix: z.string().regex(/^(sk|svc)_(live|test)_[A-Z0-9]{5}$/),
+	// sha256(full token). Lookup key. Never reversible.
+	secretHash: z.string().regex(/^[a-f0-9]{64}$/),
+	ownerKind: z.enum(['user', 'tenant']),
+	ownerId: z.string().uuid(),
+	createdBy: z.string().uuid(),
+	name: z.string().trim().min(1).max(80), // human label
+	scopes: z.array(KeyScope).min(1).max(20),
+	createdAt: z.string().datetime({ offset: true }),
+	lastUsedAt: z.string().datetime({ offset: true }).nullable(),
+	expiresAt: z.string().datetime({ offset: true }).nullable(), // nullable = never expires (discouraged)
+	revokedAt: z.string().datetime({ offset: true }).nullable(),
+	revokedReason: z
+		.enum([
+			'user_rotation',
+			'leaked_detected',
+			'owner_offboarded',
+			'tenant_disabled',
+			'admin_action',
+		])
+		.nullable(),
+	// IP allowlist (optional). CIDR list.
+	ipAllowlist: z
+		.array(z.string().regex(/^[0-9a-f.:\/]+$/i))
+		.max(20)
+		.default([]),
 });
 export type ApiKey = z.infer<typeof ApiKey>;
 ```
 
 Key invariants baked into the schema:
+
 - `prefix` is a fixed shape — predictable for log-grep and scanner.
 - `scopes.min(1)` — a scope-less token has no purpose; reject at the
   boundary.
@@ -147,25 +162,25 @@ Key invariants baked into the schema:
 import { randomBytes, createHash } from 'node:crypto';
 
 export type GeneratedKey = {
-  token: string;          // shown once: sk_live_XXXXXRANDOMBASE64
-  prefix: string;         // sk_live_XXXXX
-  secretHash: string;     // sha256 hex
+	token: string; // shown once: sk_live_XXXXXRANDOMBASE64
+	prefix: string; // sk_live_XXXXX
+	secretHash: string; // sha256 hex
 };
 
 export function generateApiKey(
-  kind: 'personal' | 'service',
-  environment: 'live' | 'test',
+	kind: 'personal' | 'service',
+	environment: 'live' | 'test',
 ): GeneratedKey {
-  const kindTag = kind === 'personal' ? 'sk' : 'svc';
-  const publicPart = randomBytes(3).toString('hex').slice(0, 5).toUpperCase();
-  const secret = randomBytes(16)
-    .toString('base64url')
-    .replace(/[^A-Za-z0-9_-]/g, '')
-    .slice(0, 22);
-  const prefix = `${kindTag}_${environment}_${publicPart}`;
-  const token = `${prefix}${secret}`;
-  const secretHash = createHash('sha256').update(token).digest('hex');
-  return { token, prefix, secretHash };
+	const kindTag = kind === 'personal' ? 'sk' : 'svc';
+	const publicPart = randomBytes(3).toString('hex').slice(0, 5).toUpperCase();
+	const secret = randomBytes(16)
+		.toString('base64url')
+		.replace(/[^A-Za-z0-9_-]/g, '')
+		.slice(0, 22);
+	const prefix = `${kindTag}_${environment}_${publicPart}`;
+	const token = `${prefix}${secret}`;
+	const secretHash = createHash('sha256').update(token).digest('hex');
+	return { token, prefix, secretHash };
 }
 ```
 
@@ -187,69 +202,73 @@ import { insertApiKey } from '$lib/server/db/api-keys';
 import { writeAuditEvent } from '@sveltesentio/audit';
 
 const CreateKey = z.object({
-  name: z.string().trim().min(1).max(80),
-  scopes: z.array(z.string()).min(1).max(20),
-  expiresInDays: z.coerce.number().int().min(1).max(365).default(90),
-  environment: z.enum(['live', 'test']).default('live'),
+	name: z.string().trim().min(1).max(80),
+	scopes: z.array(z.string()).min(1).max(20),
+	expiresInDays: z.coerce.number().int().min(1).max(365).default(90),
+	environment: z.enum(['live', 'test']).default('live'),
 });
 
 export const actions = {
-  create: async ({ request, locals }) => {
-    if (!locals.user) throw redirect(303, '/login');
-    const form = await superValidate(request, zod(CreateKey));
-    if (!form.valid) return fail(400, { form });
+	create: async ({ request, locals }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const form = await superValidate(request, zod(CreateKey));
+		if (!form.valid) return fail(400, { form });
 
-    // Enforce: user cannot grant scopes they don't hold themselves.
-    const illegal = form.data.scopes.filter((s) => !locals.user!.scopes.includes(s as never));
-    if (illegal.length > 0) return fail(403, { form, message: `Cannot grant scopes you do not hold: ${illegal.join(', ')}` });
+		// Enforce: user cannot grant scopes they don't hold themselves.
+		const illegal = form.data.scopes.filter((s) => !locals.user!.scopes.includes(s as never));
+		if (illegal.length > 0)
+			return fail(403, {
+				form,
+				message: `Cannot grant scopes you do not hold: ${illegal.join(', ')}`,
+			});
 
-    const { token, prefix, secretHash } = generateApiKey('personal', form.data.environment);
-    const record = await insertApiKey({
-      id: crypto.randomUUID(),
-      kind: 'personal',
-      environment: form.data.environment,
-      prefix,
-      secretHash,
-      ownerKind: 'user',
-      ownerId: locals.user.id,
-      createdBy: locals.user.id,
-      name: form.data.name,
-      scopes: form.data.scopes,
-      createdAt: new Date().toISOString(),
-      lastUsedAt: null,
-      expiresAt: new Date(Date.now() + form.data.expiresInDays * 86400_000).toISOString(),
-      revokedAt: null,
-      revokedReason: null,
-      ipAllowlist: [],
-    });
+		const { token, prefix, secretHash } = generateApiKey('personal', form.data.environment);
+		const record = await insertApiKey({
+			id: crypto.randomUUID(),
+			kind: 'personal',
+			environment: form.data.environment,
+			prefix,
+			secretHash,
+			ownerKind: 'user',
+			ownerId: locals.user.id,
+			createdBy: locals.user.id,
+			name: form.data.name,
+			scopes: form.data.scopes,
+			createdAt: new Date().toISOString(),
+			lastUsedAt: null,
+			expiresAt: new Date(Date.now() + form.data.expiresInDays * 86400_000).toISOString(),
+			revokedAt: null,
+			revokedReason: null,
+			ipAllowlist: [],
+		});
 
-    await writeAuditEvent({
-      kind: 'apikey.created',
-      subjectId: locals.user.id,
-      payload: { keyId: record.id, prefix, scopes: record.scopes, expiresAt: record.expiresAt },
-    });
+		await writeAuditEvent({
+			kind: 'apikey.created',
+			subjectId: locals.user.id,
+			payload: { keyId: record.id, prefix, scopes: record.scopes, expiresAt: record.expiresAt },
+		});
 
-    // Flash-surface: the ONLY time the raw token appears.
-    return message(form, { kind: 'revealed-once', keyId: record.id, token }, { status: 201 });
-  },
+		// Flash-surface: the ONLY time the raw token appears.
+		return message(form, { kind: 'revealed-once', keyId: record.id, token }, { status: 201 });
+	},
 };
 ```
 
 ```svelte
 <!-- excerpt — the one-time reveal UI -->
 {#if $message?.kind === 'revealed-once'}
-  <aside role="alert" class="key-revealed" aria-live="assertive">
-    <h3>Copy this token now. It will not be shown again.</h3>
-    <code class="token-display" aria-label="Personal access token">{$message.token}</code>
-    <button type="button" onclick={() => navigator.clipboard.writeText($message.token)}>
-      Copy to clipboard
-    </button>
-    <p>
-      Store it in your secret manager or CI variable now. You can
-      <a href="/account/api-keys/{$message.keyId}/rotate">rotate</a>
-      it later if needed.
-    </p>
-  </aside>
+	<aside role="alert" class="key-revealed" aria-live="assertive">
+		<h3>Copy this token now. It will not be shown again.</h3>
+		<code class="token-display" aria-label="Personal access token">{$message.token}</code>
+		<button type="button" onclick={() => navigator.clipboard.writeText($message.token)}>
+			Copy to clipboard
+		</button>
+		<p>
+			Store it in your secret manager or CI variable now. You can
+			<a href="/account/api-keys/{$message.keyId}/rotate">rotate</a>
+			it later if needed.
+		</p>
+	</aside>
 {/if}
 ```
 
@@ -263,61 +282,62 @@ import { apiKey } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function handleApiKey({ event, resolve }) {
-  const auth = event.request.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return resolve(event);
+	const auth = event.request.headers.get('authorization');
+	if (!auth?.startsWith('Bearer ')) return resolve(event);
 
-  const token = auth.slice(7);
-  // Fast prefix-shape check — reject obviously malformed tokens.
-  if (!/^(sk|svc)_(live|test)_[A-Z0-9]{5}[A-Za-z0-9_-]{22}$/.test(token)) {
-    return new Response(null, { status: 401 });
-  }
+	const token = auth.slice(7);
+	// Fast prefix-shape check — reject obviously malformed tokens.
+	if (!/^(sk|svc)_(live|test)_[A-Z0-9]{5}[A-Za-z0-9_-]{22}$/.test(token)) {
+		return new Response(null, { status: 401 });
+	}
 
-  const prefix = token.slice(0, 13);        // `sk_live_XXXXX` = 13 chars
-  const candidateHash = createHash('sha256').update(token).digest('hex');
+	const prefix = token.slice(0, 13); // `sk_live_XXXXX` = 13 chars
+	const candidateHash = createHash('sha256').update(token).digest('hex');
 
-  // Lookup by prefix (indexed). Fetch hash, compare with timingSafeEqual.
-  const row = await db.select().from(apiKey).where(eq(apiKey.prefix, prefix)).limit(1);
-  if (row.length === 0) return new Response(null, { status: 401 });
-  const k = row[0];
+	// Lookup by prefix (indexed). Fetch hash, compare with timingSafeEqual.
+	const row = await db.select().from(apiKey).where(eq(apiKey.prefix, prefix)).limit(1);
+	if (row.length === 0) return new Response(null, { status: 401 });
+	const k = row[0];
 
-  const a = Buffer.from(k.secretHash, 'hex');
-  const b = Buffer.from(candidateHash, 'hex');
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    return new Response(null, { status: 401 });
-  }
+	const a = Buffer.from(k.secretHash, 'hex');
+	const b = Buffer.from(candidateHash, 'hex');
+	if (a.length !== b.length || !timingSafeEqual(a, b)) {
+		return new Response(null, { status: 401 });
+	}
 
-  if (k.revokedAt) return new Response(null, { status: 401 });
-  if (k.expiresAt && new Date(k.expiresAt) < new Date()) return new Response(null, { status: 401 });
+	if (k.revokedAt) return new Response(null, { status: 401 });
+	if (k.expiresAt && new Date(k.expiresAt) < new Date()) return new Response(null, { status: 401 });
 
-  // IP allowlist check (if set).
-  if (k.ipAllowlist.length > 0) {
-    const ip = event.getClientAddress();
-    if (!k.ipAllowlist.some((cidr) => ipInCidr(ip, cidr))) {
-      return new Response(null, { status: 403 });
-    }
-  }
+	// IP allowlist check (if set).
+	if (k.ipAllowlist.length > 0) {
+		const ip = event.getClientAddress();
+		if (!k.ipAllowlist.some((cidr) => ipInCidr(ip, cidr))) {
+			return new Response(null, { status: 403 });
+		}
+	}
 
-  // Attach to event.locals — scopes are the intersection of key + owner.
-  const owner = await loadOwner(k.ownerKind, k.ownerId);
-  if (!owner || owner.disabled) return new Response(null, { status: 401 });
-  const effectiveScopes = k.scopes.filter((s) => owner.scopes.includes(s));
+	// Attach to event.locals — scopes are the intersection of key + owner.
+	const owner = await loadOwner(k.ownerKind, k.ownerId);
+	if (!owner || owner.disabled) return new Response(null, { status: 401 });
+	const effectiveScopes = k.scopes.filter((s) => owner.scopes.includes(s));
 
-  event.locals.auth = {
-    kind: 'apikey',
-    keyId: k.id,
-    prefix: k.prefix,
-    subject: { kind: k.ownerKind, id: k.ownerId },
-    scopes: effectiveScopes,
-  };
+	event.locals.auth = {
+		kind: 'apikey',
+		keyId: k.id,
+		prefix: k.prefix,
+		subject: { kind: k.ownerKind, id: k.ownerId },
+		scopes: effectiveScopes,
+	};
 
-  // lastUsedAt update — fire-and-forget, NOT blocking, coalesced.
-  queueLastUsedUpdate(k.id, new Date());
+	// lastUsedAt update — fire-and-forget, NOT blocking, coalesced.
+	queueLastUsedUpdate(k.id, new Date());
 
-  return resolve(event);
+	return resolve(event);
 }
 ```
 
 Critical details:
+
 - **`timingSafeEqual` on equal-length buffers** — prevents timing
   oracles on the hash comparison.
 - **Effective scopes = intersection of key scopes and owner scopes.**
@@ -332,30 +352,30 @@ Critical details:
 <h1>API keys</h1>
 
 <table>
-  <thead>
-    <tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th>Expires</th><th></th></tr>
-  </thead>
-  <tbody>
-    {#each data.keys as k}
-      <tr class:revoked={k.revokedAt}>
-        <td>{k.name}</td>
-        <td><code>{k.prefix}…</code></td>
-        <td>{k.scopes.join(', ')}</td>
-        <td>{k.lastUsedAt ?? 'Never'}</td>
-        <td>{k.expiresAt ?? '—'}</td>
-        <td>
-          {#if !k.revokedAt}
-            <form method="POST" action="?/revoke" use:enhance>
-              <input type="hidden" name="keyId" value={k.id} />
-              <button class="btn-danger">Revoke</button>
-            </form>
-          {:else}
-            <span class="muted">Revoked {k.revokedAt}</span>
-          {/if}
-        </td>
-      </tr>
-    {/each}
-  </tbody>
+	<thead>
+		<tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th>Expires</th><th></th></tr>
+	</thead>
+	<tbody>
+		{#each data.keys as k}
+			<tr class:revoked={k.revokedAt}>
+				<td>{k.name}</td>
+				<td><code>{k.prefix}…</code></td>
+				<td>{k.scopes.join(', ')}</td>
+				<td>{k.lastUsedAt ?? 'Never'}</td>
+				<td>{k.expiresAt ?? '—'}</td>
+				<td>
+					{#if !k.revokedAt}
+						<form method="POST" action="?/revoke" use:enhance>
+							<input type="hidden" name="keyId" value={k.id} />
+							<button class="btn-danger">Revoke</button>
+						</form>
+					{:else}
+						<span class="muted">Revoked {k.revokedAt}</span>
+					{/if}
+				</td>
+			</tr>
+		{/each}
+	</tbody>
 </table>
 ```
 
@@ -364,35 +384,36 @@ Critical details:
 ```ts
 // src/routes/account/api-keys/[id]/rotate/+server.ts
 export async function POST({ params, locals }) {
-  const existing = await loadKey(params.id);
-  if (!existing || existing.ownerId !== locals.user.id) throw error(404);
+	const existing = await loadKey(params.id);
+	if (!existing || existing.ownerId !== locals.user.id) throw error(404);
 
-  // Generate NEW token. Mark OLD revoked with reason=user_rotation.
-  // Copy metadata (name, scopes, ipAllowlist, expiresAt) to new.
-  const { token, prefix, secretHash } = generateApiKey(existing.kind, existing.environment);
-  const newId = crypto.randomUUID();
+	// Generate NEW token. Mark OLD revoked with reason=user_rotation.
+	// Copy metadata (name, scopes, ipAllowlist, expiresAt) to new.
+	const { token, prefix, secretHash } = generateApiKey(existing.kind, existing.environment);
+	const newId = crypto.randomUUID();
 
-  await db.transaction(async (tx) => {
-    await tx.insert(apiKey).values({
-      ...existing,
-      id: newId,
-      prefix,
-      secretHash,
-      createdAt: new Date().toISOString(),
-      lastUsedAt: null,
-    });
-    await tx.update(apiKey)
-      .set({ revokedAt: new Date().toISOString(), revokedReason: 'user_rotation' })
-      .where(eq(apiKey.id, existing.id));
-  });
+	await db.transaction(async (tx) => {
+		await tx.insert(apiKey).values({
+			...existing,
+			id: newId,
+			prefix,
+			secretHash,
+			createdAt: new Date().toISOString(),
+			lastUsedAt: null,
+		});
+		await tx
+			.update(apiKey)
+			.set({ revokedAt: new Date().toISOString(), revokedReason: 'user_rotation' })
+			.where(eq(apiKey.id, existing.id));
+	});
 
-  await writeAuditEvent({
-    kind: 'apikey.rotated',
-    subjectId: locals.user.id,
-    payload: { oldKeyId: existing.id, newKeyId: newId, prefix },
-  });
+	await writeAuditEvent({
+		kind: 'apikey.rotated',
+		subjectId: locals.user.id,
+		payload: { oldKeyId: existing.id, newKeyId: newId, prefix },
+	});
 
-  return json({ token, keyId: newId });
+	return json({ token, keyId: newId });
 }
 ```
 
@@ -409,25 +430,31 @@ tombstone so audit can distinguish rotations from panic-revokes.
 import { verifyGithubSignature } from '$lib/server/github/secret-scanning';
 
 export async function POST({ request }) {
-  const body = await request.text();
-  const sig = request.headers.get('github-public-key-signature') ?? '';
-  const keyId = request.headers.get('github-public-key-identifier') ?? '';
-  if (!(await verifyGithubSignature(body, sig, keyId))) throw error(401);
+	const body = await request.text();
+	const sig = request.headers.get('github-public-key-signature') ?? '';
+	const keyId = request.headers.get('github-public-key-identifier') ?? '';
+	if (!(await verifyGithubSignature(body, sig, keyId))) throw error(401);
 
-  const reports = JSON.parse(body) as Array<{ token: string; type: string; url: string; source: string }>;
-  for (const r of reports) {
-    const hash = createHash('sha256').update(r.token).digest('hex');
-    await db.update(apiKey)
-      .set({ revokedAt: new Date().toISOString(), revokedReason: 'leaked_detected' })
-      .where(eq(apiKey.secretHash, hash));
-    await writeAuditEvent({
-      kind: 'apikey.leaked_auto_revoked',
-      subjectId: 'system',
-      payload: { tokenHashPrefix: hash.slice(0, 16), reportedSource: r.source, reportedUrl: r.url },
-    });
-    await notifyOwnerOfLeak(hash, r.source, r.url);
-  }
-  return json({ received: reports.length });
+	const reports = JSON.parse(body) as Array<{
+		token: string;
+		type: string;
+		url: string;
+		source: string;
+	}>;
+	for (const r of reports) {
+		const hash = createHash('sha256').update(r.token).digest('hex');
+		await db
+			.update(apiKey)
+			.set({ revokedAt: new Date().toISOString(), revokedReason: 'leaked_detected' })
+			.where(eq(apiKey.secretHash, hash));
+		await writeAuditEvent({
+			kind: 'apikey.leaked_auto_revoked',
+			subjectId: 'system',
+			payload: { tokenHashPrefix: hash.slice(0, 16), reportedSource: r.source, reportedUrl: r.url },
+		});
+		await notifyOwnerOfLeak(hash, r.source, r.url);
+	}
+	return json({ received: reports.length });
 }
 ```
 
@@ -441,12 +468,12 @@ GitHub repo is compromised; waiting for the user to act is reckless.
 import { rateLimiter } from '@sveltesentio/rate-limit';
 
 export const keyRateLimiter = rateLimiter({
-  tokenBucket: { capacity: 600, refillPerSecond: 10 },
-  identify: (event) => {
-    const auth = event.locals.auth;
-    if (auth?.kind !== 'apikey') return null;
-    return `apikey:${auth.keyId}`;
-  },
+	tokenBucket: { capacity: 600, refillPerSecond: 10 },
+	identify: (event) => {
+		const auth = event.locals.auth;
+		if (auth?.kind !== 'apikey') return null;
+		return `apikey:${auth.keyId}`;
+	},
 });
 ```
 
@@ -461,23 +488,23 @@ owner's quota. Owner-level bucket is a second layer (see
 // Tenant admins create service tokens that survive user offboarding.
 // Owner is the tenant, not the admin who creates it.
 export const actions = {
-  create: async ({ request, locals, params }) => {
-    if (!locals.user?.permissions.includes('tenant:admin')) throw error(403);
-    const form = await superValidate(request, zod(CreateServiceToken));
-    if (!form.valid) return fail(400, { form });
+	create: async ({ request, locals, params }) => {
+		if (!locals.user?.permissions.includes('tenant:admin')) throw error(403);
+		const form = await superValidate(request, zod(CreateServiceToken));
+		if (!form.valid) return fail(400, { form });
 
-    const { token, prefix, secretHash } = generateApiKey('service', form.data.environment);
-    await insertApiKey({
-      /* ... */
-      kind: 'service',
-      ownerKind: 'tenant',
-      ownerId: params.tenant,
-      createdBy: locals.user.id,     // audit: who created it
-      // Scopes cannot exceed the tenant's configured service-scope allowlist.
-      scopes: form.data.scopes.filter((s) => tenantServiceScopes.includes(s)),
-    });
-    return message(form, { kind: 'revealed-once', token });
-  },
+		const { token, prefix, secretHash } = generateApiKey('service', form.data.environment);
+		await insertApiKey({
+			/* ... */
+			kind: 'service',
+			ownerKind: 'tenant',
+			ownerId: params.tenant,
+			createdBy: locals.user.id, // audit: who created it
+			// Scopes cannot exceed the tenant's configured service-scope allowlist.
+			scopes: form.data.scopes.filter((s) => tenantServiceScopes.includes(s)),
+		});
+		return message(form, { kind: 'revealed-once', token });
+	},
 };
 ```
 
@@ -496,7 +523,7 @@ service tokens, or suspension).
 - **Revoked keys have `aria-label="revoked"` on the row** so SR users
   hear state without relying on the strikethrough styling.
 - The token text itself is selectable — do not override `user-select:
-  none`.
+none`.
 
 ## Security invariants
 
@@ -528,30 +555,30 @@ import { test, expect } from 'vitest';
 import { generateApiKey } from '@sveltesentio/auth/api-keys';
 
 test('generated tokens match expected shape', () => {
-  for (let i = 0; i < 1000; i++) {
-    const { token, prefix, secretHash } = generateApiKey('personal', 'live');
-    expect(token).toMatch(/^sk_live_[A-Z0-9]{5}[A-Za-z0-9_-]{22}$/);
-    expect(prefix).toBe(token.slice(0, 13));
-    expect(secretHash).toMatch(/^[a-f0-9]{64}$/);
-  }
+	for (let i = 0; i < 1000; i++) {
+		const { token, prefix, secretHash } = generateApiKey('personal', 'live');
+		expect(token).toMatch(/^sk_live_[A-Z0-9]{5}[A-Za-z0-9_-]{22}$/);
+		expect(prefix).toBe(token.slice(0, 13));
+		expect(secretHash).toMatch(/^[a-f0-9]{64}$/);
+	}
 });
 
 test('prefixes are sufficiently unique', () => {
-  const prefixes = new Set<string>();
-  for (let i = 0; i < 10_000; i++) prefixes.add(generateApiKey('personal', 'live').prefix);
-  expect(prefixes.size).toBeGreaterThan(9990); // 24 bits of entropy in prefix
+	const prefixes = new Set<string>();
+	for (let i = 0; i < 10_000; i++) prefixes.add(generateApiKey('personal', 'live').prefix);
+	expect(prefixes.size).toBeGreaterThan(9990); // 24 bits of entropy in prefix
 });
 ```
 
 ```ts
 // tests/auth/api-keys/middleware.test.ts
 test('leaked-token auto-revoke flow', async () => {
-  const { token, secretHash } = generateApiKey('personal', 'live');
-  await insertApiKey({ /* ... */ secretHash });
-  await simulateGithubSecretScannerWebhook({ token, source: 'github.com/foo/bar' });
-  const row = await loadBySecretHash(secretHash);
-  expect(row.revokedAt).not.toBeNull();
-  expect(row.revokedReason).toBe('leaked_detected');
+	const { token, secretHash } = generateApiKey('personal', 'live');
+	await insertApiKey({ /* ... */ secretHash });
+	await simulateGithubSecretScannerWebhook({ token, source: 'github.com/foo/bar' });
+	const row = await loadBySecretHash(secretHash);
+	expect(row.revokedAt).not.toBeNull();
+	expect(row.revokedReason).toBe('leaked_detected');
 });
 ```
 

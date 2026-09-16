@@ -24,9 +24,7 @@ export interface ChatTransportRequest {
  * `@sveltesentio/realtime` SSE pointed at the app's `+server.ts` (ADR-0037);
  * a test transport yields a fixed sequence of chunks.
  */
-export type ChatTransport = (
-	request: ChatTransportRequest,
-) => AsyncIterable<ChatTransportChunk>;
+export type ChatTransport = (request: ChatTransportRequest) => AsyncIterable<ChatTransportChunk>;
 
 export interface UseLLMChatOptions {
 	/** Injectable streaming transport (fake in tests; SSE in prod). */

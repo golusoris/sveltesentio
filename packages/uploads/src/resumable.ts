@@ -31,19 +31,10 @@ export interface TusUpload {
  * The tus `Upload` constructor shape. Defaults to `tus-js-client`'s `Upload`;
  * inject a fake in tests to drive lifecycle/progress without a server.
  */
-export type TusUploadConstructor = new (
-	file: Blob,
-	options: TusUploadOptions,
-) => TusUpload;
+export type TusUploadConstructor = new (file: Blob, options: TusUploadOptions) => TusUpload;
 
 /** Lifecycle phase of a {@link ResumableUpload}. */
-export type ResumableState =
-	| 'idle'
-	| 'uploading'
-	| 'paused'
-	| 'success'
-	| 'error'
-	| 'aborted';
+export type ResumableState = 'idle' | 'uploading' | 'paused' | 'success' | 'error' | 'aborted';
 
 /** Progress snapshot emitted on every tus `onProgress` tick. */
 export interface ResumableProgress {

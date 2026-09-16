@@ -110,42 +110,52 @@ import { z } from 'zod';
 export const Locale = z.enum(['en_US', 'en_GB', 'de_DE', 'fr_FR', 'es_ES', 'pt_BR', 'ja_JP']);
 
 export const Meta = z.object({
-  title: z.string().min(1).max(60),
-  description: z.string().min(20).max(160),
-  canonical: z.string().url(),
-  themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  noindex: z.boolean().default(false),
-  ogType: z.enum(['website', 'article', 'profile']).default('website'),
-  locale: Locale.default('en_US'),
-  alternateLocales: z.array(Locale).max(20).default([]),
-  // Image is required EXCEPT for noindex pages.
-  image: z.object({
-    url: z.string().url(),
-    alt: z.string().min(1).max(420),
-    width: z.literal(1200),
-    height: z.literal(630),
-  }).nullable(),
-  // Twitter handles (optional)
-  twitter: z.object({
-    site: z.string().regex(/^@[A-Za-z0-9_]{1,15}$/).optional(),
-    creator: z.string().regex(/^@[A-Za-z0-9_]{1,15}$/).optional(),
-  }).default({}),
+	title: z.string().min(1).max(60),
+	description: z.string().min(20).max(160),
+	canonical: z.string().url(),
+	themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+	noindex: z.boolean().default(false),
+	ogType: z.enum(['website', 'article', 'profile']).default('website'),
+	locale: Locale.default('en_US'),
+	alternateLocales: z.array(Locale).max(20).default([]),
+	// Image is required EXCEPT for noindex pages.
+	image: z
+		.object({
+			url: z.string().url(),
+			alt: z.string().min(1).max(420),
+			width: z.literal(1200),
+			height: z.literal(630),
+		})
+		.nullable(),
+	// Twitter handles (optional)
+	twitter: z
+		.object({
+			site: z
+				.string()
+				.regex(/^@[A-Za-z0-9_]{1,15}$/)
+				.optional(),
+			creator: z
+				.string()
+				.regex(/^@[A-Za-z0-9_]{1,15}$/)
+				.optional(),
+		})
+		.default({}),
 });
 export type Meta = z.infer<typeof Meta>;
 
 // Inputs to the dynamic OG endpoint — bounded so URLs hash deterministically.
 export const OgInputs = z.object({
-  v: z.literal(1),                  // schema version, bump on layout change
-  template: z.enum(['default', 'article', 'profile', 'event']),
-  title: z.string().min(1).max(120),
-  subtitle: z.string().max(160).optional(),
-  authorName: z.string().max(80).optional(),
-  authorAvatarUrl: z.string().url().optional(),
-  badgeText: z.string().max(40).optional(),
-  locale: Locale.default('en_US'),
-  // Theme — `dark` | `light` only; per-tenant theming reuses brand
-  // tokens (see tenant-theming.md) but the OG renderer normalizes.
-  theme: z.enum(['light', 'dark']).default('light'),
+	v: z.literal(1), // schema version, bump on layout change
+	template: z.enum(['default', 'article', 'profile', 'event']),
+	title: z.string().min(1).max(120),
+	subtitle: z.string().max(160).optional(),
+	authorName: z.string().max(80).optional(),
+	authorAvatarUrl: z.string().url().optional(),
+	badgeText: z.string().max(40).optional(),
+	locale: Locale.default('en_US'),
+	// Theme — `dark` | `light` only; per-tenant theming reuses brand
+	// tokens (see tenant-theming.md) but the OG renderer normalizes.
+	theme: z.enum(['light', 'dark']).default('light'),
 });
 export type OgInputs = z.infer<typeof OgInputs>;
 ```
@@ -157,13 +167,13 @@ export type OgInputs = z.infer<typeof OgInputs>;
 ```svelte
 <!-- src/routes/blog/[slug]/+page.svelte -->
 <script lang="ts">
-  import { renderMetaTags } from '$lib/social/render';
-  let { data } = $props();
-  const meta = $derived(data.meta); // typed as Meta
+	import { renderMetaTags } from '$lib/social/render';
+	let { data } = $props();
+	const meta = $derived(data.meta); // typed as Meta
 </script>
 
 <svelte:head>
-  {@html renderMetaTags(meta)}
+	{@html renderMetaTags(meta)}
 </svelte:head>
 ```
 
@@ -173,52 +183,61 @@ import { Meta } from './types';
 import { escapeHtml } from './escape';
 
 export function renderMetaTags(input: unknown): string {
-  const meta = Meta.parse(input);
-  const e = escapeHtml;
-  const lines: string[] = [];
+	const meta = Meta.parse(input);
+	const e = escapeHtml;
+	const lines: string[] = [];
 
-  lines.push(`<title>${e(meta.title)}</title>`);
-  lines.push(`<meta name="description" content="${e(meta.description)}" />`);
-  lines.push(`<meta name="theme-color" content="${meta.themeColor}" />`);
-  lines.push(`<link rel="canonical" href="${e(meta.canonical)}" />`);
+	lines.push(`<title>${e(meta.title)}</title>`);
+	lines.push(`<meta name="description" content="${e(meta.description)}" />`);
+	lines.push(`<meta name="theme-color" content="${meta.themeColor}" />`);
+	lines.push(`<link rel="canonical" href="${e(meta.canonical)}" />`);
 
-  if (meta.noindex) {
-    lines.push(`<meta name="robots" content="noindex,nofollow" />`);
-    return lines.join('\n');
-  }
+	if (meta.noindex) {
+		lines.push(`<meta name="robots" content="noindex,nofollow" />`);
+		return lines.join('\n');
+	}
 
-  lines.push(`<meta property="og:title" content="${e(meta.title)}" />`);
-  lines.push(`<meta property="og:description" content="${e(meta.description)}" />`);
-  lines.push(`<meta property="og:type" content="${meta.ogType}" />`);
-  lines.push(`<meta property="og:url" content="${e(meta.canonical)}" />`);
-  lines.push(`<meta property="og:locale" content="${meta.locale}" />`);
-  for (const alt of meta.alternateLocales) {
-    lines.push(`<meta property="og:locale:alternate" content="${alt}" />`);
-  }
-  if (meta.image) {
-    lines.push(`<meta property="og:image" content="${e(meta.image.url)}" />`);
-    lines.push(`<meta property="og:image:width" content="${meta.image.width}" />`);
-    lines.push(`<meta property="og:image:height" content="${meta.image.height}" />`);
-    lines.push(`<meta property="og:image:alt" content="${e(meta.image.alt)}" />`);
-    lines.push(`<meta name="twitter:card" content="summary_large_image" />`);
-    lines.push(`<meta name="twitter:image" content="${e(meta.image.url)}" />`);
-    lines.push(`<meta name="twitter:image:alt" content="${e(meta.image.alt)}" />`);
-  }
-  lines.push(`<meta name="twitter:title" content="${e(meta.title)}" />`);
-  lines.push(`<meta name="twitter:description" content="${e(meta.description)}" />`);
-  if (meta.twitter.site) lines.push(`<meta name="twitter:site" content="${meta.twitter.site}" />`);
-  if (meta.twitter.creator) lines.push(`<meta name="twitter:creator" content="${meta.twitter.creator}" />`);
+	lines.push(`<meta property="og:title" content="${e(meta.title)}" />`);
+	lines.push(`<meta property="og:description" content="${e(meta.description)}" />`);
+	lines.push(`<meta property="og:type" content="${meta.ogType}" />`);
+	lines.push(`<meta property="og:url" content="${e(meta.canonical)}" />`);
+	lines.push(`<meta property="og:locale" content="${meta.locale}" />`);
+	for (const alt of meta.alternateLocales) {
+		lines.push(`<meta property="og:locale:alternate" content="${alt}" />`);
+	}
+	if (meta.image) {
+		lines.push(`<meta property="og:image" content="${e(meta.image.url)}" />`);
+		lines.push(`<meta property="og:image:width" content="${meta.image.width}" />`);
+		lines.push(`<meta property="og:image:height" content="${meta.image.height}" />`);
+		lines.push(`<meta property="og:image:alt" content="${e(meta.image.alt)}" />`);
+		lines.push(`<meta name="twitter:card" content="summary_large_image" />`);
+		lines.push(`<meta name="twitter:image" content="${e(meta.image.url)}" />`);
+		lines.push(`<meta name="twitter:image:alt" content="${e(meta.image.alt)}" />`);
+	}
+	lines.push(`<meta name="twitter:title" content="${e(meta.title)}" />`);
+	lines.push(`<meta name="twitter:description" content="${e(meta.description)}" />`);
+	if (meta.twitter.site) lines.push(`<meta name="twitter:site" content="${meta.twitter.site}" />`);
+	if (meta.twitter.creator)
+		lines.push(`<meta name="twitter:creator" content="${meta.twitter.creator}" />`);
 
-  return lines.join('\n');
+	return lines.join('\n');
 }
 ```
 
 ```ts
 // src/lib/social/escape.ts
 export function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]!));
+	return s.replace(
+		/[&<>"']/g,
+		(c) =>
+			({
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				'"': '&quot;',
+				"'": '&#39;',
+			})[c]!,
+	);
 }
 ```
 
@@ -237,40 +256,40 @@ import { renderOgTemplate } from '$lib/social/templates';
 export const config = { isr: { expiration: false } }; // immutable
 
 export async function GET({ url, params, fetch }) {
-  // The hash binds inputs; if it doesn't match, refuse.
-  const inputsParam = url.searchParams.get('i');
-  if (!inputsParam) throw error(400, 'missing inputs');
+	// The hash binds inputs; if it doesn't match, refuse.
+	const inputsParam = url.searchParams.get('i');
+	if (!inputsParam) throw error(400, 'missing inputs');
 
-  const decoded = JSON.parse(atob(inputsParam));
-  const parsed = OgInputs.safeParse(decoded);
-  if (!parsed.success) throw error(422, 'invalid inputs');
+	const decoded = JSON.parse(atob(inputsParam));
+	const parsed = OgInputs.safeParse(decoded);
+	if (!parsed.success) throw error(422, 'invalid inputs');
 
-  // Verify hash matches — content-addressed contract.
-  const expectedHash = await sha256(JSON.stringify(parsed.data));
-  if (expectedHash.slice(0, 16) !== params.hash) throw error(404);
+	// Verify hash matches — content-addressed contract.
+	const expectedHash = await sha256(JSON.stringify(parsed.data));
+	if (expectedHash.slice(0, 16) !== params.hash) throw error(404);
 
-  // Load fonts (cached at module scope in production).
-  const [interRegular, interBold] = await Promise.all([
-    fetch('/fonts/Inter-Regular.ttf').then(r => r.arrayBuffer()),
-    fetch('/fonts/Inter-Bold.ttf').then(r => r.arrayBuffer()),
-  ]);
+	// Load fonts (cached at module scope in production).
+	const [interRegular, interBold] = await Promise.all([
+		fetch('/fonts/Inter-Regular.ttf').then((r) => r.arrayBuffer()),
+		fetch('/fonts/Inter-Bold.ttf').then((r) => r.arrayBuffer()),
+	]);
 
-  const element = renderOgTemplate(parsed.data);
+	const element = renderOgTemplate(parsed.data);
 
-  return new ImageResponse(element, {
-    width: 1200,
-    height: 630,
-    fonts: [
-      { name: 'Inter', data: interRegular, weight: 400, style: 'normal' },
-      { name: 'Inter', data: interBold,    weight: 700, style: 'normal' },
-    ],
-    headers: {
-      // Content-addressed → cache forever.
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      // Don't let scrapers crawl the API endpoint endlessly.
-      'X-Robots-Tag': 'noindex',
-    },
-  });
+	return new ImageResponse(element, {
+		width: 1200,
+		height: 630,
+		fonts: [
+			{ name: 'Inter', data: interRegular, weight: 400, style: 'normal' },
+			{ name: 'Inter', data: interBold, weight: 700, style: 'normal' },
+		],
+		headers: {
+			// Content-addressed → cache forever.
+			'Cache-Control': 'public, max-age=31536000, immutable',
+			// Don't let scrapers crawl the API endpoint endlessly.
+			'X-Robots-Tag': 'noindex',
+		},
+	});
 }
 ```
 
@@ -282,58 +301,75 @@ export async function GET({ url, params, fetch }) {
 import type { OgInputs } from './types';
 
 export function renderOgTemplate(input: OgInputs) {
-  const bg = input.theme === 'dark' ? '#0a0a0a' : '#ffffff';
-  const fg = input.theme === 'dark' ? '#fafafa' : '#0a0a0a';
-  const muted = input.theme === 'dark' ? '#a3a3a3' : '#525252';
+	const bg = input.theme === 'dark' ? '#0a0a0a' : '#ffffff';
+	const fg = input.theme === 'dark' ? '#fafafa' : '#0a0a0a';
+	const muted = input.theme === 'dark' ? '#a3a3a3' : '#525252';
 
-  return {
-    type: 'div',
-    props: {
-      style: {
-        width: '1200px', height: '630px', display: 'flex', flexDirection: 'column',
-        background: bg, color: fg, padding: '64px', fontFamily: 'Inter',
-      },
-      children: [
-        input.badgeText && {
-          type: 'div',
-          props: {
-            style: { fontSize: 22, color: muted, marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.1em' },
-            children: input.badgeText,
-          },
-        },
-        {
-          type: 'div',
-          props: {
-            style: { fontSize: 72, fontWeight: 700, lineHeight: 1.1, marginBottom: 24 },
-            children: input.title,
-          },
-        },
-        input.subtitle && {
-          type: 'div',
-          props: {
-            style: { fontSize: 32, color: muted, lineHeight: 1.3 },
-            children: input.subtitle,
-          },
-        },
-        {
-          type: 'div',
-          props: {
-            style: { marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 16 },
-            children: [
-              input.authorAvatarUrl && {
-                type: 'img',
-                props: { src: input.authorAvatarUrl, width: 64, height: 64, style: { borderRadius: '50%' } },
-              },
-              input.authorName && {
-                type: 'div',
-                props: { style: { fontSize: 28 }, children: input.authorName },
-              },
-            ].filter(Boolean),
-          },
-        },
-      ].filter(Boolean),
-    },
-  };
+	return {
+		type: 'div',
+		props: {
+			style: {
+				width: '1200px',
+				height: '630px',
+				display: 'flex',
+				flexDirection: 'column',
+				background: bg,
+				color: fg,
+				padding: '64px',
+				fontFamily: 'Inter',
+			},
+			children: [
+				input.badgeText && {
+					type: 'div',
+					props: {
+						style: {
+							fontSize: 22,
+							color: muted,
+							marginBottom: 24,
+							textTransform: 'uppercase',
+							letterSpacing: '0.1em',
+						},
+						children: input.badgeText,
+					},
+				},
+				{
+					type: 'div',
+					props: {
+						style: { fontSize: 72, fontWeight: 700, lineHeight: 1.1, marginBottom: 24 },
+						children: input.title,
+					},
+				},
+				input.subtitle && {
+					type: 'div',
+					props: {
+						style: { fontSize: 32, color: muted, lineHeight: 1.3 },
+						children: input.subtitle,
+					},
+				},
+				{
+					type: 'div',
+					props: {
+						style: { marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 16 },
+						children: [
+							input.authorAvatarUrl && {
+								type: 'img',
+								props: {
+									src: input.authorAvatarUrl,
+									width: 64,
+									height: 64,
+									style: { borderRadius: '50%' },
+								},
+							},
+							input.authorName && {
+								type: 'div',
+								props: { style: { fontSize: 28 }, children: input.authorName },
+							},
+						].filter(Boolean),
+					},
+				},
+			].filter(Boolean),
+		},
+	};
 }
 ```
 
@@ -356,16 +392,16 @@ Satori restrictions you will hit:
 import { OgInputs } from './types';
 
 export async function ogImageUrl(rawInputs: OgInputs): Promise<string> {
-  const inputs = OgInputs.parse(rawInputs); // throws if invalid
-  const json = JSON.stringify(inputs);
-  const hash = (await sha256(json)).slice(0, 16);
-  const i = btoa(json);
-  return `https://cdn.example.com/og/${hash}.png?i=${i}`;
+	const inputs = OgInputs.parse(rawInputs); // throws if invalid
+	const json = JSON.stringify(inputs);
+	const hash = (await sha256(json)).slice(0, 16);
+	const i = btoa(json);
+	return `https://cdn.example.com/og/${hash}.png?i=${i}`;
 }
 
 async function sha256(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+	const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+	return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 ```
 
@@ -382,32 +418,32 @@ import { Meta } from '$lib/social/types';
 import { ogImageUrl } from '$lib/social/og-url';
 
 export async function load({ params, url }) {
-  const post = await getPost(params.slug);
+	const post = await getPost(params.slug);
 
-  const imageUrl = await ogImageUrl({
-    v: 1,
-    template: 'article',
-    title: post.title,
-    subtitle: post.excerpt.slice(0, 120),
-    authorName: post.author.name,
-    authorAvatarUrl: post.author.avatarUrl,
-    badgeText: post.category.name,
-    locale: 'en_US',
-    theme: 'light',
-  });
+	const imageUrl = await ogImageUrl({
+		v: 1,
+		template: 'article',
+		title: post.title,
+		subtitle: post.excerpt.slice(0, 120),
+		authorName: post.author.name,
+		authorAvatarUrl: post.author.avatarUrl,
+		badgeText: post.category.name,
+		locale: 'en_US',
+		theme: 'light',
+	});
 
-  const meta = Meta.parse({
-    title: post.title,
-    description: post.excerpt,
-    canonical: `${url.origin}/blog/${post.slug}`,
-    themeColor: '#0a0a0a',
-    ogType: 'article',
-    locale: 'en_US',
-    alternateLocales: post.translations.map(t => t.locale),
-    image: { url: imageUrl, alt: post.title, width: 1200, height: 630 },
-  });
+	const meta = Meta.parse({
+		title: post.title,
+		description: post.excerpt,
+		canonical: `${url.origin}/blog/${post.slug}`,
+		themeColor: '#0a0a0a',
+		ogType: 'article',
+		locale: 'en_US',
+		alternateLocales: post.translations.map((t) => t.locale),
+		image: { url: imageUrl, alt: post.title, width: 1200, height: 630 },
+	});
 
-  return { post, meta };
+	return { post, meta };
 }
 ```
 
@@ -420,14 +456,14 @@ serve it from a SvelteKit hook on 5xx:
 ```ts
 // src/hooks.server.ts
 export async function handle({ event, resolve }) {
-  const response = await resolve(event);
-  if (event.url.pathname.startsWith('/og/') && response.status >= 500) {
-    return new Response(await readFile('static/og-fallback.png'), {
-      status: 200,
-      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' },
-    });
-  }
-  return response;
+	const response = await resolve(event);
+	if (event.url.pathname.startsWith('/og/') && response.status >= 500) {
+		return new Response(await readFile('static/og-fallback.png'), {
+			status: 200,
+			headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' },
+		});
+	}
+	return response;
 }
 ```
 
@@ -446,33 +482,33 @@ import { chromium } from 'playwright';
 const ROUTES = ['/', '/blog/sample-post', '/about', '/pricing'];
 
 for (const path of ROUTES) {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto(`http://localhost:3000${path}`);
+	const browser = await chromium.launch();
+	const page = await browser.newPage();
+	await page.goto(`http://localhost:3000${path}`);
 
-  const tags = await page.evaluate(() => {
-    const get = (sel: string) => document.querySelector(sel)?.getAttribute('content') ?? null;
-    return {
-      title: document.title,
-      description: get('meta[name="description"]'),
-      ogTitle: get('meta[property="og:title"]'),
-      ogImage: get('meta[property="og:image"]'),
-      twitterCard: get('meta[name="twitter:card"]'),
-      canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null,
-    };
-  });
+	const tags = await page.evaluate(() => {
+		const get = (sel: string) => document.querySelector(sel)?.getAttribute('content') ?? null;
+		return {
+			title: document.title,
+			description: get('meta[name="description"]'),
+			ogTitle: get('meta[property="og:title"]'),
+			ogImage: get('meta[property="og:image"]'),
+			twitterCard: get('meta[name="twitter:card"]'),
+			canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null,
+		};
+	});
 
-  const result = Meta.partial().safeParse({
-    title: tags.title,
-    description: tags.description,
-    canonical: tags.canonical,
-  });
-  if (!result.success) {
-    console.error(`✗ ${path}`, result.error.issues);
-    process.exit(1);
-  }
-  console.log(`✓ ${path}`);
-  await browser.close();
+	const result = Meta.partial().safeParse({
+		title: tags.title,
+		description: tags.description,
+		canonical: tags.canonical,
+	});
+	if (!result.success) {
+		console.error(`✗ ${path}`, result.error.issues);
+		process.exit(1);
+	}
+	console.log(`✓ ${path}`);
+	await browser.close();
 }
 ```
 
@@ -485,12 +521,12 @@ Each locale gets its own `og:image` with translated title:
 
 ```ts
 const imageUrl = await ogImageUrl({
-  v: 1,
-  template: 'article',
-  title: post.titleByLocale[locale],
-  subtitle: post.excerptByLocale[locale]?.slice(0, 120),
-  locale: locale,        // shapes which font + RTL handling kicks in
-  theme: 'light',
+	v: 1,
+	template: 'article',
+	title: post.titleByLocale[locale],
+	subtitle: post.excerptByLocale[locale]?.slice(0, 120),
+	locale: locale, // shapes which font + RTL handling kicks in
+	theme: 'light',
 });
 ```
 
@@ -531,7 +567,7 @@ For RTL locales (Arabic, Hebrew), the satori template must flip
 - **Forgetting `twitter:card` meta.** Falls back to `summary` (small
   square) instead of `summary_large_image` (1.91:1 banner).
 - **Multiple `og:image` tags on one page.** Some scrapers pick the
-  *last*, others the *first*. Pick one canonical image per page.
+  _last_, others the _first_. Pick one canonical image per page.
 - **Building a custom headless-Chromium pipeline for OG images.**
   10× the cold-start cost vs `@vercel/og`. Use satori unless you
   need WebGL or fonts that satori cannot render.

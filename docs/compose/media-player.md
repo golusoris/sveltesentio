@@ -20,10 +20,10 @@ Or pin the range explicitly:
 
 ```json
 {
-  "dependencies": {
-    "vidstack": ">=1.12 <2",
-    "hls.js": "^1.6.16"
-  }
+	"dependencies": {
+		"vidstack": ">=1.12 <2",
+		"hls.js": "^1.6.16"
+	}
 }
 ```
 
@@ -37,14 +37,14 @@ non-Safari, so the 60 KB gzipped cost is off Safari bundles.
 
 ```svelte
 <script lang="ts">
-  import { MediaPlayer } from '@sveltesentio/media/player';
+	import { MediaPlayer } from '@sveltesentio/media/player';
 </script>
 
 <MediaPlayer
-  src="https://cdn.example.com/video.m3u8"
-  poster="https://cdn.example.com/poster.jpg"
-  title="How sveltesentio handles media"
-  viewType="video"
+	src="https://cdn.example.com/video.m3u8"
+	poster="https://cdn.example.com/poster.jpg"
+	title="How sveltesentio handles media"
+	viewType="video"
 />
 ```
 
@@ -60,12 +60,12 @@ The wrapper accepts `src` as:
 
 ```svelte
 <MediaPlayer
-  src={[
-    { src: 'video.av1.mp4', type: 'video/mp4; codecs=av01.0.05M.08' },
-    { src: 'video.h265.mp4', type: 'video/mp4; codecs=hvc1.1.6.L93.B0' },
-    { src: 'video.h264.mp4', type: 'video/mp4; codecs=avc1.64001F' },
-  ]}
-  title="Demo reel"
+	src={[
+		{ src: 'video.av1.mp4', type: 'video/mp4; codecs=av01.0.05M.08' },
+		{ src: 'video.h265.mp4', type: 'video/mp4; codecs=hvc1.1.6.L93.B0' },
+		{ src: 'video.h264.mp4', type: 'video/mp4; codecs=avc1.64001F' },
+	]}
+	title="Demo reel"
 />
 ```
 
@@ -76,13 +76,13 @@ default to it; ~30% of browsers fail.
 
 The wrapper wires (from Vidstack, not re-implemented):
 
-| Feature | How |
-|---|---|
+| Feature              | How                                                                                    |
+| -------------------- | -------------------------------------------------------------------------------------- |
 | Captions / subtitles | `<track kind="captions" src="…" srclang="en" label="English">` — default on if present |
-| Keyboard controls | Space/K play-pause, ← → seek, ↑ ↓ volume, F fullscreen, M mute |
-| Focus ring | Vidstack's focus styling bound to sveltesentio tokens via CSS var bridge |
-| SR announcements | `aria-label` on every control; live region for buffering |
-| Reduced motion | Vidstack respects `prefers-reduced-motion` for chrome animations |
+| Keyboard controls    | Space/K play-pause, ← → seek, ↑ ↓ volume, F fullscreen, M mute                         |
+| Focus ring           | Vidstack's focus styling bound to sveltesentio tokens via CSS var bridge               |
+| SR announcements     | `aria-label` on every control; live region for buffering                               |
+| Reduced motion       | Vidstack respects `prefers-reduced-motion` for chrome animations                       |
 
 Required props for WCAG 1.2.x:
 
@@ -93,8 +93,8 @@ Required props for WCAG 1.2.x:
 
 ```svelte
 <MediaPlayer src="video.m3u8" title="Q1 all-hands" aria-describedby="transcript">
-  <track kind="captions" src="q1.vtt" srclang="en" label="English" default />
-  <track kind="descriptions" src="q1.ad.vtt" srclang="en" label="Audio description" />
+	<track kind="captions" src="q1.vtt" srclang="en" label="English" default />
+	<track kind="descriptions" src="q1.ad.vtt" srclang="en" label="Audio description" />
 </MediaPlayer>
 <div id="transcript" class="sr-only">[full transcript…]</div>
 ```
@@ -107,10 +107,10 @@ Vidstack ships CSS custom properties (`--media-focus-ring`,
 
 ```css
 media-player {
-  --media-focus-ring: oklch(var(--color-ring));
-  --media-controls-color: oklch(var(--color-fg));
-  --media-controls-bg: oklch(var(--color-bg) / 0.85);
-  --media-slider-track-fill: oklch(var(--color-accent));
+	--media-focus-ring: oklch(var(--color-ring));
+	--media-controls-color: oklch(var(--color-fg));
+	--media-controls-bg: oklch(var(--color-bg) / 0.85);
+	--media-slider-track-fill: oklch(var(--color-accent));
 }
 ```
 
@@ -123,23 +123,25 @@ Vidstack ships two layouts: `default` (video) and `audio`. The
 wrapper maps to `viewType`:
 
 ```svelte
-<MediaPlayer viewType="video" …/>  <!-- chrome: play, scrubber, vol, fullscreen, captions -->
-<MediaPlayer viewType="audio" …/>  <!-- chrome: play, scrubber, vol, time -->
+<MediaPlayer viewType="video" … />
+<!-- chrome: play, scrubber, vol, fullscreen, captions -->
+<MediaPlayer viewType="audio" … />
+<!-- chrome: play, scrubber, vol, time -->
 ```
 
 For custom chrome, drop to Vidstack primitives directly:
 
 ```svelte
 <script lang="ts">
-  import { MediaPlayer, MediaProvider, MediaPlayButton } from 'vidstack';
+	import { MediaPlayer, MediaProvider, MediaPlayButton } from 'vidstack';
 </script>
 
 <MediaPlayer src="…">
-  <MediaProvider />
-  <div class="custom-chrome">
-    <MediaPlayButton aria-label="Play" />
-    <!-- … -->
-  </div>
+	<MediaProvider />
+	<div class="custom-chrome">
+		<MediaPlayButton aria-label="Play" />
+		<!-- … -->
+	</div>
 </MediaPlayer>
 ```
 
@@ -153,16 +155,16 @@ store:
 
 ```svelte
 <script lang="ts">
-  import { MediaPlayer, useMediaStore } from '@sveltesentio/media/player';
+	import { MediaPlayer, useMediaStore } from '@sveltesentio/media/player';
 
-  let playerRef: MediaPlayer;
-  const store = $derived(playerRef ? useMediaStore(playerRef) : null);
+	let playerRef: MediaPlayer;
+	const store = $derived(playerRef ? useMediaStore(playerRef) : null);
 </script>
 
 <MediaPlayer bind:this={playerRef} src="live.m3u8" streamType="live" />
 
 {#if store?.isLive}
-  <span role="status" aria-live="polite" class="text-danger">● LIVE</span>
+	<span role="status" aria-live="polite" class="text-danger">● LIVE</span>
 {/if}
 ```
 
@@ -175,10 +177,7 @@ Vidstack's default quality menu reads from HLS variants. For adaptive
 bitrate (default), leave the menu on. For manual pin:
 
 ```svelte
-<MediaPlayer
-  src="video.m3u8"
-  onqualitychange={(e) => console.warn('quality', e.detail.height)}
-/>
+<MediaPlayer src="video.m3u8" onqualitychange={(e) => console.warn('quality', e.detail.height)} />
 ```
 
 Never hide the quality menu — accessibility guidance (1.4.8: user
@@ -187,7 +186,7 @@ defaulting to the lowest ladder:
 
 ```ts
 if (matchMedia('(prefers-reduced-data: reduce)').matches) {
-  player.qualities.selected = player.qualities.at(0);
+	player.qualities.selected = player.qualities.at(0);
 }
 ```
 
@@ -212,8 +211,11 @@ handle the rest.
 ```ts
 // sw.ts
 registerRoute(
-  ({ url }) => /\.(m3u8|vtt|jpg|png|webp)$/.test(url.pathname),
-  new CacheFirst({ cacheName: 'media-meta', plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 })] }),
+	({ url }) => /\.(m3u8|vtt|jpg|png|webp)$/.test(url.pathname),
+	new CacheFirst({
+		cacheName: 'media-meta',
+		plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 })],
+	}),
 );
 ```
 
@@ -227,11 +229,11 @@ not per-player:
 
 ```svelte
 <script lang="ts">
-  import { track } from '$lib/telemetry';
+	import { track } from '$lib/telemetry';
 
-  function onplay(e: Event) {
-    track('media.play', { src: (e.target as any).src });
-  }
+	function onplay(e: Event) {
+		track('media.play', { src: (e.target as any).src });
+	}
 </script>
 
 <MediaPlayer src="…" {onplay} />
@@ -251,18 +253,20 @@ import { axe } from '@sveltesentio/testing/axe';
 import { MediaPlayer } from '@sveltesentio/media/player';
 
 test('MediaPlayer is axe-clean', async () => {
-  const { container } = render(MediaPlayer, {
-    props: { src: 'test.mp4', title: 'Test' },
-  });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(MediaPlayer, {
+		props: { src: 'test.mp4', title: 'Test' },
+	});
+	expect(await axe(container)).toHaveNoViolations();
 });
 
 test('keyboard Space toggles play', async () => {
-  const { container, getByLabelText } = render(MediaPlayer, { props: { src: 'test.mp4', title: 'T' } });
-  const player = container.querySelector('media-player')!;
-  player.focus();
-  await userEvent.keyboard(' ');
-  expect(getByLabelText(/pause/i)).toBeInTheDocument();
+	const { container, getByLabelText } = render(MediaPlayer, {
+		props: { src: 'test.mp4', title: 'T' },
+	});
+	const player = container.querySelector('media-player')!;
+	player.focus();
+	await userEvent.keyboard(' ');
+	expect(getByLabelText(/pause/i)).toBeInTheDocument();
 });
 ```
 
@@ -271,21 +275,21 @@ fast. Don't hit live CDNs in tests.
 
 ## Bundle footprint
 
-| Piece | gzipped |
-|---|---|
-| Vidstack core + default layout | ~45 KB |
-| `hls.js` (dyn-imported non-Safari) | ~60 KB |
-| `@sveltesentio/media/player` wrapper | <2 KB |
+| Piece                                | gzipped |
+| ------------------------------------ | ------- |
+| Vidstack core + default layout       | ~45 KB  |
+| `hls.js` (dyn-imported non-Safari)   | ~60 KB  |
+| `@sveltesentio/media/player` wrapper | <2 KB   |
 
 Lazy-load for pages that don't always play media:
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte';
-  let MediaPlayer = $state<any>(null);
-  onMount(async () => {
-    ({ MediaPlayer } = await import('@sveltesentio/media/player'));
-  });
+	import { onMount } from 'svelte';
+	let MediaPlayer = $state<any>(null);
+	onMount(async () => {
+		({ MediaPlayer } = await import('@sveltesentio/media/player'));
+	});
 </script>
 
 {#if MediaPlayer}<MediaPlayer src="…" title="…" />{/if}

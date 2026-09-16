@@ -22,9 +22,9 @@ await validateUpload(file, { maxBytes: 25 * 1024 * 1024, allowed: ['image/jpeg',
 const safe = await stripExif(file);
 
 const upload = createResumableUpload({
-  endpoint: '/api/uploads/tus',
-  file: safe,
-  metadata: { filename: file.name, filetype: safe.type },
+	endpoint: '/api/uploads/tus',
+	file: safe,
+	metadata: { filename: file.name, filetype: safe.type },
 });
 upload.start();
 ```

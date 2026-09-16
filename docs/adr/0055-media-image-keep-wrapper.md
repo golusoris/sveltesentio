@@ -32,24 +32,27 @@ Keep `@sveltesentio/media/image` as a thin wrapper with preset-aware defaults. T
 ## Alternatives considered
 
 - **Downgrade to `docs/compose/image.md`** (the original streamlining verdict). Rejected — preset-aware defaults are the exact case the preset theming invariant protects. A recipe that says "on 10-foot, set `loading='eager'` above the fold; on handheld, set `loading='lazy'`; on dashboard, tune `sizes` to viewport width ÷ 3" is exactly the kind of boilerplate every app would re-write and get wrong in different ways. Centralising it in a wrapper prevents drift.
-- **Adopt Svelte's `enhanced:img` directly as the canonical path.** Rejected as the *only* path — `enhanced:img` is build-time + file-based, which works for static image assets but not for runtime-discovered URLs (user-uploaded images, CMS-sourced, S3 signed URLs). The wrapper accommodates both: static imports route through `enhanced:img` under the hood; runtime URLs use the plain `<img>` path with preset-aware attributes.
+- **Adopt Svelte's `enhanced:img` directly as the canonical path.** Rejected as the _only_ path — `enhanced:img` is build-time + file-based, which works for static image assets but not for runtime-discovered URLs (user-uploaded images, CMS-sourced, S3 signed URLs). The wrapper accommodates both: static imports route through `enhanced:img` under the hood; runtime URLs use the plain `<img>` path with preset-aware attributes.
 - **Use `unpic` as the default.** Evaluated — `unpic` handles multi-CDN `srcset` generation well, but bundles CDN-specific URL builders that many consumers won't use. A preset-aware wrapper that emits a plain `srcset` leaves CDN choice to the consumer and is smaller.
 - **Use `svelte-easy-crop` for crop-and-zoom.** Out of scope for the default image surface — crop/zoom is a different feature (image editing), not a loading concern. Can ship later as a separate `./image/crop` sub-export if demand materialises.
 
 ## Consequences
 
 **Positive**:
+
 - Closes D171; the research dossier no longer flags the module as open.
 - Apps get correct preset-aware loading defaults without per-app boilerplate. Handheld apps lazy-load by default; 10-foot apps get eager above-the-fold + higher `srcset` ceilings; dashboard apps get moderate-lazy + LQIP.
 - LQIP placeholder opt-in addresses CLS (layout shift) budget pressure from [docs/principles.md](../principles.md) §2.9 (CLS < 0.1).
 - CDN-agnostic — consumers pick their image CDN independently.
 
 **Negative / trade-offs**:
+
 - Maintenance surface grows by one sub-export. Kept minimal: `<Image>` + `stripExif` re-export + LQIP placeholder = ~200 LoC total target.
 - Preset detection requires the consumer to have the preset context wired (via `@sveltesentio/ui/presets`). Apps that don't use presets fall back to `desktop` defaults; documented in AGENTS.md.
 - LQIP placeholder generation requires a Vite plugin. Build-time cost scales with image count; large asset trees may need `lqip: false` opt-out.
 
 **Documentation obligations**:
+
 - `packages/media/AGENTS.md` — replace `./image` row's "ADR: TBD" with a link to this ADR.
 - [docs/compose/image-optimization.md](../compose/image-optimization.md) — extend to cover the `<Image>` component's preset-aware behaviour (currently documents the raw `enhanced:img` + CDN composition).
 - `.workingdir/research/decisions-still-open.md` — mark D171 closed by this ADR.

@@ -135,9 +135,7 @@ describe('withCredentialsFetch', () => {
 
 describe('connectErrorToProblem', () => {
 	it('maps a NotFound ConnectError to the not_found problem type + 404', () => {
-		const problem = connectErrorToProblem(
-			new ConnectError('gone', Code.NotFound),
-		);
+		const problem = connectErrorToProblem(new ConnectError('gone', Code.NotFound));
 		expect(problem).toBeInstanceOf(ProblemError);
 		expect(problem.type).toBe('urn:sveltesentio:rpc:not_found');
 		expect(problem.status).toBe(404);

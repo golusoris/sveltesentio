@@ -9,11 +9,7 @@ the same `series` + `x`/`y` accessors that drive the visual.
 <script lang="ts" generics="TDatum">
 	import { ScatterChart as LcScatterChart } from 'layerchart';
 	import ChartFigure from './ChartFigure.svelte';
-	import {
-		resolveSeriesColors,
-		toFigureSeries,
-		type CartesianSeries,
-	} from './chart-series.js';
+	import { resolveSeriesColors, toFigureSeries, type CartesianSeries } from './chart-series.js';
 	import type { ChartAccessors, BuildTableOptions } from './a11y-table.js';
 	import { dashboardPreset, prefersReducedMotion } from './preset.js';
 
@@ -59,11 +55,6 @@ the same `series` + `x`/`y` accessors that drive the visual.
 	{idBase}
 >
 	{#snippet chart()}
-		<LcScatterChart
-			x={accessors.x}
-			y={accessors.y}
-			series={lcSeries}
-			padding={preset.padding}
-		/>
+		<LcScatterChart x={accessors.x} y={accessors.y} series={lcSeries} padding={preset.padding} />
 	{/snippet}
 </ChartFigure>

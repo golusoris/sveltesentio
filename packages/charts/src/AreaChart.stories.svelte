@@ -47,10 +47,7 @@
 </script>
 
 <!-- Default overlapping layout. -->
-<Story
-	name="Overlap"
-	args={{ title: 'Active accounts by plan', series, accessors }}
-/>
+<Story name="Overlap" args={{ title: 'Active accounts by plan', series, accessors }} />
 
 <!-- Stacked layout — areas sum vertically. -->
 <Story

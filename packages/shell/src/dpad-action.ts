@@ -56,10 +56,7 @@ function collectActiveDirections(): Set<Direction> {
 	return active;
 }
 
-export const dpadNavigation: Action<HTMLElement, DpadNavigationOptions> = (
-	node,
-	initial,
-) => {
+export const dpadNavigation: Action<HTMLElement, DpadNavigationOptions> = (node, initial) => {
 	let options = initial;
 
 	function move(direction: Direction): void {
@@ -98,9 +95,7 @@ export const dpadNavigation: Action<HTMLElement, DpadNavigationOptions> = (
 	}
 
 	const gamepadEnabled =
-		!options.gamepadDisabled &&
-		typeof navigator !== 'undefined' &&
-		'getGamepads' in navigator;
+		!options.gamepadDisabled && typeof navigator !== 'undefined' && 'getGamepads' in navigator;
 	if (gamepadEnabled) {
 		rafId = window.requestAnimationFrame(pollGamepads);
 	}

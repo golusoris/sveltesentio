@@ -51,17 +51,17 @@ pnpm add @huggingface/transformers
 import { createAuditLog } from '@sveltesentio/ai/audit';
 
 const audit = createAuditLog({
-  sink: (record) => myDatabase.insert(record),
-  redact: ({ prompt: _p, output: _o, ...rest }) => rest, // keep only hashes
+	sink: (record) => myDatabase.insert(record),
+	redact: ({ prompt: _p, output: _o, ...rest }) => rest, // keep only hashes
 });
 await audit.record({
-  model: 'claude-sonnet-4',
-  promptHash: 'sha256:…',
-  outputHash: 'sha256:…',
-  purpose: 'support-triage',
-  humanOverride: false,
-  riskTier: 'limited',
-  disclosureShown: true,
+	model: 'claude-sonnet-4',
+	promptHash: 'sha256:…',
+	outputHash: 'sha256:…',
+	purpose: 'support-triage',
+	humanOverride: false,
+	riskTier: 'limited',
+	disclosureShown: true,
 });
 ```
 
@@ -78,7 +78,7 @@ const reply = await llm.chat({ messages: [{ role: 'user', content: 'hi' }] });
 import { loadEdgePipeline } from '@sveltesentio/ai/edge';
 
 const classifier = await loadEdgePipeline('text-classification', {
-  model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+	model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
 });
 const result = await classifier.run('great product');
 ```

@@ -22,9 +22,9 @@ import { vi } from 'vitest';
 export type Accessor<T = Record<string, unknown>> = () => T;
 
 const require_ = createRequire(import.meta.url);
-const corePath = createRequire(
-	require_.resolve('@tanstack/svelte-query/package.json'),
-).resolve('@tanstack/query-core');
+const corePath = createRequire(require_.resolve('@tanstack/svelte-query/package.json')).resolve(
+	'@tanstack/query-core',
+);
 
 export interface SvelteQueryMock {
 	createQuery: ReturnType<typeof vi.fn>;

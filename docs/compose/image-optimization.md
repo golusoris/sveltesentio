@@ -55,7 +55,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
 
 export default {
-  plugins: [enhancedImages(), sveltekit()],
+	plugins: [enhancedImages(), sveltekit()],
 };
 ```
 
@@ -73,16 +73,16 @@ export default {
 
 ```svelte
 <script>
-  import heroImg from '$lib/assets/hero.jpg?enhanced';
+	import heroImg from '$lib/assets/hero.jpg?enhanced';
 </script>
 
 <enhanced:img
-  src={heroImg}
-  alt="Dashboard overview — KPI cards above a line chart"
-  sizes="(min-width: 1024px) 960px, 100vw"
-  loading="eager"
-  fetchpriority="high"
-  class="rounded-lg"
+	src={heroImg}
+	alt="Dashboard overview — KPI cards above a line chart"
+	sizes="(min-width: 1024px) 960px, 100vw"
+	loading="eager"
+	fetchpriority="high"
+	class="rounded-lg"
 />
 ```
 
@@ -92,7 +92,7 @@ filenames and `<picture>` fallback under the hood.
 Six build-time rules:
 
 1. **`?enhanced` query is the trigger** — bare `import img from
-   '...jpg'` gets you nothing.
+'...jpg'` gets you nothing.
 2. **`sizes` is mandatory for responsive images** — otherwise the
    browser downloads the largest candidate.
 3. **Above-the-fold hero: `loading="eager"` + `fetchpriority="high"`**;
@@ -102,7 +102,7 @@ Six build-time rules:
 5. **Decorative images: `alt=""`** — empty string, not missing
    attribute (screen-reader will announce the filename if omitted).
 6. **Hashed filenames get `Cache-Control: public, max-age=31536000,
-   immutable`** — see [caching.md](caching.md).
+immutable`** — see [caching.md](caching.md).
 
 ## Runtime — Sharp endpoint for user uploads
 
@@ -114,48 +114,48 @@ import { z } from 'zod';
 import { fetchOriginalFromStorage } from '$lib/storage';
 
 const ParamsSchema = z.object({
-  w: z.coerce.number().int().min(16).max(3840).optional(),
-  h: z.coerce.number().int().min(16).max(3840).optional(),
-  fmt: z.enum(['avif', 'webp', 'jpeg']).default('webp'),
-  fit: z.enum(['cover', 'contain', 'inside']).default('cover'),
-  q: z.coerce.number().int().min(40).max(90).default(75),
+	w: z.coerce.number().int().min(16).max(3840).optional(),
+	h: z.coerce.number().int().min(16).max(3840).optional(),
+	fmt: z.enum(['avif', 'webp', 'jpeg']).default('webp'),
+	fit: z.enum(['cover', 'contain', 'inside']).default('cover'),
+	q: z.coerce.number().int().min(40).max(90).default(75),
 });
 
 export async function GET({ params, url, setHeaders, request }) {
-  const parsed = ParamsSchema.safeParse(Object.fromEntries(url.searchParams));
-  if (!parsed.success) throw error(400, 'invalid params');
+	const parsed = ParamsSchema.safeParse(Object.fromEntries(url.searchParams));
+	if (!parsed.success) throw error(400, 'invalid params');
 
-  const { w, h, fmt, fit, q } = parsed.data;
-  const accept = request.headers.get('accept') ?? '';
-  const chosenFmt = negotiate(fmt, accept);
+	const { w, h, fmt, fit, q } = parsed.data;
+	const accept = request.headers.get('accept') ?? '';
+	const chosenFmt = negotiate(fmt, accept);
 
-  const original = await fetchOriginalFromStorage(params.id);
-  if (!original) throw error(404, 'not found');
+	const original = await fetchOriginalFromStorage(params.id);
+	if (!original) throw error(404, 'not found');
 
-  const pipeline = sharp(original).rotate(); // auto-orient from EXIF
+	const pipeline = sharp(original).rotate(); // auto-orient from EXIF
 
-  if (w || h) pipeline.resize({ width: w, height: h, fit });
+	if (w || h) pipeline.resize({ width: w, height: h, fit });
 
-  let body: Buffer;
-  if (chosenFmt === 'avif') body = await pipeline.avif({ quality: q }).toBuffer();
-  else if (chosenFmt === 'webp') body = await pipeline.webp({ quality: q }).toBuffer();
-  else body = await pipeline.jpeg({ quality: q, mozjpeg: true }).toBuffer();
+	let body: Buffer;
+	if (chosenFmt === 'avif') body = await pipeline.avif({ quality: q }).toBuffer();
+	else if (chosenFmt === 'webp') body = await pipeline.webp({ quality: q }).toBuffer();
+	else body = await pipeline.jpeg({ quality: q, mozjpeg: true }).toBuffer();
 
-  setHeaders({
-    'Content-Type': `image/${chosenFmt}`,
-    'Cache-Control': 'public, max-age=604800, immutable',
-    'Vary': 'Accept',
-    'Content-Security-Policy': "default-src 'none'",
-    'Cross-Origin-Resource-Policy': 'same-site',
-  });
+	setHeaders({
+		'Content-Type': `image/${chosenFmt}`,
+		'Cache-Control': 'public, max-age=604800, immutable',
+		Vary: 'Accept',
+		'Content-Security-Policy': "default-src 'none'",
+		'Cross-Origin-Resource-Policy': 'same-site',
+	});
 
-  return new Response(body);
+	return new Response(body);
 }
 
 function negotiate(requested: 'avif' | 'webp' | 'jpeg', accept: string): 'avif' | 'webp' | 'jpeg' {
-  if (requested === 'avif' && !accept.includes('image/avif')) return 'webp';
-  if (requested === 'webp' && !accept.includes('image/webp')) return 'jpeg';
-  return requested;
+	if (requested === 'avif' && !accept.includes('image/avif')) return 'webp';
+	if (requested === 'webp' && !accept.includes('image/webp')) return 'jpeg';
+	return requested;
 }
 ```
 
@@ -175,37 +175,37 @@ Seven runtime rules:
    deterministic (same params → same bytes).
 7. **Never stream user-uploaded SVG through this endpoint** — SVG is a
    DOM, not a raster; it belongs in an `<img>` with CSP `default-src
-   'none'` sandboxing or sanitized via DOMPurify at render time
+'none'` sandboxing or sanitized via DOMPurify at render time
    (see [trusted-types.md](trusted-types.md)).
 
 ## Responsive srcset — matching layout, not a ladder
 
 ```svelte
 <script lang="ts">
-  type Props = { id: string; alt: string; sizes: string; priority?: boolean };
-  const { id, alt, sizes, priority = false }: Props = $props();
+	type Props = { id: string; alt: string; sizes: string; priority?: boolean };
+	const { id, alt, sizes, priority = false }: Props = $props();
 
-  const widths = [320, 480, 640, 960, 1280, 1920];
-  const base = `/api/images/${id}`;
-  const avif = widths.map((w) => `${base}?w=${w}&fmt=avif ${w}w`).join(', ');
-  const webp = widths.map((w) => `${base}?w=${w}&fmt=webp ${w}w`).join(', ');
-  const jpeg = widths.map((w) => `${base}?w=${w}&fmt=jpeg ${w}w`).join(', ');
+	const widths = [320, 480, 640, 960, 1280, 1920];
+	const base = `/api/images/${id}`;
+	const avif = widths.map((w) => `${base}?w=${w}&fmt=avif ${w}w`).join(', ');
+	const webp = widths.map((w) => `${base}?w=${w}&fmt=webp ${w}w`).join(', ');
+	const jpeg = widths.map((w) => `${base}?w=${w}&fmt=jpeg ${w}w`).join(', ');
 </script>
 
 <picture>
-  <source type="image/avif" srcset={avif} {sizes} />
-  <source type="image/webp" srcset={webp} {sizes} />
-  <img
-    src={`${base}?w=960&fmt=jpeg`}
-    srcset={jpeg}
-    {sizes}
-    {alt}
-    width="960"
-    height="540"
-    loading={priority ? 'eager' : 'lazy'}
-    fetchpriority={priority ? 'high' : 'auto'}
-    decoding={priority ? 'sync' : 'async'}
-  />
+	<source type="image/avif" srcset={avif} {sizes} />
+	<source type="image/webp" srcset={webp} {sizes} />
+	<img
+		src={`${base}?w=960&fmt=jpeg`}
+		srcset={jpeg}
+		{sizes}
+		{alt}
+		width="960"
+		height="540"
+		loading={priority ? 'eager' : 'lazy'}
+		fetchpriority={priority ? 'high' : 'auto'}
+		decoding={priority ? 'sync' : 'async'}
+	/>
 </picture>
 ```
 
@@ -214,7 +214,7 @@ Six responsive rules:
 1. **Source order matters** — AVIF → WebP → JPEG. Browser picks first
    supported `<source>`.
 2. **`sizes` from layout intent** — `(min-width: 1024px) 960px,
-   100vw` means "on desktops the image is 960 CSS px; otherwise full
+100vw` means "on desktops the image is 960 CSS px; otherwise full
    viewport width".
 3. **`width` + `height` attributes on `<img>`** — even with
    `width: 100%` CSS, the attributes let the browser reserve aspect-
@@ -234,23 +234,20 @@ Six responsive rules:
 import sharp from 'sharp';
 
 export async function generateLqip(buf: Buffer): Promise<{
-  blur: string;          // data URL, ~32x32 AVIF <1 kB
-  dominant: string;      // oklch color token
-  width: number;
-  height: number;
+	blur: string; // data URL, ~32x32 AVIF <1 kB
+	dominant: string; // oklch color token
+	width: number;
+	height: number;
 }> {
-  const meta = await sharp(buf).metadata();
-  const blur = await sharp(buf)
-    .resize(32, 32, { fit: 'inside' })
-    .avif({ quality: 40 })
-    .toBuffer();
-  const { dominant } = await sharp(buf).stats();
-  return {
-    blur: `data:image/avif;base64,${blur.toString('base64')}`,
-    dominant: rgbToOklch(dominant),
-    width: meta.width ?? 0,
-    height: meta.height ?? 0,
-  };
+	const meta = await sharp(buf).metadata();
+	const blur = await sharp(buf).resize(32, 32, { fit: 'inside' }).avif({ quality: 40 }).toBuffer();
+	const { dominant } = await sharp(buf).stats();
+	return {
+		blur: `data:image/avif;base64,${blur.toString('base64')}`,
+		dominant: rgbToOklch(dominant),
+		width: meta.width ?? 0,
+		height: meta.height ?? 0,
+	};
 }
 ```
 
@@ -270,13 +267,13 @@ Five LQIP rules:
 
 Matrix:
 
-| Provider | When to pick | Cost shape |
-|---|---|---|
-| Cloudflare Images | Default when already on CF | $5/100k stored + $1/100k served |
-| Imgix | Heavy transform needs, legacy projects | Per-master + per-render |
-| Cloudinary | Ops want a dashboard + team workflows | Per-credit, expensive at scale |
-| self-host Sharp | Full control, small scale, cost-sensitive | compute + egress |
-| `@vercel/image` | Already on Vercel | bundled in platform fee |
+| Provider          | When to pick                              | Cost shape                      |
+| ----------------- | ----------------------------------------- | ------------------------------- |
+| Cloudflare Images | Default when already on CF                | $5/100k stored + $1/100k served |
+| Imgix             | Heavy transform needs, legacy projects    | Per-master + per-render         |
+| Cloudinary        | Ops want a dashboard + team workflows     | Per-credit, expensive at scale  |
+| self-host Sharp   | Full control, small scale, cost-sensitive | compute + egress                |
+| `@vercel/image`   | Already on Vercel                         | bundled in platform fee         |
 
 Five CDN rules:
 
@@ -288,20 +285,20 @@ Five CDN rules:
 4. **`Accept` header forwarding at the CDN** — otherwise AVIF
    negotiation collapses to the first client's format.
 5. **Purge on original change** via CDN API (cache key = original id
-   + params); do not use URL-invalidation if you can avoid it.
+   - params); do not use URL-invalidation if you can avoid it.
 
 ## Above-the-fold LCP image
 
 ```svelte
 <svelte:head>
-  <link
-    rel="preload"
-    as="image"
-    href={`/api/images/${heroId}?w=960&fmt=webp`}
-    imagesrcset={webpSrcset}
-    imagesizes="(min-width: 1024px) 960px, 100vw"
-    fetchpriority="high"
-  />
+	<link
+		rel="preload"
+		as="image"
+		href={`/api/images/${heroId}?w=960&fmt=webp`}
+		imagesrcset={webpSrcset}
+		imagesizes="(min-width: 1024px) 960px, 100vw"
+		fetchpriority="high"
+	/>
 </svelte:head>
 ```
 
@@ -321,8 +318,8 @@ Five LCP rules:
 
 ```svelte
 <picture>
-  <source srcset="/img/chart-dark.webp" media="(prefers-color-scheme: dark)" />
-  <img src="/img/chart-light.webp" alt="Revenue chart" width="800" height="400" />
+	<source srcset="/img/chart-dark.webp" media="(prefers-color-scheme: dark)" />
+	<img src="/img/chart-light.webp" alt="Revenue chart" width="800" height="400" />
 </picture>
 ```
 

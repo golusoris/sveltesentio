@@ -33,10 +33,4 @@ token classes apply. `type` is forwarded; defaults to `text`.
 	const classes = $derived(inputClass(invalid, className));
 </script>
 
-<input
-	{type}
-	class={classes}
-	aria-invalid={invalid ? 'true' : undefined}
-	bind:value
-	{...rest}
-/>
+<input {type} class={classes} aria-invalid={invalid ? 'true' : undefined} bind:value {...rest} />

@@ -56,14 +56,14 @@ Option D  Query string           example.com/produkte?lang=de     REJECTED
 
 **Decision matrix:**
 
-| Factor | A: Path | B: Subdomain | C: ccTLD | D: Query |
-|---|---|---|---|---|
-| SEO signal strength | strong | strong | strongest (per-country) | weak |
-| Single CDN cache keyspace | yes | per-subdomain | per-domain | yes |
-| Cookie shared across locales | yes | requires parent-domain cookies | no (separate origins) | yes |
-| Setup complexity | low | medium | high | low |
-| CORS simplicity | simple | cross-subdomain | cross-origin | simple |
-| Canonical-URL discipline | natural | per-subdomain | per-domain | brittle |
+| Factor                       | A: Path | B: Subdomain                   | C: ccTLD                | D: Query |
+| ---------------------------- | ------- | ------------------------------ | ----------------------- | -------- |
+| SEO signal strength          | strong  | strong                         | strongest (per-country) | weak     |
+| Single CDN cache keyspace    | yes     | per-subdomain                  | per-domain              | yes      |
+| Cookie shared across locales | yes     | requires parent-domain cookies | no (separate origins)   | yes      |
+| Setup complexity             | low     | medium                         | high                    | low      |
+| CORS simplicity              | simple  | cross-subdomain                | cross-origin            | simple   |
+| Canonical-URL discipline     | natural | per-subdomain                  | per-domain              | brittle  |
 
 **Three URL-shape rules:**
 
@@ -91,34 +91,76 @@ export type Locale = z.infer<typeof Locale>;
 export const DEFAULT_LOCALE: Locale = 'en';
 
 interface LocaleMeta {
-  code: Locale;
-  name: string;
-  nativeName: string;
-  dir: 'ltr' | 'rtl';
-  region: string | null;
-  fallback: Locale;
+	code: Locale;
+	name: string;
+	nativeName: string;
+	dir: 'ltr' | 'rtl';
+	region: string | null;
+	fallback: Locale;
 }
 
 export const LOCALES: Record<Locale, LocaleMeta> = {
-  en: { code: 'en', name: 'English', nativeName: 'English', dir: 'ltr', region: null, fallback: 'en' },
-  de: { code: 'de', name: 'German', nativeName: 'Deutsch', dir: 'ltr', region: 'DE', fallback: 'en' },
-  fr: { code: 'fr', name: 'French', nativeName: 'Français', dir: 'ltr', region: 'FR', fallback: 'en' },
-  es: { code: 'es', name: 'Spanish', nativeName: 'Español', dir: 'ltr', region: 'ES', fallback: 'en' },
-  ar: { code: 'ar', name: 'Arabic', nativeName: 'العربية', dir: 'rtl', region: null, fallback: 'en' },
-  ja: { code: 'ja', name: 'Japanese', nativeName: '日本語', dir: 'ltr', region: 'JP', fallback: 'en' },
+	en: {
+		code: 'en',
+		name: 'English',
+		nativeName: 'English',
+		dir: 'ltr',
+		region: null,
+		fallback: 'en',
+	},
+	de: {
+		code: 'de',
+		name: 'German',
+		nativeName: 'Deutsch',
+		dir: 'ltr',
+		region: 'DE',
+		fallback: 'en',
+	},
+	fr: {
+		code: 'fr',
+		name: 'French',
+		nativeName: 'Français',
+		dir: 'ltr',
+		region: 'FR',
+		fallback: 'en',
+	},
+	es: {
+		code: 'es',
+		name: 'Spanish',
+		nativeName: 'Español',
+		dir: 'ltr',
+		region: 'ES',
+		fallback: 'en',
+	},
+	ar: {
+		code: 'ar',
+		name: 'Arabic',
+		nativeName: 'العربية',
+		dir: 'rtl',
+		region: null,
+		fallback: 'en',
+	},
+	ja: {
+		code: 'ja',
+		name: 'Japanese',
+		nativeName: '日本語',
+		dir: 'ltr',
+		region: 'JP',
+		fallback: 'en',
+	},
 };
 
 export function isLocale(value: unknown): value is Locale {
-  return Locale.safeParse(value).success;
+	return Locale.safeParse(value).success;
 }
 ```
 
 **Six catalog rules:**
 
 1. **`Locale` is a bounded Zod enum.** Adding a locale = enum bump
-   + message-catalog audit (every `m.*` key has a translation) +
-   PR. Free-form strings drift into `en`/`en-US`/`en-GB`
-   inconsistency.
+   - message-catalog audit (every `m.*` key has a translation) +
+     PR. Free-form strings drift into `en`/`en-US`/`en-GB`
+     inconsistency.
 2. **ISO 639-1 two-letter codes** as the canonical shape. Region
    suffixes (`en-US`) are reserved for ambiguous cases — most
    products don't need them.
@@ -130,8 +172,8 @@ export function isLocale(value: unknown): value is Locale {
    message key. Paraglide's fallback chain reads from the catalog.
 5. **`nativeName` is what appears in the language-switcher.** Users
    looking for their language find "Deutsch", not "German."
-   Switcher lists native names, grouped/sorted by the *user's
-   current* locale (so an en-US user sees them alphabetized by
+   Switcher lists native names, grouped/sorted by the _user's
+   current_ locale (so an en-US user sees them alphabetized by
    English name for scanning, toggled by preference).
 6. **`region` is SEO-metadata only, not routing.** Used for
    `hreflang="de-DE"` annotations; the URL itself stays
@@ -172,7 +214,7 @@ export const match: ParamMatcher = (param) => isLocale(param);
 2. **Optional bracket `[[...]]` allows default-locale-without-
    prefix.** `/products` renders English; `/de/products` renders
    German. Pick this OR explicit-prefix-for-all (`/en/products`
-   + `/de/products`), not both.
+   - `/de/products`), not both.
 3. **API routes are OUTSIDE the locale group.** `POST /api/orders`
    never has a locale prefix; the user's locale is resolved from
    session/cookie/header server-side.
@@ -191,31 +233,31 @@ import type { Cookies } from '@sveltejs/kit';
 import { Locale, DEFAULT_LOCALE, isLocale } from './locales';
 
 interface ResolveInput {
-  urlParam: string | undefined;
-  cookie: string | undefined;
-  acceptLanguage: string | null;
-  geoCountry: string | null;
+	urlParam: string | undefined;
+	cookie: string | undefined;
+	acceptLanguage: string | null;
+	geoCountry: string | null;
 }
 
 export function resolveLocale(input: ResolveInput): Locale {
-  if (input.urlParam && isLocale(input.urlParam)) return input.urlParam;
+	if (input.urlParam && isLocale(input.urlParam)) return input.urlParam;
 
-  if (input.cookie && isLocale(input.cookie)) return input.cookie;
+	if (input.cookie && isLocale(input.cookie)) return input.cookie;
 
-  if (input.acceptLanguage) {
-    const parsed = parseAcceptLanguage(input.acceptLanguage);
-    for (const tag of parsed) {
-      const base = tag.split('-')[0];
-      if (isLocale(base)) return base;
-    }
-  }
+	if (input.acceptLanguage) {
+		const parsed = parseAcceptLanguage(input.acceptLanguage);
+		for (const tag of parsed) {
+			const base = tag.split('-')[0];
+			if (isLocale(base)) return base;
+		}
+	}
 
-  if (input.geoCountry) {
-    const geo = countryToLocale(input.geoCountry);
-    if (geo) return geo;
-  }
+	if (input.geoCountry) {
+		const geo = countryToLocale(input.geoCountry);
+		if (geo) return geo;
+	}
 
-  return DEFAULT_LOCALE;
+	return DEFAULT_LOCALE;
 }
 ```
 
@@ -230,7 +272,7 @@ export function resolveLocale(input: ResolveInput): Locale {
 3. **Accept-Language is third.** Parse `q=` weights; pick the
    highest-priority locale we support. Fall through if none match.
 4. **Geo-country is fourth, and soft.** `DE` IP suggests `de` but
-   this is a redirect *once*, not a forced shape. User who clicks
+   this is a redirect _once_, not a forced shape. User who clicks
    an English link from Germany should see English.
 5. **DEFAULT_LOCALE last.** Never throw "unresolvable locale"; the
    default is the floor.
@@ -246,42 +288,44 @@ import { LOCALES, DEFAULT_LOCALE } from '$lib/i18n/locales';
 import { PUBLIC_ORIGIN } from '$env/static/public';
 
 export const load: LayoutServerLoad = async ({ params, cookies, request, url }) => {
-  const geoCountry = request.headers.get('x-vercel-ip-country')
-    ?? request.headers.get('cf-ipcountry');
+	const geoCountry =
+		request.headers.get('x-vercel-ip-country') ?? request.headers.get('cf-ipcountry');
 
-  const resolved = resolveLocale({
-    urlParam: params.lang,
-    cookie: cookies.get('__Host-locale'),
-    acceptLanguage: request.headers.get('accept-language'),
-    geoCountry,
-  });
+	const resolved = resolveLocale({
+		urlParam: params.lang,
+		cookie: cookies.get('__Host-locale'),
+		acceptLanguage: request.headers.get('accept-language'),
+		geoCountry,
+	});
 
-  if (!params.lang && resolved !== DEFAULT_LOCALE) {
-    throw redirect(303, `/${resolved}${url.pathname}${url.search}`);
-  }
+	if (!params.lang && resolved !== DEFAULT_LOCALE) {
+		throw redirect(303, `/${resolved}${url.pathname}${url.search}`);
+	}
 
-  const pathWithoutLang = params.lang
-    ? url.pathname.replace(`/${params.lang}`, '') || '/'
-    : url.pathname;
+	const pathWithoutLang = params.lang
+		? url.pathname.replace(`/${params.lang}`, '') || '/'
+		: url.pathname;
 
-  const alternates = Object.values(LOCALES).map((locale) => ({
-    locale: locale.code,
-    hreflang: locale.region ? `${locale.code}-${locale.region}` : locale.code,
-    href: locale.code === DEFAULT_LOCALE
-      ? `${PUBLIC_ORIGIN}${pathWithoutLang}`
-      : `${PUBLIC_ORIGIN}/${locale.code}${pathWithoutLang}`,
-  }));
+	const alternates = Object.values(LOCALES).map((locale) => ({
+		locale: locale.code,
+		hreflang: locale.region ? `${locale.code}-${locale.region}` : locale.code,
+		href:
+			locale.code === DEFAULT_LOCALE
+				? `${PUBLIC_ORIGIN}${pathWithoutLang}`
+				: `${PUBLIC_ORIGIN}/${locale.code}${pathWithoutLang}`,
+	}));
 
-  const canonical = resolved === DEFAULT_LOCALE
-    ? `${PUBLIC_ORIGIN}${pathWithoutLang}`
-    : `${PUBLIC_ORIGIN}/${resolved}${pathWithoutLang}`;
+	const canonical =
+		resolved === DEFAULT_LOCALE
+			? `${PUBLIC_ORIGIN}${pathWithoutLang}`
+			: `${PUBLIC_ORIGIN}/${resolved}${pathWithoutLang}`;
 
-  return {
-    locale: resolved,
-    dir: LOCALES[resolved].dir,
-    alternates,
-    canonical,
-  };
+	return {
+		locale: resolved,
+		dir: LOCALES[resolved].dir,
+		alternates,
+		canonical,
+	};
 };
 ```
 
@@ -365,32 +409,32 @@ import { isLocale } from '$lib/i18n/locales';
 import { countryToLocale } from '$lib/i18n/resolve';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const hasLocalePrefix = /^\/[a-z]{2}(\/|$)/.test(event.url.pathname);
-  const geoRedirected = event.cookies.get('geo_redirected');
-  const manualLocale = event.cookies.get('__Host-locale');
+	const hasLocalePrefix = /^\/[a-z]{2}(\/|$)/.test(event.url.pathname);
+	const geoRedirected = event.cookies.get('geo_redirected');
+	const manualLocale = event.cookies.get('__Host-locale');
 
-  if (!hasLocalePrefix && !geoRedirected && !manualLocale) {
-    const geoCountry = event.request.headers.get('x-vercel-ip-country')
-      ?? event.request.headers.get('cf-ipcountry');
-    const suggested = geoCountry ? countryToLocale(geoCountry) : null;
+	if (!hasLocalePrefix && !geoRedirected && !manualLocale) {
+		const geoCountry =
+			event.request.headers.get('x-vercel-ip-country') ?? event.request.headers.get('cf-ipcountry');
+		const suggested = geoCountry ? countryToLocale(geoCountry) : null;
 
-    event.cookies.set('geo_redirected', '1', {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-      secure: true,
-      httpOnly: true,
-    });
+		event.cookies.set('geo_redirected', '1', {
+			path: '/',
+			maxAge: 60 * 60 * 24 * 365,
+			sameSite: 'lax',
+			secure: true,
+			httpOnly: true,
+		});
 
-    if (suggested && suggested !== 'en') {
-      return new Response(null, {
-        status: 303,
-        headers: { location: `/${suggested}${event.url.pathname}${event.url.search}` },
-      });
-    }
-  }
+		if (suggested && suggested !== 'en') {
+			return new Response(null, {
+				status: 303,
+				headers: { location: `/${suggested}${event.url.pathname}${event.url.search}` },
+			});
+		}
+	}
 
-  return resolve(event);
+	return resolve(event);
 };
 ```
 
@@ -418,31 +462,35 @@ export const handle: Handle = async ({ event, resolve }) => {
 ```svelte
 <!-- src/lib/components/LocaleSwitcher.svelte -->
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { LOCALES } from '$lib/i18n/locales';
-  import * as m from '$paraglide/messages';
-  import type { Locale } from '$lib/i18n/locales';
+	import { page } from '$app/stores';
+	import { LOCALES } from '$lib/i18n/locales';
+	import * as m from '$paraglide/messages';
+	import type { Locale } from '$lib/i18n/locales';
 
-  let { current }: { current: Locale } = $props();
+	let { current }: { current: Locale } = $props();
 
-  function switchTo(target: Locale): string {
-    const pathWithoutLang = $page.url.pathname.replace(/^\/[a-z]{2}(\/|$)/, '/');
-    return target === 'en' ? pathWithoutLang : `/${target}${pathWithoutLang}`;
-  }
+	function switchTo(target: Locale): string {
+		const pathWithoutLang = $page.url.pathname.replace(/^\/[a-z]{2}(\/|$)/, '/');
+		return target === 'en' ? pathWithoutLang : `/${target}${pathWithoutLang}`;
+	}
 </script>
 
 <form method="POST" action="/api/i18n/set-locale">
-  <label for="locale-select" class="sr-only">{m.locale_switcher_label()}</label>
-  <select id="locale-select" name="locale" onchange={(e) => location.href = switchTo(e.currentTarget.value as Locale)}>
-    {#each Object.values(LOCALES) as locale}
-      <option value={locale.code} selected={locale.code === current}>
-        {locale.nativeName}
-      </option>
-    {/each}
-  </select>
-  <noscript>
-    <button type="submit">{m.locale_switcher_submit()}</button>
-  </noscript>
+	<label for="locale-select" class="sr-only">{m.locale_switcher_label()}</label>
+	<select
+		id="locale-select"
+		name="locale"
+		onchange={(e) => (location.href = switchTo(e.currentTarget.value as Locale))}
+	>
+		{#each Object.values(LOCALES) as locale}
+			<option value={locale.code} selected={locale.code === current}>
+				{locale.nativeName}
+			</option>
+		{/each}
+	</select>
+	<noscript>
+		<button type="submit">{m.locale_switcher_submit()}</button>
+	</noscript>
 </form>
 ```
 
@@ -453,25 +501,26 @@ import { redirect } from '@sveltejs/kit';
 import { isLocale } from '$lib/i18n/locales';
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
-  const form = await request.formData();
-  const locale = form.get('locale');
-  const next = form.get('next')?.toString() ?? '/';
+	const form = await request.formData();
+	const locale = form.get('locale');
+	const next = form.get('next')?.toString() ?? '/';
 
-  if (!isLocale(locale)) throw redirect(303, '/');
+	if (!isLocale(locale)) throw redirect(303, '/');
 
-  cookies.set('__Host-locale', locale, {
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-    secure: true,
-    httpOnly: false,
-  });
+	cookies.set('__Host-locale', locale, {
+		path: '/',
+		maxAge: 60 * 60 * 24 * 365,
+		sameSite: 'lax',
+		secure: true,
+		httpOnly: false,
+	});
 
-  const targetPath = locale === 'en'
-    ? next.replace(/^\/[a-z]{2}(\/|$)/, '/')
-    : `/${locale}${next.replace(/^\/[a-z]{2}(\/|$)/, '/')}`;
+	const targetPath =
+		locale === 'en'
+			? next.replace(/^\/[a-z]{2}(\/|$)/, '/')
+			: `/${locale}${next.replace(/^\/[a-z]{2}(\/|$)/, '/')}`;
 
-  throw redirect(303, targetPath);
+	throw redirect(303, targetPath);
 };
 ```
 
@@ -488,7 +537,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 4. **`maxAge: 1 year`** — users don't want to re-pick every
    session. Re-prompt logic (if it exists at all) belongs in a
    cron that emails "still right?" not in the cookie.
-5. **Language names in *native* script.** `Deutsch` not `German`.
+5. **Language names in _native_ script.** `Deutsch` not `German`.
    Users looking for their language pattern-match their own
    script.
 6. **`<label class="sr-only">` for SR users** — the select has no
@@ -516,13 +565,13 @@ import { redirect } from '@sveltejs/kit';
 const TERMS_LOCALES = new Set(['en', 'de']);
 
 export const load: PageServerLoad = async ({ parent }) => {
-  const { locale } = await parent();
+	const { locale } = await parent();
 
-  if (!TERMS_LOCALES.has(locale)) {
-    throw redirect(303, '/legal/terms?reason=not_localized');
-  }
+	if (!TERMS_LOCALES.has(locale)) {
+		throw redirect(303, '/legal/terms?reason=not_localized');
+	}
 
-  return { locale };
+	return { locale };
 };
 ```
 
@@ -547,29 +596,33 @@ import { LOCALES, DEFAULT_LOCALE } from '$lib/i18n/locales';
 const ROUTES = ['/', '/about', '/products', '/pricing'];
 
 export const GET: RequestHandler = () => {
-  const urls = ROUTES.flatMap((path) =>
-    Object.values(LOCALES).map((locale) => {
-      const url = locale.code === DEFAULT_LOCALE
-        ? `${PUBLIC_ORIGIN}${path}`
-        : `${PUBLIC_ORIGIN}/${locale.code}${path}`;
+	const urls = ROUTES.flatMap((path) =>
+		Object.values(LOCALES).map((locale) => {
+			const url =
+				locale.code === DEFAULT_LOCALE
+					? `${PUBLIC_ORIGIN}${path}`
+					: `${PUBLIC_ORIGIN}/${locale.code}${path}`;
 
-      const alternates = Object.values(LOCALES).map((alt) => {
-        const altUrl = alt.code === DEFAULT_LOCALE
-          ? `${PUBLIC_ORIGIN}${path}`
-          : `${PUBLIC_ORIGIN}/${alt.code}${path}`;
-        const hreflang = alt.region ? `${alt.code}-${alt.region}` : alt.code;
-        return `<xhtml:link rel="alternate" hreflang="${hreflang}" href="${altUrl}"/>`;
-      }).join('');
+			const alternates = Object.values(LOCALES)
+				.map((alt) => {
+					const altUrl =
+						alt.code === DEFAULT_LOCALE
+							? `${PUBLIC_ORIGIN}${path}`
+							: `${PUBLIC_ORIGIN}/${alt.code}${path}`;
+					const hreflang = alt.region ? `${alt.code}-${alt.region}` : alt.code;
+					return `<xhtml:link rel="alternate" hreflang="${hreflang}" href="${altUrl}"/>`;
+				})
+				.join('');
 
-      return `<url><loc>${url}</loc>${alternates}</url>`;
-    }),
-  ).join('');
+			return `<url><loc>${url}</loc>${alternates}</url>`;
+		}),
+	).join('');
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+	const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`;
 
-  return new Response(xml, { headers: { 'content-type': 'application/xml' } });
+	return new Response(xml, { headers: { 'content-type': 'application/xml' } });
 };
 ```
 
@@ -588,32 +641,34 @@ export const GET: RequestHandler = () => {
 
 ```typescript
 it('redirects /de/produkte to /produkte when cookie is en', async () => {
-  const res = await app.request('/de/products', { headers: { cookie: '__Host-locale=en' } });
-  expect(res.status).toBe(200); // URL wins over cookie
+	const res = await app.request('/de/products', { headers: { cookie: '__Host-locale=en' } });
+	expect(res.status).toBe(200); // URL wins over cookie
 });
 
 it('cookie de + no URL prefix redirects to /de/', async () => {
-  const res = await app.request('/products', {
-    headers: { cookie: '__Host-locale=de' },
-  });
-  expect(res.status).toBe(303);
-  expect(res.headers.get('location')).toBe('/de/products');
+	const res = await app.request('/products', {
+		headers: { cookie: '__Host-locale=de' },
+	});
+	expect(res.status).toBe(303);
+	expect(res.headers.get('location')).toBe('/de/products');
 });
 
 it('canonical is self-referential per locale', async () => {
-  const enRes = await app.request('/products');
-  const deRes = await app.request('/de/products');
+	const enRes = await app.request('/products');
+	const deRes = await app.request('/de/products');
 
-  expect(await enRes.text()).toContain('<link rel="canonical" href="https://example.com/products"');
-  expect(await deRes.text()).toContain('<link rel="canonical" href="https://example.com/de/products"');
+	expect(await enRes.text()).toContain('<link rel="canonical" href="https://example.com/products"');
+	expect(await deRes.text()).toContain(
+		'<link rel="canonical" href="https://example.com/de/products"',
+	);
 });
 
 it('hreflang alternates are bidirectional', async () => {
-  const enHtml = await (await app.request('/products')).text();
-  const deHtml = await (await app.request('/de/products')).text();
+	const enHtml = await (await app.request('/products')).text();
+	const deHtml = await (await app.request('/de/products')).text();
 
-  expect(enHtml).toContain('hreflang="de" href="https://example.com/de/products"');
-  expect(deHtml).toContain('hreflang="en" href="https://example.com/products"');
+	expect(enHtml).toContain('hreflang="de" href="https://example.com/de/products"');
+	expect(deHtml).toContain('hreflang="en" href="https://example.com/products"');
 });
 ```
 

@@ -66,10 +66,7 @@
 />
 
 <!-- Audio-only shell (`<audio>`); captions are not required for audio. -->
-<Story
-	name="Audio"
-	args={{ src: SAMPLE_AUDIO, title: 'Sample audio track', viewType: 'audio' }}
-/>
+<Story name="Audio" args={{ src: SAMPLE_AUDIO, title: 'Sample audio track', viewType: 'audio' }} />
 
 <!-- Captions opt-out: a video with no spoken audio passes `tracks={[]}`. -->
 <Story

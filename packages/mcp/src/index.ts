@@ -9,13 +9,13 @@ import { registerResourceSubscriptions } from './subscriptions.js';
 import type { SubscriptionController } from './subscriptions.js';
 
 export interface ServerOptions {
-  rootDir: string;
-  name?: string;
-  version?: string;
+	rootDir: string;
+	name?: string;
+	version?: string;
 }
 
 export function createSveltesentioServer(opts: ServerOptions): McpServer {
-  return createSveltesentioServerWith(opts).server;
+	return createSveltesentioServerWith(opts).server;
 }
 
 /**
@@ -24,23 +24,23 @@ export function createSveltesentioServer(opts: ServerOptions): McpServer {
  * {@link createSveltesentioServer} factory is enough for read-only consumers.
  */
 export function createSveltesentioServerWith(opts: ServerOptions): {
-  server: McpServer;
-  subscriptions: SubscriptionController;
+	server: McpServer;
+	subscriptions: SubscriptionController;
 } {
-  const server = new McpServer({
-    name: opts.name ?? 'sveltesentio',
-    version: opts.version ?? '0.0.1'
-  });
+	const server = new McpServer({
+		name: opts.name ?? 'sveltesentio',
+		version: opts.version ?? '0.0.1',
+	});
 
-  registerAdrResource(server, opts.rootDir);
-  registerComposeResource(server, opts.rootDir);
-  registerComplianceResource(server, opts.rootDir);
-  registerModuleLookupTool(server, opts.rootDir);
-  registerComposeSearchTool(server, opts.rootDir);
-  registerPrincipleLookupTool(server, opts.rootDir);
-  const subscriptions = registerResourceSubscriptions(server);
+	registerAdrResource(server, opts.rootDir);
+	registerComposeResource(server, opts.rootDir);
+	registerComplianceResource(server, opts.rootDir);
+	registerModuleLookupTool(server, opts.rootDir);
+	registerComposeSearchTool(server, opts.rootDir);
+	registerPrincipleLookupTool(server, opts.rootDir);
+	const subscriptions = registerResourceSubscriptions(server);
 
-  return { server, subscriptions };
+	return { server, subscriptions };
 }
 
 export type { SubscriptionController } from './subscriptions.js';

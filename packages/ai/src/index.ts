@@ -11,12 +11,7 @@ export type {
 	CreateAuditLogOptions,
 	RiskTier,
 } from './audit.js';
-export {
-	AiAuditValidationError,
-	aiAuditRecordSchema,
-	createAuditLog,
-	riskTiers,
-} from './audit.js';
+export { AiAuditValidationError, aiAuditRecordSchema, createAuditLog, riskTiers } from './audit.js';
 
 export type {
 	ChatMessage,

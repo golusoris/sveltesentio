@@ -35,8 +35,4 @@ export {
 	safeAreaPadding,
 } from './safe-area.js';
 
-export {
-	type RegisterSWOptions,
-	type UpdateServiceWorker,
-	registerSW,
-} from './pwa.js';
+export { type RegisterSWOptions, type UpdateServiceWorker, registerSW } from './pwa.js';

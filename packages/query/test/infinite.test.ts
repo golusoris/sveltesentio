@@ -54,9 +54,9 @@ describe('createInfiniteItems — cursor pagination preset', () => {
 			initialCursor: 'cursor-7',
 			queryFn: () => Promise.resolve({ items: [], nextCursor: null }),
 		});
-		expect(
-			accessorFromCall<InfiniteOpts<string>>(sq.createInfiniteQuery)().initialPageParam,
-		).toBe('cursor-7');
+		expect(accessorFromCall<InfiniteOpts<string>>(sq.createInfiniteQuery)().initialPageParam).toBe(
+			'cursor-7',
+		);
 	});
 
 	it('getNextPageParam returns the page cursor, and null on the last page', () => {

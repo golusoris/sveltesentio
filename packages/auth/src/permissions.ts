@@ -6,7 +6,9 @@ export interface PermissionsApi {
 	allOf(...patterns: string[]): boolean;
 }
 
-export function createPermissions(input: readonly string[] | Iterable<string> | null | undefined): PermissionsApi {
+export function createPermissions(
+	input: readonly string[] | Iterable<string> | null | undefined,
+): PermissionsApi {
 	const set = new Set<string>();
 	if (input) for (const p of input) set.add(p);
 	const snapshot = Object.freeze([...set]);

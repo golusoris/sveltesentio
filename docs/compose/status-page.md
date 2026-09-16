@@ -83,59 +83,70 @@ should know when their payment failures are your vendor, not you.
 import { z } from 'zod';
 
 export const ComponentStatus = z.enum([
-  'operational',
-  'degraded_performance',
-  'partial_outage',
-  'major_outage',
-  'under_maintenance',
+	'operational',
+	'degraded_performance',
+	'partial_outage',
+	'major_outage',
+	'under_maintenance',
 ]);
 export type ComponentStatus = z.infer<typeof ComponentStatus>;
 
 export const Component = z.object({
-  id: z.string().uuid(),
-  slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
-  displayName: z.string().min(1).max(60),
-  description: z.string().max(280).nullable(),
-  group: z.string().max(40).nullable(),             // optional grouping: "Core API", "Data"
-  region: z.string().regex(/^[a-z0-9-]{2,20}$/).nullable(),
-  status: ComponentStatus,
-  orderIndex: z.number().int().min(0).max(1000),
-  showOnPublic: z.boolean().default(true),
+	id: z.string().uuid(),
+	slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
+	displayName: z.string().min(1).max(60),
+	description: z.string().max(280).nullable(),
+	group: z.string().max(40).nullable(), // optional grouping: "Core API", "Data"
+	region: z
+		.string()
+		.regex(/^[a-z0-9-]{2,20}$/)
+		.nullable(),
+	status: ComponentStatus,
+	orderIndex: z.number().int().min(0).max(1000),
+	showOnPublic: z.boolean().default(true),
 });
 export type Component = z.infer<typeof Component>;
 
 export const IncidentImpact = z.enum(['none', 'minor', 'major', 'critical']);
 
 export const PublicIncident = z.object({
-  id: z.string().uuid(),                             // matches internal incident id
-  title: z.string().min(8).max(120),
-  impact: IncidentImpact,
-  currentStatus: z.enum(['investigating', 'identified', 'monitoring', 'resolved', 'scheduled']),
-  startedAt: z.string().datetime({ offset: true }),
-  resolvedAt: z.string().datetime({ offset: true }).nullable(),
-  affectedComponentIds: z.array(z.string().uuid()).min(1).max(50),
-  // Only publicly-shareable subset of timeline entries.
-  updates: z.array(z.object({
-    id: z.string().uuid(),
-    kind: z.enum(['investigating', 'identified', 'monitoring', 'resolved', 'comment']),
-    message: z.string().min(1).max(2000),
-    at: z.string().datetime({ offset: true }),
-    author: z.string().max(60).optional(),           // "Platform Team" not individual names
-  })).min(1).max(100),
+	id: z.string().uuid(), // matches internal incident id
+	title: z.string().min(8).max(120),
+	impact: IncidentImpact,
+	currentStatus: z.enum(['investigating', 'identified', 'monitoring', 'resolved', 'scheduled']),
+	startedAt: z.string().datetime({ offset: true }),
+	resolvedAt: z.string().datetime({ offset: true }).nullable(),
+	affectedComponentIds: z.array(z.string().uuid()).min(1).max(50),
+	// Only publicly-shareable subset of timeline entries.
+	updates: z
+		.array(
+			z.object({
+				id: z.string().uuid(),
+				kind: z.enum(['investigating', 'identified', 'monitoring', 'resolved', 'comment']),
+				message: z.string().min(1).max(2000),
+				at: z.string().datetime({ offset: true }),
+				author: z.string().max(60).optional(), // "Platform Team" not individual names
+			}),
+		)
+		.min(1)
+		.max(100),
 });
 export type PublicIncident = z.infer<typeof PublicIncident>;
 
 export const Subscriber = z.object({
-  id: z.string().uuid(),
-  kind: z.enum(['email', 'webhook', 'sms']),
-  email: z.string().email().nullable(),
-  webhookUrl: z.string().url().nullable(),
-  phoneE164: z.string().regex(/^\+[1-9]\d{7,14}$/).nullable(),
-  componentIds: z.array(z.string().uuid()).max(50),  // empty = all
-  confirmedAt: z.string().datetime({ offset: true }).nullable(),
-  confirmationToken: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/),
-  unsubscribeToken: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/),
-  createdAt: z.string().datetime({ offset: true }),
+	id: z.string().uuid(),
+	kind: z.enum(['email', 'webhook', 'sms']),
+	email: z.string().email().nullable(),
+	webhookUrl: z.string().url().nullable(),
+	phoneE164: z
+		.string()
+		.regex(/^\+[1-9]\d{7,14}$/)
+		.nullable(),
+	componentIds: z.array(z.string().uuid()).max(50), // empty = all
+	confirmedAt: z.string().datetime({ offset: true }).nullable(),
+	confirmationToken: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/),
+	unsubscribeToken: z.string().regex(/^[A-Za-z0-9_-]{32,64}$/),
+	createdAt: z.string().datetime({ offset: true }),
 });
 export type Subscriber = z.infer<typeof Subscriber>;
 ```
@@ -159,7 +170,8 @@ app** deployed to a different provider (Netlify instead of the
 primary Vercel, or Cloudflare Workers), reading a **public S3 object**
 (`s3://status/<region>/state.json`) that's written by the main app
 on every status mutation. If every other piece of infra is down, S3
-+ CDN almost certainly isn't.
+
+- CDN almost certainly isn't.
 
 ### 2. State write path
 
@@ -172,36 +184,38 @@ import { createHash } from 'node:crypto';
 const s3 = new S3Client({ region: env.STATUS_S3_REGION });
 
 export async function publishStatusSnapshot() {
-  const components = await loadPublicComponents();
-  const activeIncidents = await loadActivePublicIncidents();
-  const scheduledMaintenance = await loadScheduledMaintenance();
-  const recentHistory = await loadRecentHistory(90);  // 90-day uptime window
+	const components = await loadPublicComponents();
+	const activeIncidents = await loadActivePublicIncidents();
+	const scheduledMaintenance = await loadScheduledMaintenance();
+	const recentHistory = await loadRecentHistory(90); // 90-day uptime window
 
-  const snapshot = {
-    generatedAt: new Date().toISOString(),
-    components: components.map((c) => Component.parse(c)),
-    incidents: { active: activeIncidents, scheduled: scheduledMaintenance },
-    history: recentHistory,
-  };
-  const body = JSON.stringify(snapshot);
-  const etag = createHash('sha256').update(body).digest('hex').slice(0, 16);
+	const snapshot = {
+		generatedAt: new Date().toISOString(),
+		components: components.map((c) => Component.parse(c)),
+		incidents: { active: activeIncidents, scheduled: scheduledMaintenance },
+		history: recentHistory,
+	};
+	const body = JSON.stringify(snapshot);
+	const etag = createHash('sha256').update(body).digest('hex').slice(0, 16);
 
-  await s3.send(new PutObjectCommand({
-    Bucket: env.STATUS_BUCKET,
-    Key: 'state.json',
-    Body: body,
-    ContentType: 'application/json',
-    CacheControl: 'public, max-age=30, s-maxage=30',
-    ACL: 'public-read',
-    Metadata: { etag },
-  }));
+	await s3.send(
+		new PutObjectCommand({
+			Bucket: env.STATUS_BUCKET,
+			Key: 'state.json',
+			Body: body,
+			ContentType: 'application/json',
+			CacheControl: 'public, max-age=30, s-maxage=30',
+			ACL: 'public-read',
+			Metadata: { etag },
+		}),
+	);
 
-  await invalidateCdn('/state.json');
-  await writeAuditEvent({
-    kind: 'status.snapshot.published',
-    subjectId: 'system',
-    payload: { etag, components: components.length, activeIncidents: activeIncidents.length },
-  });
+	await invalidateCdn('/state.json');
+	await writeAuditEvent({
+		kind: 'status.snapshot.published',
+		subjectId: 'system',
+		payload: { etag, components: components.length, activeIncidents: activeIncidents.length },
+	});
 }
 ```
 
@@ -214,15 +228,15 @@ TTL to expire.
 ```ts
 // status-page-app/src/routes/+page.server.ts
 export async function load({ fetch }) {
-  const res = await fetch('https://status-cdn.sveltesentio.com/state.json', {
-    headers: { 'cache-control': 'no-cache' },
-  });
-  if (!res.ok) {
-    // Fallback: show a "we're still here" message from a committed
-    // static JSON. Never a blank page.
-    return { snapshot: STATIC_FALLBACK, degraded: true };
-  }
-  return { snapshot: await res.json(), degraded: false };
+	const res = await fetch('https://status-cdn.sveltesentio.com/state.json', {
+		headers: { 'cache-control': 'no-cache' },
+	});
+	if (!res.ok) {
+		// Fallback: show a "we're still here" message from a committed
+		// static JSON. Never a blank page.
+		return { snapshot: STATIC_FALLBACK, degraded: true };
+	}
+	return { snapshot: await res.json(), degraded: false };
 }
 ```
 
@@ -235,91 +249,97 @@ snapshot from 2026-04-15") beats a blank page during an edge outage.
 ```svelte
 <!-- status-page-app/src/routes/+page.svelte -->
 <script lang="ts">
-  import type { PageData } from './$types';
-  let { data }: { data: PageData } = $props();
+	import type { PageData } from './$types';
+	let { data }: { data: PageData } = $props();
 
-  const overall = $derived.by(() => {
-    const c = data.snapshot.components;
-    if (c.some((x: any) => x.status === 'major_outage')) return 'major';
-    if (c.some((x: any) => x.status === 'partial_outage')) return 'partial';
-    if (c.some((x: any) => x.status === 'degraded_performance')) return 'degraded';
-    if (c.some((x: any) => x.status === 'under_maintenance')) return 'maintenance';
-    return 'operational';
-  });
+	const overall = $derived.by(() => {
+		const c = data.snapshot.components;
+		if (c.some((x: any) => x.status === 'major_outage')) return 'major';
+		if (c.some((x: any) => x.status === 'partial_outage')) return 'partial';
+		if (c.some((x: any) => x.status === 'degraded_performance')) return 'degraded';
+		if (c.some((x: any) => x.status === 'under_maintenance')) return 'maintenance';
+		return 'operational';
+	});
 </script>
 
 <svelte:head>
-  <title>System status — {overall === 'operational' ? 'All systems operational' : overall}</title>
-  <meta name="robots" content="index,follow" />
-  <link rel="canonical" href="https://status.sveltesentio.com" />
-  <link rel="alternate" type="application/json" href="/state.json" />
-  <link rel="alternate" type="application/atom+xml" title="Status updates" href="/feed.atom" />
+	<title>System status — {overall === 'operational' ? 'All systems operational' : overall}</title>
+	<meta name="robots" content="index,follow" />
+	<link rel="canonical" href="https://status.sveltesentio.com" />
+	<link rel="alternate" type="application/json" href="/state.json" />
+	<link rel="alternate" type="application/atom+xml" title="Status updates" href="/feed.atom" />
 </svelte:head>
 
 <header class="banner banner-{overall}" role="status" aria-live="polite">
-  {#if overall === 'operational'}
-    <h1>All systems operational</h1>
-  {:else if overall === 'maintenance'}
-    <h1>Scheduled maintenance in progress</h1>
-  {:else}
-    <h1>{overall === 'major' ? 'Major outage' : overall === 'partial' ? 'Partial outage' : 'Degraded performance'}</h1>
-  {/if}
+	{#if overall === 'operational'}
+		<h1>All systems operational</h1>
+	{:else if overall === 'maintenance'}
+		<h1>Scheduled maintenance in progress</h1>
+	{:else}
+		<h1>
+			{overall === 'major'
+				? 'Major outage'
+				: overall === 'partial'
+					? 'Partial outage'
+					: 'Degraded performance'}
+		</h1>
+	{/if}
 </header>
 
 {#if data.snapshot.incidents.active.length > 0}
-  <section aria-labelledby="active-incidents">
-    <h2 id="active-incidents">Active incidents</h2>
-    {#each data.snapshot.incidents.active as incident (incident.id)}
-      <article aria-labelledby={`inc-${incident.id}-h`}>
-        <h3 id={`inc-${incident.id}-h`}>{incident.title}</h3>
-        <p>Started {incident.startedAt} · Impact: {incident.impact}</p>
-        <ol reversed>
-          {#each incident.updates as u (u.id)}
-            <li>
-              <time datetime={u.at}>{new Date(u.at).toLocaleString()}</time>
-              <strong>{u.kind}</strong>
-              <p>{u.message}</p>
-            </li>
-          {/each}
-        </ol>
-      </article>
-    {/each}
-  </section>
+	<section aria-labelledby="active-incidents">
+		<h2 id="active-incidents">Active incidents</h2>
+		{#each data.snapshot.incidents.active as incident (incident.id)}
+			<article aria-labelledby={`inc-${incident.id}-h`}>
+				<h3 id={`inc-${incident.id}-h`}>{incident.title}</h3>
+				<p>Started {incident.startedAt} · Impact: {incident.impact}</p>
+				<ol reversed>
+					{#each incident.updates as u (u.id)}
+						<li>
+							<time datetime={u.at}>{new Date(u.at).toLocaleString()}</time>
+							<strong>{u.kind}</strong>
+							<p>{u.message}</p>
+						</li>
+					{/each}
+				</ol>
+			</article>
+		{/each}
+	</section>
 {/if}
 
 <section aria-labelledby="components">
-  <h2 id="components">Components</h2>
-  <ul class="components">
-    {#each data.snapshot.components as c (c.id)}
-      <li class="status-row">
-        <span class="name">{c.displayName}</span>
-        {#if c.description}<span class="desc">{c.description}</span>{/if}
-        <span class="status status-{c.status}" aria-label="Status: {c.status}">
-          {c.status.replace(/_/g, ' ')}
-        </span>
-      </li>
-    {/each}
-  </ul>
+	<h2 id="components">Components</h2>
+	<ul class="components">
+		{#each data.snapshot.components as c (c.id)}
+			<li class="status-row">
+				<span class="name">{c.displayName}</span>
+				{#if c.description}<span class="desc">{c.description}</span>{/if}
+				<span class="status status-{c.status}" aria-label="Status: {c.status}">
+					{c.status.replace(/_/g, ' ')}
+				</span>
+			</li>
+		{/each}
+	</ul>
 </section>
 
 <section aria-labelledby="history">
-  <h2 id="history">90-day uptime</h2>
-  <!-- Per-component 90-dot history grid. -->
+	<h2 id="history">90-day uptime</h2>
+	<!-- Per-component 90-dot history grid. -->
 </section>
 
 <section aria-labelledby="subscribe">
-  <h2 id="subscribe">Subscribe to updates</h2>
-  <form method="POST" action="/subscribe" use:enhance>
-    <label>
-      Email
-      <input type="email" name="email" required autocomplete="email" />
-    </label>
-    <button>Subscribe</button>
-  </form>
-  <p>
-    Also available: <a href="/feed.atom">Atom feed</a> ·
-    <a href="/webhook">Webhook subscription</a>
-  </p>
+	<h2 id="subscribe">Subscribe to updates</h2>
+	<form method="POST" action="/subscribe" use:enhance>
+		<label>
+			Email
+			<input type="email" name="email" required autocomplete="email" />
+		</label>
+		<button>Subscribe</button>
+	</form>
+	<p>
+		Also available: <a href="/feed.atom">Atom feed</a> ·
+		<a href="/webhook">Webhook subscription</a>
+	</p>
 </section>
 ```
 
@@ -331,38 +351,40 @@ import { randomBytes } from 'node:crypto';
 import { enqueueConfirmationEmail } from '$lib/server/email';
 
 export async function POST({ request }) {
-  const formData = await request.formData();
-  const email = String(formData.get('email') ?? '').trim().toLowerCase();
-  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) return new Response(null, { status: 400 });
+	const formData = await request.formData();
+	const email = String(formData.get('email') ?? '')
+		.trim()
+		.toLowerCase();
+	if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) return new Response(null, { status: 400 });
 
-  // Rate-limit per IP — email enumeration attack otherwise.
-  if (!(await allowSubscribe(getClientAddress()))) {
-    return new Response(null, { status: 429 });
-  }
+	// Rate-limit per IP — email enumeration attack otherwise.
+	if (!(await allowSubscribe(getClientAddress()))) {
+		return new Response(null, { status: 429 });
+	}
 
-  const confirmationToken = randomBytes(24).toString('base64url');
-  const unsubscribeToken = randomBytes(24).toString('base64url');
-  await upsertSubscriber({
-    id: crypto.randomUUID(),
-    kind: 'email',
-    email,
-    webhookUrl: null,
-    phoneE164: null,
-    componentIds: [],
-    confirmedAt: null,
-    confirmationToken,
-    unsubscribeToken,
-    createdAt: new Date().toISOString(),
-  });
+	const confirmationToken = randomBytes(24).toString('base64url');
+	const unsubscribeToken = randomBytes(24).toString('base64url');
+	await upsertSubscriber({
+		id: crypto.randomUUID(),
+		kind: 'email',
+		email,
+		webhookUrl: null,
+		phoneE164: null,
+		componentIds: [],
+		confirmedAt: null,
+		confirmationToken,
+		unsubscribeToken,
+		createdAt: new Date().toISOString(),
+	});
 
-  await enqueueConfirmationEmail({
-    to: email,
-    confirmUrl: `https://status.sveltesentio.com/confirm/${confirmationToken}`,
-  });
+	await enqueueConfirmationEmail({
+		to: email,
+		confirmUrl: `https://status.sveltesentio.com/confirm/${confirmationToken}`,
+	});
 
-  // Always return success, to prevent email enumeration.
-  // (Even if the email was already subscribed — don't leak.)
-  return new Response(null, { status: 202 });
+	// Always return success, to prevent email enumeration.
+	// (Even if the email was already subscribed — don't leak.)
+	return new Response(null, { status: 202 });
 }
 ```
 
@@ -373,29 +395,36 @@ attackers iterate addresses and discover which ones are subscribed.
 
 ```ts
 // packages/status/src/notify.ts
-export async function notifySubscribers(incident: PublicIncident, update: PublicIncident['updates'][number]) {
-  const subs = await loadConfirmedSubscribersForComponents(incident.affectedComponentIds);
-  for (const s of subs) {
-    switch (s.kind) {
-      case 'email':
-        await enqueueEmail({
-          to: s.email!,
-          template: 'status-update',
-          data: { incident, update, unsubscribeToken: s.unsubscribeToken },
-        });
-        break;
-      case 'webhook':
-        await dispatchWebhook({
-          url: s.webhookUrl!,
-          event: `status.${update.kind}`,
-          payload: { incident, update },
-        });
-        break;
-      case 'sms':
-        if (s.phoneE164) await sendSms({ to: s.phoneE164, body: `Status: ${update.kind} — ${update.message.slice(0, 140)}` });
-        break;
-    }
-  }
+export async function notifySubscribers(
+	incident: PublicIncident,
+	update: PublicIncident['updates'][number],
+) {
+	const subs = await loadConfirmedSubscribersForComponents(incident.affectedComponentIds);
+	for (const s of subs) {
+		switch (s.kind) {
+			case 'email':
+				await enqueueEmail({
+					to: s.email!,
+					template: 'status-update',
+					data: { incident, update, unsubscribeToken: s.unsubscribeToken },
+				});
+				break;
+			case 'webhook':
+				await dispatchWebhook({
+					url: s.webhookUrl!,
+					event: `status.${update.kind}`,
+					payload: { incident, update },
+				});
+				break;
+			case 'sms':
+				if (s.phoneE164)
+					await sendSms({
+						to: s.phoneE164,
+						body: `Status: ${update.kind} — ${update.message.slice(0, 140)}`,
+					});
+				break;
+		}
+	}
 }
 ```
 
@@ -409,37 +438,38 @@ doesn't stall the status update.
 ```ts
 // status-page-app/src/routes/feed.atom/+server.ts
 export async function GET({ fetch }) {
-  const { snapshot } = await loadSnapshot(fetch);
-  const entries = [
-    ...snapshot.incidents.active,
-    ...snapshot.history.slice(0, 20),
-  ]
-    .flatMap((inc: PublicIncident) => inc.updates.map((u) => ({ inc, u })))
-    .sort((a, b) => b.u.at.localeCompare(a.u.at))
-    .slice(0, 50);
+	const { snapshot } = await loadSnapshot(fetch);
+	const entries = [...snapshot.incidents.active, ...snapshot.history.slice(0, 20)]
+		.flatMap((inc: PublicIncident) => inc.updates.map((u) => ({ inc, u })))
+		.sort((a, b) => b.u.at.localeCompare(a.u.at))
+		.slice(0, 50);
 
-  const atom = `<?xml version="1.0"?>
+	const atom = `<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Sveltesentio status updates</title>
   <link href="https://status.sveltesentio.com/"/>
   <id>tag:sveltesentio.com,2026:status</id>
   <updated>${new Date().toISOString()}</updated>
-  ${entries.map(({ inc, u }) => `
+  ${entries
+		.map(
+			({ inc, u }) => `
   <entry>
     <id>tag:sveltesentio.com,2026:incident/${inc.id}/update/${u.id}</id>
     <title>${escapeXml(inc.title + ' — ' + u.kind)}</title>
     <updated>${u.at}</updated>
     <content type="text">${escapeXml(u.message)}</content>
     <link href="https://status.sveltesentio.com/incident/${inc.id}"/>
-  </entry>`).join('')}
+  </entry>`,
+		)
+		.join('')}
 </feed>`;
 
-  return new Response(atom, {
-    headers: {
-      'content-type': 'application/atom+xml; charset=utf-8',
-      'cache-control': 'public, max-age=60',
-    },
-  });
+	return new Response(atom, {
+		headers: {
+			'content-type': 'application/atom+xml; charset=utf-8',
+			'cache-control': 'public, max-age=60',
+		},
+	});
 }
 ```
 
@@ -447,23 +477,29 @@ export async function GET({ fetch }) {
 
 ```ts
 // packages/status/src/uptime.ts
-export async function computeUptime(componentId: string, days: number): Promise<{ days: Array<{ date: string; status: ComponentStatus; uptimePct: number }>; avgPct: number }> {
-  const end = new Date();
-  const start = new Date(end.getTime() - days * 86400_000);
+export async function computeUptime(
+	componentId: string,
+	days: number,
+): Promise<{
+	days: Array<{ date: string; status: ComponentStatus; uptimePct: number }>;
+	avgPct: number;
+}> {
+	const end = new Date();
+	const start = new Date(end.getTime() - days * 86400_000);
 
-  const events = await loadStatusEventsForComponent(componentId, start, end);
-  const daily: Array<{ date: string; status: ComponentStatus; uptimePct: number }> = [];
+	const events = await loadStatusEventsForComponent(componentId, start, end);
+	const daily: Array<{ date: string; status: ComponentStatus; uptimePct: number }> = [];
 
-  for (let i = 0; i < days; i++) {
-    const d = new Date(start.getTime() + i * 86400_000);
-    const iso = d.toISOString().slice(0, 10);
-    const dayEvents = events.filter((e) => e.at.slice(0, 10) === iso);
-    const { worstStatus, uptimePct } = summarizeDay(dayEvents);
-    daily.push({ date: iso, status: worstStatus, uptimePct });
-  }
+	for (let i = 0; i < days; i++) {
+		const d = new Date(start.getTime() + i * 86400_000);
+		const iso = d.toISOString().slice(0, 10);
+		const dayEvents = events.filter((e) => e.at.slice(0, 10) === iso);
+		const { worstStatus, uptimePct } = summarizeDay(dayEvents);
+		daily.push({ date: iso, status: worstStatus, uptimePct });
+	}
 
-  const avgPct = daily.reduce((a, b) => a + b.uptimePct, 0) / days;
-  return { days: daily, avgPct };
+	const avgPct = daily.reduce((a, b) => a + b.uptimePct, 0) / days;
+	return { days: daily, avgPct };
 }
 ```
 
@@ -504,14 +540,14 @@ Is maintenance excluded? Document it on the page itself.
 
 ```ts
 test('uptime calculation treats maintenance as excluded by default', async () => {
-  const { avgPct } = await computeUptime(componentId, 30);
-  expect(avgPct).toBeGreaterThan(99);
+	const { avgPct } = await computeUptime(componentId, 30);
+	expect(avgPct).toBeGreaterThan(99);
 });
 test('subscribe returns 202 for new and existing emails (no enumeration)', async () => {
-  const r1 = await POST('/subscribe', { email: 'new@example.com' });
-  const r2 = await POST('/subscribe', { email: 'existing@example.com' });
-  expect(r1.status).toBe(202);
-  expect(r2.status).toBe(202);
+	const r1 = await POST('/subscribe', { email: 'new@example.com' });
+	const r2 = await POST('/subscribe', { email: 'existing@example.com' });
+	expect(r1.status).toBe(202);
+	expect(r2.status).toBe(202);
 });
 ```
 

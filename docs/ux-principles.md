@@ -22,43 +22,43 @@ framework. Tailwind CSS 4 uses oklch internally — this aligns perfectly.
 
 ```css
 /* Primitive layer — direct oklch values, never used directly in components */
---primitive-blue-50:  oklch(97% 0.02 250);
+--primitive-blue-50: oklch(97% 0.02 250);
 --primitive-blue-500: oklch(55% 0.18 250);
 --primitive-blue-900: oklch(25% 0.09 250);
 
 /* Semantic layer — maps to primitives, used in components */
---color-primary:        var(--primitive-blue-500);
---color-primary-hover:  oklch(from var(--color-primary) calc(l - 0.07) c h);
+--color-primary: var(--primitive-blue-500);
+--color-primary-hover: oklch(from var(--color-primary) calc(l - 0.07) c h);
 --color-primary-active: oklch(from var(--color-primary) calc(l - 0.14) c h);
 
 /* Status colors — colorblind-safe (never rely on hue alone; pair with icon/shape) */
---color-critical: oklch(55% 0.22 25);   /* red — also use ⚠ icon */
---color-warning:  oklch(70% 0.18 70);   /* amber — also use ! icon */
---color-ok:       oklch(65% 0.18 145);  /* green — also use ✓ icon */
---color-info:     oklch(60% 0.15 245);  /* blue — also use ℹ icon */
+--color-critical: oklch(55% 0.22 25); /* red — also use ⚠ icon */
+--color-warning: oklch(70% 0.18 70); /* amber — also use ! icon */
+--color-ok: oklch(65% 0.18 145); /* green — also use ✓ icon */
+--color-info: oklch(60% 0.15 245); /* blue — also use ℹ icon */
 
 /* Surface tokens */
---surface:          oklch(13% 0.01 250);  /* near-black for dark mode */
+--surface: oklch(13% 0.01 250); /* near-black for dark mode */
 --surface-elevated: oklch(18% 0.01 250);
---surface-overlay:  oklch(23% 0.01 250);
+--surface-overlay: oklch(23% 0.01 250);
 
 /* Text tokens — opacity-based on same hue as surface */
---text-primary:   oklch(95% 0.005 250);  /* 87% visual weight */
---text-secondary: oklch(72% 0.005 250);  /* 60% visual weight */
---text-tertiary:  oklch(55% 0.005 250);  /* 38% visual weight */
+--text-primary: oklch(95% 0.005 250); /* 87% visual weight */
+--text-secondary: oklch(72% 0.005 250); /* 60% visual weight */
+--text-tertiary: oklch(55% 0.005 250); /* 38% visual weight */
 ```
 
 ### Hue palette — core hues used across all presets
 
-| Name | Hue (H) | Usage |
-|---|---|---|
-| Blue | 250 | Primary action, links, info |
-| Purple | 295 | Auth, premium features |
-| Teal | 195 | Secondary action, realtime indicators |
-| Amber | 70 | Warning, caution |
-| Red | 25 | Critical, destructive, error |
-| Green | 145 | Success, ok, active |
-| Gray | 250 (low C) | Neutral surfaces, text |
+| Name   | Hue (H)     | Usage                                 |
+| ------ | ----------- | ------------------------------------- |
+| Blue   | 250         | Primary action, links, info           |
+| Purple | 295         | Auth, premium features                |
+| Teal   | 195         | Secondary action, realtime indicators |
+| Amber  | 70          | Warning, caution                      |
+| Red    | 25          | Critical, destructive, error          |
+| Green  | 145         | Success, ok, active                   |
+| Gray   | 250 (low C) | Neutral surfaces, text                |
 
 ### Interface-type hue overrides
 
@@ -78,7 +78,7 @@ Each preset overrides `--color-primary` hue while keeping the L/C structure:
 --btn-hover: oklch(from var(--color-primary) calc(l - 0.07) c h);
 
 /* Lighten: add L */
---badge-bg: oklch(from var(--color-primary) calc(l + 0.40) calc(c * 0.3) h);
+--badge-bg: oklch(from var(--color-primary) calc(l + 0.4) calc(c * 0.3) h);
 
 /* Shift hue: rotate H */
 --secondary: oklch(from var(--color-primary) l c calc(h + 60));
@@ -97,15 +97,15 @@ Each preset overrides `--color-primary` hue while keeping the L/C structure:
 All spacing values are multiples of 4px (half-grid) or 8px (full grid). No arbitrary values.
 
 ```css
---space-1:  4px;   /* 0.5 grid — use sparingly, for tight internal spacing */
---space-2:  8px;   /* 1 grid — icon gap, small internal padding */
---space-3:  12px;  /* 1.5 grid */
---space-4:  16px;  /* 2 grid — standard padding, form field gap */
---space-6:  24px;  /* 3 grid — card padding, section gap */
---space-8:  32px;  /* 4 grid — large section gap */
---space-12: 48px;  /* 6 grid — page section separation */
---space-16: 64px;  /* 8 grid — hero spacing */
---space-24: 96px;  /* 12 grid — large layout margin */
+--space-1: 4px; /* 0.5 grid — use sparingly, for tight internal spacing */
+--space-2: 8px; /* 1 grid — icon gap, small internal padding */
+--space-3: 12px; /* 1.5 grid */
+--space-4: 16px; /* 2 grid — standard padding, form field gap */
+--space-6: 24px; /* 3 grid — card padding, section gap */
+--space-8: 32px; /* 4 grid — large section gap */
+--space-12: 48px; /* 6 grid — page section separation */
+--space-16: 64px; /* 8 grid — hero spacing */
+--space-24: 96px; /* 12 grid — large layout margin */
 ```
 
 Tailwind 4 maps: `p-2` = 8px, `p-4` = 16px, `p-6` = 24px etc. — use these, not arbitrary values.
@@ -117,16 +117,16 @@ Tailwind 4 maps: `p-2` = 8px, `p-4` = 16px, `p-6` = 24px etc. — use these, not
 ### Type scale (modular, ratio 1.25)
 
 ```css
---text-2xs: 11px;  /* captions, badges, timestamps */
---text-xs:  12px;  /* secondary metadata */
---text-sm:  13px;  /* compact UI (dashboard density) */
+--text-2xs: 11px; /* captions, badges, timestamps */
+--text-xs: 12px; /* secondary metadata */
+--text-sm: 13px; /* compact UI (dashboard density) */
 --text-base: 16px; /* body — standard web */
---text-lg:  18px;  /* subheadings */
---text-xl:  20px;  /* section headings */
---text-2xl: 24px;  /* page headings */
---text-3xl: 30px;  /* hero headings */
---text-4xl: 36px;  /* display */
---text-5xl: 48px;  /* 10-foot UI minimum title */
+--text-lg: 18px; /* subheadings */
+--text-xl: 20px; /* section headings */
+--text-2xl: 24px; /* page headings */
+--text-3xl: 30px; /* hero headings */
+--text-4xl: 36px; /* display */
+--text-5xl: 48px; /* 10-foot UI minimum title */
 ```
 
 ### Font families
@@ -138,6 +138,7 @@ Tailwind 4 maps: `p-2` = 8px, `p-4` = 16px, `p-6` = 24px etc. — use these, not
 ```
 
 Rules:
+
 - Variable fonts only (no static weight files)
 - Monospace for: numbers in tables/metrics, code, timestamps, file sizes
 - `font-feature-settings: 'tnum' 1` on numeric data for tabular alignment
@@ -153,12 +154,14 @@ Rules:
 **Viewing context**: 2–4 metre viewing distance, remote/gamepad navigation, ambient lighting.
 
 Layout:
+
 - TV-safe insets: minimum 5% (≈60px on 1080p) from all edges
 - 5–7 cards per row maximum — horizontal carousels as primary browse pattern
 - No small text; minimum 29pt at distance ≈ 16px × 1.8 scaling factor
 - Dark background `oklch(8% 0.01 295)` — deep purple-black, not pure black (reduces eye strain)
 
 Focus system:
+
 - Focus state: `scale(1.08)` + `box-shadow: 0 0 0 4px var(--color-primary)` + `brightness(1.15)`
 - Focus MUST be unmistakable at distance — never subtle outline only
 - D-pad spatial logic: arrow key always moves to nearest element in that direction
@@ -166,11 +169,13 @@ Focus system:
 - `tabindex` must follow visual spatial order
 
 Interaction:
+
 - No text input where avoidable — use search suggestions + D-pad select
 - Confirm actions with single large button — no tiny secondary links
 - Back button is always prominent (hardware back / B button / Escape)
 
 Colors (10-foot preset):
+
 - Primary hue: `H=295` (cinematic purple)
 - Background: `oklch(8% 0.01 295)`
 - Card: `oklch(14% 0.015 295)`
@@ -182,6 +187,7 @@ Colors (10-foot preset):
 **Context**: desktop browser, media-centric, long sessions.
 
 Layout:
+
 - Artwork grid dominates — text is metadata, not primary content
 - Left sidebar: library navigation (280px wide, collapsible to 56px icon rail)
 - Fixed playback bar at bottom: `height: 72px`, never overlaps main scroll
@@ -189,12 +195,14 @@ Layout:
 - Hover reveals quick actions: play overlay, queue button, favorite toggle
 
 Images:
+
 - Always `loading="lazy"` + `decoding="async"`
 - Dominant color placeholder while loading (extract via `color-thief` or CSS `background-color`)
 - WebP/AVIF required; JPEG fallback only
 - `aspect-ratio: 2/3` (portrait) or `aspect-ratio: 16/9` (landscape) — no layout shift
 
 Colors (media preset):
+
 - Background: `oklch(10% 0.01 295)` (deep cinematic)
 - Surface: `oklch(14% 0.015 295)`
 - Surface elevated: `oklch(19% 0.015 295)`
@@ -206,6 +214,7 @@ Colors (media preset):
 **Context**: monitoring, data-dense, power users, long sessions.
 
 Layout:
+
 - 8pt spacing grid strictly — no loose padding
 - Body text: 13–14px (density) with 1.4 line height
 - Monospace for all numbers, metrics, percentages, timestamps
@@ -213,12 +222,14 @@ Layout:
 - Content: 12-column CSS grid, cards snap to grid
 
 Realtime:
+
 - SSE for live data — never polling (no visible refresh flicker)
 - New data animates in — `@keyframes fade-slide-in` (150ms)
 - Alert banners animate from top — never modal overlays
 - Connection status always visible (small dot in corner)
 
 Semantic colors (dashboard):
+
 - Critical: `oklch(55% 0.22 25)` + triangle warning icon
 - Warning: `oklch(70% 0.18 70)` + exclamation icon
 - Ok: `oklch(65% 0.18 145)` + check icon
@@ -230,12 +241,14 @@ Semantic colors (dashboard):
 **Context**: canvas-based visual programming, technical users.
 
 Canvas:
+
 - Background: `oklch(10% 0.005 250)` dark grid, no pure black
 - Grid: `oklch(16% 0.005 250)` dots at 16px intervals, snap-to-grid
 - Node min-width: 180px, min-height: 60px (readable text at zoom-out)
 - Edge stroke: 2px, `oklch(50% 0.05 250)` default, `oklch(65% 0.22 295)` selected
 
 Node color semantics:
+
 - Input/Source: `oklch(55% 0.18 245)` (blue border)
 - Transform/Process: `oklch(55% 0.18 295)` (purple border)
 - Output/Sink: `oklch(60% 0.18 145)` (green border)
@@ -247,6 +260,7 @@ Node color semantics:
 **Context**: mass operations, thousands of items, keyboard-heavy.
 
 Layout:
+
 - Virtual scroll is mandatory — no pagination for primary views
 - Grid: `minmax(160px, 1fr)` responsive columns with 8px gap
 - List: table with `table-layout: fixed`, sortable column headers
@@ -254,6 +268,7 @@ Layout:
 - Status bar: fixed bottom, 36px height — item count, selection count
 
 Multi-select:
+
 - Click = single select (deselects others)
 - Ctrl/Cmd+Click = toggle in selection
 - Shift+Click = range select
@@ -261,6 +276,7 @@ Multi-select:
 - Keyboard: arrow keys navigate, Space = toggle select, Enter = open
 
 Colors (file manager):
+
 - Selected item: `oklch(55% 0.15 250 / 20%)` background tint
 - Selected item border: `oklch(60% 0.20 250)`
 - Hover: `oklch(50% 0.005 250 / 10%)` background tint
@@ -271,6 +287,7 @@ Colors (file manager):
 **Context**: forms, auth flows, standard navigation patterns.
 
 Layout:
+
 - Max content width: 1280px centered
 - Top navbar: 64px height, sticky
 - Sidebar (if present): 256px, sticky, scrollable
@@ -278,6 +295,7 @@ Layout:
 - Modals: max-width 480px (small), 640px (medium), 80vw (large)
 
 Form UX:
+
 - Validation: client-side (Zod) as-you-blur; server-side on submit
 - Errors display below the field in `--color-critical`
 - Required fields: `*` suffix on label (not inside field placeholder)
@@ -285,6 +303,7 @@ Form UX:
 - Destructive actions: always require confirmation AlertDialog
 
 Colors (webapp preset — light default, dark optional):
+
 - Background: `oklch(99% 0.003 250)` (near white)
 - Surface: `oklch(97% 0.005 250)` (slight tint)
 - Primary: `oklch(55% 0.18 250)` (blue)
@@ -295,12 +314,14 @@ Colors (webapp preset — light default, dark optional):
 **Context**: touch-first, offline-capable, installable.
 
 Touch:
+
 - Minimum touch target: 48×48px — never smaller
 - Spacing between targets: minimum 8px
 - Bottom navigation: 56–64px height, safe-area-inset-bottom padding
 - Thumb zone: primary actions in bottom 40% of screen
 
 Patterns:
+
 - Bottom sheet (not centered modal) for overlays
 - Pull-to-refresh on all list views
 - Swipe right = back (mirror iOS native)
@@ -308,12 +329,13 @@ Patterns:
 - Bottom tab nav: 4–5 items max (more → "More" tab)
 
 CSS for safe areas:
+
 ```css
 .bottom-nav {
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
+	padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 .top-bar {
-  padding-top: max(16px, env(safe-area-inset-top));
+	padding-top: max(16px, env(safe-area-inset-top));
 }
 ```
 
@@ -322,6 +344,7 @@ CSS for safe areas:
 ## §3.5 Motion and animation
 
 Principles:
+
 - Motion has purpose — it communicates state change, not decoration
 - Duration: 100ms (micro), 200ms (standard), 350ms (page transition)
 - Easing: `cubic-bezier(0.4, 0, 0.2, 1)` (Material standard) for most
@@ -330,14 +353,17 @@ Principles:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 ```
 
 Standard animations:
+
 - Fade in: `opacity: 0 → 1` (150ms)
 - Slide up: `translateY(8px) → translateY(0)` + fade (200ms)
 - Scale pop: `scale(0.95) → scale(1)` + fade (150ms)
@@ -364,19 +390,34 @@ Standard animations:
 /* Mobile first */
 /* xs: 0–479px — single column, bottom nav */
 /* sm: 480–767px — still mobile, larger touch targets */
-@media (min-width: 640px)  { /* sm  — Tailwind default */ }
-@media (min-width: 768px)  { /* md  — tablet portrait */ }
-@media (min-width: 1024px) { /* lg  — tablet landscape, small desktop */ }
-@media (min-width: 1280px) { /* xl  — standard desktop */ }
-@media (min-width: 1536px) { /* 2xl — wide desktop, 4K */ }
+@media (min-width: 640px) {
+	/* sm  — Tailwind default */
+}
+@media (min-width: 768px) {
+	/* md  — tablet portrait */
+}
+@media (min-width: 1024px) {
+	/* lg  — tablet landscape, small desktop */
+}
+@media (min-width: 1280px) {
+	/* xl  — standard desktop */
+}
+@media (min-width: 1536px) {
+	/* 2xl — wide desktop, 4K */
+}
 
 /* TV / 10-foot UI */
-@media (min-width: 1920px) and (hover: none) { /* TV remote navigation */ }
+@media (min-width: 1920px) and (hover: none) {
+	/* TV remote navigation */
+}
 ```
 
 Container queries for component-level responsiveness:
+
 ```css
-@container (min-width: 400px) { /* card switches from stacked to inline */ }
+@container (min-width: 400px) {
+	/* card switches from stacked to inline */
+}
 ```
 
 ---
@@ -396,17 +437,18 @@ Container queries for component-level responsiveness:
 
 ## §3.9 Platform / device HIG references
 
-| Platform | Standard | Key rules for sveltesentio |
-|---|---|---|
-| Web (all) | WCAG 2.2 AA | Minimum baseline; always enforced |
-| iOS | Apple HIG | Safe area insets, 44pt min targets, bottom sheet modals |
-| Android | Material Design 3 | 48dp min targets, bottom nav, fab placement |
-| tvOS | Apple TV HIG | 60pt TV-safe, D-pad nav, `focusable` elements |
-| Android TV | Leanback | Same as tvOS principles; min target 96dp |
-| Desktop | GNOME HIG / Fluent | Keyboard-first, right-click context, drag-drop, dense |
-| Watch | N/A | Not targeted by current interface types |
+| Platform   | Standard           | Key rules for sveltesentio                              |
+| ---------- | ------------------ | ------------------------------------------------------- |
+| Web (all)  | WCAG 2.2 AA        | Minimum baseline; always enforced                       |
+| iOS        | Apple HIG          | Safe area insets, 44pt min targets, bottom sheet modals |
+| Android    | Material Design 3  | 48dp min targets, bottom nav, fab placement             |
+| tvOS       | Apple TV HIG       | 60pt TV-safe, D-pad nav, `focusable` elements           |
+| Android TV | Leanback           | Same as tvOS principles; min target 96dp                |
+| Desktop    | GNOME HIG / Fluent | Keyboard-first, right-click context, drag-drop, dense   |
+| Watch      | N/A                | Not targeted by current interface types                 |
 
 When building for a specific platform, the interface-type preset + platform HIG rules combine:
+
 - Media server web UI running as iPad PWA → apply media preset + iOS safe areas + touch targets
 - Dashboard on Android TV → apply 10-foot preset + Android TV navigation patterns
 
@@ -419,29 +461,29 @@ on every platform. Users should never need to install a platform-specific client
 
 ### Browser support matrix
 
-| Browser | Min version | Notes |
-|---|---|---|
-| Chrome / Chromium | 120+ | Reference implementation; WebGPU available |
-| Firefox | 121+ | Full CSS oklch support; WebGPU behind flag |
-| Safari / WebKit | 17.2+ | Safe area insets; iOS PWA support |
-| Samsung Internet | 23+ | Android PWA install |
-| Edge | 120+ | Chromium-based; parity with Chrome |
+| Browser           | Min version | Notes                                      |
+| ----------------- | ----------- | ------------------------------------------ |
+| Chrome / Chromium | 120+        | Reference implementation; WebGPU available |
+| Firefox           | 121+        | Full CSS oklch support; WebGPU behind flag |
+| Safari / WebKit   | 17.2+       | Safe area insets; iOS PWA support          |
+| Samsung Internet  | 23+         | Android PWA install                        |
+| Edge              | 120+        | Chromium-based; parity with Chrome         |
 
 **No IE, no legacy Edge, no Opera Mini.** Framework requires CSS oklch, CSS nesting,
 `@layer`, container queries, `has()` — all baseline in the above matrix.
 
 ### Device coverage
 
-| Category | Method | Framework support |
-|---|---|---|
-| Desktop (1080p+) | Responsive CSS | All presets |
-| Laptop (768–1440px) | Responsive CSS | All presets |
-| Tablet (landscape) | `md:` Tailwind breakpoint | All presets |
-| Tablet (portrait) | `sm:` + touch targets | Standard / PWA presets |
-| Phone (360–430px) | `sm:` mobile-first | PWA preset primary |
-| 4K / ultrawide | `2xl:` max-width container | Dashboard / media presets |
-| TV / 10-foot (1080p+, no hover) | `@media (min-width: 1920px) and (hover: none)` | 10-foot preset |
-| Smart TV browser | Chromium-based TV runtimes | 10-foot preset |
+| Category                        | Method                                         | Framework support         |
+| ------------------------------- | ---------------------------------------------- | ------------------------- |
+| Desktop (1080p+)                | Responsive CSS                                 | All presets               |
+| Laptop (768–1440px)             | Responsive CSS                                 | All presets               |
+| Tablet (landscape)              | `md:` Tailwind breakpoint                      | All presets               |
+| Tablet (portrait)               | `sm:` + touch targets                          | Standard / PWA presets    |
+| Phone (360–430px)               | `sm:` mobile-first                             | PWA preset primary        |
+| 4K / ultrawide                  | `2xl:` max-width container                     | Dashboard / media presets |
+| TV / 10-foot (1080p+, no hover) | `@media (min-width: 1920px) and (hover: none)` | 10-foot preset            |
+| Smart TV browser                | Chromium-based TV runtimes                     | 10-foot preset            |
 
 ### CSS compatibility rules
 
@@ -462,14 +504,14 @@ padding: env(safe-area-inset-top) env(safe-area-inset-right)
 
 ### Progressive enhancement tiers
 
-| Feature | Baseline | Enhanced |
-|---|---|---|
-| Images | `<img>` with alt | `loading="lazy"` + `decoding="async"` + AVIF/WebP |
-| Video | `<video>` + HLS fallback | vidstack + native MSE |
-| Offline | Network-first | Service worker + cache-first via `@vite-pwa/sveltekit` |
-| AI | Server-side inference | Edge AI via Transformers.js + WebGPU (Chrome 120+) |
-| Animations | CSS transitions | GSAP/Web Animations API, respects `prefers-reduced-motion` |
-| Push notifications | None | `Notification API` + Service Worker (PWA only) |
+| Feature            | Baseline                 | Enhanced                                                   |
+| ------------------ | ------------------------ | ---------------------------------------------------------- |
+| Images             | `<img>` with alt         | `loading="lazy"` + `decoding="async"` + AVIF/WebP          |
+| Video              | `<video>` + HLS fallback | vidstack + native MSE                                      |
+| Offline            | Network-first            | Service worker + cache-first via `@vite-pwa/sveltekit`     |
+| AI                 | Server-side inference    | Edge AI via Transformers.js + WebGPU (Chrome 120+)         |
+| Animations         | CSS transitions          | GSAP/Web Animations API, respects `prefers-reduced-motion` |
+| Push notifications | None                     | `Notification API` + Service Worker (PWA only)             |
 
 ### PWA installability checklist
 
@@ -508,12 +550,14 @@ and overrides only what differs.
 ```
 
 Usage in an app:
+
 ```svelte
 <!-- app/src/app.html -->
 <link rel="stylesheet" href="/node_modules/@sveltesentio/ui/tokens/media.css" />
 ```
 
 Or via Tailwind 4 CSS import:
+
 ```css
 /* app/src/app.css */
 @import '@sveltesentio/ui/tokens/media.css';

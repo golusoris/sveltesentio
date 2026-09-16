@@ -21,88 +21,88 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 `./canvas-model` + `./node-view` and is unit-tested there.
 -->
 <script lang="ts">
-  import {
-    SvelteFlow,
-    SvelteFlowProvider,
-    type Node,
-    type Edge,
-    type NodeTypes,
-  } from '@xyflow/svelte';
-  import type { Snippet } from 'svelte';
-  import { applyElkLayout, canvasAriaLabel, type OnLayout } from './canvas-model.js';
-  import type { ElkLayoutOptions } from './layout.js';
+	import {
+		SvelteFlow,
+		SvelteFlowProvider,
+		type Node,
+		type Edge,
+		type NodeTypes,
+	} from '@xyflow/svelte';
+	import type { Snippet } from 'svelte';
+	import { applyElkLayout, canvasAriaLabel, type OnLayout } from './canvas-model.js';
+	import type { ElkLayoutOptions } from './layout.js';
 
-  interface Props {
-    /** The nodes to render. Bindable so drag/position updates flow back out. */
-    nodes?: Node[];
-    /** The edges to render. Bindable so connection updates flow back out. */
-    edges?: Edge[];
-    /** Maps node `type` keys to components (e.g. the example node palette). */
-    nodeTypes?: NodeTypes;
-    /** Fit the viewport to all nodes on mount. Default `true`. */
-    fitView?: boolean;
-    /** When `true`, the canvas is non-interactive (`role="img"`, no drag/select). */
-    readonly?: boolean;
-    /** Accessible label prefix; node/edge counts are appended automatically. */
-    ariaLabel?: string;
-    /** ELK options used by {@link runLayout}. */
-    layoutOptions?: ElkLayoutOptions;
-    /** Notified after `runLayout()` re-positions the nodes. */
-    onlayout?: OnLayout<Node>;
-    /** Extra canvas children (`<Background>`, `<Controls>`, `<MiniMap>`, …). */
-    children?: Snippet;
-  }
+	interface Props {
+		/** The nodes to render. Bindable so drag/position updates flow back out. */
+		nodes?: Node[];
+		/** The edges to render. Bindable so connection updates flow back out. */
+		edges?: Edge[];
+		/** Maps node `type` keys to components (e.g. the example node palette). */
+		nodeTypes?: NodeTypes;
+		/** Fit the viewport to all nodes on mount. Default `true`. */
+		fitView?: boolean;
+		/** When `true`, the canvas is non-interactive (`role="img"`, no drag/select). */
+		readonly?: boolean;
+		/** Accessible label prefix; node/edge counts are appended automatically. */
+		ariaLabel?: string;
+		/** ELK options used by {@link runLayout}. */
+		layoutOptions?: ElkLayoutOptions;
+		/** Notified after `runLayout()` re-positions the nodes. */
+		onlayout?: OnLayout<Node>;
+		/** Extra canvas children (`<Background>`, `<Controls>`, `<MiniMap>`, …). */
+		children?: Snippet;
+	}
 
-  let {
-    nodes = $bindable([]),
-    edges = $bindable([]),
-    nodeTypes,
-    fitView = true,
-    readonly = false,
-    ariaLabel,
-    layoutOptions,
-    onlayout,
-    children,
-  }: Props = $props();
+	let {
+		nodes = $bindable([]),
+		edges = $bindable([]),
+		nodeTypes,
+		fitView = true,
+		readonly = false,
+		ariaLabel,
+		layoutOptions,
+		onlayout,
+		children,
+	}: Props = $props();
 
-  const label = $derived(canvasAriaLabel(nodes, edges, ariaLabel));
-  const role = $derived(readonly ? 'img' : 'application');
+	const label = $derived(canvasAriaLabel(nodes, edges, ariaLabel));
+	const role = $derived(readonly ? 'img' : 'application');
 
-  /** Run ELK auto-layout over the current graph and commit the new positions. */
-  export async function runLayout(): Promise<void> {
-    const next = await applyElkLayout(nodes, edges, layoutOptions);
-    nodes = next;
-    onlayout?.(next);
-  }
+	/** Run ELK auto-layout over the current graph and commit the new positions. */
+	export async function runLayout(): Promise<void> {
+		const next = await applyElkLayout(nodes, edges, layoutOptions);
+		nodes = next;
+		onlayout?.(next);
+	}
 </script>
 
 <div class="ssentio-flow-canvas" {role} aria-roledescription="Flow diagram" aria-label={label}>
-  <SvelteFlowProvider>
-    <SvelteFlow
-      bind:nodes
-      bind:edges
-      {nodeTypes}
-      {fitView}
-      nodesDraggable={!readonly}
-      nodesConnectable={!readonly}
-      elementsSelectable={!readonly}
-    >
-      {#if children}{@render children()}{/if}
-    </SvelteFlow>
-  </SvelteFlowProvider>
+	<SvelteFlowProvider>
+		<SvelteFlow
+			bind:nodes
+			bind:edges
+			{nodeTypes}
+			{fitView}
+			nodesDraggable={!readonly}
+			nodesConnectable={!readonly}
+			elementsSelectable={!readonly}
+		>
+			{#if children}{@render children()}{/if}
+		</SvelteFlow>
+	</SvelteFlowProvider>
 </div>
 
 <style>
-  .ssentio-flow-canvas {
-    inline-size: 100%;
-    block-size: 100%;
-    min-block-size: 20rem;
-    position: relative;
-  }
+	.ssentio-flow-canvas {
+		inline-size: 100%;
+		block-size: 100%;
+		min-block-size: 20rem;
+		position: relative;
+	}
 
-  @media (prefers-reduced-motion: reduce) {
-    .ssentio-flow-canvas :global(.svelte-flow__viewport) {
-      transition: none !important;
-    }
-  }
+	@media (prefers-reduced-motion: reduce) {
+		.ssentio-flow-canvas :global(.svelte-flow__viewport) {
+			transition: none !important;
+		}
+	}
 </style>

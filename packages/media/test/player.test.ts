@@ -6,11 +6,7 @@ import {
 	initialPlaybackState,
 	createHlsAttachment,
 } from '../src/player';
-import type {
-	HlsRendition,
-	HlsLike,
-	PlaybackState,
-} from '../src/player';
+import type { HlsRendition, HlsLike, PlaybackState } from '../src/player';
 
 const renditions: HlsRendition[] = [
 	{ id: '240', height: 240, bitrate: 400_000, codec: 'avc1.640015' },
@@ -48,10 +44,9 @@ describe('pickRendition', () => {
 	});
 
 	it('never excludes audio-only renditions by height but does not pick them over video', () => {
-		const r = pickRendition(
-			[{ id: 'audio-en', bitrate: 128_000, language: 'en' }, ...renditions],
-			{ maxHeight: 240 },
-		);
+		const r = pickRendition([{ id: 'audio-en', bitrate: 128_000, language: 'en' }, ...renditions], {
+			maxHeight: 240,
+		});
 		expect(r?.id).toBe('240');
 	});
 
@@ -110,10 +105,7 @@ describe('playbackReducer', () => {
 	});
 
 	it('replays from ended via play', () => {
-		const s = playbackReducer(
-			{ status: 'ended', renditionId: null },
-			{ type: 'play' },
-		);
+		const s = playbackReducer({ status: 'ended', renditionId: null }, { type: 'play' });
 		expect(s.status).toBe('playing');
 	});
 
@@ -133,9 +125,7 @@ describe('playbackReducer', () => {
 
 	it('selects quality orthogonally to lifecycle but not while idle', () => {
 		const idle = initialPlaybackState;
-		expect(
-			playbackReducer(idle, { type: 'selectQuality', renditionId: '1080' }),
-		).toBe(idle);
+		expect(playbackReducer(idle, { type: 'selectQuality', renditionId: '1080' })).toBe(idle);
 		const paused: PlaybackState = { status: 'paused', renditionId: null };
 		const next = playbackReducer(paused, {
 			type: 'selectQuality',
@@ -146,9 +136,7 @@ describe('playbackReducer', () => {
 
 	it('reset returns the initial state', () => {
 		const dirty: PlaybackState = { status: 'playing', renditionId: '480' };
-		expect(playbackReducer(dirty, { type: 'reset' })).toEqual(
-			initialPlaybackState,
-		);
+		expect(playbackReducer(dirty, { type: 'reset' })).toEqual(initialPlaybackState);
 	});
 });
 

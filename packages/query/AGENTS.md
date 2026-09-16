@@ -6,13 +6,13 @@
 
 Thin composition layer over `@tanstack/svelte-query@^6` (ADR-0008). This package enforces the framework's **"no `writable()` for server state"** rule by making TanStack Query the ergonomic default.
 
-| Export | Purpose |
-|---|---|
-| `QueryClient` factory | Pre-configured client with RFC 9457 retry-on-typed-errors + monotonic-ID cache keys |
-| `load` helpers | SSR prefetch into the cache so `+page.svelte` hydrates without a network round-trip |
+| Export                                   | Purpose                                                                                                                                                                                                                                                         |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QueryClient` factory                    | Pre-configured client with RFC 9457 retry-on-typed-errors + monotonic-ID cache keys                                                                                                                                                                             |
+| `load` helpers                           | SSR prefetch into the cache so `+page.svelte` hydrates without a network round-trip                                                                                                                                                                             |
 | `useConnectQuery` / `createConnectQuery` | ConnectRPC bridge (`./connect`): a `queryFn` factory over a typed unary `Client<T>` method, with the v6 `Accessor<Options>` pattern + `ConnectError`→`ProblemError` retry integration ([ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md)) |
-| `useInfiniteQuery` preset | Pagination patterns with cursor + offset variants; feeds `ui/data` virtual list |
-| `useOptimistic` | Optimistic update helper with rollback on RFC 9457 typed error |
+| `useInfiniteQuery` preset                | Pagination patterns with cursor + offset variants; feeds `ui/data` virtual list                                                                                                                                                                                 |
+| `useOptimistic`                          | Optimistic update helper with rollback on RFC 9457 typed error                                                                                                                                                                                                  |
 
 ## Invariants
 
@@ -32,13 +32,13 @@ import { createQueryClient } from '@sveltesentio/query';
 import { createClient } from '@sveltesentio/api';
 
 export const load = async ({ fetch }) => {
-  const qc = createQueryClient();
-  const api = createClient({ fetch });
-  await qc.prefetchQuery({
-    queryKey: ['user', 'me'],
-    queryFn: () => api.GET('/user/me').then((r) => r.data),
-  });
-  return { dehydratedState: dehydrate(qc) };
+	const qc = createQueryClient();
+	const api = createClient({ fetch });
+	await qc.prefetchQuery({
+		queryKey: ['user', 'me'],
+		queryFn: () => api.GET('/user/me').then((r) => r.data),
+	});
+	return { dehydratedState: dehydrate(qc) };
 };
 ```
 
@@ -61,9 +61,9 @@ import { UserService } from './gen/user_pb';
 
 const client = createClient(UserService, { baseUrl: '/api' });
 const user = useConnectQuery({
-  client,
-  queryKey: ['user', id],
-  call: (c, opts) => c.getUser({ id }, opts),
+	client,
+	queryKey: ['user', id],
+	call: (c, opts) => c.getUser({ id }, opts),
 });
 ```
 
@@ -75,10 +75,10 @@ const user = useConnectQuery({
 
 ## Common tasks
 
-| Task | Command |
-|---|---|
-| Typecheck | `pnpm --filter @sveltesentio/query typecheck` |
-| Unit tests | `pnpm --filter @sveltesentio/query test` |
+| Task       | Command                                       |
+| ---------- | --------------------------------------------- |
+| Typecheck  | `pnpm --filter @sveltesentio/query typecheck` |
+| Unit tests | `pnpm --filter @sveltesentio/query test`      |
 
 ## Related ADRs
 

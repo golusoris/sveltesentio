@@ -119,7 +119,12 @@ describe('createAuditLog', () => {
 		});
 
 		const record = await log.record(
-			baseEntry({ prompt: 'secret PII', output: 'sensitive answer', promptHash: undefined, outputHash: undefined }),
+			baseEntry({
+				prompt: 'secret PII',
+				output: 'sensitive answer',
+				promptHash: undefined,
+				outputHash: undefined,
+			}),
 		);
 
 		expect(record.prompt).toBeUndefined();
@@ -153,9 +158,9 @@ describe('createAuditLog', () => {
 		const sink = vi.fn();
 		const log = createAuditLog({ sink, clock: fixedClock, idFactory: () => 'id' });
 
-		await expect(
-			log.record(baseEntry({ model: '' })),
-		).rejects.toBeInstanceOf(AiAuditValidationError);
+		await expect(log.record(baseEntry({ model: '' }))).rejects.toBeInstanceOf(
+			AiAuditValidationError,
+		);
 		expect(sink).not.toHaveBeenCalled();
 	});
 

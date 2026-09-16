@@ -16,17 +16,17 @@ The v6 Svelte adapter is **runes-first**: hook results are rune-backed reactive 
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
-  import { browser } from '$app/environment';
+	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
+	import { browser } from '$app/environment';
 
-  let { children } = $props();
-  const client = new QueryClient({
-    defaultOptions: { queries: { enabled: browser, staleTime: 60_000 } }
-  });
+	let { children } = $props();
+	const client = new QueryClient({
+		defaultOptions: { queries: { enabled: browser, staleTime: 60_000 } },
+	});
 </script>
 
 <QueryClientProvider {client}>
-  {@render children()}
+	{@render children()}
 </QueryClientProvider>
 ```
 
@@ -34,22 +34,22 @@ The v6 Svelte adapter is **runes-first**: hook results are rune-backed reactive 
 
 ```svelte
 <script lang="ts">
-  import { createQuery } from '@tanstack/svelte-query';
+	import { createQuery } from '@tanstack/svelte-query';
 
-  // Pass a function returning options (accessor), NOT the raw object.
-  const posts = createQuery(() => ({
-    queryKey: ['posts'],
-    queryFn: async () => (await fetch('/api/posts')).json(),
-    staleTime: 60_000
-  }));
+	// Pass a function returning options (accessor), NOT the raw object.
+	const posts = createQuery(() => ({
+		queryKey: ['posts'],
+		queryFn: async () => (await fetch('/api/posts')).json(),
+		staleTime: 60_000,
+	}));
 </script>
 
 {#if posts.isPending}
-  …
+	…
 {:else if posts.error}
-  {posts.error.message}
+	{posts.error.message}
 {:else}
-  {#each posts.data as p}{p.title}{/each}
+	{#each posts.data as p}{p.title}{/each}
 {/if}
 ```
 
@@ -62,8 +62,9 @@ import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 
 const qc = useQueryClient();
 const create = createMutation(() => ({
-  mutationFn: (input: { title: string }) => fetch('/api/posts', { method: 'POST', body: JSON.stringify(input) }),
-  onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] })
+	mutationFn: (input: { title: string }) =>
+		fetch('/api/posts', { method: 'POST', body: JSON.stringify(input) }),
+	onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
 }));
 
 create.mutate({ title: 'hi' });
@@ -74,10 +75,10 @@ await create.mutateAsync({ title: 'hi' });
 
 ```ts
 const feed = createInfiniteQuery(() => ({
-  queryKey: ['feed'],
-  queryFn: ({ pageParam }) => fetchPage(pageParam),
-  initialPageParam: 0,
-  getNextPageParam: (last) => last.nextCursor ?? undefined
+	queryKey: ['feed'],
+	queryFn: ({ pageParam }) => fetchPage(pageParam),
+	initialPageParam: 0,
+	getNextPageParam: (last) => last.nextCursor ?? undefined,
 }));
 ```
 
@@ -88,31 +89,31 @@ const feed = createInfiniteQuery(() => ({
 import { dehydrate, QueryClient } from '@tanstack/svelte-query';
 
 export const load = async () => {
-  const qc = new QueryClient();
-  await qc.prefetchQuery({ queryKey: ['posts'], queryFn: fetchPosts });
-  return { dehydratedState: dehydrate(qc) };
+	const qc = new QueryClient();
+	await qc.prefetchQuery({ queryKey: ['posts'], queryFn: fetchPosts });
+	return { dehydratedState: dehydrate(qc) };
 };
 ```
 
 ```svelte
 <!-- +layout.svelte -->
 <script>
-  import { HydrationBoundary } from '@tanstack/svelte-query';
-  let { data, children } = $props();
+	import { HydrationBoundary } from '@tanstack/svelte-query';
+	let { data, children } = $props();
 </script>
 
 <HydrationBoundary state={data.dehydratedState}>
-  {@render children()}
+	{@render children()}
 </HydrationBoundary>
 ```
 
 ## Query invalidation patterns
 
 ```ts
-qc.invalidateQueries({ queryKey: ['posts'] });               // exact + descendants
+qc.invalidateQueries({ queryKey: ['posts'] }); // exact + descendants
 qc.invalidateQueries({ queryKey: ['posts'], exact: true });
 qc.setQueryData(['post', id], (old) => ({ ...old, title })); // optimistic
-qc.cancelQueries({ queryKey: ['posts'] });                   // before optimistic write
+qc.cancelQueries({ queryKey: ['posts'] }); // before optimistic write
 ```
 
 ## `sveltesentio` usage

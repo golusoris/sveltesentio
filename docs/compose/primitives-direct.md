@@ -47,7 +47,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+	return twMerge(clsx(inputs));
 }
 ```
 
@@ -58,62 +58,62 @@ Same `cn()` helper shadcn uses — order-preserving Tailwind merge.
 ```svelte
 <!-- src/lib/ui/Button.svelte -->
 <script lang="ts" module>
-  import { tv, type VariantProps } from 'tailwind-variants';
+	import { tv, type VariantProps } from 'tailwind-variants';
 
-  export const buttonVariants = tv({
-    base: 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
-    variants: {
-      variant: {
-        default: 'bg-accent text-accent-fg hover:bg-accent/90',
-        outline: 'border border-border bg-bg hover:bg-muted',
-        ghost: 'hover:bg-muted',
-        destructive: 'bg-danger text-bg hover:bg-danger/90',
-      },
-      size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 px-3',
-        lg: 'h-11 px-8',
-        icon: 'h-10 w-10',
-      },
-    },
-    defaultVariants: { variant: 'default', size: 'default' },
-  });
+	export const buttonVariants = tv({
+		base: 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+		variants: {
+			variant: {
+				default: 'bg-accent text-accent-fg hover:bg-accent/90',
+				outline: 'border border-border bg-bg hover:bg-muted',
+				ghost: 'hover:bg-muted',
+				destructive: 'bg-danger text-bg hover:bg-danger/90',
+			},
+			size: {
+				default: 'h-10 px-4 py-2',
+				sm: 'h-9 px-3',
+				lg: 'h-11 px-8',
+				icon: 'h-10 w-10',
+			},
+		},
+		defaultVariants: { variant: 'default', size: 'default' },
+	});
 
-  export type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
-  export type ButtonSize = VariantProps<typeof buttonVariants>['size'];
+	export type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+	export type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 </script>
 
 <script lang="ts">
-  import type { HTMLButtonAttributes } from 'svelte/elements';
-  import { cn } from '$lib/utils';
-  import { track } from '$lib/telemetry'; // app-specific invariant
+	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import { cn } from '$lib/utils';
+	import { track } from '$lib/telemetry'; // app-specific invariant
 
-  let {
-    variant = 'default',
-    size = 'default',
-    class: className,
-    event,
-    children,
-    onclick,
-    ...rest
-  }: HTMLButtonAttributes & {
-    variant?: ButtonVariant;
-    size?: ButtonSize;
-    event?: string; // telemetry key — team-wide invariant
-  } = $props();
+	let {
+		variant = 'default',
+		size = 'default',
+		class: className,
+		event,
+		children,
+		onclick,
+		...rest
+	}: HTMLButtonAttributes & {
+		variant?: ButtonVariant;
+		size?: ButtonSize;
+		event?: string; // telemetry key — team-wide invariant
+	} = $props();
 
-  function onClickWithTelemetry(e: MouseEvent) {
-    if (event) track(event);
-    onclick?.(e);
-  }
+	function onClickWithTelemetry(e: MouseEvent) {
+		if (event) track(event);
+		onclick?.(e);
+	}
 </script>
 
 <button
-  class={cn(buttonVariants({ variant, size }), className)}
-  onclick={onClickWithTelemetry}
-  {...rest}
+	class={cn(buttonVariants({ variant, size }), className)}
+	onclick={onClickWithTelemetry}
+	{...rest}
 >
-  {@render children?.()}
+	{@render children?.()}
 </button>
 ```
 
@@ -125,51 +125,51 @@ doesn't embed it; the direct-wrap version does. That's the justification.
 ```svelte
 <!-- src/lib/ui/Dialog.svelte -->
 <script lang="ts">
-  import { Dialog as DialogPrimitive } from 'bits-ui';
-  import { X } from 'lucide-svelte';
-  import { cn } from '$lib/utils';
-  import type { Snippet } from 'svelte';
+	import { Dialog as DialogPrimitive } from 'bits-ui';
+	import { X } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
+	import type { Snippet } from 'svelte';
 
-  let {
-    open = $bindable(false),
-    title,
-    description,
-    children,
-  }: {
-    open?: boolean;
-    title: string;
-    description?: string;
-    children: Snippet;
-  } = $props();
+	let {
+		open = $bindable(false),
+		title,
+		description,
+		children,
+	}: {
+		open?: boolean;
+		title: string;
+		description?: string;
+		children: Snippet;
+	} = $props();
 </script>
 
 <DialogPrimitive.Root bind:open>
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay
-      class="data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 bg-black/60"
-    />
-    <DialogPrimitive.Content
-      class={cn(
-        'bg-bg text-fg border-border data-[state=open]:animate-in data-[state=closed]:animate-out fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border p-6 shadow-lg sm:rounded-lg',
-      )}
-    >
-      <DialogPrimitive.Title class="text-lg font-semibold">
-        {title}
-      </DialogPrimitive.Title>
-      {#if description}
-        <DialogPrimitive.Description class="text-muted-fg text-sm">
-          {description}
-        </DialogPrimitive.Description>
-      {/if}
-      {@render children()}
-      <DialogPrimitive.Close
-        class="ring-offset-bg focus:ring-ring absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2"
-        aria-label="Close"
-      >
-        <X class="size-4" />
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
+	<DialogPrimitive.Portal>
+		<DialogPrimitive.Overlay
+			class="data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 bg-black/60"
+		/>
+		<DialogPrimitive.Content
+			class={cn(
+				'bg-bg text-fg border-border data-[state=open]:animate-in data-[state=closed]:animate-out fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border p-6 shadow-lg sm:rounded-lg',
+			)}
+		>
+			<DialogPrimitive.Title class="text-lg font-semibold">
+				{title}
+			</DialogPrimitive.Title>
+			{#if description}
+				<DialogPrimitive.Description class="text-muted-fg text-sm">
+					{description}
+				</DialogPrimitive.Description>
+			{/if}
+			{@render children()}
+			<DialogPrimitive.Close
+				class="ring-offset-bg focus:ring-ring absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2"
+				aria-label="Close"
+			>
+				<X class="size-4" />
+			</DialogPrimitive.Close>
+		</DialogPrimitive.Content>
+	</DialogPrimitive.Portal>
 </DialogPrimitive.Root>
 ```
 
@@ -192,24 +192,24 @@ You wrap the styling. Don't re-implement the a11y.
 
 ## Common primitives
 
-| bits-ui primitive | Typical use |
-|---|---|
-| `Dialog` | Modal dialogs |
-| `AlertDialog` | Confirm / destructive actions (non-dismissable overlay) |
-| `Select` | Accessible select with keyboard nav |
-| `Combobox` | Typeahead select |
-| `Command` | Command palette (see [command-palette.md](command-palette.md)) |
-| `DropdownMenu` / `Menubar` / `ContextMenu` | Menus |
-| `Tooltip` | Tooltips with delay group |
-| `Popover` | Non-modal overlays |
-| `Tabs` | Tabbed surfaces |
-| `Accordion` | Collapsible sections |
-| `Checkbox` / `RadioGroup` / `Switch` | Form controls |
-| `Slider` / `Progress` | Range / progress |
-| `Toggle` / `ToggleGroup` | Toggle buttons |
-| `Avatar` | Avatar w/ fallback |
-| `ScrollArea` | Styled scroll container |
-| `DateField` / `DatePicker` / `RangeCalendar` | Accessible date inputs |
+| bits-ui primitive                            | Typical use                                                    |
+| -------------------------------------------- | -------------------------------------------------------------- |
+| `Dialog`                                     | Modal dialogs                                                  |
+| `AlertDialog`                                | Confirm / destructive actions (non-dismissable overlay)        |
+| `Select`                                     | Accessible select with keyboard nav                            |
+| `Combobox`                                   | Typeahead select                                               |
+| `Command`                                    | Command palette (see [command-palette.md](command-palette.md)) |
+| `DropdownMenu` / `Menubar` / `ContextMenu`   | Menus                                                          |
+| `Tooltip`                                    | Tooltips with delay group                                      |
+| `Popover`                                    | Non-modal overlays                                             |
+| `Tabs`                                       | Tabbed surfaces                                                |
+| `Accordion`                                  | Collapsible sections                                           |
+| `Checkbox` / `RadioGroup` / `Switch`         | Form controls                                                  |
+| `Slider` / `Progress`                        | Range / progress                                               |
+| `Toggle` / `ToggleGroup`                     | Toggle buttons                                                 |
+| `Avatar`                                     | Avatar w/ fallback                                             |
+| `ScrollArea`                                 | Styled scroll container                                        |
+| `DateField` / `DatePicker` / `RangeCalendar` | Accessible date inputs                                         |
 
 Full list: <https://bits-ui.com/docs/components>.
 
@@ -239,7 +239,7 @@ import { tv } from 'tailwind-variants';
 export const focusRing = 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none';
 
 export const pressable = tv({
-  base: `${focusRing} transition-colors disabled:pointer-events-none disabled:opacity-50`,
+	base: `${focusRing} transition-colors disabled:pointer-events-none disabled:opacity-50`,
 });
 ```
 
@@ -252,7 +252,7 @@ Same as shadcn — `lucide-svelte` per ADR-0002:
 
 ```svelte
 <script lang="ts">
-  import { ChevronDown } from 'lucide-svelte';
+	import { ChevronDown } from 'lucide-svelte';
 </script>
 
 <ChevronDown class="size-4 opacity-50" />
@@ -269,17 +269,17 @@ import { axe } from 'jest-axe';
 import Button from '$lib/ui/Button.svelte';
 
 test('telemetry fires on click', async () => {
-  const track = vi.fn();
-  vi.mock('$lib/telemetry', () => ({ track }));
+	const track = vi.fn();
+	vi.mock('$lib/telemetry', () => ({ track }));
 
-  render(Button, { props: { event: 'save.click', children: () => 'Save' } });
-  await userEvent.click(screen.getByRole('button', { name: /save/i }));
-  expect(track).toHaveBeenCalledWith('save.click');
+	render(Button, { props: { event: 'save.click', children: () => 'Save' } });
+	await userEvent.click(screen.getByRole('button', { name: /save/i }));
+	expect(track).toHaveBeenCalledWith('save.click');
 });
 
 test('Dialog is axe-clean when open', async () => {
-  const { container } = render(Dialog, { props: { open: true, title: 'Test' } });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(Dialog, { props: { open: true, title: 'Test' } });
+	expect(await axe(container)).toHaveNoViolations();
 });
 ```
 
@@ -304,10 +304,10 @@ direct:
 
    ```json
    {
-     "aliases": {
-       "components": "$lib/components",
-       "ui": "$lib/ui" // or omit entirely for direct-only
-     }
+   	"aliases": {
+   		"components": "$lib/components",
+   		"ui": "$lib/ui" // or omit entirely for direct-only
+   	}
    }
    ```
 

@@ -74,7 +74,4 @@
 />
 
 <!-- Submission in flight: input + buttons disabled, submit reads "Verifying…". -->
-<Story
-	name="Pending"
-	args={{ errorState: requiredState, onSubmit: logSubmit, pending: true }}
-/>
+<Story name="Pending" args={{ errorState: requiredState, onSubmit: logSubmit, pending: true }} />

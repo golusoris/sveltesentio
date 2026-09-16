@@ -37,9 +37,7 @@ afterEach(() => {
 type Listener = (change: AwarenessChange, origin: unknown) => void;
 
 /** Minimal in-memory awareness fake matching the structural interface. */
-class FakeAwareness<S extends PresenceState = PresenceState>
-	implements AwarenessLike<S>
-{
+class FakeAwareness<S extends PresenceState = PresenceState> implements AwarenessLike<S> {
 	readonly clientID: number;
 	private readonly states = new Map<number, S>();
 	private readonly listeners = new Map<AwarenessEvent, Set<Listener>>();
@@ -164,9 +162,7 @@ describe('createPresenceStore', () => {
 		aw.setRemote(2, { name: 'ada', color: 'red' });
 		aw.emit('change', { added: [], updated: [2], removed: [] });
 
-		expect(store.others).toEqual([
-			{ clientId: 2, state: { name: 'ada', color: 'red' } },
-		]);
+		expect(store.others).toEqual([{ clientId: 2, state: { name: 'ada', color: 'red' } }]);
 	});
 
 	it('re-snapshots others on a remote remove change event', async () => {

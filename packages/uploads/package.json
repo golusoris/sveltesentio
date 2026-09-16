@@ -1,65 +1,65 @@
 {
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*",
-    "exifr": "^7.1.3",
-    "file-type": "^22.0.2"
-  },
-  "description": "Resumable uploads \u2014 tus-js-client + exifr (EXIF strip) + file-type (magic-byte sniffing)",
-  "devDependencies": {
-    "tus-js-client": "^4.3.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./exif": {
-      "import": "./src/exif.ts",
-      "types": "./src/exif.ts"
-    },
-    "./resumable": {
-      "import": "./src/resumable.ts",
-      "types": "./src/resumable.ts"
-    },
-    "./validate": {
-      "import": "./src/validate.ts",
-      "types": "./src/validate.ts"
-    }
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md"
-  ],
-  "keywords": [
-    "sveltesentio",
-    "uploads",
-    "tus",
-    "exifr",
-    "file-type",
-    "resumable"
-  ],
-  "name": "@sveltesentio/uploads",
-  "peerDependencies": {
-    "tus-js-client": ">=4.3.0"
-  },
-  "peerDependenciesMeta": {
-    "tus-js-client": {
-      "optional": true
-    }
-  },
-  "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
-  },
-  "sideEffects": false,
-  "type": "module",
-  "version": "0.2.0"
+	"dependencies": {
+		"@sveltesentio/core": "workspace:*",
+		"exifr": "^7.1.3",
+		"file-type": "^22.0.2"
+	},
+	"description": "Resumable uploads \u2014 tus-js-client + exifr (EXIF strip) + file-type (magic-byte sniffing)",
+	"devDependencies": {
+		"tus-js-client": "^4.3.1",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.11"
+	},
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		},
+		"./exif": {
+			"import": "./src/exif.ts",
+			"types": "./src/exif.ts"
+		},
+		"./resumable": {
+			"import": "./src/resumable.ts",
+			"types": "./src/resumable.ts"
+		},
+		"./validate": {
+			"import": "./src/validate.ts",
+			"types": "./src/validate.ts"
+		}
+	},
+	"files": [
+		"src",
+		"CHANGELOG.md"
+	],
+	"keywords": [
+		"sveltesentio",
+		"uploads",
+		"tus",
+		"exifr",
+		"file-type",
+		"resumable"
+	],
+	"name": "@sveltesentio/uploads",
+	"peerDependencies": {
+		"tus-js-client": ">=4.3.0"
+	},
+	"peerDependenciesMeta": {
+		"tus-js-client": {
+			"optional": true
+		}
+	},
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"test": "vitest run --coverage",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"version": "0.2.0"
 }

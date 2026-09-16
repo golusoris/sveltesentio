@@ -52,17 +52,17 @@ let cache = $state<{ fetchedAt: number; items: Project[] } | null>(null);
 const STALE_AFTER_MS = 2 * 60_000;
 
 export async function getProjects(): Promise<Project[]> {
-  const now = getClock().now();
-  if (cache && now - cache.fetchedAt < STALE_AFTER_MS) return cache.items;
+	const now = getClock().now();
+	if (cache && now - cache.fetchedAt < STALE_AFTER_MS) return cache.items;
 
-  const { data, error } = await api.GET('/v1/projects');
-  if (error) throw error;
-  cache = { fetchedAt: now, items: data.items };
-  return data.items;
+	const { data, error } = await api.GET('/v1/projects');
+	if (error) throw error;
+	cache = { fetchedAt: now, items: data.items };
+	return data.items;
 }
 
 export function invalidateProjects() {
-  cache = null;
+	cache = null;
 }
 ```
 
@@ -70,12 +70,12 @@ Consumption in a component:
 
 ```svelte
 <script lang="ts">
-  import { getProjects } from '$lib/state/projects.svelte';
-  const projects = $derived(await getProjects());
+	import { getProjects } from '$lib/state/projects.svelte';
+	const projects = $derived(await getProjects());
 </script>
 
 {#each projects as project (project.id)}
-  <article>{project.name}</article>
+	<article>{project.name}</article>
 {/each}
 ```
 
@@ -106,16 +106,16 @@ Wire once in root layout:
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { QueryClientProvider } from '@tanstack/svelte-query';
-  import { createQueryClient } from '@sveltesentio/query';
-  import { setClock, systemClock } from '@sveltesentio/core/clock';
+	import { QueryClientProvider } from '@tanstack/svelte-query';
+	import { createQueryClient } from '@sveltesentio/query';
+	import { setClock, systemClock } from '@sveltesentio/core/clock';
 
-  setClock(systemClock);
-  const queryClient = createQueryClient();
+	setClock(systemClock);
+	const queryClient = createQueryClient();
 </script>
 
 <QueryClientProvider client={queryClient}>
-  <slot />
+	<slot />
 </QueryClientProvider>
 ```
 
@@ -134,14 +134,14 @@ import { api } from '$lib/api/client';
 import { createQuery } from '@sveltesentio/query';
 
 export function projectsQuery() {
-  return createQuery({
-    queryKey: ['projects', 'list'] as const,
-    queryFn: async ({ signal }) => {
-      const { data, error } = await api.GET('/v1/projects', { signal });
-      if (error) throw error;
-      return data.items;
-    },
-  });
+	return createQuery({
+		queryKey: ['projects', 'list'] as const,
+		queryFn: async ({ signal }) => {
+			const { data, error } = await api.GET('/v1/projects', { signal });
+			if (error) throw error;
+			return data.items;
+		},
+	});
 }
 ```
 
@@ -149,18 +149,18 @@ Consume:
 
 ```svelte
 <script lang="ts">
-  import { projectsQuery } from '$lib/queries/projects';
-  const q = projectsQuery();
+	import { projectsQuery } from '$lib/queries/projects';
+	const q = projectsQuery();
 </script>
 
 {#if $q.isPending}
-  <LoadingSkeleton />
+	<LoadingSkeleton />
 {:else if $q.isError}
-  <ErrorBanner error={$q.error} />
+	<ErrorBanner error={$q.error} />
 {:else}
-  {#each $q.data as project (project.id)}
-    <article>{project.name}</article>
-  {/each}
+	{#each $q.data as project (project.id)}
+		<article>{project.name}</article>
+	{/each}
 {/if}
 ```
 
@@ -175,28 +175,28 @@ import { QueryClient, dehydrate } from '@tanstack/svelte-query';
 import { api } from '$lib/api/client';
 
 export async function load() {
-  const qc = new QueryClient();
-  await qc.prefetchQuery({
-    queryKey: ['projects', 'list'] as const,
-    queryFn: async () => {
-      const { data, error } = await api.GET('/v1/projects');
-      if (error) throw error;
-      return data.items;
-    },
-  });
-  return { dehydratedState: dehydrate(qc) };
+	const qc = new QueryClient();
+	await qc.prefetchQuery({
+		queryKey: ['projects', 'list'] as const,
+		queryFn: async () => {
+			const { data, error } = await api.GET('/v1/projects');
+			if (error) throw error;
+			return data.items;
+		},
+	});
+	return { dehydratedState: dehydrate(qc) };
 }
 ```
 
 ```svelte
 <!-- +page.svelte -->
 <script lang="ts">
-  import { HydrationBoundary } from '@tanstack/svelte-query';
-  let { data } = $props();
+	import { HydrationBoundary } from '@tanstack/svelte-query';
+	let { data } = $props();
 </script>
 
 <HydrationBoundary state={data.dehydratedState}>
-  <!-- component using projectsQuery() reads from the hydrated cache -->
+	<!-- component using projectsQuery() reads from the hydrated cache -->
 </HydrationBoundary>
 ```
 

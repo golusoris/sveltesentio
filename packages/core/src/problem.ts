@@ -40,8 +40,7 @@ export class ProblemError extends Error {
 	readonly extensions: Readonly<Record<string, unknown>>;
 
 	constructor(init: ProblemErrorInit) {
-		const message =
-			init.detail ?? init.title ?? `Problem: ${init.type} (${init.status ?? '?'})`;
+		const message = init.detail ?? init.title ?? `Problem: ${init.type} (${init.status ?? '?'})`;
 		super(message, init.cause === undefined ? undefined : { cause: init.cause });
 		this.name = 'ProblemError';
 		this.type = init.type;
@@ -73,15 +72,7 @@ export function parseProblem(input: unknown): ProblemDocument | undefined {
 }
 
 export function problemFromDocument(doc: ProblemDocument, cause?: unknown): ProblemError {
-	const {
-		type,
-		title,
-		status,
-		detail,
-		instance,
-		['invalid-params']: invalidParams,
-		...rest
-	} = doc;
+	const { type, title, status, detail, instance, ['invalid-params']: invalidParams, ...rest } = doc;
 	return new ProblemError({
 		type,
 		title,

@@ -22,13 +22,13 @@ Related: [server-state.md](server-state.md) (TanStack Query),
 
 ## When to use ConnectRPC vs. alternatives
 
-| Need | Tool |
-|---|---|
-| Typed RPC against Go (Golusoris) | ConnectRPC (this recipe) |
+| Need                                  | Tool                                             |
+| ------------------------------------- | ------------------------------------------------ |
+| Typed RPC against Go (Golusoris)      | ConnectRPC (this recipe)                         |
 | Typed REST against any OpenAPI server | openapi-fetch ([http-client.md](http-client.md)) |
-| Server-only push (no client send) | SSE ([sse.md](sse.md)) |
-| Collaborative state | Yjs ([collab.md](collab.md)) |
-| Ad-hoc JSON | `fetch` directly |
+| Server-only push (no client send)     | SSE ([sse.md](sse.md))                           |
+| Collaborative state                   | Yjs ([collab.md](collab.md))                     |
+| Ad-hoc JSON                           | `fetch` directly                                 |
 
 Don't reach for ConnectRPC unless the server is ConnectRPC-native.
 The Buf codegen pipeline is overhead that pays off only when both
@@ -79,10 +79,10 @@ plugins:
 
 ```json
 {
-  "scripts": {
-    "gen:proto": "buf generate proto",
-    "gen:proto:check": "buf lint proto && buf format -d proto"
-  }
+	"scripts": {
+		"gen:proto": "buf generate proto",
+		"gen:proto:check": "buf lint proto && buf format -d proto"
+	}
 }
 ```
 
@@ -98,19 +98,19 @@ working types without running buf locally.
 import { createConnectTransport } from '@connectrpc/connect-web';
 
 export const transport = createConnectTransport({
-  baseUrl: import.meta.env.VITE_API_BASE,    // 'https://api.golusoris.dev'
-  useBinaryFormat: false,                    // JSON in dev, binary in prod (see below)
-  credentials: 'include',                    // HttpOnly cookies per ADR-0034
-  interceptors: [authInterceptor, traceInterceptor],
+	baseUrl: import.meta.env.VITE_API_BASE, // 'https://api.golusoris.dev'
+	useBinaryFormat: false, // JSON in dev, binary in prod (see below)
+	credentials: 'include', // HttpOnly cookies per ADR-0034
+	interceptors: [authInterceptor, traceInterceptor],
 });
 ```
 
 Binary vs. JSON:
 
-| Format | When | Trade-off |
-|---|---|---|
-| JSON | Dev / debugging | Inspectable in DevTools Network tab |
-| Binary | Production | ~30% smaller, ~2× faster decode; opaque in DevTools |
+| Format | When            | Trade-off                                           |
+| ------ | --------------- | --------------------------------------------------- |
+| JSON   | Dev / debugging | Inspectable in DevTools Network tab                 |
+| Binary | Production      | ~30% smaller, ~2× faster decode; opaque in DevTools |
 
 Toggle via env: `useBinaryFormat: import.meta.env.PROD`.
 
@@ -121,11 +121,8 @@ Toggle via env: `useBinaryFormat: import.meta.env.PROD`.
 import { createPromiseClient } from '@connectrpc/connect';
 import type { ServiceType } from '@bufbuild/protobuf';
 
-export function createClient<T extends ServiceType>(
-  service: T,
-  opts: { transport: Transport },
-) {
-  return createPromiseClient(service, opts.transport);
+export function createClient<T extends ServiceType>(service: T, opts: { transport: Transport }) {
+	return createPromiseClient(service, opts.transport);
 }
 ```
 
@@ -146,22 +143,22 @@ Use `connect-query` over hand-rolling `useQuery`:
 
 ```svelte
 <script lang="ts">
-  import { createQuery } from '@connectrpc/connect-query';
-  import { listItems } from '$lib/gen/api/v1/feed_service-FeedService_connectquery';
+	import { createQuery } from '@connectrpc/connect-query';
+	import { listItems } from '$lib/gen/api/v1/feed_service-FeedService_connectquery';
 
-  const query = createQuery(listItems, { cursor: '' }, { transport });
+	const query = createQuery(listItems, { cursor: '' }, { transport });
 </script>
 
 {#if $query.isPending}
-  <span role="status">Loading…</span>
+	<span role="status">Loading…</span>
 {:else if $query.isError}
-  <ProblemErrorView error={$query.error} />
+	<ProblemErrorView error={$query.error} />
 {:else}
-  <ul>
-    {#each $query.data.items as item (item.id)}
-      <li>{item.title}</li>
-  {/each}
-  </ul>
+	<ul>
+		{#each $query.data.items as item (item.id)}
+			<li>{item.title}</li>
+		{/each}
+	</ul>
 {/if}
 ```
 
@@ -177,50 +174,54 @@ runes to expose `$state`:
 ```ts
 // @sveltesentio/realtime/rpc
 export function useConnectStream<I, O>(
-  method: (req: I) => AsyncIterable<O>,
-  input: I,
-  options?: { onError?: (e: Error) => void },
+	method: (req: I) => AsyncIterable<O>,
+	input: I,
+	options?: { onError?: (e: Error) => void },
 ): {
-  readonly items: readonly O[];
-  readonly status: 'idle' | 'streaming' | 'closed' | 'error';
-  start(): void;
-  close(): void;
+	readonly items: readonly O[];
+	readonly status: 'idle' | 'streaming' | 'closed' | 'error';
+	start(): void;
+	close(): void;
 } {
-  let items = $state<O[]>([]);
-  let status = $state<'idle' | 'streaming' | 'closed' | 'error'>('idle');
-  let abort: AbortController | null = null;
+	let items = $state<O[]>([]);
+	let status = $state<'idle' | 'streaming' | 'closed' | 'error'>('idle');
+	let abort: AbortController | null = null;
 
-  async function start() {
-    abort = new AbortController();
-    status = 'streaming';
-    try {
-      for await (const msg of method(input)) {
-        if (abort.signal.aborted) return;
-        items.push(msg);
-      }
-      status = 'closed';
-    } catch (err) {
-      status = 'error';
-      options?.onError?.(err as Error);
-    }
-  }
+	async function start() {
+		abort = new AbortController();
+		status = 'streaming';
+		try {
+			for await (const msg of method(input)) {
+				if (abort.signal.aborted) return;
+				items.push(msg);
+			}
+			status = 'closed';
+		} catch (err) {
+			status = 'error';
+			options?.onError?.(err as Error);
+		}
+	}
 
-  function close() {
-    abort?.abort();
-    status = 'closed';
-  }
+	function close() {
+		abort?.abort();
+		status = 'closed';
+	}
 
-  $effect(() => {
-    start();
-    return close;
-  });
+	$effect(() => {
+		start();
+		return close;
+	});
 
-  return {
-    get items() { return items; },
-    get status() { return status; },
-    start,
-    close,
-  };
+	return {
+		get items() {
+			return items;
+		},
+		get status() {
+			return status;
+		},
+		start,
+		close,
+	};
 }
 ```
 
@@ -228,23 +229,20 @@ Component:
 
 ```svelte
 <script lang="ts">
-  import { useConnectStream } from '@sveltesentio/realtime/rpc';
-  import { feed } from '$lib/rpc/clients';
+	import { useConnectStream } from '@sveltesentio/realtime/rpc';
+	import { feed } from '$lib/rpc/clients';
 
-  const stream = useConnectStream(
-    (input) => feed.tail(input),
-    { since: 0n },
-  );
+	const stream = useConnectStream((input) => feed.tail(input), { since: 0n });
 </script>
 
 <ul role="log" aria-live="polite" aria-relevant="additions">
-  {#each stream.items as item (item.id)}
-    <li>{item.body}</li>
-  {/each}
+	{#each stream.items as item (item.id)}
+		<li>{item.body}</li>
+	{/each}
 </ul>
 
 {#if stream.status === 'error'}
-  <span role="status">Connection lost. Retrying…</span>
+	<span role="status">Connection lost. Retrying…</span>
 {/if}
 ```
 
@@ -259,17 +257,17 @@ gateway). Browser support is HTTP/2-only:
 
 ```ts
 const transport = createConnectTransport({
-  baseUrl,
-  useHttpGet: false,
-  // bidi works iff the server speaks HTTP/2 and the browser negotiates it
+	baseUrl,
+	useHttpGet: false,
+	// bidi works iff the server speaks HTTP/2 and the browser negotiates it
 });
 
-const chat = await feed.chat();              // returns BidiStreamResponse
+const chat = await feed.chat(); // returns BidiStreamResponse
 
 (async () => {
-  for await (const reply of chat) {
-    messages.push(reply);
-  }
+	for await (const reply of chat) {
+		messages.push(reply);
+	}
 })();
 
 await chat.send({ text: 'hi' });
@@ -286,13 +284,13 @@ ConnectRPC errors carry a code + message + details:
 import { ConnectError, Code } from '@connectrpc/connect';
 
 try {
-  await feed.delete({ id });
+	await feed.delete({ id });
 } catch (err) {
-  if (err instanceof ConnectError) {
-    if (err.code === Code.NotFound) toast.error('Already deleted');
-    else if (err.code === Code.PermissionDenied) goto('/login');
-    else throw err;
-  }
+	if (err instanceof ConnectError) {
+		if (err.code === Code.NotFound) toast.error('Already deleted');
+		else if (err.code === Code.PermissionDenied) goto('/login');
+		else throw err;
+	}
 }
 ```
 
@@ -302,10 +300,10 @@ boundary so the rest of the app speaks one error vocabulary
 
 ```ts
 const codeToProblem: Record<number, string> = {
-  [Code.NotFound]: 'urn:golusoris:not_found',
-  [Code.PermissionDenied]: 'urn:golusoris:forbidden',
-  [Code.Unauthenticated]: 'urn:golusoris:auth:required',
-  [Code.ResourceExhausted]: 'urn:golusoris:rate_limited',
+	[Code.NotFound]: 'urn:golusoris:not_found',
+	[Code.PermissionDenied]: 'urn:golusoris:forbidden',
+	[Code.Unauthenticated]: 'urn:golusoris:auth:required',
+	[Code.ResourceExhausted]: 'urn:golusoris:rate_limited',
 };
 ```
 
@@ -317,9 +315,9 @@ mobile native bridges) ride on an interceptor:
 
 ```ts
 const authInterceptor: Interceptor = (next) => async (req) => {
-  const token = await getToken();
-  if (token) req.header.set('Authorization', `Bearer ${token}`);
-  return next(req);
+	const token = await getToken();
+	if (token) req.header.set('Authorization', `Bearer ${token}`);
+	return next(req);
 };
 ```
 
@@ -330,16 +328,16 @@ ADR-0034.
 
 ```ts
 const traceInterceptor: Interceptor = (next) => async (req) => {
-  const correlationId = crypto.randomUUID();
-  req.header.set('X-Correlation-Id', correlationId);
-  try {
-    return await next(req);
-  } catch (err) {
-    if (err instanceof ConnectError) {
-      err.metadata.set('X-Correlation-Id', correlationId);
-    }
-    throw err;
-  }
+	const correlationId = crypto.randomUUID();
+	req.header.set('X-Correlation-Id', correlationId);
+	try {
+		return await next(req);
+	} catch (err) {
+		if (err instanceof ConnectError) {
+			err.metadata.set('X-Correlation-Id', correlationId);
+		}
+		throw err;
+	}
 };
 ```
 
@@ -355,14 +353,14 @@ import { createRouterTransport } from '@connectrpc/connect';
 import { FeedService } from '$lib/gen/...';
 
 test('feed.list returns items', async () => {
-  const transport = createRouterTransport(({ service }) => {
-    service(FeedService, {
-      list: () => ({ items: [{ id: '1', title: 'x' }] }),
-    });
-  });
-  const client = createClient(FeedService, { transport });
-  const out = await client.list({});
-  expect(out.items).toHaveLength(1);
+	const transport = createRouterTransport(({ service }) => {
+		service(FeedService, {
+			list: () => ({ items: [{ id: '1', title: 'x' }] }),
+		});
+	});
+	const client = createClient(FeedService, { transport });
+	const out = await client.list({});
+	expect(out.items).toHaveLength(1);
 });
 ```
 
@@ -374,10 +372,10 @@ For streams:
 
 ```ts
 service(FeedService, {
-  tail: async function* () {
-    yield { id: '1', body: 'a' };
-    yield { id: '2', body: 'b' };
-  },
+	tail: async function* () {
+		yield { id: '1', body: 'a' };
+		yield { id: '2', body: 'b' };
+	},
 });
 ```
 
@@ -387,16 +385,16 @@ Before:
 
 ```ts
 const res = await fetch(`${API}/feed/list?cursor=${cursor}`, {
-  headers: { 'Content-Type': 'application/json' },
-  credentials: 'include',
+	headers: { 'Content-Type': 'application/json' },
+	credentials: 'include',
 });
-const json = await res.json() as ListItemsResponse;   // unsafe cast
+const json = (await res.json()) as ListItemsResponse; // unsafe cast
 ```
 
 After:
 
 ```ts
-const out = await feed.list({ cursor });              // typed, validated
+const out = await feed.list({ cursor }); // typed, validated
 ```
 
 Mechanical migration:

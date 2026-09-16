@@ -103,35 +103,51 @@ export const StoreKind = z.enum(['s3', 'r2', 'gcs']);
 export const Method = z.enum(['GET', 'PUT', 'DELETE']);
 
 export const SignRequest = z.object({
-  kind: StoreKind,
-  bucket: z.string().min(3).max(63).regex(/^[a-z0-9.-]+$/),
-  key: z.string().min(1).max(1024),
-  method: Method,
-  // TTL in seconds, clamped per store (S3 allows <=7d, we clamp to <=72h).
-  expiresSec: z.number().int().min(60).max(72 * 3600),
-  // Content-type must be pinned for PUT — prevents type-laundering.
-  contentType: z.string().min(3).max(256).optional(),
-  // Size constraint for PUT — prevents gigabyte surprise uploads.
-  maxSizeBytes: z.number().int().positive().max(50 * 1024 * 1024 * 1024).optional(),
-  // For GET: response-* overrides (S3 specific).
-  responseCacheControl: z.string().max(128).optional(),
-  responseContentDisposition: z.string().max(256).optional(),
-  // Optional IP binding (S3 only; CloudFront signed URLs support it natively).
-  sourceIpCidr: z.string().regex(/^[\d.]+\/\d{1,2}$|^[0-9a-f:]+\/\d{1,3}$/i).optional(),
-  // Caller-supplied audit id.
-  requestedBy: z.string().uuid(),
+	kind: StoreKind,
+	bucket: z
+		.string()
+		.min(3)
+		.max(63)
+		.regex(/^[a-z0-9.-]+$/),
+	key: z.string().min(1).max(1024),
+	method: Method,
+	// TTL in seconds, clamped per store (S3 allows <=7d, we clamp to <=72h).
+	expiresSec: z
+		.number()
+		.int()
+		.min(60)
+		.max(72 * 3600),
+	// Content-type must be pinned for PUT — prevents type-laundering.
+	contentType: z.string().min(3).max(256).optional(),
+	// Size constraint for PUT — prevents gigabyte surprise uploads.
+	maxSizeBytes: z
+		.number()
+		.int()
+		.positive()
+		.max(50 * 1024 * 1024 * 1024)
+		.optional(),
+	// For GET: response-* overrides (S3 specific).
+	responseCacheControl: z.string().max(128).optional(),
+	responseContentDisposition: z.string().max(256).optional(),
+	// Optional IP binding (S3 only; CloudFront signed URLs support it natively).
+	sourceIpCidr: z
+		.string()
+		.regex(/^[\d.]+\/\d{1,2}$|^[0-9a-f:]+\/\d{1,3}$/i)
+		.optional(),
+	// Caller-supplied audit id.
+	requestedBy: z.string().uuid(),
 });
 export type SignRequest = z.infer<typeof SignRequest>;
 
 export const SignedUrl = z.object({
-  url: z.string().url(),
-  method: Method,
-  expiresAt: z.string().datetime(),
-  key: z.string(),
-  bucket: z.string(),
-  // SHA-256 of URL + expiry — used in audit events to prove issuance
-  // without storing the whole URL (which contains a secret signature).
-  urlFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+	url: z.string().url(),
+	method: Method,
+	expiresAt: z.string().datetime(),
+	key: z.string(),
+	bucket: z.string(),
+	// SHA-256 of URL + expiry — used in audit events to prove issuance
+	// without storing the whole URL (which contains a secret signature).
+	urlFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
 });
 ```
 
@@ -141,7 +157,13 @@ export const SignedUrl = z.object({
 
 ```ts
 // packages/storage/src/sign.ts
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
+import {
+	S3Client,
+	GetObjectCommand,
+	PutObjectCommand,
+	DeleteObjectCommand,
+	ObjectCannedACL,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { SignRequest, SignedUrl } from './types';
 import { recordAudit } from '$lib/server/audit';
@@ -150,71 +172,79 @@ import { sha256 } from '$lib/server/crypto';
 const clients = new Map<string, S3Client>();
 
 function clientFor(kind: 's3' | 'r2'): S3Client {
-  const key = kind;
-  const existing = clients.get(key);
-  if (existing) return existing;
-  const c = new S3Client({
-    region: process.env[`${key.toUpperCase()}_REGION`] ?? 'auto',
-    endpoint: process.env[`${key.toUpperCase()}_ENDPOINT`], // R2 requires explicit
-    forcePathStyle: kind === 'r2',
-    credentials: {
-      accessKeyId:     process.env[`${key.toUpperCase()}_ACCESS_KEY_ID`]!,
-      secretAccessKey: process.env[`${key.toUpperCase()}_SECRET_ACCESS_KEY`]!,
-    },
-  });
-  clients.set(key, c);
-  return c;
+	const key = kind;
+	const existing = clients.get(key);
+	if (existing) return existing;
+	const c = new S3Client({
+		region: process.env[`${key.toUpperCase()}_REGION`] ?? 'auto',
+		endpoint: process.env[`${key.toUpperCase()}_ENDPOINT`], // R2 requires explicit
+		forcePathStyle: kind === 'r2',
+		credentials: {
+			accessKeyId: process.env[`${key.toUpperCase()}_ACCESS_KEY_ID`]!,
+			secretAccessKey: process.env[`${key.toUpperCase()}_SECRET_ACCESS_KEY`]!,
+		},
+	});
+	clients.set(key, c);
+	return c;
 }
 
 export async function signUrl(input: unknown): Promise<ReturnType<typeof SignedUrl.parse>> {
-  const req = SignRequest.parse(input);
-  if (req.kind === 'gcs') return signGcsUrl(req); // separate path
+	const req = SignRequest.parse(input);
+	if (req.kind === 'gcs') return signGcsUrl(req); // separate path
 
-  const client = clientFor(req.kind);
-  let command;
-  switch (req.method) {
-    case 'GET':
-      command = new GetObjectCommand({
-        Bucket: req.bucket,
-        Key: req.key,
-        ResponseCacheControl: req.responseCacheControl,
-        ResponseContentDisposition: req.responseContentDisposition,
-      });
-      break;
-    case 'PUT':
-      command = new PutObjectCommand({
-        Bucket: req.bucket,
-        Key: req.key,
-        ContentType: req.contentType,
-        // ContentLength enforcement happens via Condition in POST-policy
-        // form; PUT signed URLs don't enforce size, so attach a
-        // size-limiting gateway (nginx client_max_body_size) in front.
-        ServerSideEncryption: 'AES256',
-      });
-      break;
-    case 'DELETE':
-      command = new DeleteObjectCommand({ Bucket: req.bucket, Key: req.key });
-      break;
-  }
+	const client = clientFor(req.kind);
+	let command;
+	switch (req.method) {
+		case 'GET':
+			command = new GetObjectCommand({
+				Bucket: req.bucket,
+				Key: req.key,
+				ResponseCacheControl: req.responseCacheControl,
+				ResponseContentDisposition: req.responseContentDisposition,
+			});
+			break;
+		case 'PUT':
+			command = new PutObjectCommand({
+				Bucket: req.bucket,
+				Key: req.key,
+				ContentType: req.contentType,
+				// ContentLength enforcement happens via Condition in POST-policy
+				// form; PUT signed URLs don't enforce size, so attach a
+				// size-limiting gateway (nginx client_max_body_size) in front.
+				ServerSideEncryption: 'AES256',
+			});
+			break;
+		case 'DELETE':
+			command = new DeleteObjectCommand({ Bucket: req.bucket, Key: req.key });
+			break;
+	}
 
-  const url = await getSignedUrl(client, command, { expiresIn: req.expiresSec });
-  const expiresAt = new Date(Date.now() + req.expiresSec * 1000).toISOString();
-  const fingerprint = await sha256(`${url}|${expiresAt}`);
+	const url = await getSignedUrl(client, command, { expiresIn: req.expiresSec });
+	const expiresAt = new Date(Date.now() + req.expiresSec * 1000).toISOString();
+	const fingerprint = await sha256(`${url}|${expiresAt}`);
 
-  await recordAudit({
-    actor: req.requestedBy,
-    action: 'storage.signed_url.issued',
-    payload: {
-      kind: req.kind, bucket: req.bucket, key: req.key,
-      method: req.method, expiresAt, urlFingerprint: fingerprint,
-      hasIpBinding: Boolean(req.sourceIpCidr),
-    },
-  });
+	await recordAudit({
+		actor: req.requestedBy,
+		action: 'storage.signed_url.issued',
+		payload: {
+			kind: req.kind,
+			bucket: req.bucket,
+			key: req.key,
+			method: req.method,
+			expiresAt,
+			urlFingerprint: fingerprint,
+			hasIpBinding: Boolean(req.sourceIpCidr),
+		},
+	});
 
-  return SignedUrl.parse({
-    url, method: req.method, expiresAt, key: req.key, bucket: req.bucket,
-    urlFingerprint: fingerprint,
-  });
+	return SignedUrl.parse({
+		url,
+		method: req.method,
+		expiresAt,
+		key: req.key,
+		bucket: req.bucket,
+		urlFingerprint: fingerprint,
+	});
 }
 ```
 
@@ -237,16 +267,19 @@ import { SignRequest } from './types';
 const gcs = new Storage({ keyFilename: process.env.GCS_KEY_PATH });
 
 export async function signGcsUrl(req: SignRequest) {
-  const [url] = await gcs.bucket(req.bucket).file(req.key).getSignedUrl({
-    version: 'v4',
-    action: req.method === 'GET' ? 'read' : req.method === 'PUT' ? 'write' : 'delete',
-    expires: Date.now() + req.expiresSec * 1000,
-    contentType: req.contentType,
-    responseDisposition: req.responseContentDisposition,
-    // GCS doesn't support IP binding in signed URLs; compensate with
-    // VPC Service Controls or Access Context Manager if needed.
-  });
-  return url;
+	const [url] = await gcs
+		.bucket(req.bucket)
+		.file(req.key)
+		.getSignedUrl({
+			version: 'v4',
+			action: req.method === 'GET' ? 'read' : req.method === 'PUT' ? 'write' : 'delete',
+			expires: Date.now() + req.expiresSec * 1000,
+			contentType: req.contentType,
+			responseDisposition: req.responseContentDisposition,
+			// GCS doesn't support IP binding in signed URLs; compensate with
+			// VPC Service Controls or Access Context Manager if needed.
+		});
+	return url;
 }
 ```
 
@@ -260,31 +293,41 @@ import { requirePermission } from '$lib/server/auth';
 import { rateLimiter } from '$lib/server/rate-limiter';
 
 export async function POST({ request, locals, getClientAddress }) {
-  const parsed = SignRequest.safeParse({ ...await request.json(), requestedBy: locals.user?.id });
-  if (!parsed.success) throw error(422, JSON.stringify(parsed.error.issues));
+	const parsed = SignRequest.safeParse({ ...(await request.json()), requestedBy: locals.user?.id });
+	if (!parsed.success) throw error(422, JSON.stringify(parsed.error.issues));
 
-  // Scope authz — resolve the object's owning tenant + permission-gate.
-  const obj = await db.query(
-    `SELECT tenant_id, owner_id, visibility FROM storage_objects WHERE bucket = $1 AND key = $2`,
-    [parsed.data.bucket, parsed.data.key],
-  ).then(r => r.rows[0]);
+	// Scope authz — resolve the object's owning tenant + permission-gate.
+	const obj = await db
+		.query(
+			`SELECT tenant_id, owner_id, visibility FROM storage_objects WHERE bucket = $1 AND key = $2`,
+			[parsed.data.bucket, parsed.data.key],
+		)
+		.then((r) => r.rows[0]);
 
-  if (!obj) throw error(404);
-  if (obj.tenant_id !== locals.tenant.id) throw error(403);
-  if (parsed.data.method === 'GET') await requirePermission(locals.user, `storage.read:${obj.visibility}`);
-  else                               await requirePermission(locals.user, 'storage.write');
+	if (!obj) throw error(404);
+	if (obj.tenant_id !== locals.tenant.id) throw error(403);
+	if (parsed.data.method === 'GET')
+		await requirePermission(locals.user, `storage.read:${obj.visibility}`);
+	else await requirePermission(locals.user, 'storage.write');
 
-  // Per-user rate-limit — stops enumeration + URL-harvest attacks.
-  const check = await rateLimiter.consume(`sign:${locals.user.id}`, 1, { capacity: 120, refillPerSec: 2 });
-  if (!check.allowed) return json({ type: 'about:blank', title: 'rate limited', status: 429 }, { status: 429, headers: { 'Retry-After': String(check.retryAfterSec) } });
+	// Per-user rate-limit — stops enumeration + URL-harvest attacks.
+	const check = await rateLimiter.consume(`sign:${locals.user.id}`, 1, {
+		capacity: 120,
+		refillPerSec: 2,
+	});
+	if (!check.allowed)
+		return json(
+			{ type: 'about:blank', title: 'rate limited', status: 429 },
+			{ status: 429, headers: { 'Retry-After': String(check.retryAfterSec) } },
+		);
 
-  // Optional: bind to request IP for high-sensitivity objects.
-  if (obj.visibility === 'confidential') {
-    parsed.data.sourceIpCidr = `${getClientAddress()}/32`;
-  }
+	// Optional: bind to request IP for high-sensitivity objects.
+	if (obj.visibility === 'confidential') {
+		parsed.data.sourceIpCidr = `${getClientAddress()}/32`;
+	}
 
-  const signed = await signUrl(parsed.data);
-  return json(signed);
+	const signed = await signUrl(parsed.data);
+	return json(signed);
 }
 ```
 
@@ -306,32 +349,38 @@ Critical path:
 import { signUrl } from '@sveltesentio/storage';
 
 const ALLOWED_UPLOAD_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/webp', 'image/avif',
-  'application/pdf',
+	'image/jpeg',
+	'image/png',
+	'image/webp',
+	'image/avif',
+	'application/pdf',
 ]);
 
 export async function POST({ request, locals }) {
-  const { filename, contentType, sizeBytes } = await request.json();
-  if (!ALLOWED_UPLOAD_TYPES.has(contentType)) throw error(422, 'disallowed content type');
-  if (sizeBytes > 50 * 1024 * 1024) throw error(422, 'too large');
+	const { filename, contentType, sizeBytes } = await request.json();
+	if (!ALLOWED_UPLOAD_TYPES.has(contentType)) throw error(422, 'disallowed content type');
+	if (sizeBytes > 50 * 1024 * 1024) throw error(422, 'too large');
 
-  const key = `uploads/${locals.tenant.id}/${crypto.randomUUID()}`;
-  const signed = await signUrl({
-    kind: 's3', bucket: 'user-uploads', key,
-    method: 'PUT', expiresSec: 15 * 60,
-    contentType,          // BAKED INTO the signature — client can't change
-    requestedBy: locals.user.id,
-  });
+	const key = `uploads/${locals.tenant.id}/${crypto.randomUUID()}`;
+	const signed = await signUrl({
+		kind: 's3',
+		bucket: 'user-uploads',
+		key,
+		method: 'PUT',
+		expiresSec: 15 * 60,
+		contentType, // BAKED INTO the signature — client can't change
+		requestedBy: locals.user.id,
+	});
 
-  // Record the pending object BEFORE returning the URL — so if the
-  // upload completes out-of-band, we know what it was for.
-  await db.query(
-    `INSERT INTO storage_objects (id, tenant_id, bucket, key, content_type, size_bytes, status, owner_id)
+	// Record the pending object BEFORE returning the URL — so if the
+	// upload completes out-of-band, we know what it was for.
+	await db.query(
+		`INSERT INTO storage_objects (id, tenant_id, bucket, key, content_type, size_bytes, status, owner_id)
      VALUES ($1, $2, 'user-uploads', $3, $4, $5, 'pending', $6)`,
-    [crypto.randomUUID(), locals.tenant.id, key, contentType, sizeBytes, locals.user.id],
-  );
+		[crypto.randomUUID(), locals.tenant.id, key, contentType, sizeBytes, locals.user.id],
+	);
 
-  return json({ uploadUrl: signed.url, key, expiresAt: signed.expiresAt });
+	return json({ uploadUrl: signed.url, key, expiresAt: signed.expiresAt });
 }
 ```
 
@@ -346,24 +395,29 @@ Uploads finish out-of-band; confirm before exposing the object:
 ```ts
 // src/routes/api/uploads/finalize/+server.ts
 export async function POST({ request, locals }) {
-  const { key } = await request.json();
-  const obj = await db.query(`SELECT * FROM storage_objects WHERE key = $1 AND owner_id = $2 AND status = 'pending'`, [key, locals.user.id]).then(r => r.rows[0]);
-  if (!obj) throw error(404);
+	const { key } = await request.json();
+	const obj = await db
+		.query(
+			`SELECT * FROM storage_objects WHERE key = $1 AND owner_id = $2 AND status = 'pending'`,
+			[key, locals.user.id],
+		)
+		.then((r) => r.rows[0]);
+	if (!obj) throw error(404);
 
-  // HEAD the object — only exists if upload completed.
-  const head = await s3.send(new HeadObjectCommand({ Bucket: obj.bucket, Key: key }));
-  if (!head.ContentLength || head.ContentLength > 50 * 1024 * 1024) {
-    await s3.send(new DeleteObjectCommand({ Bucket: obj.bucket, Key: key }));
-    throw error(422, 'upload verification failed');
-  }
+	// HEAD the object — only exists if upload completed.
+	const head = await s3.send(new HeadObjectCommand({ Bucket: obj.bucket, Key: key }));
+	if (!head.ContentLength || head.ContentLength > 50 * 1024 * 1024) {
+		await s3.send(new DeleteObjectCommand({ Bucket: obj.bucket, Key: key }));
+		throw error(422, 'upload verification failed');
+	}
 
-  // Confirm + kick off downstream (virus scan, thumbnail).
-  await db.query(
-    `UPDATE storage_objects SET status = 'uploaded', size_bytes = $1, uploaded_at = NOW() WHERE id = $2`,
-    [head.ContentLength, obj.id],
-  );
-  await postProcessQueue.add('virus-scan', { objectId: obj.id });
-  return json({ ok: true });
+	// Confirm + kick off downstream (virus scan, thumbnail).
+	await db.query(
+		`UPDATE storage_objects SET status = 'uploaded', size_bytes = $1, uploaded_at = NOW() WHERE id = $2`,
+		[head.ContentLength, obj.id],
+	);
+	await postProcessQueue.add('virus-scan', { objectId: obj.id });
+	return json({ ok: true });
 }
 ```
 
@@ -402,36 +456,45 @@ only (not for viewer / processor roles).
 ```svelte
 <!-- src/lib/components/DownloadButton.svelte -->
 <script lang="ts">
-  let { objectKey, filename }: { objectKey: string; filename: string } = $props();
-  let loading = $state(false);
+	let { objectKey, filename }: { objectKey: string; filename: string } = $props();
+	let loading = $state(false);
 
-  async function onClick() {
-    loading = true;
-    try {
-      const res = await fetch('/api/storage/sign', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-csrf-token': readCookie('__Host-csrf') ?? '' },
-        body: JSON.stringify({ kind: 's3', bucket: 'user-uploads', key: objectKey, method: 'GET', expiresSec: 600 }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const { url } = await res.json();
-      // Trigger the download via a transient anchor — the URL is single-use
-      // in spirit; discard it from memory after click.
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } finally {
-      loading = false;
-    }
-  }
+	async function onClick() {
+		loading = true;
+		try {
+			const res = await fetch('/api/storage/sign', {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					'x-csrf-token': readCookie('__Host-csrf') ?? '',
+				},
+				body: JSON.stringify({
+					kind: 's3',
+					bucket: 'user-uploads',
+					key: objectKey,
+					method: 'GET',
+					expiresSec: 600,
+				}),
+			});
+			if (!res.ok) throw new Error(`${res.status}`);
+			const { url } = await res.json();
+			// Trigger the download via a transient anchor — the URL is single-use
+			// in spirit; discard it from memory after click.
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			a.rel = 'noopener';
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <button type="button" onclick={onClick} disabled={loading} aria-busy={loading}>
-  {loading ? 'Preparing…' : `Download ${filename}`}
+	{loading ? 'Preparing…' : `Download ${filename}`}
 </button>
 ```
 
@@ -448,16 +511,22 @@ to a path prefix:
 import { getSignedCookies } from '@aws-sdk/cloudfront-signer';
 
 const cookies = getSignedCookies({
-  url: `https://cdn.example.com/tenants/${tenantId}/streams/*`,
-  keyPairId: process.env.CF_KEY_PAIR_ID!,
-  privateKey: fs.readFileSync('cf-private.pem', 'utf8'),
-  dateLessThan: new Date(Date.now() + 3600 * 1000).toISOString(),
-  ipAddress: `${clientIp}/32`, // optional
+	url: `https://cdn.example.com/tenants/${tenantId}/streams/*`,
+	keyPairId: process.env.CF_KEY_PAIR_ID!,
+	privateKey: fs.readFileSync('cf-private.pem', 'utf8'),
+	dateLessThan: new Date(Date.now() + 3600 * 1000).toISOString(),
+	ipAddress: `${clientIp}/32`, // optional
 });
 
 // Return via Set-Cookie: scoped to CDN origin only
 for (const [name, value] of Object.entries(cookies)) {
-  event.cookies.set(name, value, { domain: '.cdn.example.com', path: '/', httpOnly: true, secure: true, sameSite: 'none' });
+	event.cookies.set(name, value, {
+		domain: '.cdn.example.com',
+		path: '/',
+		httpOnly: true,
+		secure: true,
+		sameSite: 'none',
+	});
 }
 ```
 

@@ -12,7 +12,10 @@ export type EventSourceLike = {
 	close(): void;
 };
 
-export type EventSourceFactory = (url: string, init?: { withCredentials?: boolean }) => EventSourceLike;
+export type EventSourceFactory = (
+	url: string,
+	init?: { withCredentials?: boolean },
+) => EventSourceLike;
 
 export type SseClientState = 'idle' | 'connecting' | 'open' | 'closed';
 
@@ -45,9 +48,7 @@ export class SseClient {
 		this.clearTimer = options.clearTimeoutImpl ?? clearTimeout;
 		const factory = options.eventSourceFactory ?? defaultFactory;
 		if (!factory) {
-			throw new Error(
-				'SseClient requires an eventSourceFactory (no global EventSource present)',
-			);
+			throw new Error('SseClient requires an eventSourceFactory (no global EventSource present)');
 		}
 		this.factory = factory;
 	}
@@ -141,10 +142,7 @@ const defaultFactory: EventSourceFactory | undefined = (() => {
 	const es = (globalThis as { EventSource?: unknown }).EventSource;
 	if (typeof es !== 'function') return undefined;
 	return (url: string, init?: { withCredentials?: boolean }) => {
-		const Ctor = es as new (
-			url: string,
-			init?: { withCredentials?: boolean },
-		) => EventSourceLike;
+		const Ctor = es as new (url: string, init?: { withCredentials?: boolean }) => EventSourceLike;
 		return new Ctor(url, init);
 	};
 })();

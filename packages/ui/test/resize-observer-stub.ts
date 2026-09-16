@@ -14,8 +14,14 @@ type ResizeCallback = (entries: ResizeObserverEntryLike[], observer: unknown) =>
 interface ResizeObserverEntryLike {
 	readonly target: Element;
 	readonly contentRect: { readonly width: number; readonly height: number };
-	readonly borderBoxSize: ReadonlyArray<{ readonly inlineSize: number; readonly blockSize: number }>;
-	readonly contentBoxSize: ReadonlyArray<{ readonly inlineSize: number; readonly blockSize: number }>;
+	readonly borderBoxSize: ReadonlyArray<{
+		readonly inlineSize: number;
+		readonly blockSize: number;
+	}>;
+	readonly contentBoxSize: ReadonlyArray<{
+		readonly inlineSize: number;
+		readonly blockSize: number;
+	}>;
 }
 
 interface StubbedElement extends HTMLElement {

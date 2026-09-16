@@ -73,10 +73,9 @@ export function strictCsp(options: StrictCspOptions): CspDirectives {
 
 export function serialiseCsp(directives: CspDirectives): string {
 	const parts: string[] = [];
-	for (const [name, value] of Object.entries(directives) as Array<[
-		keyof CspDirectives,
-		CspDirectives[keyof CspDirectives],
-	]>) {
+	for (const [name, value] of Object.entries(directives) as Array<
+		[keyof CspDirectives, CspDirectives[keyof CspDirectives]]
+	>) {
 		if (value === undefined || value === false) continue;
 		if (value === true) {
 			parts.push(name);

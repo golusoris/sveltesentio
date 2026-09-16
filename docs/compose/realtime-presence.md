@@ -81,60 +81,75 @@ import { z } from 'zod';
 // Yjs Awareness payload — the local state every user broadcasts.
 // Bounded fields prevent payload bloat (each peer pays for every other peer's state).
 export const PresenceState = z.object({
-  user: z.object({
-    id: z.string().uuid(),
-    name: z.string().min(1).max(80),
-    avatarUrl: z.string().url().nullable(),
-    color: z.string().regex(/^#[0-9a-f]{6}$/i),
-  }),
-  cursor: z.object({
-    anchor: z.number().int().nonnegative(),
-    head: z.number().int().nonnegative(),
-  }).nullable(),
-  selection: z.object({
-    rects: z.array(z.object({
-      top: z.number(), left: z.number(), width: z.number(), height: z.number(),
-    })).max(20),
-  }).nullable(),
-  typing: z.boolean().default(false),
-  lastActiveAt: z.number().int().nonnegative(), // epoch ms
-  // App-specific extension; cap to keep payload <2KB per peer
-  app: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+	user: z.object({
+		id: z.string().uuid(),
+		name: z.string().min(1).max(80),
+		avatarUrl: z.string().url().nullable(),
+		color: z.string().regex(/^#[0-9a-f]{6}$/i),
+	}),
+	cursor: z
+		.object({
+			anchor: z.number().int().nonnegative(),
+			head: z.number().int().nonnegative(),
+		})
+		.nullable(),
+	selection: z
+		.object({
+			rects: z
+				.array(
+					z.object({
+						top: z.number(),
+						left: z.number(),
+						width: z.number(),
+						height: z.number(),
+					}),
+				)
+				.max(20),
+		})
+		.nullable(),
+	typing: z.boolean().default(false),
+	lastActiveAt: z.number().int().nonnegative(), // epoch ms
+	// App-specific extension; cap to keep payload <2KB per peer
+	app: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 export type PresenceState = z.infer<typeof PresenceState>;
 
 // SSE-based view-only presence
 export const PresenceEvent = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('snapshot'),
-    room: z.string().min(1).max(200),
-    members: z.array(z.object({
-      userId: z.string().uuid(),
-      name: z.string(),
-      avatarUrl: z.string().url().nullable(),
-      joinedAt: z.string().datetime(),
-      lastSeenAt: z.string().datetime(),
-    })).max(500),
-    serverTime: z.string().datetime(),
-  }),
-  z.object({
-    type: z.literal('join'),
-    room: z.string(),
-    userId: z.string().uuid(),
-    name: z.string(),
-    avatarUrl: z.string().url().nullable(),
-    joinedAt: z.string().datetime(),
-  }),
-  z.object({
-    type: z.literal('leave'),
-    room: z.string(),
-    userId: z.string().uuid(),
-    leftAt: z.string().datetime(),
-  }),
-  z.object({
-    type: z.literal('heartbeat'),
-    serverTime: z.string().datetime(),
-  }),
+	z.object({
+		type: z.literal('snapshot'),
+		room: z.string().min(1).max(200),
+		members: z
+			.array(
+				z.object({
+					userId: z.string().uuid(),
+					name: z.string(),
+					avatarUrl: z.string().url().nullable(),
+					joinedAt: z.string().datetime(),
+					lastSeenAt: z.string().datetime(),
+				}),
+			)
+			.max(500),
+		serverTime: z.string().datetime(),
+	}),
+	z.object({
+		type: z.literal('join'),
+		room: z.string(),
+		userId: z.string().uuid(),
+		name: z.string(),
+		avatarUrl: z.string().url().nullable(),
+		joinedAt: z.string().datetime(),
+	}),
+	z.object({
+		type: z.literal('leave'),
+		room: z.string(),
+		userId: z.string().uuid(),
+		leftAt: z.string().datetime(),
+	}),
+	z.object({
+		type: z.literal('heartbeat'),
+		serverTime: z.string().datetime(),
+	}),
 ]);
 export type PresenceEvent = z.infer<typeof PresenceEvent>;
 ```
@@ -153,58 +168,60 @@ import { Awareness } from 'y-protocols/awareness';
 import { PresenceState } from '@sveltesentio/realtime-presence/schema';
 
 export type PresenceProvider = {
-  awareness: Awareness;
-  setLocal: (s: PresenceState) => void;
-  onChange: (cb: (states: Map<number, PresenceState>) => void) => () => void;
-  destroy: () => void;
+	awareness: Awareness;
+	setLocal: (s: PresenceState) => void;
+	onChange: (cb: (states: Map<number, PresenceState>) => void) => () => void;
+	destroy: () => void;
 };
 
-export function createPresence(doc: Y.Doc, room: string, user: PresenceState['user']): PresenceProvider {
-  const provider = new WebsocketProvider(
-    `${import.meta.env.VITE_WS_URL}/yjs`,
-    room,
-    doc,
-    { connect: true, params: { token: getYjsToken() } },
-  );
-  const awareness = provider.awareness;
+export function createPresence(
+	doc: Y.Doc,
+	room: string,
+	user: PresenceState['user'],
+): PresenceProvider {
+	const provider = new WebsocketProvider(`${import.meta.env.VITE_WS_URL}/yjs`, room, doc, {
+		connect: true,
+		params: { token: getYjsToken() },
+	});
+	const awareness = provider.awareness;
 
-  // Initialize local state with user identity (always present).
-  const initial: PresenceState = {
-    user,
-    cursor: null,
-    selection: null,
-    typing: false,
-    lastActiveAt: Date.now(),
-  };
-  awareness.setLocalState(PresenceState.parse(initial));
+	// Initialize local state with user identity (always present).
+	const initial: PresenceState = {
+		user,
+		cursor: null,
+		selection: null,
+		typing: false,
+		lastActiveAt: Date.now(),
+	};
+	awareness.setLocalState(PresenceState.parse(initial));
 
-  // Garbage-collect stale peers — y-websocket marks peers offline after 30s
-  // by default. We re-emit on change.
-  function onChange(cb: (states: Map<number, PresenceState>) => void) {
-    const handler = () => {
-      const states = new Map<number, PresenceState>();
-      for (const [clientId, raw] of awareness.getStates()) {
-        const parsed = PresenceState.safeParse(raw);
-        if (parsed.success) states.set(clientId, parsed.data);
-        // else: silently drop malformed state from another client
-      }
-      cb(states);
-    };
-    awareness.on('change', handler);
-    handler(); // emit initial
-    return () => awareness.off('change', handler);
-  }
+	// Garbage-collect stale peers — y-websocket marks peers offline after 30s
+	// by default. We re-emit on change.
+	function onChange(cb: (states: Map<number, PresenceState>) => void) {
+		const handler = () => {
+			const states = new Map<number, PresenceState>();
+			for (const [clientId, raw] of awareness.getStates()) {
+				const parsed = PresenceState.safeParse(raw);
+				if (parsed.success) states.set(clientId, parsed.data);
+				// else: silently drop malformed state from another client
+			}
+			cb(states);
+		};
+		awareness.on('change', handler);
+		handler(); // emit initial
+		return () => awareness.off('change', handler);
+	}
 
-  function setLocal(s: PresenceState) {
-    awareness.setLocalState(PresenceState.parse({ ...s, lastActiveAt: Date.now() }));
-  }
+	function setLocal(s: PresenceState) {
+		awareness.setLocalState(PresenceState.parse({ ...s, lastActiveAt: Date.now() }));
+	}
 
-  return {
-    awareness,
-    setLocal,
-    onChange,
-    destroy: () => provider.destroy(),
-  };
+	return {
+		awareness,
+		setLocal,
+		onChange,
+		destroy: () => provider.destroy(),
+	};
 }
 ```
 
@@ -217,99 +234,101 @@ posture preserves UX for the rest of the room.
 ```svelte
 <!-- $lib/components/CollaborativeEditor.svelte -->
 <script lang="ts">
-  import * as Y from 'yjs';
-  import { onMount } from 'svelte';
-  import { createPresence, type PresenceState } from '$lib/realtime/awareness';
-  import RemoteCursor from './RemoteCursor.svelte';
+	import * as Y from 'yjs';
+	import { onMount } from 'svelte';
+	import { createPresence, type PresenceState } from '$lib/realtime/awareness';
+	import RemoteCursor from './RemoteCursor.svelte';
 
-  type Props = { docId: string; user: PresenceState['user'] };
-  const { docId, user }: Props = $props();
+	type Props = { docId: string; user: PresenceState['user'] };
+	const { docId, user }: Props = $props();
 
-  const ydoc = new Y.Doc();
-  const ytext = ydoc.getText('content');
+	const ydoc = new Y.Doc();
+	const ytext = ydoc.getText('content');
 
-  let editorEl = $state<HTMLDivElement | null>(null);
-  let peers = $state<Map<number, PresenceState>>(new Map());
-  let presence = $state<ReturnType<typeof createPresence> | null>(null);
+	let editorEl = $state<HTMLDivElement | null>(null);
+	let peers = $state<Map<number, PresenceState>>(new Map());
+	let presence = $state<ReturnType<typeof createPresence> | null>(null);
 
-  onMount(() => {
-    presence = createPresence(ydoc, `doc:${docId}`, user);
-    const off = presence.onChange((s) => (peers = new Map(s)));
+	onMount(() => {
+		presence = createPresence(ydoc, `doc:${docId}`, user);
+		const off = presence.onChange((s) => (peers = new Map(s)));
 
-    // Update local cursor every selection change.
-    const sel = () => {
-      const range = window.getSelection()?.rangeCount ? window.getSelection()!.getRangeAt(0) : null;
-      presence!.setLocal({
-        user,
-        cursor: range ? { anchor: range.startOffset, head: range.endOffset } : null,
-        selection: range ? selectionRects(range) : null,
-        typing: false,
-        lastActiveAt: Date.now(),
-      });
-    };
-    document.addEventListener('selectionchange', sel);
-    return () => {
-      document.removeEventListener('selectionchange', sel);
-      off();
-      presence!.destroy();
-    };
-  });
+		// Update local cursor every selection change.
+		const sel = () => {
+			const range = window.getSelection()?.rangeCount ? window.getSelection()!.getRangeAt(0) : null;
+			presence!.setLocal({
+				user,
+				cursor: range ? { anchor: range.startOffset, head: range.endOffset } : null,
+				selection: range ? selectionRects(range) : null,
+				typing: false,
+				lastActiveAt: Date.now(),
+			});
+		};
+		document.addEventListener('selectionchange', sel);
+		return () => {
+			document.removeEventListener('selectionchange', sel);
+			off();
+			presence!.destroy();
+		};
+	});
 
-  // Filter our own clientId out of remote peers.
-  const remote = $derived(
-    Array.from(peers.entries()).filter(([cid]) => cid !== presence?.awareness.clientID),
-  );
+	// Filter our own clientId out of remote peers.
+	const remote = $derived(
+		Array.from(peers.entries()).filter(([cid]) => cid !== presence?.awareness.clientID),
+	);
 </script>
 
 <div bind:this={editorEl} contenteditable class="relative">
-  <!-- Yjs binding to editorEl elided; see collab.md -->
-  {#each remote as [cid, p] (cid)}
-    <RemoteCursor state={p} />
-  {/each}
+	<!-- Yjs binding to editorEl elided; see collab.md -->
+	{#each remote as [cid, p] (cid)}
+		<RemoteCursor state={p} />
+	{/each}
 </div>
 ```
 
 ```svelte
 <!-- RemoteCursor.svelte -->
 <script lang="ts">
-  import type { PresenceState } from '@sveltesentio/realtime-presence/schema';
-  type Props = { state: PresenceState };
-  const { state }: Props = $props();
+	import type { PresenceState } from '@sveltesentio/realtime-presence/schema';
+	type Props = { state: PresenceState };
+	const { state }: Props = $props();
 
-  // Respect prefers-reduced-motion: animate position only when motion is OK.
-  let prefersReducedMotion = $state(false);
-  $effect(() => {
-    const m = window.matchMedia('(prefers-reduced-motion: reduce)');
-    prefersReducedMotion = m.matches;
-    const cb = () => (prefersReducedMotion = m.matches);
-    m.addEventListener('change', cb);
-    return () => m.removeEventListener('change', cb);
-  });
+	// Respect prefers-reduced-motion: animate position only when motion is OK.
+	let prefersReducedMotion = $state(false);
+	$effect(() => {
+		const m = window.matchMedia('(prefers-reduced-motion: reduce)');
+		prefersReducedMotion = m.matches;
+		const cb = () => (prefersReducedMotion = m.matches);
+		m.addEventListener('change', cb);
+		return () => m.removeEventListener('change', cb);
+	});
 
-  const transition = $derived(prefersReducedMotion ? 'none' : 'transform 80ms linear');
+	const transition = $derived(prefersReducedMotion ? 'none' : 'transform 80ms linear');
 </script>
 
 {#if state.cursor && state.selection?.rects.length}
-  {#each state.selection.rects as r}
-    <div
-      class="pointer-events-none absolute"
-      style:top="{r.top}px" style:left="{r.left}px"
-      style:width="{r.width}px" style:height="{r.height}px"
-      style:background-color={state.user.color}
-      style:opacity="0.2"
-      style:transition
-    ></div>
-  {/each}
-  <div
-    class="pointer-events-none absolute h-5 w-px"
-    style:background-color={state.user.color}
-    style:transition
-    aria-hidden="true"
-  ></div>
-  <span
-    class="pointer-events-none absolute -top-5 rounded px-1 text-xs text-white"
-    style:background-color={state.user.color}
-  >{state.user.name}</span>
+	{#each state.selection.rects as r}
+		<div
+			class="pointer-events-none absolute"
+			style:top="{r.top}px"
+			style:left="{r.left}px"
+			style:width="{r.width}px"
+			style:height="{r.height}px"
+			style:background-color={state.user.color}
+			style:opacity="0.2"
+			style:transition
+		></div>
+	{/each}
+	<div
+		class="pointer-events-none absolute h-5 w-px"
+		style:background-color={state.user.color}
+		style:transition
+		aria-hidden="true"
+	></div>
+	<span
+		class="pointer-events-none absolute -top-5 rounded px-1 text-xs text-white"
+		style:background-color={state.user.color}>{state.user.name}</span
+	>
 {/if}
 ```
 
@@ -330,51 +349,51 @@ import { PresenceEvent } from '@sveltesentio/realtime-presence/schema';
 const Params = z.object({ room: z.string().min(1).max(200) });
 
 export const GET = async ({ params, locals, request }) => {
-  if (!locals.user) throw error(401);
-  const { room } = Params.parse(params);
+	if (!locals.user) throw error(401);
+	const { room } = Params.parse(params);
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const member = {
-        userId: locals.user.id,
-        name: locals.user.name,
-        avatarUrl: locals.user.avatarUrl,
-        sessionId: crypto.randomUUID(),
-      };
+	const stream = new ReadableStream({
+		async start(controller) {
+			const member = {
+				userId: locals.user.id,
+				name: locals.user.name,
+				avatarUrl: locals.user.avatarUrl,
+				sessionId: crypto.randomUUID(),
+			};
 
-      const send = (e: PresenceEvent) =>
-        controller.enqueue(`data: ${JSON.stringify(PresenceEvent.parse(e))}\n\n`);
+			const send = (e: PresenceEvent) =>
+				controller.enqueue(`data: ${JSON.stringify(PresenceEvent.parse(e))}\n\n`);
 
-      const subscriber = presenceRegistry.subscribe(room, member, send);
+			const subscriber = presenceRegistry.subscribe(room, member, send);
 
-      // Send initial snapshot
-      send({
-        type: 'snapshot',
-        room,
-        members: presenceRegistry.list(room),
-        serverTime: new Date().toISOString(),
-      });
+			// Send initial snapshot
+			send({
+				type: 'snapshot',
+				room,
+				members: presenceRegistry.list(room),
+				serverTime: new Date().toISOString(),
+			});
 
-      // 15s heartbeat keeps proxies happy + tells client we're alive
-      const heartbeat = setInterval(() => {
-        send({ type: 'heartbeat', serverTime: new Date().toISOString() });
-      }, 15_000);
+			// 15s heartbeat keeps proxies happy + tells client we're alive
+			const heartbeat = setInterval(() => {
+				send({ type: 'heartbeat', serverTime: new Date().toISOString() });
+			}, 15_000);
 
-      request.signal.addEventListener('abort', () => {
-        clearInterval(heartbeat);
-        subscriber.unsubscribe();
-      });
-    },
-  });
+			request.signal.addEventListener('abort', () => {
+				clearInterval(heartbeat);
+				subscriber.unsubscribe();
+			});
+		},
+	});
 
-  return new Response(stream, {
-    headers: {
-      'content-type': 'text/event-stream',
-      'cache-control': 'no-store',
-      'connection': 'keep-alive',
-      'x-accel-buffering': 'no', // disable nginx buffering
-    },
-  });
+	return new Response(stream, {
+		headers: {
+			'content-type': 'text/event-stream',
+			'cache-control': 'no-store',
+			connection: 'keep-alive',
+			'x-accel-buffering': 'no', // disable nginx buffering
+		},
+	});
 };
 ```
 
@@ -386,69 +405,81 @@ type Member = { userId: string; name: string; avatarUrl: string | null; sessionI
 type Subscriber = (event: PresenceEvent) => void;
 
 class PresenceRegistry {
-  private rooms = new Map<string, Map<string, { member: Member; lastSeen: number; send: Subscriber }>>();
+	private rooms = new Map<
+		string,
+		Map<string, { member: Member; lastSeen: number; send: Subscriber }>
+	>();
 
-  subscribe(room: string, member: Member, send: Subscriber) {
-    if (!this.rooms.has(room)) this.rooms.set(room, new Map());
-    const r = this.rooms.get(room)!;
-    r.set(member.sessionId, { member, lastSeen: Date.now(), send });
+	subscribe(room: string, member: Member, send: Subscriber) {
+		if (!this.rooms.has(room)) this.rooms.set(room, new Map());
+		const r = this.rooms.get(room)!;
+		r.set(member.sessionId, { member, lastSeen: Date.now(), send });
 
-    this.broadcast(room, {
-      type: 'join',
-      room,
-      userId: member.userId,
-      name: member.name,
-      avatarUrl: member.avatarUrl,
-      joinedAt: new Date().toISOString(),
-    });
+		this.broadcast(room, {
+			type: 'join',
+			room,
+			userId: member.userId,
+			name: member.name,
+			avatarUrl: member.avatarUrl,
+			joinedAt: new Date().toISOString(),
+		});
 
-    return {
-      unsubscribe: () => {
-        r.delete(member.sessionId);
-        if (r.size === 0) this.rooms.delete(room);
-        this.broadcast(room, {
-          type: 'leave',
-          room,
-          userId: member.userId,
-          leftAt: new Date().toISOString(),
-        });
-      },
-    };
-  }
+		return {
+			unsubscribe: () => {
+				r.delete(member.sessionId);
+				if (r.size === 0) this.rooms.delete(room);
+				this.broadcast(room, {
+					type: 'leave',
+					room,
+					userId: member.userId,
+					leftAt: new Date().toISOString(),
+				});
+			},
+		};
+	}
 
-  list(room: string): { userId: string; name: string; avatarUrl: string | null; joinedAt: string; lastSeenAt: string }[] {
-    const r = this.rooms.get(room);
-    if (!r) return [];
-    return Array.from(r.values()).map(({ member, lastSeen }) => ({
-      ...member,
-      joinedAt: new Date(lastSeen).toISOString(),
-      lastSeenAt: new Date(lastSeen).toISOString(),
-    }));
-  }
+	list(room: string): {
+		userId: string;
+		name: string;
+		avatarUrl: string | null;
+		joinedAt: string;
+		lastSeenAt: string;
+	}[] {
+		const r = this.rooms.get(room);
+		if (!r) return [];
+		return Array.from(r.values()).map(({ member, lastSeen }) => ({
+			...member,
+			joinedAt: new Date(lastSeen).toISOString(),
+			lastSeenAt: new Date(lastSeen).toISOString(),
+		}));
+	}
 
-  private broadcast(room: string, event: PresenceEvent) {
-    const r = this.rooms.get(room);
-    if (!r) return;
-    for (const { send } of r.values()) send(event);
-  }
+	private broadcast(room: string, event: PresenceEvent) {
+		const r = this.rooms.get(room);
+		if (!r) return;
+		for (const { send } of r.values()) send(event);
+	}
 
-  // Reaper: remove stale sessions (no heartbeat in 60s)
-  startReaper() {
-    setInterval(() => {
-      const now = Date.now();
-      for (const [room, members] of this.rooms) {
-        for (const [sessionId, { member, lastSeen }] of members) {
-          if (now - lastSeen > 60_000) {
-            members.delete(sessionId);
-            this.broadcast(room, {
-              type: 'leave', room, userId: member.userId, leftAt: new Date().toISOString(),
-            });
-          }
-        }
-        if (members.size === 0) this.rooms.delete(room);
-      }
-    }, 10_000);
-  }
+	// Reaper: remove stale sessions (no heartbeat in 60s)
+	startReaper() {
+		setInterval(() => {
+			const now = Date.now();
+			for (const [room, members] of this.rooms) {
+				for (const [sessionId, { member, lastSeen }] of members) {
+					if (now - lastSeen > 60_000) {
+						members.delete(sessionId);
+						this.broadcast(room, {
+							type: 'leave',
+							room,
+							userId: member.userId,
+							leftAt: new Date().toISOString(),
+						});
+					}
+				}
+				if (members.size === 0) this.rooms.delete(room);
+			}
+		}, 10_000);
+	}
 }
 
 export const presenceRegistry = new PresenceRegistry();
@@ -468,9 +499,9 @@ import { redis, redisSub } from './redis';
 
 await redisSub.subscribe('presence:*');
 redisSub.on('pmessage', (_pattern, channel, payload) => {
-  const room = channel.split(':')[1];
-  const event: PresenceEvent = JSON.parse(payload);
-  // forward to local subscribers of this room
+	const room = channel.split(':')[1];
+	const event: PresenceEvent = JSON.parse(payload);
+	// forward to local subscribers of this room
 });
 
 // On local broadcast:

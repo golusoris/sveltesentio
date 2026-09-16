@@ -26,13 +26,13 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [
-    paraglideVitePlugin({
-      project: './project.inlang',
-      outdir: './src/lib/paraglide'
-    }),
-    sveltekit()
-  ]
+	plugins: [
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+		}),
+		sveltekit(),
+	],
 });
 ```
 
@@ -49,8 +49,8 @@ Compiles to `src/lib/paraglide/messages.js`:
 ```ts
 import * as m from '$lib/paraglide/messages';
 
-m.hello({ name: 'Ada' });            // "Hello Ada"
-m.items({ count: 3 });               // "3 items"
+m.hello({ name: 'Ada' }); // "Hello Ada"
+m.items({ count: 3 }); // "3 items"
 ```
 
 Type-safe: missing keys, missing params, and invalid plural categories are TypeScript errors.
@@ -60,19 +60,19 @@ Type-safe: missing keys, missing params, and invalid plural categories are TypeS
 ```ts
 import { setLocale, getLocale, locales, baseLocale } from '$lib/paraglide/runtime';
 
-setLocale('de');                     // updates locale + persists per strategy
-getLocale();                          // -> 'de'
-locales;                              // ['en', 'de', ...]
+setLocale('de'); // updates locale + persists per strategy
+getLocale(); // -> 'de'
+locales; // ['en', 'de', ...]
 ```
 
 ## Locale strategies (URL / cookie / preferredLanguage)
 
 ```ts
 paraglideVitePlugin({
-  project: './project.inlang',
-  outdir: './src/lib/paraglide',
-  strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale']
-})
+	project: './project.inlang',
+	outdir: './src/lib/paraglide',
+	strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+});
 ```
 
 The `url` strategy reads/writes a path prefix (`/de/about`); `cookie` uses `PARAGLIDE_LOCALE`; `preferredLanguage` reads `Accept-Language`. Order = priority.
@@ -85,10 +85,10 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = ({ event, resolve }) =>
-  paraglideMiddleware(event.request, ({ request, locale }) => {
-    event.request = request;
-    return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
-  });
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
+		return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
+	});
 ```
 
 ## `sveltesentio` usage

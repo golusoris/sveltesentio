@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	codeChallengeS256,
-	generatePkceChallenge,
-	generateVerifier,
-} from '../src/pkce.js';
+import { codeChallengeS256, generatePkceChallenge, generateVerifier } from '../src/pkce.js';
 
 describe('PKCE helpers', () => {
 	it('generates a verifier + S256 challenge', async () => {

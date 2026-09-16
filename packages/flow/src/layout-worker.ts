@@ -17,8 +17,7 @@ import {
 } from './layout.js';
 
 /** RFC 9457 `type` URN for an error raised while laying out inside the worker. */
-export const LAYOUT_WORKER_ERROR_TYPE =
-	'https://sveltesentio.dev/problems/flow/layout-worker';
+export const LAYOUT_WORKER_ERROR_TYPE = 'https://sveltesentio.dev/problems/flow/layout-worker';
 
 /** The request envelope posted from the main thread into the layout worker. */
 export interface LayoutWorkerRequest<E extends DagEdgeLike = DagEdgeLike> {
@@ -44,8 +43,7 @@ export interface LayoutWorkerFailure {
 }
 
 export type LayoutWorkerResponse<E extends DagEdgeLike = DagEdgeLike> =
-	| LayoutWorkerSuccess<E>
-	| LayoutWorkerFailure;
+	LayoutWorkerSuccess<E> | LayoutWorkerFailure;
 
 /**
  * The async layout function `createLayoutWorker` returns: same signature as the
@@ -157,14 +155,8 @@ function postLayout<N extends SizedNode, E extends DagEdgeLike>(
  *   public signature is identical either way, so callers swap transports without
  *   code changes.
  */
-export function createLayoutWorker(
-	options: CreateLayoutWorkerOptions = {},
-): LayoutWorkerHandle {
-	const {
-		layoutOptions = {},
-		workerFactory,
-		fallbackFactory = createElkLayout,
-	} = options;
+export function createLayoutWorker(options: CreateLayoutWorkerOptions = {}): LayoutWorkerHandle {
+	const { layoutOptions = {}, workerFactory, fallbackFactory = createElkLayout } = options;
 
 	if (workerFactory && workerIsAvailable()) {
 		let worker: Worker | undefined = workerFactory();

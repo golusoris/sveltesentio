@@ -13,13 +13,13 @@ export { default as DecisionNode } from './nodes/DecisionNode.svelte';
 export { default as DataNode } from './nodes/DataNode.svelte';
 
 export {
-  type ExampleNodeData,
-  type ExampleFlowNode,
-  type ExampleNodeKind,
-  type NodeView,
-  DEFAULT_NODE_LABELS,
-  NODE_KIND_NAMES,
-  deriveNodeView,
+	type ExampleNodeData,
+	type ExampleFlowNode,
+	type ExampleNodeKind,
+	type NodeView,
+	DEFAULT_NODE_LABELS,
+	NODE_KIND_NAMES,
+	deriveNodeView,
 } from './node-view.js';
 
 /**
@@ -28,7 +28,7 @@ export {
  * `<DataNode>`. The keys match the node `type` strings the palette mints.
  */
 export const exampleNodeTypes: NodeTypes = {
-  process: ProcessNode,
-  decision: DecisionNode,
-  data: DataNode,
+	process: ProcessNode,
+	decision: DecisionNode,
+	data: DataNode,
 };

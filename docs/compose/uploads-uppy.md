@@ -28,16 +28,16 @@ Related: [uploads.md](uploads.md) (default headless path),
 
 ## When Uppy is the right call
 
-| Use case | Default ([uploads.md](uploads.md)) | Uppy Dashboard (this recipe) |
-|---|---|---|
-| Single avatar / hero image | ✅ | ❌ overkill |
-| Inline form attachment | ✅ | ❌ Dashboard hijacks layout |
-| Batch import (10-1000 files) | ⚠️ build your own grid | ✅ Dashboard ready |
-| Webcam / screencap capture | ❌ wire by hand | ✅ plugin |
-| Google Drive / Dropbox picker | ❌ | ✅ plugin (via Companion) |
-| Mobile camera roll | ⚠️ via `<input capture>` | ✅ plugin |
-| Custom branded UI | ✅ | ⚠️ skinning required |
-| Bundle budget critical | ✅ ~30 KB | ❌ ~150 KB Dashboard + plugins |
+| Use case                      | Default ([uploads.md](uploads.md)) | Uppy Dashboard (this recipe)   |
+| ----------------------------- | ---------------------------------- | ------------------------------ |
+| Single avatar / hero image    | ✅                                 | ❌ overkill                    |
+| Inline form attachment        | ✅                                 | ❌ Dashboard hijacks layout    |
+| Batch import (10-1000 files)  | ⚠️ build your own grid             | ✅ Dashboard ready             |
+| Webcam / screencap capture    | ❌ wire by hand                    | ✅ plugin                      |
+| Google Drive / Dropbox picker | ❌                                 | ✅ plugin (via Companion)      |
+| Mobile camera roll            | ⚠️ via `<input capture>`           | ✅ plugin                      |
+| Custom branded UI             | ✅                                 | ⚠️ skinning required           |
+| Bundle budget critical        | ✅ ~30 KB                          | ❌ ~150 KB Dashboard + plugins |
 
 Default to [uploads.md](uploads.md). Reach for Uppy when the
 batch / multi-source / picker matrix justifies the bundle.
@@ -67,74 +67,74 @@ principles + version drift risk).
 ```svelte
 <!-- src/lib/uploads/UppyDashboard.svelte -->
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import Uppy from '@uppy/core';
-  import Dashboard from '@uppy/dashboard';
-  import Tus from '@uppy/tus';
-  import Webcam from '@uppy/webcam';
-  import { stripExif, validateMagicBytes } from '@sveltesentio/uploads';
-  import '@uppy/core/dist/style.min.css';
-  import '@uppy/dashboard/dist/style.min.css';
+	import { onMount, onDestroy } from 'svelte';
+	import Uppy from '@uppy/core';
+	import Dashboard from '@uppy/dashboard';
+	import Tus from '@uppy/tus';
+	import Webcam from '@uppy/webcam';
+	import { stripExif, validateMagicBytes } from '@sveltesentio/uploads';
+	import '@uppy/core/dist/style.min.css';
+	import '@uppy/dashboard/dist/style.min.css';
 
-  let {
-    endpoint = '/api/uploads',
-    maxBytes = 50 * 1024 * 1024,
-    allowed = ['image/png', 'image/jpeg', 'image/webp'],
-    onComplete = () => {},
-  }: {
-    endpoint?: string;
-    maxBytes?: number;
-    allowed?: string[];
-    onComplete?: (result: { successful: unknown[]; failed: unknown[] }) => void;
-  } = $props();
+	let {
+		endpoint = '/api/uploads',
+		maxBytes = 50 * 1024 * 1024,
+		allowed = ['image/png', 'image/jpeg', 'image/webp'],
+		onComplete = () => {},
+	}: {
+		endpoint?: string;
+		maxBytes?: number;
+		allowed?: string[];
+		onComplete?: (result: { successful: unknown[]; failed: unknown[] }) => void;
+	} = $props();
 
-  let mount: HTMLDivElement;
-  let uppy: Uppy | null = null;
+	let mount: HTMLDivElement;
+	let uppy: Uppy | null = null;
 
-  onMount(() => {
-    uppy = new Uppy({
-      restrictions: {
-        maxFileSize: maxBytes,
-        allowedFileTypes: allowed,           // Uppy uses File.type — DO NOT trust
-      },
-      onBeforeFileAdded: async (file) => {
-        const sniff = await validateMagicBytes(file.data, { allowed, maxBytes });
-        if (!sniff.ok) {
-          uppy?.info({ message: `Rejected: ${sniff.reason}` }, 'error', 5000);
-          return false;                      // hard reject
-        }
-        if (file.type?.startsWith('image/')) {
-          file.data = await stripExif(file.data);   // mutate to stripped blob
-          file.size = file.data.size;
-        }
-        return true;
-      },
-    })
-      .use(Dashboard, {
-        target: mount,
-        inline: true,
-        proudlyDisplayPoweredByUppy: false,
-        height: 470,
-        theme: 'auto',                       // sync with prefers-color-scheme
-        note: `Max ${maxBytes / 1e6} MB · ${allowed.join(', ')}`,
-        locale: { strings: { dropPasteFiles: 'Drop files here or %{browseFiles}' } },
-      })
-      .use(Webcam, { target: Dashboard })
-      .use(Tus, {
-        endpoint,
-        retryDelays: [0, 1000, 3000, 5000, 10_000],
-        chunkSize: 4 * 1024 * 1024,
-        removeFingerprintOnSuccess: true,
-      });
+	onMount(() => {
+		uppy = new Uppy({
+			restrictions: {
+				maxFileSize: maxBytes,
+				allowedFileTypes: allowed, // Uppy uses File.type — DO NOT trust
+			},
+			onBeforeFileAdded: async (file) => {
+				const sniff = await validateMagicBytes(file.data, { allowed, maxBytes });
+				if (!sniff.ok) {
+					uppy?.info({ message: `Rejected: ${sniff.reason}` }, 'error', 5000);
+					return false; // hard reject
+				}
+				if (file.type?.startsWith('image/')) {
+					file.data = await stripExif(file.data); // mutate to stripped blob
+					file.size = file.data.size;
+				}
+				return true;
+			},
+		})
+			.use(Dashboard, {
+				target: mount,
+				inline: true,
+				proudlyDisplayPoweredByUppy: false,
+				height: 470,
+				theme: 'auto', // sync with prefers-color-scheme
+				note: `Max ${maxBytes / 1e6} MB · ${allowed.join(', ')}`,
+				locale: { strings: { dropPasteFiles: 'Drop files here or %{browseFiles}' } },
+			})
+			.use(Webcam, { target: Dashboard })
+			.use(Tus, {
+				endpoint,
+				retryDelays: [0, 1000, 3000, 5000, 10_000],
+				chunkSize: 4 * 1024 * 1024,
+				removeFingerprintOnSuccess: true,
+			});
 
-    uppy.on('complete', (result) => {
-      onComplete({ successful: result.successful, failed: result.failed });
-    });
-  });
+		uppy.on('complete', (result) => {
+			onComplete({ successful: result.successful, failed: result.failed });
+		});
+	});
 
-  onDestroy(() => {
-    uppy?.destroy();
-  });
+	onDestroy(() => {
+		uppy?.destroy();
+	});
 </script>
 
 <div bind:this={mount} role="region" aria-label="File upload"></div>
@@ -171,10 +171,10 @@ Browser → Uppy Dashboard → Companion (Node) → Google Drive API
 
 Companion is a Node.js service. Two deployment options:
 
-| Option | When |
-|---|---|
-| Self-host `@uppy/companion` Node service | Full control; preferred |
-| Transloadit Companion (SaaS) | Don't want to run Node; vendor lock |
+| Option                                   | When                                |
+| ---------------------------------------- | ----------------------------------- |
+| Self-host `@uppy/companion` Node service | Full control; preferred             |
+| Transloadit Companion (SaaS)             | Don't want to run Node; vendor lock |
 
 Self-host docker:
 
@@ -224,10 +224,10 @@ gzipped. Lazy-load via dynamic import:
 let UppyDashboard: typeof import('./UppyDashboard.svelte').default;
 
 async function open() {
-  if (!UppyDashboard) {
-    UppyDashboard = (await import('./UppyDashboard.svelte')).default;
-  }
-  showModal = true;
+	if (!UppyDashboard) {
+		UppyDashboard = (await import('./UppyDashboard.svelte')).default;
+	}
+	showModal = true;
 }
 ```
 
@@ -241,11 +241,11 @@ Uppy uses CSS custom properties — bridge to oklch tokens per
 
 ```css
 :global(.uppy-Root) {
-  --uppy-c-blue: var(--color-accent);
-  --uppy-c-red: var(--color-error);
-  --uppy-c-green: var(--color-success);
-  --uppy-c-bg: var(--color-bg);
-  --uppy-c-fg: var(--color-fg);
+	--uppy-c-blue: var(--color-accent);
+	--uppy-c-red: var(--color-error);
+	--uppy-c-green: var(--color-success);
+	--uppy-c-bg: var(--color-bg);
+	--uppy-c-fg: var(--color-fg);
 }
 ```
 
@@ -281,20 +281,20 @@ import UppyDashboard from '$lib/uploads/UppyDashboard.svelte';
 import { vi } from 'vitest';
 
 test('Dashboard rejects spoofed file via onBeforeFileAdded', async () => {
-  const onComplete = vi.fn();
-  const { container } = render(UppyDashboard, { props: { onComplete } });
+	const onComplete = vi.fn();
+	const { container } = render(UppyDashboard, { props: { onComplete } });
 
-  const file = new File(['<script>alert(1)</script>'], 'evil.png', {
-    type: 'image/png',                       // user-controlled lie
-  });
+	const file = new File(['<script>alert(1)</script>'], 'evil.png', {
+		type: 'image/png', // user-controlled lie
+	});
 
-  // dispatch via the file input Uppy renders
-  const input = container.querySelector('input[type=file]') as HTMLInputElement;
-  Object.defineProperty(input, 'files', { value: [file] });
-  input.dispatchEvent(new Event('change', { bubbles: true }));
+	// dispatch via the file input Uppy renders
+	const input = container.querySelector('input[type=file]') as HTMLInputElement;
+	Object.defineProperty(input, 'files', { value: [file] });
+	input.dispatchEvent(new Event('change', { bubbles: true }));
 
-  await screen.findByText(/Rejected/);
-  expect(onComplete).not.toHaveBeenCalled();
+	await screen.findByText(/Rejected/);
+	expect(onComplete).not.toHaveBeenCalled();
 });
 ```
 
@@ -303,7 +303,7 @@ budget — Uppy's wire interactions surface only with a real server.
 
 ## Migration from raw Dashboard / non-pipeline integration
 
-If you adopted Uppy *without* the `@sveltesentio/uploads` validate +
+If you adopted Uppy _without_ the `@sveltesentio/uploads` validate +
 strip pipeline:
 
 1. Add `onBeforeFileAdded` hook with `validateMagicBytes` + `stripExif`.

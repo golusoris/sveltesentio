@@ -12,12 +12,12 @@ Same rationale as `golusoris/golusoris/docs/architecture/README.md` — sveltese
 
 ## Levels we maintain
 
-| Level | File | Audience | When to update |
-|---|---|---|---|
-| **L1 Context** | [`context.puml`](context.puml) | Anyone (PMs, ops, security) | A new external system / actor enters the picture. |
-| **L2 Container** | [`container.puml`](container.puml) | Engineers, ops | A new top-level `@sveltesentio/*` package lands. |
-| **L3 Component** | `component-<package>.puml` | Engineers working on that package | Internal architecture changes worth recording. |
-| **L4 Code** | (skipped) | — | Read the code; JSDoc / TSDoc + per-package `AGENTS.md` cover this. |
+| Level            | File                               | Audience                          | When to update                                                     |
+| ---------------- | ---------------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| **L1 Context**   | [`context.puml`](context.puml)     | Anyone (PMs, ops, security)       | A new external system / actor enters the picture.                  |
+| **L2 Container** | [`container.puml`](container.puml) | Engineers, ops                    | A new top-level `@sveltesentio/*` package lands.                   |
+| **L3 Component** | `component-<package>.puml`         | Engineers working on that package | Internal architecture changes worth recording.                     |
+| **L4 Code**      | (skipped)                          | —                                 | Read the code; JSDoc / TSDoc + per-package `AGENTS.md` cover this. |
 
 L4 is intentionally omitted. Code is the source of truth for code-level structure; diagrams duplicate and rot.
 

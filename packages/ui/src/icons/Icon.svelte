@@ -55,7 +55,7 @@ by assistive tech. Pass `label` to make it MEANINGFUL — it then becomes
 
 {#if Resolved}
 	<Resolved
-		size={size}
+		{size}
 		class={className}
 		aria-hidden={decorative ? 'true' : undefined}
 		role={decorative ? undefined : 'img'}

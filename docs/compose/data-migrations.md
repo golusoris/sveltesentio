@@ -14,7 +14,7 @@
 
 Data migrations are **the most dangerous boring work in any
 codebase**. The difference between a seamless rollout and a
-multi-hour outage is the discipline applied to *boring* steps. The
+multi-hour outage is the discipline applied to _boring_ steps. The
 patterns below prioritize **safety, reversibility-by-roll-forward,
 and observability over velocity**. A migration that "usually works"
 is a migration that will take the database down.
@@ -95,33 +95,33 @@ import { z } from 'zod';
 import { clock } from '@sveltesentio/core/clock';
 
 export const MigrationRecord = z.object({
-  id: z.string().regex(/^\d{8}-\d{4}-[a-z0-9-]+$/),
-  kind: z.enum(['schema', 'data']),
-  appliedAt: z.string().datetime(),
-  durationMs: z.number().int().nonnegative(),
-  actor: z.string().min(1),
-  checksum: z.string().length(64),
-  status: z.enum(['running', 'succeeded', 'failed', 'partial']),
+	id: z.string().regex(/^\d{8}-\d{4}-[a-z0-9-]+$/),
+	kind: z.enum(['schema', 'data']),
+	appliedAt: z.string().datetime(),
+	durationMs: z.number().int().nonnegative(),
+	actor: z.string().min(1),
+	checksum: z.string().length(64),
+	status: z.enum(['running', 'succeeded', 'failed', 'partial']),
 });
 
 export async function runMigration(id: string) {
-  const conn = await connect(MIGRATION_ROLE);
-  await conn.query('SET lock_timeout = $1', [LOCK_TIMEOUT_MS]);
-  await conn.query('SET statement_timeout = $1', [STATEMENT_TIMEOUT_MS]);
+	const conn = await connect(MIGRATION_ROLE);
+	await conn.query('SET lock_timeout = $1', [LOCK_TIMEOUT_MS]);
+	await conn.query('SET statement_timeout = $1', [STATEMENT_TIMEOUT_MS]);
 
-  const existing = await conn.findOne('migrations', { id });
-  if (existing?.status === 'succeeded') return { skipped: true };
+	const existing = await conn.findOne('migrations', { id });
+	if (existing?.status === 'succeeded') return { skipped: true };
 
-  const started = clock.now();
-  await conn.insertOrUpdate('migrations', {
-    id,
-    kind: loadKind(id),
-    appliedAt: started.toISOString(),
-    actor: process.env.MIGRATION_ACTOR ?? 'unknown',
-    checksum: await checksum(id),
-    status: 'running',
-  });
-  // run the SQL or TS module; catch, set status 'failed', re-throw
+	const started = clock.now();
+	await conn.insertOrUpdate('migrations', {
+		id,
+		kind: loadKind(id),
+		appliedAt: started.toISOString(),
+		actor: process.env.MIGRATION_ACTOR ?? 'unknown',
+		checksum: await checksum(id),
+		status: 'running',
+	});
+	// run the SQL or TS module; catch, set status 'failed', re-throw
 }
 ```
 
@@ -173,7 +173,7 @@ Five single-step rules:
    constant default is `AccessExclusiveLock`-brief on PG11+; on
    older or with computed default, it rewrites → long outage.
 5. **Check constraint** adds are `NOT VALID` + `VALIDATE
-   CONSTRAINT` later; otherwise they scan the whole table under
+CONSTRAINT` later; otherwise they scan the whole table under
    lock.
 
 ## Expand / backfill / contract (THE pattern)
@@ -215,23 +215,23 @@ import { makeBackfill } from '@sveltesentio/db/migrate';
 import { z } from 'zod';
 
 export default makeBackfill({
-  id: '20260418-0002-backfill-users-email-normalized',
-  batchSize: 500,
-  pollInterval: 50,
-  select: `
+	id: '20260418-0002-backfill-users-email-normalized',
+	batchSize: 500,
+	pollInterval: 50,
+	select: `
     SELECT id, email FROM users
     WHERE email_normalized IS NULL
     ORDER BY id ASC
     LIMIT $1
   `,
-  apply: async (tx, rows) => {
-    for (const r of rows) {
-      await tx.query(
-        'UPDATE users SET email_normalized = $1 WHERE id = $2 AND email_normalized IS NULL',
-        [normalize(r.email), r.id],
-      );
-    }
-  },
+	apply: async (tx, rows) => {
+		for (const r of rows) {
+			await tx.query(
+				'UPDATE users SET email_normalized = $1 WHERE id = $2 AND email_normalized IS NULL',
+				[normalize(r.email), r.id],
+			);
+		}
+	},
 });
 ```
 
@@ -247,7 +247,7 @@ Eight backfill rules:
    live traffic; avoids replication lag spikes.
 5. **Observe via OTel** — `migration.backfill.rows` counter,
    `migration.backfill.batch_ms` histogram, `migration.backfill.
-   remaining` gauge.
+remaining` gauge.
 6. **Alert on stalls** — no progress for 5 minutes at expected
    rate = page on-call.
 7. **Can run as a queue worker** per
@@ -262,8 +262,8 @@ Eight backfill rules:
 ```ts
 // app code
 const email = (await flags.isOn('users.read.email_normalized', { userId: ctx.userId }))
-  ? row.email_normalized
-  : normalize(row.email);
+	? row.email_normalized
+	: normalize(row.email);
 ```
 
 Six cutover rules:
@@ -307,7 +307,7 @@ Seven contract rules:
 5. **`SET NOT NULL` on a populated column is a full-table
    `AccessExclusiveLock`** — plan for a maintenance window for
    very large tables, or use `CHECK (email_normalized IS NOT
-   NULL) NOT VALID` + `VALIDATE CONSTRAINT`.
+NULL) NOT VALID` + `VALIDATE CONSTRAINT`.
 6. **Backup PITR marker** created right before contract — roll
    forward is the path, but PITR lets you recover if the contract
    surfaces a hidden reader.
@@ -321,17 +321,17 @@ Seven contract rules:
 import { makeWorker } from '$lib/server/queue';
 
 export const backfillWorker = makeWorker(
-  'migration.backfill',
-  PayloadSchema,
-  async ({ migrationId, batchSize }) => {
-    const { done, processed } = await runOneBatch(migrationId, batchSize);
-    if (done) {
-      await db.migrations.setStatus(migrationId, 'succeeded');
-      return { completed: true };
-    }
-    await queue.enqueue('migration.backfill', { migrationId, batchSize }, { delay: 50 });
-    return { processed };
-  },
+	'migration.backfill',
+	PayloadSchema,
+	async ({ migrationId, batchSize }) => {
+		const { done, processed } = await runOneBatch(migrationId, batchSize);
+		if (done) {
+			await db.migrations.setStatus(migrationId, 'succeeded');
+			return { completed: true };
+		}
+		await queue.enqueue('migration.backfill', { migrationId, batchSize }, { delay: 50 });
+		return { processed };
+	},
 );
 ```
 
@@ -354,13 +354,13 @@ Six queue-worker rules:
 
 Five risk classes (label every migration):
 
-| Class | Example | Lock | Pre-deploy | Window |
-|---|---|---|---|---|
-| R1 low | nullable column add, index create concurrently | brief | PR review | anytime |
-| R2 medium | `NOT NULL` with default on new column, PG11+ | brief | PR + ops review | anytime |
-| R3 expand | expand phase of parallel-change | brief | PR + ops + plan | anytime |
-| R4 cutover | flag-gated read switch | none | PR + rollout plan | business hours |
-| R5 contract | drop column/table, `SET NOT NULL` on existing | long | PR + ops + window | maintenance window |
+| Class       | Example                                        | Lock  | Pre-deploy        | Window             |
+| ----------- | ---------------------------------------------- | ----- | ----------------- | ------------------ |
+| R1 low      | nullable column add, index create concurrently | brief | PR review         | anytime            |
+| R2 medium   | `NOT NULL` with default on new column, PG11+   | brief | PR + ops review   | anytime            |
+| R3 expand   | expand phase of parallel-change                | brief | PR + ops + plan   | anytime            |
+| R4 cutover  | flag-gated read switch                         | none  | PR + rollout plan | business hours     |
+| R5 contract | drop column/table, `SET NOT NULL` on existing  | long  | PR + ops + window | maintenance window |
 
 Six risk rules:
 
@@ -467,12 +467,12 @@ Bounded attributes only:
 
 ```ts
 export const MIGRATION_ATTRIBUTES = [
-  'migration.id',              // bounded per release — not unbounded user input
-  'migration.kind',            // schema | data
-  'migration.phase',           // expand | backfill | cutover | contract
-  'migration.risk',            // r1-r5
-  'migration.outcome',         // succeeded | failed | partial | skipped
-  'migration.duration_bucket', // <1s | <10s | <1m | <10m | <1h | >1h
+	'migration.id', // bounded per release — not unbounded user input
+	'migration.kind', // schema | data
+	'migration.phase', // expand | backfill | cutover | contract
+	'migration.risk', // r1-r5
+	'migration.outcome', // succeeded | failed | partial | skipped
+	'migration.duration_bucket', // <1s | <10s | <1m | <10m | <1h | >1h
 ] as const;
 ```
 

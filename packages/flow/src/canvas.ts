@@ -5,14 +5,14 @@
 export { default as FlowCanvas } from './FlowCanvas.svelte';
 
 export {
-  type CanvasNodeLike,
-  type CanvasEdgeLike,
-  type FallbackNodeSize,
-  type FocusDirection,
-  type OnLayout,
-  resolveNodeSize,
-  applyElkLayout,
-  focusOrder,
-  nextFocusTarget,
-  canvasAriaLabel,
+	type CanvasNodeLike,
+	type CanvasEdgeLike,
+	type FallbackNodeSize,
+	type FocusDirection,
+	type OnLayout,
+	resolveNodeSize,
+	applyElkLayout,
+	focusOrder,
+	nextFocusTarget,
+	canvasAriaLabel,
 } from './canvas-model.js';

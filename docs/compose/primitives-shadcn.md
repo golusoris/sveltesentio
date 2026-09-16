@@ -41,23 +41,23 @@ The `init` generates `components.json` + installs peer deps
 
 ```json
 {
-  "$schema": "https://shadcn-svelte.com/schema.json",
-  "style": "default",
-  "tailwind": {
-    "config": "src/app.css",
-    "css": "src/app.css",
-    "baseColor": "neutral",
-    "cssVariables": true
-  },
-  "aliases": {
-    "components": "$lib/components",
-    "utils": "$lib/utils",
-    "ui": "$lib/components/ui",
-    "hooks": "$lib/hooks",
-    "lib": "$lib"
-  },
-  "typescript": true,
-  "registry": "https://shadcn-svelte.com/registry"
+	"$schema": "https://shadcn-svelte.com/schema.json",
+	"style": "default",
+	"tailwind": {
+		"config": "src/app.css",
+		"css": "src/app.css",
+		"baseColor": "neutral",
+		"cssVariables": true
+	},
+	"aliases": {
+		"components": "$lib/components",
+		"utils": "$lib/utils",
+		"ui": "$lib/components/ui",
+		"hooks": "$lib/hooks",
+		"lib": "$lib"
+	},
+	"typescript": true,
+	"registry": "https://shadcn-svelte.com/registry"
 }
 ```
 
@@ -76,7 +76,7 @@ Committed to the repo — consumer owns it.
 
 ```svelte
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
 </script>
 
 <Button variant="default">Save</Button>
@@ -125,18 +125,18 @@ directly:
 ```ts
 // button.svelte (generated, then edited)
 const buttonVariants = tv({
-  base: '...',
-  variants: {
-    variant: {
-      default: 'bg-accent text-accent-fg hover:bg-accent/90',
-      destructive: 'bg-danger text-bg hover:bg-danger/90',
-      outline: 'border border-border bg-bg hover:bg-muted',
-      secondary: 'bg-muted text-muted-fg hover:bg-muted/80',
-      ghost: 'hover:bg-muted hover:text-fg',
-      link: 'text-accent underline-offset-4 hover:underline',
-    },
-    // …
-  },
+	base: '...',
+	variants: {
+		variant: {
+			default: 'bg-accent text-accent-fg hover:bg-accent/90',
+			destructive: 'bg-danger text-bg hover:bg-danger/90',
+			outline: 'border border-border bg-bg hover:bg-muted',
+			secondary: 'bg-muted text-muted-fg hover:bg-muted/80',
+			ghost: 'hover:bg-muted hover:text-fg',
+			link: 'text-accent underline-offset-4 hover:underline',
+		},
+		// …
+	},
 });
 ```
 
@@ -191,12 +191,12 @@ Add icons per import:
 
 ```svelte
 <script lang="ts">
-  import { Save, Trash2 } from 'lucide-svelte';
+	import { Save, Trash2 } from 'lucide-svelte';
 </script>
 
 <Button>
-  <Save class="mr-2 size-4" />
-  Save
+	<Save class="mr-2 size-4" />
+	Save
 </Button>
 ```
 
@@ -212,21 +212,21 @@ shadcn uses `tailwind-variants` (tv):
 import { tv, type VariantProps } from 'tailwind-variants';
 
 export const buttonVariants = tv({
-  base: 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
-  variants: {
-    variant: {
-      default: 'bg-accent text-accent-fg hover:bg-accent/90',
-      // …
-      brand: 'bg-brand text-brand-fg hover:bg-brand/90', // new app variant
-    },
-    size: {
-      default: 'h-10 px-4 py-2',
-      sm: 'h-9 px-3',
-      lg: 'h-11 px-8',
-      icon: 'h-10 w-10',
-    },
-  },
-  defaultVariants: { variant: 'default', size: 'default' },
+	base: 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-ring focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+	variants: {
+		variant: {
+			default: 'bg-accent text-accent-fg hover:bg-accent/90',
+			// …
+			brand: 'bg-brand text-brand-fg hover:bg-brand/90', // new app variant
+		},
+		size: {
+			default: 'h-10 px-4 py-2',
+			sm: 'h-9 px-3',
+			lg: 'h-11 px-8',
+			icon: 'h-10 w-10',
+		},
+	},
+	defaultVariants: { variant: 'default', size: 'default' },
 });
 
 export type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
@@ -246,8 +246,8 @@ import { axe } from 'jest-axe';
 import { Dialog } from '$lib/components/ui/dialog';
 
 test('dialog is axe-clean', async () => {
-  const { container } = render(Dialog, { props: { open: true } });
-  expect(await axe(container)).toHaveNoViolations();
+	const { container } = render(Dialog, { props: { open: true } });
+	expect(await axe(container)).toHaveNoViolations();
 });
 ```
 

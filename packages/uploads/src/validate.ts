@@ -54,9 +54,7 @@ export async function validateUpload(
 }
 
 /** Sniff a type from a raw byte buffer (server-side / non-`Blob` inputs). */
-export async function detectFileType(
-	bytes: Uint8Array,
-): Promise<DetectedFileType | undefined> {
+export async function detectFileType(bytes: Uint8Array): Promise<DetectedFileType | undefined> {
 	const sniffed = await fileTypeFromBuffer(bytes);
 	return sniffed ? { mime: sniffed.mime, ext: sniffed.ext } : undefined;
 }

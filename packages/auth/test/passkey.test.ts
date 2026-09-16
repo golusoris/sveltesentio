@@ -10,7 +10,8 @@ vi.mock('@simplewebauthn/browser', () => ({
 	browserSupportsWebAuthn,
 }));
 
-const { registerPasskey, authenticatePasskey, passkeysSupported } = await import('../src/passkey.js');
+const { registerPasskey, authenticatePasskey, passkeysSupported } =
+	await import('../src/passkey.js');
 
 describe('passkey wrappers', () => {
 	beforeEach(() => {

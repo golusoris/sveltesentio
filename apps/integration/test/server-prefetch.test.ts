@@ -10,24 +10,24 @@ import type { Item } from '../src/server-prefetch.js';
 
 /** A fetch stub returning a JSON item for `/items/{id}`. */
 function okFetch(item: Item): typeof globalThis.fetch {
-	return (() =>
+	return () =>
 		Promise.resolve(
 			new Response(JSON.stringify(item), {
 				status: 200,
 				headers: { 'content-type': 'application/json' },
 			}),
-		));
+		);
 }
 
 /** A fetch stub returning an RFC 9457 problem document. */
 function problemFetch(): typeof globalThis.fetch {
-	return (() =>
+	return () =>
 		Promise.resolve(
 			new Response(
 				JSON.stringify({ type: 'https://err/not-found', title: 'No such item', status: 404 }),
 				{ status: 404, headers: { 'content-type': 'application/problem+json' } },
 			),
-		));
+		);
 }
 
 describe('api + query SSR prefetch composition', () => {

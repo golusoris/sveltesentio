@@ -9,12 +9,8 @@ import {
 
 describe('originOf', () => {
 	it('extracts the origin from an absolute URL', () => {
-		expect(originOf('https://cdn.example.com/emulatorjs/data/')).toBe(
-			'https://cdn.example.com',
-		);
-		expect(originOf('https://cdn.example.com:8443/x')).toBe(
-			'https://cdn.example.com:8443',
-		);
+		expect(originOf('https://cdn.example.com/emulatorjs/data/')).toBe('https://cdn.example.com');
+		expect(originOf('https://cdn.example.com:8443/x')).toBe('https://cdn.example.com:8443');
 	});
 
 	it('returns undefined for relative / empty URLs', () => {

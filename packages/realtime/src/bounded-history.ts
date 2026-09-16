@@ -18,11 +18,7 @@
  * first. A `limit` of 0 or less keeps nothing, which is the honest reading of
  * "hold no history"; the callers default it to 100.
  */
-export function appendBounded<T>(
-	current: readonly T[],
-	batch: readonly T[],
-	limit: number,
-): T[] {
+export function appendBounded<T>(current: readonly T[], batch: readonly T[], limit: number): T[] {
 	if (limit <= 0) return [];
 	const next = current.concat(batch);
 	return next.length > limit ? next.slice(next.length - limit) : next;

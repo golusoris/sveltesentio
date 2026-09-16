@@ -58,18 +58,15 @@ No npm dep — the API is native. A thin wrapper worth writing:
 ```ts
 // src/lib/fs/index.ts
 export function supportsFileSystemAccess(): boolean {
-  return typeof window !== 'undefined'
-    && 'showOpenFilePicker' in window;
+	return typeof window !== 'undefined' && 'showOpenFilePicker' in window;
 }
 
 export function supportsDirectoryPicker(): boolean {
-  return typeof window !== 'undefined'
-    && 'showDirectoryPicker' in window;
+	return typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 }
 
 export function supportsSavePicker(): boolean {
-  return typeof window !== 'undefined'
-    && 'showSaveFilePicker' in window;
+	return typeof window !== 'undefined' && 'showSaveFilePicker' in window;
 }
 ```
 
@@ -80,53 +77,56 @@ Every entry point starts with the detect.
 ```svelte
 <!-- src/lib/fs/OpenButton.svelte -->
 <script lang="ts">
-  import { supportsFileSystemAccess } from '$lib/fs';
+	import { supportsFileSystemAccess } from '$lib/fs';
 
-  let { accept, onFile }: {
-    accept?: Record<string, string[]>;
-    onFile: (file: File, handle?: FileSystemFileHandle) => void;
-  } = $props();
+	let {
+		accept,
+		onFile,
+	}: {
+		accept?: Record<string, string[]>;
+		onFile: (file: File, handle?: FileSystemFileHandle) => void;
+	} = $props();
 
-  let input: HTMLInputElement | undefined = $state();
+	let input: HTMLInputElement | undefined = $state();
 
-  async function openViaAPI() {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: accept ? [{ description: 'Files', accept }] : undefined,
-        multiple: false,
-        excludeAcceptAllOption: false,
-      });
-      const file = await handle.getFile();
-      onFile(file, handle);
-    } catch (err) {
-      if ((err as DOMException).name === 'AbortError') return;
-      throw err;
-    }
-  }
+	async function openViaAPI() {
+		try {
+			const [handle] = await window.showOpenFilePicker({
+				types: accept ? [{ description: 'Files', accept }] : undefined,
+				multiple: false,
+				excludeAcceptAllOption: false,
+			});
+			const file = await handle.getFile();
+			onFile(file, handle);
+		} catch (err) {
+			if ((err as DOMException).name === 'AbortError') return;
+			throw err;
+		}
+	}
 
-  function openViaInput() {
-    input?.click();
-  }
+	function openViaInput() {
+		input?.click();
+	}
 
-  function handleInput(event: Event) {
-    const el = event.target as HTMLInputElement;
-    const file = el.files?.[0];
-    if (file) onFile(file);
-    el.value = '';
-  }
+	function handleInput(event: Event) {
+		const el = event.target as HTMLInputElement;
+		const file = el.files?.[0];
+		if (file) onFile(file);
+		el.value = '';
+	}
 </script>
 
 {#if supportsFileSystemAccess()}
-  <button onclick={openViaAPI}>Open file…</button>
+	<button onclick={openViaAPI}>Open file…</button>
 {:else}
-  <button onclick={openViaInput}>Open file…</button>
-  <input
-    bind:this={input}
-    type="file"
-    accept={accept ? Object.keys(accept).join(',') : undefined}
-    class="sr-only"
-    onchange={handleInput}
-  />
+	<button onclick={openViaInput}>Open file…</button>
+	<input
+		bind:this={input}
+		type="file"
+		accept={accept ? Object.keys(accept).join(',') : undefined}
+		class="sr-only"
+		onchange={handleInput}
+	/>
 {/if}
 ```
 
@@ -144,37 +144,35 @@ Three invariants:
 
 ```svelte
 <script lang="ts">
-  import { supportsSavePicker } from '$lib/fs';
+	import { supportsSavePicker } from '$lib/fs';
 
-  async function saveAs(content: string | Blob, suggestedName: string) {
-    if (supportsSavePicker()) {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName,
-          types: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        return handle;
-      } catch (err) {
-        if ((err as DOMException).name === 'AbortError') return;
-        throw err;
-      }
-    }
+	async function saveAs(content: string | Blob, suggestedName: string) {
+		if (supportsSavePicker()) {
+			try {
+				const handle = await window.showSaveFilePicker({
+					suggestedName,
+					types: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }],
+				});
+				const writable = await handle.createWritable();
+				await writable.write(content);
+				await writable.close();
+				return handle;
+			} catch (err) {
+				if ((err as DOMException).name === 'AbortError') return;
+				throw err;
+			}
+		}
 
-    // Fallback: download link.
-    const blob = content instanceof Blob
-      ? content
-      : new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = suggestedName;
-    a.click();
-    URL.revokeObjectURL(url);
-    return null;
-  }
+		// Fallback: download link.
+		const blob = content instanceof Blob ? content : new Blob([content], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = suggestedName;
+		a.click();
+		URL.revokeObjectURL(url);
+		return null;
+	}
 </script>
 ```
 
@@ -184,7 +182,7 @@ Two invariants:
    writable stream holds a lock on the file; user can't re-save.
 2. **Fallback downloads via blob URL, never data: URL.** data: URLs
    fail past ~2MB and pollute browser history. Always `URL.createObjectURL`
-   + `revokeObjectURL`.
+   - `revokeObjectURL`.
 
 ## Save-back — reuse the handle
 
@@ -193,53 +191,53 @@ Cmd+S without a second picker:
 
 ```svelte
 <script lang="ts">
-  let content = $state<string>('');
-  let handle = $state<FileSystemFileHandle | null>(null);
-  let dirty = $state(false);
+	let content = $state<string>('');
+	let handle = $state<FileSystemFileHandle | null>(null);
+	let dirty = $state(false);
 
-  async function open() {
-    const [h] = await window.showOpenFilePicker();
-    handle = h;
-    content = await (await h.getFile()).text();
-    dirty = false;
-  }
+	async function open() {
+		const [h] = await window.showOpenFilePicker();
+		handle = h;
+		content = await (await h.getFile()).text();
+		dirty = false;
+	}
 
-  async function save() {
-    if (!handle) return saveAs();
-    const writable = await handle.createWritable();
-    await writable.write(content);
-    await writable.close();
-    dirty = false;
-  }
+	async function save() {
+		if (!handle) return saveAs();
+		const writable = await handle.createWritable();
+		await writable.write(content);
+		await writable.close();
+		dirty = false;
+	}
 
-  async function saveAs() {
-    const h = await window.showSaveFilePicker({
-      suggestedName: 'document.txt',
-    });
-    const w = await h.createWritable();
-    await w.write(content);
-    await w.close();
-    handle = h;
-    dirty = false;
-  }
+	async function saveAs() {
+		const h = await window.showSaveFilePicker({
+			suggestedName: 'document.txt',
+		});
+		const w = await h.createWritable();
+		await w.write(content);
+		await w.close();
+		handle = h;
+		dirty = false;
+	}
 
-  $effect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        save();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
+	$effect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+				e.preventDefault();
+				save();
+			}
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
 </script>
 
 <header>
-  <span>{handle?.name ?? 'Untitled'}{dirty ? ' •' : ''}</span>
-  <button onclick={open}>Open…</button>
-  <button onclick={save} disabled={!dirty}>Save</button>
-  <button onclick={saveAs}>Save as…</button>
+	<span>{handle?.name ?? 'Untitled'}{dirty ? ' •' : ''}</span>
+	<button onclick={open}>Open…</button>
+	<button onclick={save} disabled={!dirty}>Save</button>
+	<button onclick={saveAs}>Save as…</button>
 </header>
 
 <textarea bind:value={content} oninput={() => (dirty = true)}></textarea>
@@ -255,10 +253,10 @@ not**. On reload, re-request:
 
 ```ts
 async function ensureReadWrite(handle: FileSystemHandle): Promise<boolean> {
-  const opts = { mode: 'readwrite' as const };
-  if ((await handle.queryPermission(opts)) === 'granted') return true;
-  if ((await handle.requestPermission(opts)) === 'granted') return true;
-  return false;
+	const opts = { mode: 'readwrite' as const };
+	if ((await handle.queryPermission(opts)) === 'granted') return true;
+	if ((await handle.requestPermission(opts)) === 'granted') return true;
+	return false;
 }
 ```
 
@@ -274,21 +272,19 @@ Handles serialize to IDB via structured clone:
 import { openDB } from 'idb';
 
 const dbPromise = openDB('sveltesentio-fs', 1, {
-  upgrade(db) {
-    db.createObjectStore('handles');
-  },
+	upgrade(db) {
+		db.createObjectStore('handles');
+	},
 });
 
 export async function rememberHandle(key: string, handle: FileSystemHandle) {
-  const db = await dbPromise;
-  await db.put('handles', handle, key);
+	const db = await dbPromise;
+	await db.put('handles', handle, key);
 }
 
-export async function recallHandle(
-  key: string,
-): Promise<FileSystemHandle | undefined> {
-  const db = await dbPromise;
-  return db.get('handles', key);
+export async function recallHandle(key: string): Promise<FileSystemHandle | undefined> {
+	const db = await dbPromise;
+	return db.get('handles', key);
 }
 ```
 
@@ -300,12 +296,12 @@ Purge `sveltesentio-fs` + all shell state when the session ends.
 
 ```svelte
 <script lang="ts">
-  async function openProject() {
-    const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
-    for await (const [name, entry] of dir.entries()) {
-      console.warn('entry', name, entry.kind);
-    }
-  }
+	async function openProject() {
+		const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+		for await (const [name, entry] of dir.entries()) {
+			console.warn('entry', name, entry.kind);
+		}
+	}
 </script>
 ```
 
@@ -327,16 +323,16 @@ defensive copy:
 
 ```ts
 async function safePickDirectory(): Promise<FileSystemDirectoryHandle | null> {
-  try {
-    return await window.showDirectoryPicker({ mode: 'readwrite' });
-  } catch (err) {
-    if ((err as DOMException).name === 'AbortError') return null;
-    if ((err as DOMException).name === 'SecurityError') {
-      alert('That folder is protected by your browser. Pick a different folder.');
-      return null;
-    }
-    throw err;
-  }
+	try {
+		return await window.showDirectoryPicker({ mode: 'readwrite' });
+	} catch (err) {
+		if ((err as DOMException).name === 'AbortError') return null;
+		if ((err as DOMException).name === 'SecurityError') {
+			alert('That folder is protected by your browser. Pick a different folder.');
+			return null;
+		}
+		throw err;
+	}
 }
 ```
 
@@ -348,18 +344,18 @@ Files from disk are **user input**. Parse with Zod at the boundary:
 import { z } from 'zod';
 
 const ProjectSchema = z.object({
-  version: z.literal('1'),
-  title: z.string(),
-  nodes: z.array(z.object({ id: z.string(), type: z.string() })),
+	version: z.literal('1'),
+	title: z.string(),
+	nodes: z.array(z.object({ id: z.string(), type: z.string() })),
 });
 
 async function loadProject(handle: FileSystemFileHandle) {
-  const file = await handle.getFile();
-  if (file.size > 10 * 1024 * 1024) throw new Error('File too large');
-  const text = await file.text();
-  const parsed = ProjectSchema.safeParse(JSON.parse(text));
-  if (!parsed.success) throw new Error('Invalid project format');
-  return parsed.data;
+	const file = await handle.getFile();
+	if (file.size > 10 * 1024 * 1024) throw new Error('File too large');
+	const text = await file.text();
+	const parsed = ProjectSchema.safeParse(JSON.parse(text));
+	if (!parsed.success) throw new Error('Invalid project format');
+	return parsed.data;
 }
 ```
 
@@ -405,10 +401,10 @@ persistent storage to reduce eviction risk:
 
 ```ts
 if (navigator.storage?.persist) {
-  const granted = await navigator.storage.persist();
-  if (!granted) {
-    console.warn('Storage is not persistent; handles may be evicted.');
-  }
+	const granted = await navigator.storage.persist();
+	if (!granted) {
+		console.warn('Storage is not persistent; handles may be evicted.');
+	}
 }
 ```
 
@@ -424,11 +420,11 @@ import { vi } from 'vitest';
 
 const mockFile = new File(['{"version":"1","title":"T","nodes":[]}'], 'p.json');
 const mockHandle = {
-  getFile: vi.fn().mockResolvedValue(mockFile),
-  createWritable: vi.fn().mockResolvedValue({
-    write: vi.fn(),
-    close: vi.fn(),
-  }),
+	getFile: vi.fn().mockResolvedValue(mockFile),
+	createWritable: vi.fn().mockResolvedValue({
+		write: vi.fn(),
+		close: vi.fn(),
+	}),
 };
 (window as any).showOpenFilePicker = vi.fn().mockResolvedValue([mockHandle]);
 ```
@@ -438,13 +434,13 @@ isn't easily scriptable in Playwright; test the fallback):
 
 ```ts
 test('open fallback', async ({ page }) => {
-  await page.goto('/editor');
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser'),
-    page.click('text=Open file…'),
-  ]);
-  await fileChooser.setFiles('test-fixtures/project.json');
-  await expect(page.getByText('test-fixtures/project.json')).toBeVisible();
+	await page.goto('/editor');
+	const [fileChooser] = await Promise.all([
+		page.waitForEvent('filechooser'),
+		page.click('text=Open file…'),
+	]);
+	await fileChooser.setFiles('test-fixtures/project.json');
+	await expect(page.getByText('test-fixtures/project.json')).toBeVisible();
 });
 ```
 

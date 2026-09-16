@@ -40,33 +40,33 @@ import * as exifr from 'exifr';
 import * as tus from 'tus-js-client';
 
 export type UploadPolicy = {
-  maxBytes: number;
-  allowed: string[];           // e.g. ['image/jpeg', 'image/png', 'application/pdf']
-  stripExif?: boolean;          // default true for image/*
+	maxBytes: number;
+	allowed: string[]; // e.g. ['image/jpeg', 'image/png', 'application/pdf']
+	stripExif?: boolean; // default true for image/*
 };
 
 export type UploadResult = {
-  url: string;                  // tus Location header
-  bytes: number;
-  mime: string;
+	url: string; // tus Location header
+	bytes: number;
+	mime: string;
 };
 
 export class UploadRejection extends Error {
-  constructor(
-    message: string,
-    public code: 'too_large' | 'disallowed_type' | 'spoofed_type' | 'corrupt',
-  ) {
-    super(message);
-  }
+	constructor(
+		message: string,
+		public code: 'too_large' | 'disallowed_type' | 'spoofed_type' | 'corrupt',
+	) {
+		super(message);
+	}
 }
 
 export async function uploadFile(
-  file: File,
-  policy: UploadPolicy,
-  endpoint: string,
+	file: File,
+	policy: UploadPolicy,
+	endpoint: string,
 ): Promise<UploadResult> {
-  const prepared = await validateAndStrip(file, policy);
-  return await tusUpload(prepared.blob, endpoint, prepared.mime);
+	const prepared = await validateAndStrip(file, policy);
+	return await tusUpload(prepared.blob, endpoint, prepared.mime);
 }
 ```
 
@@ -76,43 +76,34 @@ Split validate/strip from transport so tests don't need a live server.
 
 ```ts
 async function validateAndStrip(file: File, policy: UploadPolicy) {
-  if (file.size > policy.maxBytes) {
-    throw new UploadRejection(
-      `File exceeds ${policy.maxBytes} bytes`,
-      'too_large',
-    );
-  }
+	if (file.size > policy.maxBytes) {
+		throw new UploadRejection(`File exceeds ${policy.maxBytes} bytes`, 'too_large');
+	}
 
-  const sniffed = await fileTypeFromBlob(file);
-  if (!sniffed) {
-    throw new UploadRejection('Unrecognized file type', 'corrupt');
-  }
+	const sniffed = await fileTypeFromBlob(file);
+	if (!sniffed) {
+		throw new UploadRejection('Unrecognized file type', 'corrupt');
+	}
 
-  const matches = policy.allowed.some((a) =>
-    a.endsWith('/*')
-      ? sniffed.mime.startsWith(a.slice(0, -1))
-      : sniffed.mime === a,
-  );
-  if (!matches) {
-    throw new UploadRejection(
-      `Type ${sniffed.mime} not in allowed list`,
-      'disallowed_type',
-    );
-  }
+	const matches = policy.allowed.some((a) =>
+		a.endsWith('/*') ? sniffed.mime.startsWith(a.slice(0, -1)) : sniffed.mime === a,
+	);
+	if (!matches) {
+		throw new UploadRejection(`Type ${sniffed.mime} not in allowed list`, 'disallowed_type');
+	}
 
-  // Spoof check — declared vs sniffed.
-  if (file.type && file.type !== sniffed.mime) {
-    throw new UploadRejection(
-      `Declared ${file.type} but content is ${sniffed.mime}`,
-      'spoofed_type',
-    );
-  }
+	// Spoof check — declared vs sniffed.
+	if (file.type && file.type !== sniffed.mime) {
+		throw new UploadRejection(
+			`Declared ${file.type} but content is ${sniffed.mime}`,
+			'spoofed_type',
+		);
+	}
 
-  const shouldStrip =
-    (policy.stripExif ?? true) && sniffed.mime.startsWith('image/');
+	const shouldStrip = (policy.stripExif ?? true) && sniffed.mime.startsWith('image/');
 
-  const blob = shouldStrip ? await stripExif(file, sniffed.mime) : file;
-  return { blob, mime: sniffed.mime };
+	const blob = shouldStrip ? await stripExif(file, sniffed.mime) : file;
+	return { blob, mime: sniffed.mime };
 }
 ```
 
@@ -128,21 +119,21 @@ Two viable strategies:
 
 ```ts
 async function stripExif(file: File, mime: string): Promise<Blob> {
-  if (mime === 'image/png' || mime === 'image/webp') {
-    // PNG/WebP exif chunks are rare; canvas round-trip is safe.
-  }
+	if (mime === 'image/png' || mime === 'image/webp') {
+		// PNG/WebP exif chunks are rare; canvas round-trip is safe.
+	}
 
-  const img = await loadImage(file);
-  const canvas = new OffscreenCanvas(img.width, img.height);
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
+	const img = await loadImage(file);
+	const canvas = new OffscreenCanvas(img.width, img.height);
+	const ctx = canvas.getContext('2d')!;
+	ctx.drawImage(img, 0, 0);
 
-  const quality = mime === 'image/jpeg' ? 0.92 : undefined;
-  return await canvas.convertToBlob({ type: mime, quality });
+	const quality = mime === 'image/jpeg' ? 0.92 : undefined;
+	return await canvas.convertToBlob({ type: mime, quality });
 }
 
 async function loadImage(file: File): Promise<ImageBitmap> {
-  return await createImageBitmap(file);
+	return await createImageBitmap(file);
 }
 ```
 
@@ -155,10 +146,10 @@ upload UX — camera-original pixels are not preserved.
 import { gps } from 'exifr';
 
 async function stripExif(file: File, mime: string): Promise<Blob> {
-  if (mime !== 'image/jpeg') return file;
-  const buf = new Uint8Array(await file.arrayBuffer());
-  const stripped = removeJpegAppMarkers(buf); // custom helper
-  return new Blob([stripped], { type: 'image/jpeg' });
+	if (mime !== 'image/jpeg') return file;
+	const buf = new Uint8Array(await file.arrayBuffer());
+	const stripped = removeJpegAppMarkers(buf); // custom helper
+	return new Blob([stripped], { type: 'image/jpeg' });
 }
 ```
 
@@ -174,33 +165,31 @@ archival uploads where re-encode is unacceptable).
 
 ```ts
 function tusUpload(blob: Blob, endpoint: string, mime: string): Promise<UploadResult> {
-  return new Promise((resolve, reject) => {
-    const upload = new tus.Upload(blob, {
-      endpoint,
-      retryDelays: [0, 1000, 3000, 5000, 10000],
-      metadata: {
-        filename: (blob as File).name ?? 'upload',
-        filetype: mime,
-      },
-      chunkSize: 4 * 1024 * 1024,
-      onError: (err) => reject(err),
-      onSuccess: () => {
-        resolve({
-          url: upload.url!,
-          bytes: blob.size,
-          mime,
-        });
-      },
-    });
+	return new Promise((resolve, reject) => {
+		const upload = new tus.Upload(blob, {
+			endpoint,
+			retryDelays: [0, 1000, 3000, 5000, 10000],
+			metadata: {
+				filename: (blob as File).name ?? 'upload',
+				filetype: mime,
+			},
+			chunkSize: 4 * 1024 * 1024,
+			onError: (err) => reject(err),
+			onSuccess: () => {
+				resolve({
+					url: upload.url!,
+					bytes: blob.size,
+					mime,
+				});
+			},
+		});
 
-    // Resume from prior session if we have fingerprints cached.
-    upload
-      .findPreviousUploads()
-      .then((prev) => {
-        if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
-        upload.start();
-      });
-  });
+		// Resume from prior session if we have fingerprints cached.
+		upload.findPreviousUploads().then((prev) => {
+			if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+			upload.start();
+		});
+	});
 }
 ```
 
@@ -213,36 +202,40 @@ tus expects `PATCH` with `Content-Type: application/offset+octet-stream`
 
 ```svelte
 <script lang="ts">
-  import { uploadFile, UploadRejection } from '$lib/uploads/pipeline';
-  import { toast } from '@sveltesentio/ui/toast';
+	import { uploadFile, UploadRejection } from '$lib/uploads/pipeline';
+	import { toast } from '@sveltesentio/ui/toast';
 
-  let progress = $state(0);
-  let uploader = $state<tus.Upload | null>(null);
+	let progress = $state(0);
+	let uploader = $state<tus.Upload | null>(null);
 
-  async function onFile(file: File) {
-    try {
-      const result = await uploadFile(file, {
-        maxBytes: 20 * 1024 * 1024,
-        allowed: ['image/jpeg', 'image/png', 'image/webp'],
-      }, '/api/uploads');
-      toast.success('Upload complete', { description: result.url });
-    } catch (err) {
-      if (err instanceof UploadRejection) {
-        toast.error(err.message, { description: err.code });
-      } else throw err;
-    }
-  }
+	async function onFile(file: File) {
+		try {
+			const result = await uploadFile(
+				file,
+				{
+					maxBytes: 20 * 1024 * 1024,
+					allowed: ['image/jpeg', 'image/png', 'image/webp'],
+				},
+				'/api/uploads',
+			);
+			toast.success('Upload complete', { description: result.url });
+		} catch (err) {
+			if (err instanceof UploadRejection) {
+				toast.error(err.message, { description: err.code });
+			} else throw err;
+		}
+	}
 </script>
 
 <input
-  type="file"
-  accept="image/jpeg,image/png,image/webp"
-  onchange={(e) => e.currentTarget.files?.[0] && onFile(e.currentTarget.files[0])}
+	type="file"
+	accept="image/jpeg,image/png,image/webp"
+	onchange={(e) => e.currentTarget.files?.[0] && onFile(e.currentTarget.files[0])}
 />
 
 {#if uploader}
-  <progress max="100" value={progress} aria-label="Upload progress"></progress>
-  <button type="button" onclick={() => uploader?.abort()}>Cancel</button>
+	<progress max="100" value={progress} aria-label="Upload progress"></progress>
+	<button type="button" onclick={() => uploader?.abort()}>Cancel</button>
 {/if}
 ```
 
@@ -297,13 +290,13 @@ your network.
 
 ## Accessibility
 
-| Control | Requirement |
-|---|---|
-| File input | Keyboard-reachable (`tabindex` default); label via `<label for>` |
+| Control        | Requirement                                                                |
+| -------------- | -------------------------------------------------------------------------- |
+| File input     | Keyboard-reachable (`tabindex` default); label via `<label for>`           |
 | Drag-drop zone | Also accept keyboard-triggered file picker; `role="region"` + `aria-label` |
-| Progress bar | `<progress>` element or `role="progressbar"` + `aria-valuenow/min/max` |
-| Cancel button | Standard button; announce "Upload cancelled" via `aria-live="polite"` |
-| Error | `role="alert"` (blocks flow); describe why + how to fix |
+| Progress bar   | `<progress>` element or `role="progressbar"` + `aria-valuenow/min/max`     |
+| Cancel button  | Standard button; announce "Upload cancelled" via `aria-live="polite"`      |
+| Error          | `role="alert"` (blocks flow); describe why + how to fix                    |
 
 Never drag-drop-only. File-picker fallback is mandatory for WCAG
 2.1.1.
@@ -315,20 +308,20 @@ import { uploadFile, UploadRejection } from '$lib/uploads/pipeline';
 
 // Unit: validation
 test('rejects spoofed type', async () => {
-  const jsContent = new File([`alert(1)`], 'photo.png', { type: 'image/png' });
-  await expect(
-    uploadFile(jsContent, { maxBytes: 1e6, allowed: ['image/*'] }, '/api/uploads'),
-  ).rejects.toMatchObject({ code: 'spoofed_type' });
+	const jsContent = new File([`alert(1)`], 'photo.png', { type: 'image/png' });
+	await expect(
+		uploadFile(jsContent, { maxBytes: 1e6, allowed: ['image/*'] }, '/api/uploads'),
+	).rejects.toMatchObject({ code: 'spoofed_type' });
 });
 
 // Integration: tus round-trip
 test('resumes after simulated disconnect', async () => {
-  const server = await startTusServer();
-  const file = new File([new Uint8Array(10 * 1024 * 1024)], 'big.bin', {
-    type: 'application/octet-stream',
-  });
-  // kill connection at 50%, assert resume
-  await server.close();
+	const server = await startTusServer();
+	const file = new File([new Uint8Array(10 * 1024 * 1024)], 'big.bin', {
+		type: 'application/octet-stream',
+	});
+	// kill connection at 50%, assert resume
+	await server.close();
 });
 ```
 

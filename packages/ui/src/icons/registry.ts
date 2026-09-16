@@ -18,10 +18,7 @@ export type IconComponent = NonNullable<unknown>;
 
 /** A loader's return: a component (sync or Promise), or a nullish miss. */
 export type IconLoaderResult =
-	| IconComponent
-	| Promise<IconComponent | undefined>
-	| undefined
-	| null;
+	IconComponent | Promise<IconComponent | undefined> | undefined | null;
 
 /**
  * An icon loader. Returns the component for `name`, or `undefined`/`null` to

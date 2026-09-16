@@ -45,14 +45,7 @@ const slices: Slice[] = [
 ];
 
 // WCAG 2.2 AA tag set (mirrors @sveltesentio/testing's axeDefaults / ADR-0031).
-const WCAG_22_AA_TAGS = [
-	'wcag2a',
-	'wcag2aa',
-	'wcag21a',
-	'wcag21aa',
-	'wcag22aa',
-	'best-practice',
-];
+const WCAG_22_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 async function expectNoAxeViolations(container: HTMLElement): Promise<void> {
 	const results = await axe.run(container, {
@@ -105,11 +98,7 @@ describe.each(CARTESIAN_KINDS)('%s chart wrapper', (kind) => {
 		const { getAllByRole } = renderChart();
 		// x-axis column + one column per series.
 		const colHeaders = getAllByRole('columnheader');
-		expect(colHeaders.map((h) => h.textContent)).toEqual([
-			'Category',
-			'Sessions',
-			'Errors',
-		]);
+		expect(colHeaders.map((h) => h.textContent)).toEqual(['Category', 'Sessions', 'Errors']);
 		// Row per x value, first-seen order.
 		const rowHeaders = getAllByRole('rowheader');
 		expect(rowHeaders.map((h) => h.textContent)).toEqual(['Mon', 'Tue']);
@@ -179,11 +168,7 @@ describe('pie chart wrapper', () => {
 		expect(colHeaders.map((h) => h.textContent)).toEqual(['Category', 'Share']);
 
 		const rowHeaders = getAllByRole('rowheader');
-		expect(rowHeaders.map((h) => h.textContent)).toEqual([
-			'Chrome',
-			'Firefox',
-			'Safari',
-		]);
+		expect(rowHeaders.map((h) => h.textContent)).toEqual(['Chrome', 'Firefox', 'Safari']);
 
 		const cells = getAllByRole('cell');
 		expect(cells.map((c) => c.textContent)).toEqual([
@@ -215,9 +200,7 @@ describe('low-level Chart wrapper', () => {
 		{ key: 'sessions', label: 'Sessions', data: [{ t: 'Mon', v: 1000 }] },
 	];
 
-	function renderLowLevel(
-		props: { description?: string; showDataTable?: boolean } = {},
-	) {
+	function renderLowLevel(props: { description?: string; showDataTable?: boolean } = {}) {
 		return render(ChartHarness, {
 			title: 'Custom composition',
 			description: props.description,

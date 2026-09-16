@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	issueCsrfToken,
-	timingSafeEqual,
-	verifyCsrfToken,
-} from '../src/csrf.js';
+import { issueCsrfToken, timingSafeEqual, verifyCsrfToken } from '../src/csrf.js';
 import { randomBytes } from '../src/random.js';
 
 const SECRET = randomBytes(32);
@@ -50,10 +46,7 @@ describe('CSRF double-submit token', () => {
 
 	it('rejects if a single byte flips (HMAC mismatch)', async () => {
 		const { token } = await issueCsrfToken(SESSION_ID, SECRET);
-		const tampered =
-			token.slice(0, 10) +
-			(token[10] === 'A' ? 'B' : 'A') +
-			token.slice(11);
+		const tampered = token.slice(0, 10) + (token[10] === 'A' ? 'B' : 'A') + token.slice(11);
 		expect(await verifyCsrfToken(tampered, SESSION_ID, SECRET)).toBe(false);
 	});
 });
@@ -70,8 +63,6 @@ describe('timingSafeEqual', () => {
 	});
 
 	it('returns false for content mismatch', () => {
-		expect(
-			timingSafeEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4])),
-		).toBe(false);
+		expect(timingSafeEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4]))).toBe(false);
 	});
 });

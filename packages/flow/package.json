@@ -1,91 +1,91 @@
 {
-  "dependencies": {
-    "@sveltesentio/core": "workspace:*"
-  },
-  "description": "@xyflow/svelte wrappers \u2014 node editors, DAG helpers, canvas utilities",
-  "devDependencies": {
-    "@storybook/addon-svelte-csf": "5.1.3",
-    "@sveltejs/vite-plugin-svelte": "^7.3.0",
-    "@sveltesentio/testing": "workspace:*",
-    "@testing-library/jest-dom": "^6.10.0",
-    "@testing-library/svelte": "^5.4.2",
-    "@xyflow/svelte": "^1.6.6",
-    "axe-core": "^4.13.0",
-    "elkjs": "^0.12.0",
-    "jsdom": "^29.1.1",
-    "svelte": "^5.57.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
-  },
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    },
-    "./canvas": {
-      "import": "./src/canvas.ts",
-      "svelte": "./src/FlowCanvas.svelte",
-      "types": "./src/canvas.ts"
-    },
-    "./canvas-model": {
-      "import": "./src/canvas-model.ts",
-      "types": "./src/canvas-model.ts"
-    },
-    "./dag": {
-      "import": "./src/dag.ts",
-      "types": "./src/dag.ts"
-    },
-    "./layout": {
-      "import": "./src/layout.ts",
-      "types": "./src/layout.ts"
-    },
-    "./layout-worker": {
-      "import": "./src/layout-worker.ts",
-      "types": "./src/layout-worker.ts"
-    },
-    "./node-palette": {
-      "import": "./src/node-palette.ts",
-      "types": "./src/node-palette.ts"
-    },
-    "./nodes": {
-      "import": "./src/nodes.ts",
-      "types": "./src/nodes.ts"
-    }
-  },
-  "files": [
-    "src",
-    "CHANGELOG.md",
-    "!src/**/*.stories.svelte"
-  ],
-  "keywords": [
-    "sveltesentio",
-    "flow",
-    "node-editor",
-    "dag",
-    "xyflow"
-  ],
-  "name": "@sveltesentio/flow",
-  "peerDependencies": {
-    "@xyflow/svelte": ">=1.0.0",
-    "elkjs": ">=0.11.0",
-    "svelte": ">=5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@xyflow/svelte": {
-      "optional": true
-    }
-  },
-  "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsc",
-    "lint": "eslint src/",
-    "test": "vitest run --coverage",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
-  },
-  "sideEffects": false,
-  "type": "module",
-  "version": "0.4.0"
+	"dependencies": {
+		"@sveltesentio/core": "workspace:*"
+	},
+	"description": "@xyflow/svelte wrappers \u2014 node editors, DAG helpers, canvas utilities",
+	"devDependencies": {
+		"@storybook/addon-svelte-csf": "5.1.3",
+		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@sveltesentio/testing": "workspace:*",
+		"@testing-library/jest-dom": "^6.10.0",
+		"@testing-library/svelte": "^5.4.2",
+		"@xyflow/svelte": "^1.6.6",
+		"axe-core": "^4.13.0",
+		"elkjs": "^0.12.0",
+		"jsdom": "^29.1.1",
+		"svelte": "^5.57.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.11"
+	},
+	"exports": {
+		".": {
+			"import": "./src/index.ts",
+			"types": "./src/index.ts"
+		},
+		"./canvas": {
+			"import": "./src/canvas.ts",
+			"svelte": "./src/FlowCanvas.svelte",
+			"types": "./src/canvas.ts"
+		},
+		"./canvas-model": {
+			"import": "./src/canvas-model.ts",
+			"types": "./src/canvas-model.ts"
+		},
+		"./dag": {
+			"import": "./src/dag.ts",
+			"types": "./src/dag.ts"
+		},
+		"./layout": {
+			"import": "./src/layout.ts",
+			"types": "./src/layout.ts"
+		},
+		"./layout-worker": {
+			"import": "./src/layout-worker.ts",
+			"types": "./src/layout-worker.ts"
+		},
+		"./node-palette": {
+			"import": "./src/node-palette.ts",
+			"types": "./src/node-palette.ts"
+		},
+		"./nodes": {
+			"import": "./src/nodes.ts",
+			"types": "./src/nodes.ts"
+		}
+	},
+	"files": [
+		"src",
+		"CHANGELOG.md",
+		"!src/**/*.stories.svelte"
+	],
+	"keywords": [
+		"sveltesentio",
+		"flow",
+		"node-editor",
+		"dag",
+		"xyflow"
+	],
+	"name": "@sveltesentio/flow",
+	"peerDependencies": {
+		"@xyflow/svelte": ">=1.0.0",
+		"elkjs": ">=0.11.0",
+		"svelte": ">=5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@xyflow/svelte": {
+			"optional": true
+		}
+	},
+	"private": false,
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"lint": "eslint src/",
+		"test": "vitest run --coverage",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"version": "0.4.0"
 }

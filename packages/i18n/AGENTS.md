@@ -37,9 +37,9 @@ Per [ADR-0040](../../docs/adr/0040-paraglide-strategy-logical-properties.md):
 
 ```ts
 paraglideVitePlugin({
-  project: './project.inlang',
-  outdir: './src/lib/paraglide',
-  strategy: ['url', 'cookie', 'baseLocale'],
+	project: './project.inlang',
+	outdir: './src/lib/paraglide',
+	strategy: ['url', 'cookie', 'baseLocale'],
 });
 ```
 

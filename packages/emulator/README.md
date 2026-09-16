@@ -33,14 +33,14 @@ static/emulatorjs/data/   # cores, loader.js, art, BIOS shims — from the Emula
 
 ```svelte
 <script lang="ts">
-  import Emulator from '@sveltesentio/emulator/Emulator.svelte';
+	import Emulator from '@sveltesentio/emulator/Emulator.svelte';
 </script>
 
 <Emulator
-  core="snes"
-  gameUrl="/roms/zelda.sfc"
-  dataPath="/emulatorjs/data/"
-  gameName="A Link to the Past"
+	core="snes"
+	gameUrl="/roms/zelda.sfc"
+	dataPath="/emulatorjs/data/"
+	gameName="A Link to the Past"
 />
 ```
 
@@ -53,16 +53,16 @@ import { buildEmulatorConfig, injectEmulatorScript } from '@sveltesentio/emulato
 
 // Pure: typed options -> the EJS_* globals.
 const { globals, loaderUrl, core } = buildEmulatorConfig({
-  core: 'playstation',      // human slug or raw core id
-  gameUrl: '/roms/game.bin',
-  biosUrl: '/bios/scph.bin',
-  dataPath: '/emulatorjs/data/',
+	core: 'playstation', // human slug or raw core id
+	gameUrl: '/roms/game.bin',
+	biosUrl: '/bios/scph.bin',
+	dataPath: '/emulatorjs/data/',
 });
 
 // Injects the loader script + globals; returns a cleanup fn.
 const { cleanup } = injectEmulatorScript(
-  { core: 'snes', gameUrl: '/roms/z.sfc' },
-  { document, window },
+	{ core: 'snes', gameUrl: '/roms/z.sfc' },
+	{ document, window },
 );
 ```
 
@@ -74,9 +74,9 @@ const { cleanup } = injectEmulatorScript(
 import { resolveCore, knownCores } from '@sveltesentio/emulator/cores';
 
 resolveCore('Super Nintendo'); // 'snes'
-resolveCore('Mega Drive');     // 'segaMD'
-resolveCore('dreamcast');      // undefined (unsupported)
-knownCores();                  // the distinct cores this package addresses
+resolveCore('Mega Drive'); // 'segaMD'
+resolveCore('dreamcast'); // undefined (unsupported)
+knownCores(); // the distinct cores this package addresses
 ```
 
 Slugs are matched case-insensitively after stripping non-alphanumerics, so `"sega-md"`, `"Sega MD"` and `"segamd"` all resolve identically. Covers ~25 platforms across Nintendo / Sega / Sony / NEC / SNK / Bandai / Atari / arcade.
@@ -91,8 +91,8 @@ import { emulatorCspDirectives, mergeCspDirectives } from '@sveltesentio/emulato
 
 const base = strictCsp({ nonce });
 const policy = mergeCspDirectives(
-  base,
-  emulatorCspDirectives({ dataBaseUrl: 'https://roms.example.com/data/' }),
+	base,
+	emulatorCspDirectives({ dataBaseUrl: 'https://roms.example.com/data/' }),
 );
 
 response.headers.set('Content-Security-Policy', serialiseCsp(policy));
@@ -100,14 +100,14 @@ response.headers.set('Content-Security-Policy', serialiseCsp(policy));
 
 `mergeCspDirectives` unions source lists per directive (de-duplicated, order-preserving) and leaves boolean/string base directives (e.g. `upgrade-insecure-requests`) untouched. What gets added:
 
-| Directive | Added sources | Reason |
-|---|---|---|
-| `script-src` | `'self' blob: 'wasm-unsafe-eval'` | WASM core compilation + blob bootstrap |
-| `worker-src` | `'self' blob:` | EmulatorJS Web Workers |
-| `child-src` | `'self' blob:` | worker fallback for older engines |
-| `connect-src` | `'self'` + data origin | fetch cores / ROM / BIOS |
-| `img-src` | `'self' blob: data:` + data origin | canvas + box art |
-| `media-src` | `'self' blob:` + data origin | audio |
+| Directive     | Added sources                      | Reason                                 |
+| ------------- | ---------------------------------- | -------------------------------------- |
+| `script-src`  | `'self' blob: 'wasm-unsafe-eval'`  | WASM core compilation + blob bootstrap |
+| `worker-src`  | `'self' blob:`                     | EmulatorJS Web Workers                 |
+| `child-src`   | `'self' blob:`                     | worker fallback for older engines      |
+| `connect-src` | `'self'` + data origin             | fetch cores / ROM / BIOS               |
+| `img-src`     | `'self' blob: data:` + data origin | canvas + box art                       |
+| `media-src`   | `'self' blob:` + data origin       | audio                                  |
 
 For engines that predate `'wasm-unsafe-eval'`, pass `{ wasmEvalFallback: true }` to substitute the broad `'unsafe-eval'` — this materially weakens the policy, so only enable it when you must.
 

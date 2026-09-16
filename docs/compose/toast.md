@@ -30,8 +30,8 @@ upstream:
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-  import { Toaster } from '@sveltesentio/ui/toast';
-  let { children } = $props();
+	import { Toaster } from '@sveltesentio/ui/toast';
+	let { children } = $props();
 </script>
 
 {@render children()}
@@ -47,13 +47,13 @@ applies the matching size tokens. No config needed for defaults.
 
 ```ts
 type ToasterProps = {
-  position?: 'top-left' | 'top-right' | 'top-center' |
-             'bottom-left' | 'bottom-right' | 'bottom-center';
-  richColors?: boolean;      // default true — status-tinted bg per type
-  closeButton?: boolean;     // default true
-  expand?: boolean;          // default false — stack vs expand on hover
-  duration?: number;         // default 4000ms
-  gap?: number;              // default 12px (desktop) / 16px (handheld) / 24px (10-foot)
+	position?:
+		'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center';
+	richColors?: boolean; // default true — status-tinted bg per type
+	closeButton?: boolean; // default true
+	expand?: boolean; // default false — stack vs expand on hover
+	duration?: number; // default 4000ms
+	gap?: number; // default 12px (desktop) / 16px (handheld) / 24px (10-foot)
 };
 ```
 
@@ -65,17 +65,17 @@ you need to.
 
 ```svelte
 <script lang="ts">
-  import { toast } from '@sveltesentio/ui/toast';
+	import { toast } from '@sveltesentio/ui/toast';
 
-  async function save() {
-    const id = toast.loading('Saving…');
-    try {
-      await api.PUT('/flow', { body: { /* … */ } });
-      toast.success('Saved', { id });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed', { id });
-    }
-  }
+	async function save() {
+		const id = toast.loading('Saving…');
+		try {
+			await api.PUT('/flow', { body: {/* … */} });
+			toast.success('Saved', { id });
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Save failed', { id });
+		}
+	}
 </script>
 
 <button onclick={save}>Save</button>
@@ -103,9 +103,9 @@ toast.message(message: string, opts?: ToastOptions): string; // plain, no icon
 
 ```ts
 toast.promise(api.PUT('/flow', { body }), {
-  loading: 'Saving…',
-  success: () => 'Saved',
-  error: (e) => (e instanceof Error ? e.message : 'Save failed'),
+	loading: 'Saving…',
+	success: () => 'Saved',
+	error: (e) => (e instanceof Error ? e.message : 'Save failed'),
 });
 ```
 
@@ -118,9 +118,9 @@ When an API call rejects with a `ProblemError` (RFC 9457 — see
 import { problemToMessage } from '@sveltesentio/core/http';
 
 try {
-  await api.POST('/thing', { body });
+	await api.POST('/thing', { body });
 } catch (err) {
-  toast.error(problemToMessage(err));
+	toast.error(problemToMessage(err));
 }
 ```
 
@@ -132,10 +132,10 @@ prefer surfacing in-form instead of toasting.
 
 ```ts
 toast('Draft saved', {
-  action: {
-    label: 'Undo',
-    onClick: () => restoreDraft(),
-  },
+	action: {
+		label: 'Undo',
+		onClick: () => restoreDraft(),
+	},
 });
 ```
 
@@ -163,18 +163,18 @@ override tokens at the preset layer instead.
 
 The wrapper's core invariant. Behavior per preset:
 
-| Preset | Padding | Font-size | Max-width | Gap |
-|---|---|---|---|---|
-| `desktop` (default) | `12px 16px` | `0.875rem` | `356px` | `12px` |
-| `handheld` | `16px 20px` | `1rem` | `90vw` | `16px` |
-| `10foot` | `24px 32px` | `1.5rem` | `560px` | `24px` |
+| Preset              | Padding     | Font-size  | Max-width | Gap    |
+| ------------------- | ----------- | ---------- | --------- | ------ |
+| `desktop` (default) | `12px 16px` | `0.875rem` | `356px`   | `12px` |
+| `handheld`          | `16px 20px` | `1rem`     | `90vw`    | `16px` |
+| `10foot`            | `24px 32px` | `1.5rem`   | `560px`   | `24px` |
 
 These are the wrapper's defaults, applied via
 `:root[data-preset='...']` selectors. Override per-app:
 
 ```css
 :root[data-preset='handheld'] [data-sonner-toast] {
-  padding-block: 18px; /* custom for this app */
+	padding-block: 18px; /* custom for this app */
 }
 ```
 
@@ -202,9 +202,9 @@ import { render, screen } from '@testing-library/svelte';
 import { toast, Toaster } from '@sveltesentio/ui/toast';
 
 test('toast.success renders with status role', async () => {
-  render(Toaster);
-  toast.success('Saved');
-  expect(await screen.findByRole('status', { name: /saved/i })).toBeInTheDocument();
+	render(Toaster);
+	toast.success('Saved');
+	expect(await screen.findByRole('status', { name: /saved/i })).toBeInTheDocument();
 });
 ```
 
@@ -226,7 +226,7 @@ Playwright for preset-scaling checks — set `data-preset='10foot'` on
   `loading` / `success` pairs forget the `id` round-trip and double-stack
   on re-render.
 - **Skipping the wrapper.** `svelte-sonner` direct loses preset sizing
-  + mode-watcher theme sync. ADR-0016's invariant requires the wrapper.
+  - mode-watcher theme sync. ADR-0016's invariant requires the wrapper.
 - **Using toast as the error surface for `ProblemError` validation
   details.** Map structured errors to form fields via
   `problemToFieldErrors` ([forms.md](forms.md)). Toast is the floor, not

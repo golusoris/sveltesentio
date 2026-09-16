@@ -4,11 +4,7 @@
 // component import (mirrors the `./server` invariant in AGENTS.md).
 import { superForm as upstreamSuperForm } from 'sveltekit-superforms/client';
 import type { Readable } from 'svelte/store';
-import type {
-	FormOptions,
-	SuperForm,
-	SuperValidated,
-} from 'sveltekit-superforms';
+import type { FormOptions, SuperForm, SuperValidated } from 'sveltekit-superforms';
 
 /**
  * Initial form argument accepted by {@link useForm} — the same shape
@@ -64,9 +60,7 @@ export interface UseForm<
 	/** Reactive per-field errors (the `$errors` store, runes-native). */
 	readonly errors: SuperForm<Out>['errors'] extends Readable<infer E> ? E : never;
 	/** Reactive input constraints (the `$constraints` store). */
-	readonly constraints: SuperForm<Out>['constraints'] extends Readable<infer C>
-		? C
-		: never;
+	readonly constraints: SuperForm<Out>['constraints'] extends Readable<infer C> ? C : never;
 	/** Reactive status message (the `$message` store), or `undefined`. */
 	readonly message: unknown;
 	/** Reactive tainted-fields map (the `$tainted` store), or `undefined`. */
@@ -156,9 +150,7 @@ export function useForm<
 
 	type Data = Out;
 	type Errors = SuperForm<Out>['errors'] extends Readable<infer E> ? E : never;
-	type Constraints = SuperForm<Out>['constraints'] extends Readable<infer C>
-		? C
-		: never;
+	type Constraints = SuperForm<Out>['constraints'] extends Readable<infer C> ? C : never;
 	type Tainted = SuperForm<Out>['tainted'] extends Readable<infer T> ? T : never;
 
 	let data = $state<Data>(seed(sf.form));

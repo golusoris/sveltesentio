@@ -31,14 +31,14 @@ import { fail } from '@sveltejs/kit';
 import { schema } from './schema';
 
 export const actions = {
-  default: formAction(
-    schema,
-    async ({ form }) => {
-      await createUser(form.data); // throws a @sveltesentio/core ProblemError on conflict
-      return { form };
-    },
-    { superValidate, fail },
-  ),
+	default: formAction(
+		schema,
+		async ({ form }) => {
+			await createUser(form.data); // throws a @sveltesentio/core ProblemError on conflict
+			return { form };
+		},
+		{ superValidate, fail },
+	),
 };
 ```
 

@@ -19,27 +19,27 @@ bindings), [safe-area.md](safe-area.md) (`ps-*` logical variants).
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
 export default defineConfig({
-  plugins: [
-    paraglideVitePlugin({
-      project: './project.inlang',
-      outdir: './src/lib/paraglide',
-      strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
-    }),
-  ],
+	plugins: [
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+			strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+		}),
+	],
 });
 ```
 
 Paraglide evaluates the strategy **left to right**, returning the
 first match. Each entry has different SSR / caching implications:
 
-| Strategy | Source | SSR-safe? | Cacheable? | When to use |
-|---|---|---|---|---|
-| `url` | `/en/…`, `/de/…` path prefix or subdomain | ✅ | Per-URL cache | SEO-critical content; shareable URLs must carry locale |
-| `cookie` | `NEXT_LOCALE` / custom cookie | ✅ | Per-cookie cache (`Vary: Cookie`) | User-selected override that persists across sessions |
-| `preferredLanguage` | `Accept-Language` header | ✅ | Per-AL cache (`Vary: Accept-Language`) | First-visit default before user picks |
-| `baseLocale` | configured default (e.g. `en`) | ✅ | Fully cacheable | Final fallback |
-| `localStorage` | client-only storage | ❌ SSR | Not cacheable | Don't use server-side |
-| `custom` | user-supplied resolver | depends | depends | advanced / DB-backed preferences |
+| Strategy            | Source                                    | SSR-safe? | Cacheable?                             | When to use                                            |
+| ------------------- | ----------------------------------------- | --------- | -------------------------------------- | ------------------------------------------------------ |
+| `url`               | `/en/…`, `/de/…` path prefix or subdomain | ✅        | Per-URL cache                          | SEO-critical content; shareable URLs must carry locale |
+| `cookie`            | `NEXT_LOCALE` / custom cookie             | ✅        | Per-cookie cache (`Vary: Cookie`)      | User-selected override that persists across sessions   |
+| `preferredLanguage` | `Accept-Language` header                  | ✅        | Per-AL cache (`Vary: Accept-Language`) | First-visit default before user picks                  |
+| `baseLocale`        | configured default (e.g. `en`)            | ✅        | Fully cacheable                        | Final fallback                                         |
+| `localStorage`      | client-only storage                       | ❌ SSR    | Not cacheable                          | Don't use server-side                                  |
+| `custom`            | user-supplied resolver                    | depends   | depends                                | advanced / DB-backed preferences                       |
 
 **Recommended default:** `['url', 'cookie', 'preferredLanguage', 'baseLocale']`.
 `url` wins for shareability; `cookie` for sticky user pick;
@@ -105,26 +105,26 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 import { sequence } from '@sveltejs/kit/hooks';
 
 const i18nHandle = ({ event, resolve }) =>
-  paraglideMiddleware(event.request, ({ request, locale }) => {
-    event.request = request;
-    event.locals.locale = locale;
-    return resolve(event, {
-      transformPageChunk: ({ html }) =>
-        html.replace('%lang%', locale).replace('%dir%', dirOf(locale)),
-    });
-  });
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
+		event.locals.locale = locale;
+		return resolve(event, {
+			transformPageChunk: ({ html }) =>
+				html.replace('%lang%', locale).replace('%dir%', dirOf(locale)),
+		});
+	});
 
-export const handle = sequence(i18nHandle, /* withTheme, withTenant, … */);
+export const handle = sequence(i18nHandle /* withTheme, withTenant, … */);
 
 function dirOf(locale: string): 'ltr' | 'rtl' {
-  return ['ar', 'he', 'fa', 'ur'].includes(locale.split('-')[0]) ? 'rtl' : 'ltr';
+	return ['ar', 'he', 'fa', 'ur'].includes(locale.split('-')[0]) ? 'rtl' : 'ltr';
 }
 ```
 
 Two HTML template holes in `app.html`:
 
 ```html
-<html lang="%lang%" dir="%dir%">
+<html lang="%lang%" dir="%dir%"></html>
 ```
 
 `dir="rtl"` is mandatory for Arabic/Hebrew/Persian/Urdu; Tailwind's
@@ -136,7 +136,7 @@ logical properties (`ms-*`, `pe-*`) flip automatically — see
 ```ts
 // inside paraglideMiddleware's resolve:
 setHeaders({
-  Vary: 'Accept-Language, Cookie',
+	Vary: 'Accept-Language, Cookie',
 });
 ```
 
@@ -162,10 +162,10 @@ URL rewriting:
 // svelte.config.js
 import adapter from '@sveltejs/adapter-static';
 export default {
-  kit: {
-    adapter: adapter(),
-    paths: { relative: false },   // ← required
-  },
+	kit: {
+		adapter: adapter(),
+		paths: { relative: false }, // ← required
+	},
 };
 ```
 
@@ -185,7 +185,7 @@ Usage:
 
 ```svelte
 <script lang="ts">
-  import { m } from '@sveltesentio/i18n';
+	import { m } from '@sveltesentio/i18n';
 </script>
 
 <h1>{m.greeting({ name: 'Ada' })}</h1>
@@ -208,13 +208,13 @@ build` → per-locale chunks with tree-shaking. Consequence:
 
 Trade-off vs runtime i18n (svelte-i18n, typesafe-i18n runtime):
 
-| | Paraglide v2 | Runtime i18n |
-|---|---|---|
-| Bundle size | ~70% smaller | Full catalog ships |
-| Live updates | Rebuild required | Hot-swap |
-| Tree-shake per locale | Yes | Bundler-dependent |
-| SSR HTML | Pre-rendered | Runtime-resolved |
-| Translation platform | Push-to-git | API-driven |
+|                       | Paraglide v2     | Runtime i18n       |
+| --------------------- | ---------------- | ------------------ |
+| Bundle size           | ~70% smaller     | Full catalog ships |
+| Live updates          | Rebuild required | Hot-swap           |
+| Tree-shake per locale | Yes              | Bundler-dependent  |
+| SSR HTML              | Pre-rendered     | Runtime-resolved   |
+| Translation platform  | Push-to-git      | API-driven         |
 
 Sveltesentio picks compile-time (ADR-0017). If you need live updates,
 document the deploy-on-translate cadence upfront.
@@ -235,20 +235,20 @@ ICU parser ships to the client — the branching is pre-compiled.
 
 ```svelte
 <script lang="ts">
-  import { localizeUrl, locales } from '$lib/paraglide/runtime';
-  import { page } from '$app/stores';
+	import { localizeUrl, locales } from '$lib/paraglide/runtime';
+	import { page } from '$app/stores';
 
-  function switchTo(locale: string) {
-    document.cookie = `PARAGLIDE_LOCALE=${locale}; path=/; max-age=31536000; SameSite=Lax; Secure`;
-    window.location.href = localizeUrl($page.url, { locale });
-  }
+	function switchTo(locale: string) {
+		document.cookie = `PARAGLIDE_LOCALE=${locale}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+		window.location.href = localizeUrl($page.url, { locale });
+	}
 </script>
 
 <label for="locale">Language</label>
 <select id="locale" onchange={(e) => switchTo(e.currentTarget.value)}>
-  {#each locales as locale}
-    <option value={locale} selected={$page.data.locale === locale}>{locale}</option>
-  {/each}
+	{#each locales as locale}
+		<option value={locale} selected={$page.data.locale === locale}>{locale}</option>
+	{/each}
 </select>
 ```
 
@@ -291,8 +291,8 @@ import { m } from '$lib/paraglide/messages';
 import { setLocale } from '$lib/paraglide/runtime';
 
 test('German greeting', () => {
-  setLocale('de');
-  expect(m.greeting({ name: 'Ada' })).toBe('Hallo, Ada!');
+	setLocale('de');
+	expect(m.greeting({ name: 'Ada' })).toBe('Hallo, Ada!');
 });
 ```
 
@@ -300,9 +300,11 @@ Playwright:
 
 ```ts
 test('url strategy overrides cookie', async ({ context, page }) => {
-  await context.addCookies([{ name: 'PARAGLIDE_LOCALE', value: 'fr', url: 'http://localhost:5173' }]);
-  await page.goto('/de/');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+	await context.addCookies([
+		{ name: 'PARAGLIDE_LOCALE', value: 'fr', url: 'http://localhost:5173' },
+	]);
+	await page.goto('/de/');
+	await expect(page.locator('html')).toHaveAttribute('lang', 'de');
 });
 ```
 
@@ -339,7 +341,7 @@ arca is the reference integration (see
 - **Shipping `@inlang/paraglide-sveltekit` on v2.** Deprecated.
   Remove.
 - **`Vary: *`.** Kills all CDN caching. Be surgical: `Accept-Language,
-  Cookie` only if both strategies are active.
+Cookie` only if both strategies are active.
 
 ## References
 

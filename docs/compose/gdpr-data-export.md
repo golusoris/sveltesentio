@@ -17,8 +17,9 @@ sync with the data map), **categorization** (regulators require
 data sorted by category, not by your internal table layout),
 **third-party data exclusion** (other users' messages to this user
 must be redacted), and **media-bundle handling** (avatars + uploads
-+ generated reports + audit excerpts ship as a manifest-indexed
-bundle, not a single JSON blob).
+
+- generated reports + audit excerpts ship as a manifest-indexed
+  bundle, not a single JSON blob).
 
 ## Related
 
@@ -45,7 +46,7 @@ bundle, not a single JSON blob).
 
 ```text
 USER REQUEST            BUILDER WORKER            NOTIFY               DOWNLOAD
-                                                                       
+
 /account/export → POST  jobId: export:${userId}   sendNotification     /api/exports/{id}
 re-auth + Zod-validate  (1) enumerate datasets    (download_ready)     authz: requester only
 audit-log: export.req   (2) per-dataset query     dedupeKey            signed-URL → S3
@@ -71,17 +72,17 @@ import { z } from 'zod';
 // Categories follow the GDPR Art.4 typology; each export must
 // classify every record into exactly one category.
 export const DataCategory = z.enum([
-  'identity',         // name, email, username, dob
-  'contact',          // address, phone, secondary emails
-  'authentication',   // password hashes (excluded from export!), MFA factors metadata
-  'preferences',      // theme, locale, notification settings
-  'usage',            // page views, action logs (last 90d)
-  'content',          // posts, comments, uploads
-  'social',           // follows, friends, blocks (excluding other users' PII)
-  'commercial',       // orders, invoices, subscriptions
-  'communications',   // messages SENT BY this user (received messages excluded)
-  'system',           // tenant memberships, role assignments
-  'audit_excerpt',    // user-facing audit log slice (no admin-only fields)
+	'identity', // name, email, username, dob
+	'contact', // address, phone, secondary emails
+	'authentication', // password hashes (excluded from export!), MFA factors metadata
+	'preferences', // theme, locale, notification settings
+	'usage', // page views, action logs (last 90d)
+	'content', // posts, comments, uploads
+	'social', // follows, friends, blocks (excluding other users' PII)
+	'commercial', // orders, invoices, subscriptions
+	'communications', // messages SENT BY this user (received messages excluded)
+	'system', // tenant memberships, role assignments
+	'audit_excerpt', // user-facing audit log slice (no admin-only fields)
 ]);
 export type DataCategory = z.infer<typeof DataCategory>;
 
@@ -89,68 +90,74 @@ export const ExportFormat = z.enum(['json', 'csv', 'json_and_csv']);
 export type ExportFormat = z.infer<typeof ExportFormat>;
 
 export const ExportStatus = z.enum([
-  'queued',
-  'building',
-  'ready',
-  'downloaded',
-  'expired',
-  'failed',
+	'queued',
+	'building',
+	'ready',
+	'downloaded',
+	'expired',
+	'failed',
 ]);
 export type ExportStatus = z.infer<typeof ExportStatus>;
 
 export const ExportRequest = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
-  requestedAt: z.string().datetime(),
-  format: ExportFormat.default('json_and_csv'),
-  categories: z.array(DataCategory).min(1),
-  status: ExportStatus,
-  bundleSizeBytes: z.number().int().nonnegative().nullable(),
-  manifestSha256: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
-  downloadUrl: z.string().url().nullable(),
-  downloadExpiresAt: z.string().datetime().nullable(),
-  builtAt: z.string().datetime().nullable(),
-  downloadedAt: z.string().datetime().nullable(),
-  failureReason: z.string().max(2000).nullable(),
+	id: z.string().uuid(),
+	userId: z.string().uuid(),
+	requestedAt: z.string().datetime(),
+	format: ExportFormat.default('json_and_csv'),
+	categories: z.array(DataCategory).min(1),
+	status: ExportStatus,
+	bundleSizeBytes: z.number().int().nonnegative().nullable(),
+	manifestSha256: z
+		.string()
+		.regex(/^[a-f0-9]{64}$/)
+		.nullable(),
+	downloadUrl: z.string().url().nullable(),
+	downloadExpiresAt: z.string().datetime().nullable(),
+	builtAt: z.string().datetime().nullable(),
+	downloadedAt: z.string().datetime().nullable(),
+	failureReason: z.string().max(2000).nullable(),
 });
 export type ExportRequest = z.infer<typeof ExportRequest>;
 
 // Per-category dataset record in the bundle.
 export const DatasetEntry = z.object({
-  category: DataCategory,
-  table: z.string().min(1).max(100),
-  rowCount: z.number().int().nonnegative(),
-  jsonPath: z.string().min(1),
-  csvPath: z.string().nullable(),
-  schemaUrl: z.string().url().nullable(), // public schema definition
+	category: DataCategory,
+	table: z.string().min(1).max(100),
+	rowCount: z.number().int().nonnegative(),
+	jsonPath: z.string().min(1),
+	csvPath: z.string().nullable(),
+	schemaUrl: z.string().url().nullable(), // public schema definition
 });
 
 export const ExportManifest = z.object({
-  schemaVersion: z.literal(1),
-  exportId: z.string().uuid(),
-  userId: z.string().uuid(),
-  builtAt: z.string().datetime(),
-  generator: z.object({
-    name: z.literal('sveltesentio-portability'),
-    version: z.string(),
-  }),
-  datasets: z.array(DatasetEntry),
-  mediaFiles: z.array(z.object({
-    path: z.string(),
-    sizeBytes: z.number().int().nonnegative(),
-    sha256: z.string().regex(/^[a-f0-9]{64}$/),
-    originalName: z.string(),
-  })),
-  totalSizeBytes: z.number().int().nonnegative(),
-  bundleSha256: z.string().regex(/^[a-f0-9]{64}$/),
+	schemaVersion: z.literal(1),
+	exportId: z.string().uuid(),
+	userId: z.string().uuid(),
+	builtAt: z.string().datetime(),
+	generator: z.object({
+		name: z.literal('sveltesentio-portability'),
+		version: z.string(),
+	}),
+	datasets: z.array(DatasetEntry),
+	mediaFiles: z.array(
+		z.object({
+			path: z.string(),
+			sizeBytes: z.number().int().nonnegative(),
+			sha256: z.string().regex(/^[a-f0-9]{64}$/),
+			originalName: z.string(),
+		}),
+	),
+	totalSizeBytes: z.number().int().nonnegative(),
+	bundleSha256: z.string().regex(/^[a-f0-9]{64}$/),
 });
 export type ExportManifest = z.infer<typeof ExportManifest>;
 ```
 
 `ExportManifest` is the **contract** other systems can rely on —
 versioned (`schemaVersion: 1`), checksummed, listing every dataset
-+ every media file + their SHA-256s. A second controller importing
-this bundle has a deterministic surface to read against.
+
+- every media file + their SHA-256s. A second controller importing
+  this bundle has a deterministic surface to read against.
 
 ## Reference — request endpoint
 
@@ -168,50 +175,50 @@ import { auditLog } from '$lib/server/audit';
 import { exportQueue } from '$lib/server/queues';
 
 const RequestForm = z.object({
-  format: z.enum(['json', 'csv', 'json_and_csv']).default('json_and_csv'),
-  categories: z.array(DataCategory).min(1),
-  password: z.string().min(1).max(200), // re-auth
+	format: z.enum(['json', 'csv', 'json_and_csv']).default('json_and_csv'),
+	categories: z.array(DataCategory).min(1),
+	password: z.string().min(1).max(200), // re-auth
 });
 
 export const actions = {
-  request: async ({ request, locals, getClientAddress }) => {
-    const form = await superValidate(request, zod(RequestForm));
-    if (!form.valid) return fail(400, { form });
+	request: async ({ request, locals, getClientAddress }) => {
+		const form = await superValidate(request, zod(RequestForm));
+		if (!form.valid) return fail(400, { form });
 
-    await rateLimit({
-      key: `export:${locals.user.id}`,
-      limit: 3,
-      windowMs: 86400_000, // 3 exports per day max
-    });
+		await rateLimit({
+			key: `export:${locals.user.id}`,
+			limit: 3,
+			windowMs: 86400_000, // 3 exports per day max
+		});
 
-    if (!(await reauth(locals.user.id, form.data.password))) {
-      return fail(401, { form: { ...form, errors: { password: 'Incorrect password' } } });
-    }
+		if (!(await reauth(locals.user.id, form.data.password))) {
+			return fail(401, { form: { ...form, errors: { password: 'Incorrect password' } } });
+		}
 
-    const exportId = uuidv7();
-    await db.query(
-      `INSERT INTO export_requests (id, user_id, format, categories, status, requested_at)
+		const exportId = uuidv7();
+		await db.query(
+			`INSERT INTO export_requests (id, user_id, format, categories, status, requested_at)
        VALUES ($1, $2, $3, $4, 'queued', NOW())`,
-      [exportId, locals.user.id, form.data.format, form.data.categories],
-    );
+			[exportId, locals.user.id, form.data.format, form.data.categories],
+		);
 
-    await auditLog('export.requested', {
-      exportId,
-      userId: locals.user.id,
-      format: form.data.format,
-      categories: form.data.categories,
-      ip: getClientAddress(),
-    });
+		await auditLog('export.requested', {
+			exportId,
+			userId: locals.user.id,
+			format: form.data.format,
+			categories: form.data.categories,
+			ip: getClientAddress(),
+		});
 
-    // Idempotent on jobId: re-queueing the same exportId is harmless.
-    await exportQueue.add(
-      'build-export',
-      { exportId },
-      { jobId: `export:${exportId}`, attempts: 3 },
-    );
+		// Idempotent on jobId: re-queueing the same exportId is harmless.
+		await exportQueue.add(
+			'build-export',
+			{ exportId },
+			{ jobId: `export:${exportId}`, attempts: 3 },
+		);
 
-    return { success: true, exportId };
-  },
+		return { success: true, exportId };
+	},
 };
 ```
 
@@ -232,59 +239,66 @@ import { db } from '$lib/server/db';
 // preflight check (CI fails if a column references user_id but is
 // missing from this map).
 export const DATA_MAP: Array<{
-  category: DataCategory;
-  table: string;
-  query: (userId: string) => Promise<unknown[]>;
-  redactPaths?: string[]; // dot-paths in each row to nullify
-  schemaUrl: string;
+	category: DataCategory;
+	table: string;
+	query: (userId: string) => Promise<unknown[]>;
+	redactPaths?: string[]; // dot-paths in each row to nullify
+	schemaUrl: string;
 }> = [
-  {
-    category: 'identity',
-    table: 'users',
-    schemaUrl: 'https://schemas.example.com/portability/users-v1.json',
-    query: (userId) => db.query(
-      `SELECT id, email, username, name, locale, created_at FROM users WHERE id = $1`, [userId],
-    ).then((r) => r.rows),
-    // Never export password_hash, mfa_secret_encrypted, even though they're "your data"
-    redactPaths: [],
-  },
-  {
-    category: 'contact',
-    table: 'user_addresses',
-    schemaUrl: 'https://schemas.example.com/portability/addresses-v1.json',
-    query: (userId) => db.query(
-      `SELECT * FROM user_addresses WHERE user_id = $1`, [userId],
-    ).then((r) => r.rows),
-  },
-  {
-    category: 'preferences',
-    table: 'user_preferences',
-    schemaUrl: 'https://schemas.example.com/portability/preferences-v1.json',
-    query: (userId) => db.query(
-      `SELECT * FROM user_preferences WHERE user_id = $1`, [userId],
-    ).then((r) => r.rows),
-  },
-  {
-    category: 'content',
-    table: 'posts',
-    schemaUrl: 'https://schemas.example.com/portability/posts-v1.json',
-    query: (userId) => db.query(
-      `SELECT id, title, body, created_at, updated_at FROM posts WHERE author_id = $1`, [userId],
-    ).then((r) => r.rows),
-  },
-  {
-    category: 'communications',
-    table: 'messages',
-    schemaUrl: 'https://schemas.example.com/portability/messages-v1.json',
-    // CRITICAL: only messages SENT by this user. Received messages contain
-    // other users' content and must NOT be in this user's export
-    // (Art.20 §4 — must not adversely affect rights of others).
-    query: (userId) => db.query(
-      `SELECT id, recipient_id, body, sent_at FROM messages WHERE sender_id = $1`, [userId],
-    ).then((r) => r.rows),
-    redactPaths: ['recipient_id'], // even recipient ID is third-party PII
-  },
-  // ... more entries per table
+	{
+		category: 'identity',
+		table: 'users',
+		schemaUrl: 'https://schemas.example.com/portability/users-v1.json',
+		query: (userId) =>
+			db
+				.query(`SELECT id, email, username, name, locale, created_at FROM users WHERE id = $1`, [
+					userId,
+				])
+				.then((r) => r.rows),
+		// Never export password_hash, mfa_secret_encrypted, even though they're "your data"
+		redactPaths: [],
+	},
+	{
+		category: 'contact',
+		table: 'user_addresses',
+		schemaUrl: 'https://schemas.example.com/portability/addresses-v1.json',
+		query: (userId) =>
+			db.query(`SELECT * FROM user_addresses WHERE user_id = $1`, [userId]).then((r) => r.rows),
+	},
+	{
+		category: 'preferences',
+		table: 'user_preferences',
+		schemaUrl: 'https://schemas.example.com/portability/preferences-v1.json',
+		query: (userId) =>
+			db.query(`SELECT * FROM user_preferences WHERE user_id = $1`, [userId]).then((r) => r.rows),
+	},
+	{
+		category: 'content',
+		table: 'posts',
+		schemaUrl: 'https://schemas.example.com/portability/posts-v1.json',
+		query: (userId) =>
+			db
+				.query(`SELECT id, title, body, created_at, updated_at FROM posts WHERE author_id = $1`, [
+					userId,
+				])
+				.then((r) => r.rows),
+	},
+	{
+		category: 'communications',
+		table: 'messages',
+		schemaUrl: 'https://schemas.example.com/portability/messages-v1.json',
+		// CRITICAL: only messages SENT by this user. Received messages contain
+		// other users' content and must NOT be in this user's export
+		// (Art.20 §4 — must not adversely affect rights of others).
+		query: (userId) =>
+			db
+				.query(`SELECT id, recipient_id, body, sent_at FROM messages WHERE sender_id = $1`, [
+					userId,
+				])
+				.then((r) => r.rows),
+		redactPaths: ['recipient_id'], // even recipient ID is third-party PII
+	},
+	// ... more entries per table
 ];
 ```
 
@@ -313,170 +327,189 @@ import { s3 } from '$lib/server/s3';
 import { sendNotification } from '@sveltesentio/notifications';
 import { auditLog } from '$lib/server/audit';
 
-new Worker('exports', async (job) => {
-  const { exportId } = job.data as { exportId: string };
+new Worker(
+	'exports',
+	async (job) => {
+		const { exportId } = job.data as { exportId: string };
 
-  await db.query(`UPDATE export_requests SET status = 'building' WHERE id = $1`, [exportId]);
+		await db.query(`UPDATE export_requests SET status = 'building' WHERE id = $1`, [exportId]);
 
-  const req = await db.queryOne<{ user_id: string; format: string; categories: string[] }>(
-    `SELECT user_id, format, categories FROM export_requests WHERE id = $1`, [exportId],
-  );
+		const req = await db.queryOne<{ user_id: string; format: string; categories: string[] }>(
+			`SELECT user_id, format, categories FROM export_requests WHERE id = $1`,
+			[exportId],
+		);
 
-  const workDir = join(tmpdir(), `export-${exportId}`);
-  await mkdir(workDir, { recursive: true });
+		const workDir = join(tmpdir(), `export-${exportId}`);
+		await mkdir(workDir, { recursive: true });
 
-  try {
-    // 1. Per-dataset query + write
-    const datasets = [];
-    const wantsJson = req.format === 'json' || req.format === 'json_and_csv';
-    const wantsCsv = req.format === 'csv' || req.format === 'json_and_csv';
+		try {
+			// 1. Per-dataset query + write
+			const datasets = [];
+			const wantsJson = req.format === 'json' || req.format === 'json_and_csv';
+			const wantsCsv = req.format === 'csv' || req.format === 'json_and_csv';
 
-    for (const entry of DATA_MAP) {
-      if (!req.categories.includes(entry.category)) continue;
+			for (const entry of DATA_MAP) {
+				if (!req.categories.includes(entry.category)) continue;
 
-      const rows = await entry.query(req.user_id);
-      const redacted = rows.map((row) => redact(row, entry.redactPaths ?? []));
+				const rows = await entry.query(req.user_id);
+				const redacted = rows.map((row) => redact(row, entry.redactPaths ?? []));
 
-      let jsonPath: string | null = null;
-      let csvPath: string | null = null;
+				let jsonPath: string | null = null;
+				let csvPath: string | null = null;
 
-      if (wantsJson) {
-        jsonPath = `data/${entry.category}/${entry.table}.json`;
-        await mkdir(join(workDir, `data/${entry.category}`), { recursive: true });
-        await writeFile(join(workDir, jsonPath), JSON.stringify(redacted, null, 2));
-      }
-      if (wantsCsv && redacted.length > 0) {
-        csvPath = `data/${entry.category}/${entry.table}.csv`;
-        const csv = csvStringify(redacted, { header: true });
-        await writeFile(join(workDir, csvPath), csv);
-      }
+				if (wantsJson) {
+					jsonPath = `data/${entry.category}/${entry.table}.json`;
+					await mkdir(join(workDir, `data/${entry.category}`), { recursive: true });
+					await writeFile(join(workDir, jsonPath), JSON.stringify(redacted, null, 2));
+				}
+				if (wantsCsv && redacted.length > 0) {
+					csvPath = `data/${entry.category}/${entry.table}.csv`;
+					const csv = csvStringify(redacted, { header: true });
+					await writeFile(join(workDir, csvPath), csv);
+				}
 
-      datasets.push({
-        category: entry.category,
-        table: entry.table,
-        rowCount: redacted.length,
-        jsonPath: jsonPath ?? '',
-        csvPath,
-        schemaUrl: entry.schemaUrl,
-      });
-    }
+				datasets.push({
+					category: entry.category,
+					table: entry.table,
+					rowCount: redacted.length,
+					jsonPath: jsonPath ?? '',
+					csvPath,
+					schemaUrl: entry.schemaUrl,
+				});
+			}
 
-    // 2. Media files
-    const mediaFiles = [];
-    if (req.categories.includes('content')) {
-      const uploads = await db.query<{ id: string; original_name: string; s3_key: string; size_bytes: string }>(
-        `SELECT id, original_name, s3_key, size_bytes FROM uploads WHERE user_id = $1`, [req.user_id],
-      );
-      for (const u of uploads.rows) {
-        const buf = await s3.getObject({ Key: u.s3_key }).then((r) => r.Body!.transformToByteArray());
-        const sha = createHash('sha256').update(buf).digest('hex');
-        const path = `media/${u.id}/${u.original_name}`;
-        await mkdir(join(workDir, `media/${u.id}`), { recursive: true });
-        await writeFile(join(workDir, path), buf);
-        mediaFiles.push({
-          path,
-          sizeBytes: Number(u.size_bytes),
-          sha256: sha,
-          originalName: u.original_name,
-        });
-      }
-    }
+			// 2. Media files
+			const mediaFiles = [];
+			if (req.categories.includes('content')) {
+				const uploads = await db.query<{
+					id: string;
+					original_name: string;
+					s3_key: string;
+					size_bytes: string;
+				}>(`SELECT id, original_name, s3_key, size_bytes FROM uploads WHERE user_id = $1`, [
+					req.user_id,
+				]);
+				for (const u of uploads.rows) {
+					const buf = await s3
+						.getObject({ Key: u.s3_key })
+						.then((r) => r.Body!.transformToByteArray());
+					const sha = createHash('sha256').update(buf).digest('hex');
+					const path = `media/${u.id}/${u.original_name}`;
+					await mkdir(join(workDir, `media/${u.id}`), { recursive: true });
+					await writeFile(join(workDir, path), buf);
+					mediaFiles.push({
+						path,
+						sizeBytes: Number(u.size_bytes),
+						sha256: sha,
+						originalName: u.original_name,
+					});
+				}
+			}
 
-    // 3. Manifest
-    const manifest = ExportManifest.parse({
-      schemaVersion: 1,
-      exportId,
-      userId: req.user_id,
-      builtAt: new Date().toISOString(),
-      generator: { name: 'sveltesentio-portability', version: '1.0.0' },
-      datasets,
-      mediaFiles,
-      totalSizeBytes: 0, // filled after zip
-      bundleSha256: '', // filled after zip
-    });
-    await writeFile(join(workDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+			// 3. Manifest
+			const manifest = ExportManifest.parse({
+				schemaVersion: 1,
+				exportId,
+				userId: req.user_id,
+				builtAt: new Date().toISOString(),
+				generator: { name: 'sveltesentio-portability', version: '1.0.0' },
+				datasets,
+				mediaFiles,
+				totalSizeBytes: 0, // filled after zip
+				bundleSha256: '', // filled after zip
+			});
+			await writeFile(join(workDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
-    // 4. README explaining the bundle structure
-    await writeFile(join(workDir, 'README.txt'),
-      `Personal data export\n` +
-      `Generated: ${manifest.builtAt}\n` +
-      `Schema: ${manifest.schemaVersion}\n\n` +
-      `See manifest.json for the full file index.\n` +
-      `Each dataset under data/<category>/<table>.{json,csv} per GDPR Art.20.\n` +
-      `Media files under media/<upload-id>/<original-name>.\n`);
+			// 4. README explaining the bundle structure
+			await writeFile(
+				join(workDir, 'README.txt'),
+				`Personal data export\n` +
+					`Generated: ${manifest.builtAt}\n` +
+					`Schema: ${manifest.schemaVersion}\n\n` +
+					`See manifest.json for the full file index.\n` +
+					`Each dataset under data/<category>/<table>.{json,csv} per GDPR Art.20.\n` +
+					`Media files under media/<upload-id>/<original-name>.\n`,
+			);
 
-    // 5. Bundle as ZIP
-    const zipPath = join(workDir, `export-${exportId}.zip`);
-    await new Promise<void>((resolve, reject) => {
-      const out = createWriteStream(zipPath);
-      const archive = archiver('zip', { zlib: { level: 6 } });
-      out.on('close', () => resolve());
-      archive.on('error', reject);
-      archive.pipe(out);
-      archive.directory(join(workDir, 'data'), 'data');
-      if (req.categories.includes('content')) archive.directory(join(workDir, 'media'), 'media');
-      archive.file(join(workDir, 'manifest.json'), { name: 'manifest.json' });
-      archive.file(join(workDir, 'README.txt'), { name: 'README.txt' });
-      void archive.finalize();
-    });
+			// 5. Bundle as ZIP
+			const zipPath = join(workDir, `export-${exportId}.zip`);
+			await new Promise<void>((resolve, reject) => {
+				const out = createWriteStream(zipPath);
+				const archive = archiver('zip', { zlib: { level: 6 } });
+				out.on('close', () => resolve());
+				archive.on('error', reject);
+				archive.pipe(out);
+				archive.directory(join(workDir, 'data'), 'data');
+				if (req.categories.includes('content')) archive.directory(join(workDir, 'media'), 'media');
+				archive.file(join(workDir, 'manifest.json'), { name: 'manifest.json' });
+				archive.file(join(workDir, 'README.txt'), { name: 'README.txt' });
+				void archive.finalize();
+			});
 
-    // 6. Compute bundle SHA + upload
-    const bundle = await readFile(zipPath);
-    const bundleSha = createHash('sha256').update(bundle).digest('hex');
-    const s3Key = `exports/${req.user_id}/${exportId}.zip`;
-    await s3.putObject({
-      Key: s3Key,
-      Body: bundle,
-      ContentType: 'application/zip',
-      ServerSideEncryption: 'AES256',
-    });
+			// 6. Compute bundle SHA + upload
+			const bundle = await readFile(zipPath);
+			const bundleSha = createHash('sha256').update(bundle).digest('hex');
+			const s3Key = `exports/${req.user_id}/${exportId}.zip`;
+			await s3.putObject({
+				Key: s3Key,
+				Body: bundle,
+				ContentType: 'application/zip',
+				ServerSideEncryption: 'AES256',
+			});
 
-    // 7. Sign download URL (72h expiry)
-    const downloadUrl = await s3.getSignedUrl('getObject', {
-      Key: s3Key,
-      Expires: 72 * 3600,
-      ResponseCacheControl: 'private, no-store',
-      ResponseContentDisposition: `attachment; filename="export-${exportId}.zip"`,
-    });
-    const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+			// 7. Sign download URL (72h expiry)
+			const downloadUrl = await s3.getSignedUrl('getObject', {
+				Key: s3Key,
+				Expires: 72 * 3600,
+				ResponseCacheControl: 'private, no-store',
+				ResponseContentDisposition: `attachment; filename="export-${exportId}.zip"`,
+			});
+			const expiresAt = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
 
-    await db.query(
-      `UPDATE export_requests
+			await db.query(
+				`UPDATE export_requests
        SET status = 'ready', built_at = NOW(), bundle_size_bytes = $1,
            manifest_sha256 = $2, download_url = $3, download_expires_at = $4
        WHERE id = $5`,
-      [bundle.length, bundleSha, downloadUrl, expiresAt, exportId],
-    );
+				[bundle.length, bundleSha, downloadUrl, expiresAt, exportId],
+			);
 
-    await sendNotification({
-      userId: req.user_id,
-      type: 'export.ready',
-      dedupeKey: `export-ready:${exportId}`,
-      meta: { exportId, expiresAt, sizeBytes: bundle.length },
-    });
+			await sendNotification({
+				userId: req.user_id,
+				type: 'export.ready',
+				dedupeKey: `export-ready:${exportId}`,
+				meta: { exportId, expiresAt, sizeBytes: bundle.length },
+			});
 
-    await auditLog('export.completed', { exportId, userId: req.user_id, sizeBytes: bundle.length, sha256: bundleSha });
-  } catch (err) {
-    await db.query(
-      `UPDATE export_requests SET status = 'failed', failure_reason = $1 WHERE id = $2`,
-      [(err as Error).message.slice(0, 2000), exportId],
-    );
-    await auditLog('export.failed', { exportId, error: (err as Error).message });
-    throw err; // BullMQ retry
-  } finally {
-    await rm(workDir, { recursive: true, force: true });
-  }
-}, { connection: redisConfig, concurrency: 2 });
+			await auditLog('export.completed', {
+				exportId,
+				userId: req.user_id,
+				sizeBytes: bundle.length,
+				sha256: bundleSha,
+			});
+		} catch (err) {
+			await db.query(
+				`UPDATE export_requests SET status = 'failed', failure_reason = $1 WHERE id = $2`,
+				[(err as Error).message.slice(0, 2000), exportId],
+			);
+			await auditLog('export.failed', { exportId, error: (err as Error).message });
+			throw err; // BullMQ retry
+		} finally {
+			await rm(workDir, { recursive: true, force: true });
+		}
+	},
+	{ connection: redisConfig, concurrency: 2 },
+);
 
 function redact(row: Record<string, unknown>, paths: string[]): Record<string, unknown> {
-  const copy = { ...row };
-  for (const p of paths) {
-    const parts = p.split('.');
-    let cur: any = copy;
-    for (let i = 0; i < parts.length - 1; i++) cur = cur?.[parts[i]];
-    if (cur) cur[parts[parts.length - 1]] = null;
-  }
-  return copy;
+	const copy = { ...row };
+	for (const p of paths) {
+		const parts = p.split('.');
+		let cur: any = copy;
+		for (let i = 0; i < parts.length - 1; i++) cur = cur?.[parts[i]];
+		if (cur) cur[parts[parts.length - 1]] = null;
+	}
+	return copy;
 }
 ```
 
@@ -493,25 +526,30 @@ import { db } from '$lib/server/db';
 import { auditLog } from '$lib/server/audit';
 
 export const GET = async ({ params, locals }) => {
-  if (!locals.user) throw error(401);
+	if (!locals.user) throw error(401);
 
-  const r = await db.queryOne<{ user_id: string; status: string; download_url: string; download_expires_at: string }>(
-    `SELECT user_id, status, download_url, download_expires_at
+	const r = await db.queryOne<{
+		user_id: string;
+		status: string;
+		download_url: string;
+		download_expires_at: string;
+	}>(
+		`SELECT user_id, status, download_url, download_expires_at
      FROM export_requests WHERE id = $1`,
-    [params.id],
-  );
+		[params.id],
+	);
 
-  if (!r || r.user_id !== locals.user.id) throw error(404);
-  if (r.status !== 'ready') throw error(409, { type: 'not_ready', status: r.status });
-  if (new Date(r.download_expires_at) < new Date()) throw error(410, { type: 'expired' });
+	if (!r || r.user_id !== locals.user.id) throw error(404);
+	if (r.status !== 'ready') throw error(409, { type: 'not_ready', status: r.status });
+	if (new Date(r.download_expires_at) < new Date()) throw error(410, { type: 'expired' });
 
-  await db.query(
-    `UPDATE export_requests SET status = 'downloaded', downloaded_at = NOW() WHERE id = $1`,
-    [params.id],
-  );
-  await auditLog('export.downloaded', { exportId: params.id, userId: locals.user.id });
+	await db.query(
+		`UPDATE export_requests SET status = 'downloaded', downloaded_at = NOW() WHERE id = $1`,
+		[params.id],
+	);
+	await auditLog('export.downloaded', { exportId: params.id, userId: locals.user.id });
 
-  throw redirect(302, r.download_url);
+	throw redirect(302, r.download_url);
 };
 ```
 
@@ -538,7 +576,7 @@ export const GET = async ({ params, locals }) => {
    tampering invisible.
 9. **Public download URL** — anyone with the link gets the user's
    life. Signed URL + 72h expiry + `Cache-Control: private,
-   no-store`.
+no-store`.
 10. **Long expiry (>30d) on download URL** — link forwarded /
     leaked = permanent exfiltration risk.
 11. **No re-auth on request** — unattended laptop = full export
@@ -565,7 +603,7 @@ export const GET = async ({ params, locals }) => {
 20. **No `sendBeacon` audit-trail of download access** — fraud
     investigation has no record. Audit on every GET of the bundle.
 21. **CSV without header row** — non-portable. Always `header:
-    true`.
+true`.
 22. **Date format mixed (ISO, locale, epoch)** — inconsistent;
     consumers can't parse. ISO 8601 everywhere.
 23. **Manifest schema unversioned** — breaking changes to the

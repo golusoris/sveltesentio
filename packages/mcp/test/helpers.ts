@@ -36,7 +36,7 @@ export async function connectClient(rootDir: string): Promise<Client> {
  * controller, so a test can drive `resources/updated` notifications end-to-end.
  */
 export async function connectClientWith(
-	rootDir: string
+	rootDir: string,
 ): Promise<{ client: Client; subscriptions: SubscriptionController }> {
 	const { server, subscriptions } = createSveltesentioServerWith({ rootDir });
 	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -55,7 +55,7 @@ export async function readText(client: Client, uri: string): Promise<ResourceCon
 export async function callTool(
 	client: Client,
 	name: string,
-	args: Record<string, unknown>
+	args: Record<string, unknown>,
 ): Promise<{ isError: boolean; text: string }> {
 	const res = await client.callTool({ name, arguments: args });
 	const content = res.content as TextContent[];

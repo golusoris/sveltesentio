@@ -21,7 +21,7 @@ fingerprinting for versioned assets**. Everything authenticated is
 ## Related
 
 - [cookies-authoritative.md](cookies-authoritative.md) — `Vary:
-  Cookie` header pair, CDN-cache hazard on authenticated routes.
+Cookie` header pair, CDN-cache hazard on authenticated routes.
 - [http-client.md](http-client.md) — client-side cache respects
   `Cache-Control` via `fetch`; `openapi-fetch` doesn't cache by
   default — that's TanStack Query's job.
@@ -71,22 +71,22 @@ Origin response               (your SvelteKit handler)
 
 ## The default matrix
 
-| Response shape | Cache-Control | Vary | Notes |
-|---|---|---|---|
-| Anonymous SSR page | `public, max-age=0, s-maxage=60, stale-while-revalidate=600` | `Accept-Encoding, Accept-Language` | Short origin cache; SWR masks revalidation latency |
-| Authenticated SSR page | `private, no-store` | (n/a) | Never touch shared caches |
-| Anonymous JSON API | `public, max-age=30, s-maxage=60, stale-while-revalidate=300` | `Accept, Accept-Encoding` | Tune per endpoint |
-| Authenticated JSON API | `private, no-store` | — | Default until reviewed |
-| Mutation endpoint (POST/PUT/DELETE) | `no-store` | — | Never cached anywhere |
-| Hashed asset (JS/CSS with fingerprint) | `public, max-age=31536000, immutable` | — | 1-year + immutable |
-| Unhashed asset (favicon, robots) | `public, max-age=86400, stale-while-revalidate=604800` | — | 1-day + SWR week |
-| User-uploaded image (signed URL) | `private, max-age=300, no-store` | — | Private; no CDN revalidation |
-| Public product image (non-signed) | `public, max-age=604800, stale-while-revalidate=2592000` | — | 1-week + SWR month |
-| Error response 4xx | `no-store` | — | Never cache errors |
-| Error response 5xx | `no-store` | — | Never cache errors |
-| HTML served under OIDC-redirect flow | `private, no-store` | — | State-cookie-bound |
-| Server-Sent Events / streaming | `no-cache, no-transform` | — | Must revalidate; proxy MUST NOT transform |
-| OpenAPI schema `/api/v2/openapi.json` | `public, max-age=300, stale-while-revalidate=3600` | — | Stable per deploy |
+| Response shape                         | Cache-Control                                                 | Vary                               | Notes                                              |
+| -------------------------------------- | ------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------- |
+| Anonymous SSR page                     | `public, max-age=0, s-maxage=60, stale-while-revalidate=600`  | `Accept-Encoding, Accept-Language` | Short origin cache; SWR masks revalidation latency |
+| Authenticated SSR page                 | `private, no-store`                                           | (n/a)                              | Never touch shared caches                          |
+| Anonymous JSON API                     | `public, max-age=30, s-maxage=60, stale-while-revalidate=300` | `Accept, Accept-Encoding`          | Tune per endpoint                                  |
+| Authenticated JSON API                 | `private, no-store`                                           | —                                  | Default until reviewed                             |
+| Mutation endpoint (POST/PUT/DELETE)    | `no-store`                                                    | —                                  | Never cached anywhere                              |
+| Hashed asset (JS/CSS with fingerprint) | `public, max-age=31536000, immutable`                         | —                                  | 1-year + immutable                                 |
+| Unhashed asset (favicon, robots)       | `public, max-age=86400, stale-while-revalidate=604800`        | —                                  | 1-day + SWR week                                   |
+| User-uploaded image (signed URL)       | `private, max-age=300, no-store`                              | —                                  | Private; no CDN revalidation                       |
+| Public product image (non-signed)      | `public, max-age=604800, stale-while-revalidate=2592000`      | —                                  | 1-week + SWR month                                 |
+| Error response 4xx                     | `no-store`                                                    | —                                  | Never cache errors                                 |
+| Error response 5xx                     | `no-store`                                                    | —                                  | Never cache errors                                 |
+| HTML served under OIDC-redirect flow   | `private, no-store`                                           | —                                  | State-cookie-bound                                 |
+| Server-Sent Events / streaming         | `no-cache, no-transform`                                      | —                                  | Must revalidate; proxy MUST NOT transform          |
+| OpenAPI schema `/api/v2/openapi.json`  | `public, max-age=300, stale-while-revalidate=3600`            | —                                  | Stable per deploy                                  |
 
 **Rule-of-thumb mnemonic:**
 
@@ -102,45 +102,51 @@ Origin response               (your SvelteKit handler)
 import type { RequestEvent } from '@sveltejs/kit';
 
 export type CachePolicy =
-  | { kind: 'anonymous-page' }
-  | { kind: 'anonymous-api' }
-  | { kind: 'authenticated'; varyCookie?: boolean }
-  | { kind: 'immutable-asset' }
-  | { kind: 'uploaded-image'; private: true }
-  | { kind: 'public-image' }
-  | { kind: 'mutation' }
-  | { kind: 'error' };
+	| { kind: 'anonymous-page' }
+	| { kind: 'anonymous-api' }
+	| { kind: 'authenticated'; varyCookie?: boolean }
+	| { kind: 'immutable-asset' }
+	| { kind: 'uploaded-image'; private: true }
+	| { kind: 'public-image' }
+	| { kind: 'mutation' }
+	| { kind: 'error' };
 
-export function applyCacheHeaders(
-  response: Response,
-  policy: CachePolicy,
-): Response {
-  switch (policy.kind) {
-    case 'anonymous-page':
-      response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
-      response.headers.set('Vary', 'Accept-Encoding, Accept-Language');
-      return response;
-    case 'anonymous-api':
-      response.headers.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
-      response.headers.set('Vary', 'Accept, Accept-Encoding');
-      return response;
-    case 'authenticated':
-      response.headers.set('Cache-Control', 'private, no-store');
-      return response;
-    case 'immutable-asset':
-      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-      return response;
-    case 'uploaded-image':
-      response.headers.set('Cache-Control', 'private, max-age=300, no-store');
-      return response;
-    case 'public-image':
-      response.headers.set('Cache-Control', 'public, max-age=604800, stale-while-revalidate=2592000');
-      return response;
-    case 'mutation':
-    case 'error':
-      response.headers.set('Cache-Control', 'no-store');
-      return response;
-  }
+export function applyCacheHeaders(response: Response, policy: CachePolicy): Response {
+	switch (policy.kind) {
+		case 'anonymous-page':
+			response.headers.set(
+				'Cache-Control',
+				'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+			);
+			response.headers.set('Vary', 'Accept-Encoding, Accept-Language');
+			return response;
+		case 'anonymous-api':
+			response.headers.set(
+				'Cache-Control',
+				'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+			);
+			response.headers.set('Vary', 'Accept, Accept-Encoding');
+			return response;
+		case 'authenticated':
+			response.headers.set('Cache-Control', 'private, no-store');
+			return response;
+		case 'immutable-asset':
+			response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+			return response;
+		case 'uploaded-image':
+			response.headers.set('Cache-Control', 'private, max-age=300, no-store');
+			return response;
+		case 'public-image':
+			response.headers.set(
+				'Cache-Control',
+				'public, max-age=604800, stale-while-revalidate=2592000',
+			);
+			return response;
+		case 'mutation':
+		case 'error':
+			response.headers.set('Cache-Control', 'no-store');
+			return response;
+	}
 }
 ```
 
@@ -163,12 +169,12 @@ Usage in a route:
 ```ts
 // src/routes/docs/[slug]/+page.server.ts
 export async function load({ params, setHeaders }) {
-  const doc = await loadDoc(params.slug);
-  setHeaders({
-    'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
-    'vary': 'Accept-Encoding, Accept-Language',
-  });
-  return { doc };
+	const doc = await loadDoc(params.slug);
+	setHeaders({
+		'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+		vary: 'Accept-Encoding, Accept-Language',
+	});
+	return { doc };
 }
 ```
 
@@ -177,11 +183,11 @@ Or via `hooks.server.ts` for blanket policies:
 ```ts
 // src/hooks.server.ts
 export async function handle({ event, resolve }) {
-  const response = await resolve(event);
-  if (event.locals.session) {
-    response.headers.set('Cache-Control', 'private, no-store');
-  }
-  return response;
+	const response = await resolve(event);
+	if (event.locals.session) {
+		response.headers.set('Cache-Control', 'private, no-store');
+	}
+	return response;
 }
 ```
 
@@ -231,9 +237,9 @@ Cache-Control: public, max-age=60, stale-while-revalidate=600
 3. **`stale-if-error` complements SWR** for graceful origin-outage
    handling — cache serves stale instead of 5xx on origin failure:
 
-    ```text
-    Cache-Control: public, max-age=60, stale-while-revalidate=600, stale-if-error=86400
-    ```
+   ```text
+   Cache-Control: public, max-age=60, stale-while-revalidate=600, stale-if-error=86400
+   ```
 
    Critical for status pages, landing pages, anywhere the "site is
    down" UX is worse than a mildly-stale response.
@@ -282,7 +288,7 @@ auth-dependent at all, it's `private, no-store`.
 
 A private cache (browser) will still serve the cached page even
 after logout if the logout didn't revoke the cookie on the server. Fix:
-logout must set an expired session cookie *and* the next page post-logout
+logout must set an expired session cookie _and_ the next page post-logout
 must be `private, no-store` so the browser re-fetches it.
 
 ### Trap 3 — Set-Cookie + Cache-Control: public
@@ -307,7 +313,7 @@ immediate: "we just fixed a bug, purge `/pricing`".
 **Three purge rules:**
 
 1. **Purge via cache-key, not URL alone.** `/pricing` with `Vary:
-   Accept-Language` has multiple entries; purge must cover them all.
+Accept-Language` has multiple entries; purge must cover them all.
    Most CDN APIs handle this; verify.
 2. **Purge is eventually-consistent.** Cloudflare: < 30s typical;
    Fastly: < 200ms; CloudFront: minutes. Factor this into post-
@@ -355,14 +361,14 @@ queue).
 
 ```ts
 span.setAttributes({
-  'cache.policy': policy.kind,              // bounded enum
-  'cache.hit': hit,                         // boolean
-  'cache.age_seconds': ageSeconds,          // only if hit
+	'cache.policy': policy.kind, // bounded enum
+	'cache.hit': hit, // boolean
+	'cache.age_seconds': ageSeconds, // only if hit
 });
 
 metrics.cacheHitRate.add(1, {
-  policy: policy.kind,
-  route: normalizedRoute,                   // /api/orders/:id (no raw IDs)
+	policy: policy.kind,
+	route: normalizedRoute, // /api/orders/:id (no raw IDs)
 });
 ```
 
@@ -381,15 +387,17 @@ Unit-test the helper:
 ```ts
 // packages/http/test/cache.test.ts
 describe('applyCacheHeaders', () => {
-  test('anonymous-page sets public + SWR + Vary', () => {
-    const r = applyCacheHeaders(new Response('x'), { kind: 'anonymous-page' });
-    expect(r.headers.get('Cache-Control')).toBe('public, max-age=0, s-maxage=60, stale-while-revalidate=600');
-    expect(r.headers.get('Vary')).toBe('Accept-Encoding, Accept-Language');
-  });
-  test('authenticated sets private, no-store', () => {
-    const r = applyCacheHeaders(new Response('x'), { kind: 'authenticated' });
-    expect(r.headers.get('Cache-Control')).toBe('private, no-store');
-  });
+	test('anonymous-page sets public + SWR + Vary', () => {
+		const r = applyCacheHeaders(new Response('x'), { kind: 'anonymous-page' });
+		expect(r.headers.get('Cache-Control')).toBe(
+			'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+		);
+		expect(r.headers.get('Vary')).toBe('Accept-Encoding, Accept-Language');
+	});
+	test('authenticated sets private, no-store', () => {
+		const r = applyCacheHeaders(new Response('x'), { kind: 'authenticated' });
+		expect(r.headers.get('Cache-Control')).toBe('private, no-store');
+	});
 });
 ```
 
@@ -446,7 +454,7 @@ Playwright smoke:
 - **Don't cache SSE / streaming responses.** `no-cache, no-transform`
   — intermediate proxies must not buffer or compress.
 - **Don't forget `Vary: Accept-Encoding`.** A missing `Vary:
-  Accept-Encoding` on a gzip-served response can cause cache to serve
+Accept-Encoding` on a gzip-served response can cause cache to serve
   gzip bytes to a client that didn't accept encoding.
 - **Don't rely on cache for correctness.** Cache is latency
   optimization; business logic must work with cache disabled.

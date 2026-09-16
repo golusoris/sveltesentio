@@ -10,25 +10,20 @@ export class EnvValidationError extends Error {
 	}
 }
 
-export interface EnvOptions<
-	TServer extends ZodRawShape,
-	TPublic extends ZodRawShape,
-> {
+export interface EnvOptions<TServer extends ZodRawShape, TPublic extends ZodRawShape> {
 	server: ZodObject<TServer>;
 	publicEnv: ZodObject<TPublic>;
 	runtimeEnv: Record<string, string | undefined>;
 	skipValidation?: boolean;
 }
 
-export type Env<
-	TServer extends ZodRawShape,
-	TPublic extends ZodRawShape,
-> = Readonly<ZodInfer<ZodObject<TServer>> & ZodInfer<ZodObject<TPublic>>>;
+export type Env<TServer extends ZodRawShape, TPublic extends ZodRawShape> = Readonly<
+	ZodInfer<ZodObject<TServer>> & ZodInfer<ZodObject<TPublic>>
+>;
 
-export function createEnv<
-	TServer extends ZodRawShape,
-	TPublic extends ZodRawShape,
->(options: EnvOptions<TServer, TPublic>): Env<TServer, TPublic> {
+export function createEnv<TServer extends ZodRawShape, TPublic extends ZodRawShape>(
+	options: EnvOptions<TServer, TPublic>,
+): Env<TServer, TPublic> {
 	const { server, publicEnv, runtimeEnv, skipValidation = false } = options;
 
 	if (skipValidation) {

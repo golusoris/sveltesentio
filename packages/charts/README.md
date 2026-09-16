@@ -41,31 +41,31 @@ that supplies the text alternative, independent of which library draws the pixel
 
 ```svelte
 <script lang="ts">
-  import ChartFigure from '@sveltesentio/charts/figure';
-  import { dashboardPreset, prefersReducedMotion } from '@sveltesentio/charts/preset';
-  import { Chart, Svg, Spline, Axis } from 'layerchart';
+	import ChartFigure from '@sveltesentio/charts/figure';
+	import { dashboardPreset, prefersReducedMotion } from '@sveltesentio/charts/preset';
+	import { Chart, Svg, Spline, Axis } from 'layerchart';
 
-  const series = [{ key: 'sessions', label: 'Active sessions', data: points }];
-  const preset = $derived(dashboardPreset({ reducedMotion: prefersReducedMotion() }));
+	const series = [{ key: 'sessions', label: 'Active sessions', data: points }];
+	const preset = $derived(dashboardPreset({ reducedMotion: prefersReducedMotion() }));
 </script>
 
 <ChartFigure
-  title="Active HLS sessions"
-  description="Live count over the last hour."
-  {series}
-  accessors={{ x: (d) => d.t, y: (d) => d.v }}
-  tableOptions={{ xLabel: 'Time' }}
+	title="Active HLS sessions"
+	description="Live count over the last hour."
+	{series}
+	accessors={{ x: (d) => d.t, y: (d) => d.v }}
+	tableOptions={{ xLabel: 'Time' }}
 >
-  {#snippet chart()}
-    <!-- Any LayerChart / uPlot composition. The wrapper is API-agnostic. -->
-    <Chart data={series[0].data} x="t" y="v" padding={preset.padding}>
-      <Svg>
-        <Axis placement="left" grid={preset.grid.y} />
-        <Axis placement="bottom" grid={preset.grid.x} />
-        <Spline />
-      </Svg>
-    </Chart>
-  {/snippet}
+	{#snippet chart()}
+		<!-- Any LayerChart / uPlot composition. The wrapper is API-agnostic. -->
+		<Chart data={series[0].data} x="t" y="v" padding={preset.padding}>
+			<Svg>
+				<Axis placement="left" grid={preset.grid.y} />
+				<Axis placement="bottom" grid={preset.grid.x} />
+				<Spline />
+			</Svg>
+		</Chart>
+	{/snippet}
 </ChartFigure>
 ```
 

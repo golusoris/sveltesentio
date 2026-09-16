@@ -13,11 +13,7 @@ the simplified-chart `data` prop; the visual is entirely the caller's.
 -->
 <script lang="ts" generics="TDatum">
 	import ChartFigure from './ChartFigure.svelte';
-	import type {
-		ChartSeries,
-		ChartAccessors,
-		BuildTableOptions,
-	} from './a11y-table.js';
+	import type { ChartSeries, ChartAccessors, BuildTableOptions } from './a11y-table.js';
 	import type { Snippet } from 'svelte';
 
 	interface Props<T> {

@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	checkBundleBudget,
-	sentioPlugin,
-	type BundleLike,
-} from '../src/vite';
+import { checkBundleBudget, sentioPlugin, type BundleLike } from '../src/vite';
 
 const chunk = (code: string): BundleLike[string] => ({ type: 'chunk', code });
 const asset = (source: string | Uint8Array): BundleLike[string] => ({
@@ -87,9 +83,7 @@ describe('sentioPlugin generateBundle gate', () => {
 	it('logs a within-budget confirmation when verbose', () => {
 		const p = sentioPlugin({ bundleBudget: { 'entry.js': 100 }, verbose: true });
 		run(p, { 'entry.js': chunk('ok') });
-		expect(warn).toHaveBeenCalledWith(
-			expect.stringContaining('all chunks within budget'),
-		);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('all chunks within budget'));
 	});
 
 	it('throws and names the offending chunk when over budget', () => {

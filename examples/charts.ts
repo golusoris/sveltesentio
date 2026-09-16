@@ -2,6 +2,6 @@
 import { dashboardPreset, chartPalette, prefersReducedMotion } from '@sveltesentio/charts';
 
 const opts = dashboardPreset({
-  series: [{ label: 'Requests', stroke: chartPalette.primary }],
-  animate: !prefersReducedMotion(),
+	series: [{ label: 'Requests', stroke: chartPalette.primary }],
+	animate: !prefersReducedMotion(),
 });

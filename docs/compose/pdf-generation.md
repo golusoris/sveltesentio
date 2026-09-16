@@ -89,8 +89,14 @@ pnpm exec playwright install --with-deps chromium
 import { z } from 'zod';
 
 export const PdfKind = z.enum([
-  'invoice', 'receipt', 'ticket', 'payslip',
-  'certificate', 'brochure', 'policy', 'statement',
+	'invoice',
+	'receipt',
+	'ticket',
+	'payslip',
+	'certificate',
+	'brochure',
+	'policy',
+	'statement',
 ]);
 export type PdfKind = z.infer<typeof PdfKind>;
 
@@ -98,65 +104,75 @@ export const PdfTier = z.enum(['tier1_pdfkit', 'tier1_pdflib', 'tier2_chromium']
 
 // ISO 4217 + bounded amount grid for invoice lines.
 export const Money = z.object({
-  amountMinor: z.number().int(),            // cents; negative = credit
-  currency: z.enum(['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'chf']),
+	amountMinor: z.number().int(), // cents; negative = credit
+	currency: z.enum(['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'chf']),
 });
 
 export const InvoiceLine = z.object({
-  description: z.string().min(1).max(200),
-  quantity: z.number().min(0).max(999_999),
-  unitPrice: Money,
-  amount: Money, // quantity × unit; stored separately to avoid float rounding
+	description: z.string().min(1).max(200),
+	quantity: z.number().min(0).max(999_999),
+	unitPrice: Money,
+	amount: Money, // quantity × unit; stored separately to avoid float rounding
 });
 
 export const InvoiceInput = z.object({
-  schemaVersion: z.literal(1),
-  kind: z.literal('invoice'),
-  tenantId: z.string().uuid(),
-  invoiceNumber: z.string().regex(/^[A-Z0-9-]{3,40}$/),
-  issuedAt: z.string().datetime(),
-  dueAt: z.string().datetime(),
-  seller: z.object({
-    legalName: z.string().min(1).max(200),
-    vatNumber: z.string().regex(/^[A-Z]{2}[A-Z0-9]{2,18}$/).optional(), // EU VAT
-    address: z.string().min(5).max(500),
-    logoUrl: z.string().url().nullable(),
-  }),
-  buyer: z.object({
-    legalName: z.string().min(1).max(200),
-    vatNumber: z.string().regex(/^[A-Z]{2}[A-Z0-9]{2,18}$/).optional(),
-    address: z.string().min(5).max(500),
-  }),
-  lines: z.array(InvoiceLine).min(1).max(200),
-  subtotal: Money,
-  taxLines: z.array(z.object({
-    label: z.string().min(1).max(80),
-    rateBps: z.number().int().min(0).max(10_000), // basis points; 19% → 1900
-    amount: Money,
-  })).max(10),
-  total: Money,
-  locale: z.enum(['en_US', 'en_GB', 'de_DE', 'fr_FR', 'es_ES', 'it_IT', 'ja_JP']).default('en_US'),
-  notes: z.string().max(2000).optional(),
+	schemaVersion: z.literal(1),
+	kind: z.literal('invoice'),
+	tenantId: z.string().uuid(),
+	invoiceNumber: z.string().regex(/^[A-Z0-9-]{3,40}$/),
+	issuedAt: z.string().datetime(),
+	dueAt: z.string().datetime(),
+	seller: z.object({
+		legalName: z.string().min(1).max(200),
+		vatNumber: z
+			.string()
+			.regex(/^[A-Z]{2}[A-Z0-9]{2,18}$/)
+			.optional(), // EU VAT
+		address: z.string().min(5).max(500),
+		logoUrl: z.string().url().nullable(),
+	}),
+	buyer: z.object({
+		legalName: z.string().min(1).max(200),
+		vatNumber: z
+			.string()
+			.regex(/^[A-Z]{2}[A-Z0-9]{2,18}$/)
+			.optional(),
+		address: z.string().min(5).max(500),
+	}),
+	lines: z.array(InvoiceLine).min(1).max(200),
+	subtotal: Money,
+	taxLines: z
+		.array(
+			z.object({
+				label: z.string().min(1).max(80),
+				rateBps: z.number().int().min(0).max(10_000), // basis points; 19% → 1900
+				amount: Money,
+			}),
+		)
+		.max(10),
+	total: Money,
+	locale: z.enum(['en_US', 'en_GB', 'de_DE', 'fr_FR', 'es_ES', 'it_IT', 'ja_JP']).default('en_US'),
+	notes: z.string().max(2000).optional(),
 });
 export type InvoiceInput = z.infer<typeof InvoiceInput>;
 
 export const RenderRequest = z.object({
-  idempotencyKey: z.string().uuid(), // UUIDv7 — caller-supplied
-  kind: PdfKind,
-  tier: PdfTier,
-  payload: z.unknown(), // narrowed at the handler based on `kind`
+	idempotencyKey: z.string().uuid(), // UUIDv7 — caller-supplied
+	kind: PdfKind,
+	tier: PdfTier,
+	payload: z.unknown(), // narrowed at the handler based on `kind`
 });
 
 export const RenderResult = z.object({
-  id: z.string().uuid(),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
-  bytes: z.number().int().positive(),
-  pages: z.number().int().positive(),
-  s3Key: z.string().min(1),
-  signedUrl: z.string().url(),
-  expiresAt: z.string().datetime(),
-  renderedAt: z.string().datetime(),
-  tier: PdfTier,
+	id: z.string().uuid(),
+	sha256: z.string().regex(/^[a-f0-9]{64}$/),
+	bytes: z.number().int().positive(),
+	pages: z.number().int().positive(),
+	s3Key: z.string().min(1),
+	signedUrl: z.string().url(),
+	expiresAt: z.string().datetime(),
+	renderedAt: z.string().datetime(),
+	tier: PdfTier,
 });
 ```
 
@@ -177,87 +193,89 @@ import { InvoiceInput } from '../types';
 import { formatMoney, formatDate } from '../i18n';
 
 export async function renderInvoice(input: InvoiceInput): Promise<Buffer> {
-  const parsed = InvoiceInput.parse(input);
-  const doc = new PDFDocument({
-    size: 'A4',
-    margin: 56,         // 20mm — fits European letterhead
-    lang: parsed.locale.slice(0, 2),
-    displayTitle: true,
-    pdfVersion: '1.7',
-    tagged: true,       // PDF/UA-1 structural tagging
-    info: {
-      Title: `Invoice ${parsed.invoiceNumber}`,
-      Author: parsed.seller.legalName,
-      Subject: `Invoice for ${parsed.buyer.legalName}`,
-      Creator: 'sveltesentio',
-      Producer: 'PDFKit',
-      CreationDate: new Date(parsed.issuedAt),
-    },
-  });
+	const parsed = InvoiceInput.parse(input);
+	const doc = new PDFDocument({
+		size: 'A4',
+		margin: 56, // 20mm — fits European letterhead
+		lang: parsed.locale.slice(0, 2),
+		displayTitle: true,
+		pdfVersion: '1.7',
+		tagged: true, // PDF/UA-1 structural tagging
+		info: {
+			Title: `Invoice ${parsed.invoiceNumber}`,
+			Author: parsed.seller.legalName,
+			Subject: `Invoice for ${parsed.buyer.legalName}`,
+			Creator: 'sveltesentio',
+			Producer: 'PDFKit',
+			CreationDate: new Date(parsed.issuedAt),
+		},
+	});
 
-  // Register the licensed font once per process; PDFKit throws on missing.
-  doc.registerFont('Inter-Regular', 'assets/fonts/Inter-Regular.ttf');
-  doc.registerFont('Inter-Bold',    'assets/fonts/Inter-Bold.ttf');
+	// Register the licensed font once per process; PDFKit throws on missing.
+	doc.registerFont('Inter-Regular', 'assets/fonts/Inter-Regular.ttf');
+	doc.registerFont('Inter-Bold', 'assets/fonts/Inter-Bold.ttf');
 
-  const chunks: Buffer[] = [];
-  doc.on('data', (c: Buffer) => chunks.push(c));
-  const done = new Promise<Buffer>(resolve => doc.on('end', () => resolve(Buffer.concat(chunks))));
+	const chunks: Buffer[] = [];
+	doc.on('data', (c: Buffer) => chunks.push(c));
+	const done = new Promise<Buffer>((resolve) =>
+		doc.on('end', () => resolve(Buffer.concat(chunks))),
+	);
 
-  // STRUCTURE = tagging tree; everything goes inside structure elements.
-  const struct = doc.struct('Document');
-  doc.addStructure(struct);
+	// STRUCTURE = tagging tree; everything goes inside structure elements.
+	const struct = doc.struct('Document');
+	doc.addStructure(struct);
 
-  // Header
-  const header = doc.struct('H1', () => {
-    doc.font('Inter-Bold').fontSize(22).text(`Invoice ${parsed.invoiceNumber}`);
-  });
-  struct.add(header);
+	// Header
+	const header = doc.struct('H1', () => {
+		doc.font('Inter-Bold').fontSize(22).text(`Invoice ${parsed.invoiceNumber}`);
+	});
+	struct.add(header);
 
-  doc.moveDown(0.5).font('Inter-Regular').fontSize(10);
-  doc.text(`Issued ${formatDate(parsed.issuedAt, parsed.locale)}`);
-  doc.text(`Due ${formatDate(parsed.dueAt, parsed.locale)}`);
-  doc.moveDown(1);
+	doc.moveDown(0.5).font('Inter-Regular').fontSize(10);
+	doc.text(`Issued ${formatDate(parsed.issuedAt, parsed.locale)}`);
+	doc.text(`Due ${formatDate(parsed.dueAt, parsed.locale)}`);
+	doc.moveDown(1);
 
-  // Parties (two columns)
-  const sellerBlock = doc.struct('Sect', () => {
-    doc.font('Inter-Bold').fontSize(10).text('From', 56, doc.y);
-    doc.font('Inter-Regular').text(parsed.seller.legalName);
-    doc.text(parsed.seller.address);
-    if (parsed.seller.vatNumber) doc.text(`VAT ${parsed.seller.vatNumber}`);
-  });
-  struct.add(sellerBlock);
-  doc.moveDown(2);
+	// Parties (two columns)
+	const sellerBlock = doc.struct('Sect', () => {
+		doc.font('Inter-Bold').fontSize(10).text('From', 56, doc.y);
+		doc.font('Inter-Regular').text(parsed.seller.legalName);
+		doc.text(parsed.seller.address);
+		if (parsed.seller.vatNumber) doc.text(`VAT ${parsed.seller.vatNumber}`);
+	});
+	struct.add(sellerBlock);
+	doc.moveDown(2);
 
-  // Line items table (tag as Table)
-  const tableStruct = doc.struct('Table', () => {
-    // Header row
-    doc.font('Inter-Bold').fontSize(10);
-    doc.text('Description', 56, doc.y, { width: 260 });
-    doc.text('Qty',      316, doc.y, { width: 40,  align: 'right' });
-    doc.text('Unit',     356, doc.y, { width: 80,  align: 'right' });
-    doc.text('Amount',   436, doc.y, { width: 100, align: 'right' });
-    doc.moveDown(0.5);
+	// Line items table (tag as Table)
+	const tableStruct = doc.struct('Table', () => {
+		// Header row
+		doc.font('Inter-Bold').fontSize(10);
+		doc.text('Description', 56, doc.y, { width: 260 });
+		doc.text('Qty', 316, doc.y, { width: 40, align: 'right' });
+		doc.text('Unit', 356, doc.y, { width: 80, align: 'right' });
+		doc.text('Amount', 436, doc.y, { width: 100, align: 'right' });
+		doc.moveDown(0.5);
 
-    doc.font('Inter-Regular');
-    for (const line of parsed.lines) {
-      const y = doc.y;
-      doc.text(line.description, 56, y, { width: 260 });
-      doc.text(String(line.quantity), 316, y, { width: 40, align: 'right' });
-      doc.text(formatMoney(line.unitPrice, parsed.locale), 356, y, { width: 80, align: 'right' });
-      doc.text(formatMoney(line.amount,    parsed.locale), 436, y, { width: 100, align: 'right' });
-      doc.moveDown(0.3);
-    }
-  });
-  struct.add(tableStruct);
+		doc.font('Inter-Regular');
+		for (const line of parsed.lines) {
+			const y = doc.y;
+			doc.text(line.description, 56, y, { width: 260 });
+			doc.text(String(line.quantity), 316, y, { width: 40, align: 'right' });
+			doc.text(formatMoney(line.unitPrice, parsed.locale), 356, y, { width: 80, align: 'right' });
+			doc.text(formatMoney(line.amount, parsed.locale), 436, y, { width: 100, align: 'right' });
+			doc.moveDown(0.3);
+		}
+	});
+	struct.add(tableStruct);
 
-  // Totals
-  doc.moveDown(1);
-  doc.font('Inter-Bold').fontSize(11);
-  doc.text(`Total ${formatMoney(parsed.total, parsed.locale)}`, { align: 'right' });
+	// Totals
+	doc.moveDown(1);
+	doc.font('Inter-Bold').fontSize(11);
+	doc.text(`Total ${formatMoney(parsed.total, parsed.locale)}`, { align: 'right' });
 
-  struct.end();
-  doc.end();
-  return done;
+	struct.end();
+	doc.end();
+	return done;
 }
 ```
 
@@ -278,19 +296,19 @@ import { PDFDocument } from 'pdf-lib';
 import { readFile } from 'fs/promises';
 
 export async function fillTaxForm(data: Record<string, string>): Promise<Uint8Array> {
-  const bytes = await readFile('assets/forms/tax-form-template.pdf');
-  const doc = await PDFDocument.load(bytes);
-  const form = doc.getForm();
+	const bytes = await readFile('assets/forms/tax-form-template.pdf');
+	const doc = await PDFDocument.load(bytes);
+	const form = doc.getForm();
 
-  // Every field name is hardcoded after inspection; no dynamic field
-  // lookup — typos become silent "form field with typo never fills".
-  for (const [fieldName, value] of Object.entries(data)) {
-    const field = form.getTextField(fieldName);
-    field.setText(value.slice(0, 2000));  // DoS protection
-    field.enableReadOnly();               // prevent post-render edit
-  }
-  form.flatten(); // bake values into the page; no AcroForm afterwards
-  return doc.save();
+	// Every field name is hardcoded after inspection; no dynamic field
+	// lookup — typos become silent "form field with typo never fills".
+	for (const [fieldName, value] of Object.entries(data)) {
+		const field = form.getTextField(fieldName);
+		field.setText(value.slice(0, 2000)); // DoS protection
+		field.enableReadOnly(); // prevent post-render edit
+	}
+	form.flatten(); // bake values into the page; no AcroForm afterwards
+	return doc.save();
 }
 ```
 
@@ -305,74 +323,80 @@ import { chromium, type Browser } from 'playwright';
 import { z } from 'zod';
 
 const BrochureInput = z.object({
-  templateUrl: z.string().url(), // internal URL — template route in our app
-  params: z.record(z.string(), z.string()).refine(
-    (obj) => Object.keys(obj).length <= 50,
-    'too many params',
-  ),
-  pdfOptions: z.object({
-    format: z.literal('A4').default('A4'),
-    landscape: z.boolean().default(false),
-    printBackground: z.boolean().default(true),
-    margin: z.object({
-      top: z.string().default('20mm'),
-      right: z.string().default('15mm'),
-      bottom: z.string().default('20mm'),
-      left: z.string().default('15mm'),
-    }).default({}),
-  }).default({}),
+	templateUrl: z.string().url(), // internal URL — template route in our app
+	params: z
+		.record(z.string(), z.string())
+		.refine((obj) => Object.keys(obj).length <= 50, 'too many params'),
+	pdfOptions: z
+		.object({
+			format: z.literal('A4').default('A4'),
+			landscape: z.boolean().default(false),
+			printBackground: z.boolean().default(true),
+			margin: z
+				.object({
+					top: z.string().default('20mm'),
+					right: z.string().default('15mm'),
+					bottom: z.string().default('20mm'),
+					left: z.string().default('15mm'),
+				})
+				.default({}),
+		})
+		.default({}),
 });
 
 // Persistent pool — launching Chromium per render is 800ms cold; pool = 60ms.
 let pool: Browser | null = null;
 export async function getBrowser(): Promise<Browser> {
-  if (pool && pool.isConnected()) return pool;
-  pool = await chromium.launch({
-    args: [
-      '--no-sandbox',                  // containers already sandbox
-      '--disable-dev-shm-usage',       // /dev/shm is small in k8s
-      '--disable-gpu',
-      '--font-render-hinting=none',    // deterministic rendering
-    ],
-  });
-  return pool;
+	if (pool && pool.isConnected()) return pool;
+	pool = await chromium.launch({
+		args: [
+			'--no-sandbox', // containers already sandbox
+			'--disable-dev-shm-usage', // /dev/shm is small in k8s
+			'--disable-gpu',
+			'--font-render-hinting=none', // deterministic rendering
+		],
+	});
+	return pool;
 }
 
 export async function renderBrochure(input: unknown): Promise<Buffer> {
-  const parsed = BrochureInput.parse(input);
-  const browser = await getBrowser();
+	const parsed = BrochureInput.parse(input);
+	const browser = await getBrowser();
 
-  const context = await browser.newContext({
-    userAgent: 'sveltesentio-pdf-renderer/1.0',
-    // Fresh storage per render — no session bleed across tenants.
-    storageState: undefined,
-    // Internal token — the template route verifies this, so the
-    // Chromium can render authenticated tenant-specific pages without
-    // holding long-lived sessions.
-    extraHTTPHeaders: { 'x-pdf-render-token': process.env.PDF_RENDER_TOKEN! },
-  });
+	const context = await browser.newContext({
+		userAgent: 'sveltesentio-pdf-renderer/1.0',
+		// Fresh storage per render — no session bleed across tenants.
+		storageState: undefined,
+		// Internal token — the template route verifies this, so the
+		// Chromium can render authenticated tenant-specific pages without
+		// holding long-lived sessions.
+		extraHTTPHeaders: { 'x-pdf-render-token': process.env.PDF_RENDER_TOKEN! },
+	});
 
-  const page = await context.newPage();
-  const url = new URL(parsed.templateUrl);
-  for (const [k, v] of Object.entries(parsed.params)) url.searchParams.set(k, v);
+	const page = await context.newPage();
+	const url = new URL(parsed.templateUrl);
+	for (const [k, v] of Object.entries(parsed.params)) url.searchParams.set(k, v);
 
-  try {
-    await page.goto(url.toString(), { waitUntil: 'networkidle', timeout: 30_000 });
-    // Custom signal — the template route dispatches this when ready.
-    await page.waitForFunction(() => (window as unknown as { __pdfReady?: boolean }).__pdfReady === true, { timeout: 10_000 });
+	try {
+		await page.goto(url.toString(), { waitUntil: 'networkidle', timeout: 30_000 });
+		// Custom signal — the template route dispatches this when ready.
+		await page.waitForFunction(
+			() => (window as unknown as { __pdfReady?: boolean }).__pdfReady === true,
+			{ timeout: 10_000 },
+		);
 
-    const pdf = await page.pdf({
-      format: parsed.pdfOptions.format,
-      landscape: parsed.pdfOptions.landscape,
-      printBackground: parsed.pdfOptions.printBackground,
-      margin: parsed.pdfOptions.margin,
-      displayHeaderFooter: false,
-      preferCSSPageSize: true,
-    });
-    return pdf;
-  } finally {
-    await context.close(); // NEVER close the browser; reuse the pool.
-  }
+		const pdf = await page.pdf({
+			format: parsed.pdfOptions.format,
+			landscape: parsed.pdfOptions.landscape,
+			printBackground: parsed.pdfOptions.printBackground,
+			margin: parsed.pdfOptions.margin,
+			displayHeaderFooter: false,
+			preferCSSPageSize: true,
+		});
+		return pdf;
+	} finally {
+		await context.close(); // NEVER close the browser; reuse the pool.
+	}
 }
 ```
 
@@ -407,54 +431,71 @@ import { sha256 } from '$lib/server/crypto';
 
 export const pdfQueue = new Queue('pdf-render');
 
-new Worker('pdf-render', async (job) => {
-  const req = RenderRequest.parse(job.data);
+new Worker(
+	'pdf-render',
+	async (job) => {
+		const req = RenderRequest.parse(job.data);
 
-  // Tenant-scoped rate limit — PDF rendering is expensive.
-  const check = await rateLimiter.consume(`pdf:${(req.payload as { tenantId?: string }).tenantId}`, 1, {
-    capacity: 100, refillPerSec: 100 / 3600, // 100/hr per tenant
-  });
-  if (!check.allowed) throw new Error('pdf_rate_limit');
+		// Tenant-scoped rate limit — PDF rendering is expensive.
+		const check = await rateLimiter.consume(
+			`pdf:${(req.payload as { tenantId?: string }).tenantId}`,
+			1,
+			{
+				capacity: 100,
+				refillPerSec: 100 / 3600, // 100/hr per tenant
+			},
+		);
+		if (!check.allowed) throw new Error('pdf_rate_limit');
 
-  let bytes: Buffer | Uint8Array;
-  switch (req.kind) {
-    case 'invoice':
-      bytes = await renderInvoice(InvoiceInput.parse(req.payload));
-      break;
-    case 'brochure':
-    case 'policy':
-      bytes = await renderBrochure(req.payload);
-      break;
-    default:
-      throw new Error(`unsupported kind: ${req.kind}`);
-  }
+		let bytes: Buffer | Uint8Array;
+		switch (req.kind) {
+			case 'invoice':
+				bytes = await renderInvoice(InvoiceInput.parse(req.payload));
+				break;
+			case 'brochure':
+			case 'policy':
+				bytes = await renderBrochure(req.payload);
+				break;
+			default:
+				throw new Error(`unsupported kind: ${req.kind}`);
+		}
 
-  const hash = await sha256(new Uint8Array(bytes));
-  const s3Key = `pdf/${req.kind}/${hash}.pdf`;
-  const upload = await uploadAndSign(s3Key, bytes, { contentType: 'application/pdf', expiresSec: 3600 });
+		const hash = await sha256(new Uint8Array(bytes));
+		const s3Key = `pdf/${req.kind}/${hash}.pdf`;
+		const upload = await uploadAndSign(s3Key, bytes, {
+			contentType: 'application/pdf',
+			expiresSec: 3600,
+		});
 
-  await recordAudit({
-    actor: (req.payload as { actor?: string }).actor ?? 'system',
-    action: `pdf.${req.kind}.rendered`,
-    payload: { sha256: hash, bytes: bytes.byteLength, tier: req.tier, idempotencyKey: req.idempotencyKey },
-  });
+		await recordAudit({
+			actor: (req.payload as { actor?: string }).actor ?? 'system',
+			action: `pdf.${req.kind}.rendered`,
+			payload: {
+				sha256: hash,
+				bytes: bytes.byteLength,
+				tier: req.tier,
+				idempotencyKey: req.idempotencyKey,
+			},
+		});
 
-  const result: typeof RenderResult._type = {
-    id: uuidv7(),
-    sha256: hash,
-    bytes: bytes.byteLength,
-    pages: 1, // TODO: pdf-lib page count for Tier 1
-    s3Key,
-    signedUrl: upload.signedUrl,
-    expiresAt: upload.expiresAt,
-    renderedAt: new Date().toISOString(),
-    tier: req.tier,
-  };
-  return result;
-}, {
-  concurrency: 4, // Tier 2 is heavy; Tier 1 could go higher if isolated
-  limiter: { max: 50, duration: 60_000 },
-});
+		const result: typeof RenderResult._type = {
+			id: uuidv7(),
+			sha256: hash,
+			bytes: bytes.byteLength,
+			pages: 1, // TODO: pdf-lib page count for Tier 1
+			s3Key,
+			signedUrl: upload.signedUrl,
+			expiresAt: upload.expiresAt,
+			renderedAt: new Date().toISOString(),
+			tier: req.tier,
+		};
+		return result;
+	},
+	{
+		concurrency: 4, // Tier 2 is heavy; Tier 1 could go higher if isolated
+		limiter: { max: 50, duration: 60_000 },
+	},
+);
 ```
 
 ### 5. Idempotency via content hash
@@ -462,19 +503,19 @@ new Worker('pdf-render', async (job) => {
 ```ts
 // packages/pdf/src/idempotency.ts
 export async function renderIfNotExists(req: RenderRequest): Promise<RenderResult> {
-  // Canonical JSON — `JSON.stringify` with sorted keys.
-  const canon = canonicalJson({ kind: req.kind, tier: req.tier, payload: req.payload });
-  const inputHash = await sha256(canon);
+	// Canonical JSON — `JSON.stringify` with sorted keys.
+	const canon = canonicalJson({ kind: req.kind, tier: req.tier, payload: req.payload });
+	const inputHash = await sha256(canon);
 
-  // Probe S3 HEAD first — if object exists, reuse.
-  const s3Key = `pdf/${req.kind}/${inputHash}.pdf`;
-  const existing = await s3Head(s3Key);
-  if (existing) {
-    return buildResultFromS3(inputHash, s3Key, existing);
-  }
-  // Enqueue
-  const job = await pdfQueue.add(req.kind, req, { jobId: inputHash });
-  return waitForCompletion(job);
+	// Probe S3 HEAD first — if object exists, reuse.
+	const s3Key = `pdf/${req.kind}/${inputHash}.pdf`;
+	const existing = await s3Head(s3Key);
+	if (existing) {
+		return buildResultFromS3(inputHash, s3Key, existing);
+	}
+	// Enqueue
+	const job = await pdfQueue.add(req.kind, req, { jobId: inputHash });
+	return waitForCompletion(job);
 }
 ```
 
@@ -490,10 +531,10 @@ ModDate to the same, so the byte output is stable.
 // PDFKit emits /CreationDate + /ModDate from the system clock by default.
 // We override both to the input's timestamp, and disable the random PDF id.
 const doc = new PDFDocument({
-  info: {
-    CreationDate: new Date(parsed.issuedAt),
-    ModDate:      new Date(parsed.issuedAt),
-  },
+	info: {
+		CreationDate: new Date(parsed.issuedAt),
+		ModDate: new Date(parsed.issuedAt),
+	},
 });
 // Remove doc._id randomness (PDFKit internal); if library version
 // exposes `doc._root.data.ID`, set deterministically from inputHash.
@@ -504,17 +545,17 @@ the hash changes, and the CDN cache is useless.
 
 ### 7. Accessibility — PDF/UA-1 checklist
 
-| Requirement | How |
-|---|---|
-| Document language | `new PDFDocument({ lang: 'en' })` |
-| Title meta | `info.Title` + `displayTitle: true` (title bar shows it) |
-| Structural tags | `tagged: true` + `doc.struct('H1', ...)` / `'Sect'` / `'Table'` |
-| Reading order | structure tree order must match visual order |
+| Requirement         | How                                                                  |
+| ------------------- | -------------------------------------------------------------------- |
+| Document language   | `new PDFDocument({ lang: 'en' })`                                    |
+| Title meta          | `info.Title` + `displayTitle: true` (title bar shows it)             |
+| Structural tags     | `tagged: true` + `doc.struct('H1', ...)` / `'Sect'` / `'Table'`      |
+| Reading order       | structure tree order must match visual order                         |
 | Alt text for images | `doc.image(..., { alt: 'Company logo' })` inside a `'Figure'` struct |
-| Tables tagged | use `'Table'` + `'TR'` + `'TH'` + `'TD'` structure elements |
-| Color contrast | 4.5:1 WCAG AA minimum; test with PAC3 |
-| Fonts embedded | never rely on system fonts on the reader's device |
-| No scanned images | scanned-only PDFs fail PDF/UA-1 (no extractable text) |
+| Tables tagged       | use `'Table'` + `'TR'` + `'TH'` + `'TD'` structure elements          |
+| Color contrast      | 4.5:1 WCAG AA minimum; test with PAC3                                |
+| Fonts embedded      | never rely on system fonts on the reader's device                    |
+| No scanned images   | scanned-only PDFs fail PDF/UA-1 (no extractable text)                |
 
 Ship a CI step that pipes rendered PDFs through
 [veraPDF](https://verapdf.org/) or the Adobe PAC3 CLI; fail the build

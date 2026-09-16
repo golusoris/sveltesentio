@@ -53,7 +53,9 @@ describe('matchesBinding / matchesShortcut', () => {
 	});
 
 	it('requires an exact modifier set (no extra modifiers)', () => {
-		expect(matchesBinding(event('k', { ctrlKey: true, shiftKey: true }), binding, false)).toBe(false);
+		expect(matchesBinding(event('k', { ctrlKey: true, shiftKey: true }), binding, false)).toBe(
+			false,
+		);
 	});
 
 	it('is case-insensitive on the key', () => {

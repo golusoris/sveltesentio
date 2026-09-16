@@ -7,7 +7,8 @@ template hygiene (plain-text fallback, `List-Unsubscribe` headers).
 This recipe is the authoritative contract for the sveltesentio
 stack: **sending provider (Postmark default / SES escape) +
 authenticated domains + bounce/complaint webhook → suppression list
-+ RFC 8058 one-click unsubscribe + per-template send rate monitors**.
+
+- RFC 8058 one-click unsubscribe + per-template send rate monitors**.
 
 Per [principles.md §2.2](../principles.md) (OWASP ASVS L2 V8 —
 communication security; email is a trust channel), the posture is:
@@ -73,14 +74,14 @@ Clicked         → redirect-link tracking (unreliable; blocked, prefetched)
 
 ## Sending-provider decision matrix
 
-| Provider | Use when | Avoid when |
-|---|---|---|
-| **Postmark** (DEFAULT) | Transactional only; clean reputation; straightforward API | Marketing sends (separate product: Postmark Broadcasts) |
-| **AWS SES** (ESCAPE high-volume) | >1M/month transactional; AWS-integrated; cost-sensitive | Small team (deliverability tuning is on you) |
-| **Resend** | Developer-friendly API; React-email ecosystem (we use mjml-svelte) | — (it's fine; Postmark is more mature) |
-| **SendGrid** | Legacy integrations only | New projects — reputation has dipped |
-| **Mailgun** | — | New projects; prefer Postmark/SES/Resend |
-| **Your own SMTP / Postfix** | Never for new sends | ALWAYS (IP reputation bootstrapping is a year-long project) |
+| Provider                         | Use when                                                           | Avoid when                                                  |
+| -------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| **Postmark** (DEFAULT)           | Transactional only; clean reputation; straightforward API          | Marketing sends (separate product: Postmark Broadcasts)     |
+| **AWS SES** (ESCAPE high-volume) | >1M/month transactional; AWS-integrated; cost-sensitive            | Small team (deliverability tuning is on you)                |
+| **Resend**                       | Developer-friendly API; React-email ecosystem (we use mjml-svelte) | — (it's fine; Postmark is more mature)                      |
+| **SendGrid**                     | Legacy integrations only                                           | New projects — reputation has dipped                        |
+| **Mailgun**                      | —                                                                  | New projects; prefer Postmark/SES/Resend                    |
+| **Your own SMTP / Postfix**      | Never for new sends                                                | ALWAYS (IP reputation bootstrapping is a year-long project) |
 
 **Three provider rules:**
 
@@ -179,7 +180,7 @@ max_age: 604800
 Two rules:
 
 1. **MTA-STS enforces TLS on inbound.** Prevents downgrade attacks
-   on recipients sending email *to* your domain.
+   on recipients sending email _to_ your domain.
 2. **Start with `mode: testing`, move to `enforce` after 2 weeks.**
    Monitor TLS-RPT reports for misconfigured receiving MX servers.
 
@@ -218,63 +219,66 @@ import type { EmailTemplate } from './schemas';
 const postmark = new Postmark.ServerClient(POSTMARK_TOKEN);
 
 interface SendOptions {
-  to: string;
-  template: EmailTemplate;
-  data: Record<string, unknown>;
-  userId: string;
-  category: 'transactional' | 'marketing';
-  correlationId: string;
+	to: string;
+	template: EmailTemplate;
+	data: Record<string, unknown>;
+	userId: string;
+	category: 'transactional' | 'marketing';
+	correlationId: string;
 }
 
 export async function sendEmail(opts: SendOptions): Promise<{ sent: boolean; reason?: string }> {
-  if (await isSuppressed(opts.to, opts.category)) {
-    await recordEmailEvent({ ...opts, action: 'suppressed', reason: 'suppression_list' });
-    return { sent: false, reason: 'suppression_list' };
-  }
+	if (await isSuppressed(opts.to, opts.category)) {
+		await recordEmailEvent({ ...opts, action: 'suppressed', reason: 'suppression_list' });
+		return { sent: false, reason: 'suppression_list' };
+	}
 
-  const rl = await checkRateLimit({
-    bucket: `email:${opts.userId}:${opts.template}`,
-    limit: 10,
-    windowSeconds: 3600,
-  });
-  if (!rl.allowed) {
-    await recordEmailEvent({ ...opts, action: 'suppressed', reason: 'rate_limit' });
-    return { sent: false, reason: 'rate_limit' };
-  }
+	const rl = await checkRateLimit({
+		bucket: `email:${opts.userId}:${opts.template}`,
+		limit: 10,
+		windowSeconds: 3600,
+	});
+	if (!rl.allowed) {
+		await recordEmailEvent({ ...opts, action: 'suppressed', reason: 'rate_limit' });
+		return { sent: false, reason: 'rate_limit' };
+	}
 
-  const rendered = await renderTemplate(opts.template, opts.data);
+	const rendered = await renderTemplate(opts.template, opts.data);
 
-  const listUnsubUrl = `https://${PUBLIC_DOMAIN}/unsubscribe?token=${signUnsubToken(opts.to, opts.category)}`;
+	const listUnsubUrl = `https://${PUBLIC_DOMAIN}/unsubscribe?token=${signUnsubToken(opts.to, opts.category)}`;
 
-  const res = await postmark.sendEmail({
-    From: fromAddress(opts.category),
-    To: opts.to,
-    Subject: rendered.subject,
-    HtmlBody: rendered.html,
-    TextBody: rendered.text,
-    MessageStream: opts.category === 'transactional' ? 'outbound' : 'broadcast',
-    Headers: [
-      { Name: 'List-Unsubscribe', Value: `<${listUnsubUrl}>, <mailto:unsub@${PUBLIC_DOMAIN}?subject=unsubscribe&body=${opts.to}>` },
-      { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
-      { Name: 'X-Template', Value: opts.template },
-      { Name: 'X-Correlation-Id', Value: opts.correlationId },
-    ],
-    Metadata: { userId: opts.userId, template: opts.template, correlationId: opts.correlationId },
-  });
+	const res = await postmark.sendEmail({
+		From: fromAddress(opts.category),
+		To: opts.to,
+		Subject: rendered.subject,
+		HtmlBody: rendered.html,
+		TextBody: rendered.text,
+		MessageStream: opts.category === 'transactional' ? 'outbound' : 'broadcast',
+		Headers: [
+			{
+				Name: 'List-Unsubscribe',
+				Value: `<${listUnsubUrl}>, <mailto:unsub@${PUBLIC_DOMAIN}?subject=unsubscribe&body=${opts.to}>`,
+			},
+			{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+			{ Name: 'X-Template', Value: opts.template },
+			{ Name: 'X-Correlation-Id', Value: opts.correlationId },
+		],
+		Metadata: { userId: opts.userId, template: opts.template, correlationId: opts.correlationId },
+	});
 
-  await recordEmailEvent({
-    ...opts,
-    action: 'sent',
-    providerId: res.MessageID,
-  });
+	await recordEmailEvent({
+		...opts,
+		action: 'sent',
+		providerId: res.MessageID,
+	});
 
-  return { sent: true };
+	return { sent: true };
 }
 
 function fromAddress(category: 'transactional' | 'marketing'): string {
-  return category === 'transactional'
-    ? `noreply@mail.${PUBLIC_DOMAIN}`
-    : `hello@news.${PUBLIC_DOMAIN}`;
+	return category === 'transactional'
+		? `noreply@mail.${PUBLIC_DOMAIN}`
+		: `hello@news.${PUBLIC_DOMAIN}`;
 }
 ```
 
@@ -294,12 +298,12 @@ function fromAddress(category: 'transactional' | 'marketing'): string {
    (RFC 8058) — Gmail's "unsubscribe" button requires both. The
    `mailto:` is the fallback; the HTTPS URL is the modern path.
 5. **Token-signed unsubscribe URL.** HMAC the `(email, category,
-   timestamp)` — prevents enumeration attacks; expires after N
+timestamp)` — prevents enumeration attacks; expires after N
    days.
 6. **`X-Correlation-Id` on every send.** Threads through webhook
    callbacks for OTel correlation. Same UUIDv7 convention as
    [observability.md](observability.md).
-7. **Audit *before* send for suppression/rate-limit, *after* send
+7. **Audit _before_ send for suppression/rate-limit, _after_ send
    for provider-sent.** Order matters: a suppression-skipped
    send still needs an audit row (for customer-success visibility:
    "why didn't I receive the email?").
@@ -326,33 +330,33 @@ CREATE INDEX email_suppressions_created_idx ON email_suppressions (created_at DE
 import { db } from '$lib/db';
 
 export async function isSuppressed(
-  email: string,
-  category: 'transactional' | 'marketing',
+	email: string,
+	category: 'transactional' | 'marketing',
 ): Promise<boolean> {
-  const row = await db.oneOrNone(
-    `SELECT 1 FROM email_suppressions
+	const row = await db.oneOrNone(
+		`SELECT 1 FROM email_suppressions
       WHERE email = $1
         AND (category = $2 OR category = 'all')
         AND (reason != 'soft_bounce' OR created_at > now() - interval '24 hours')`,
-    [email.toLowerCase(), category],
-  );
-  return row !== null;
+		[email.toLowerCase(), category],
+	);
+	return row !== null;
 }
 
 export async function addSuppression(
-  email: string,
-  category: 'transactional' | 'marketing' | 'all',
-  reason: 'hard_bounce' | 'soft_bounce' | 'complaint' | 'unsubscribe' | 'manual',
-  metadata?: Record<string, unknown>,
+	email: string,
+	category: 'transactional' | 'marketing' | 'all',
+	reason: 'hard_bounce' | 'soft_bounce' | 'complaint' | 'unsubscribe' | 'manual',
+	metadata?: Record<string, unknown>,
 ): Promise<void> {
-  await db.none(
-    `INSERT INTO email_suppressions (email, category, reason, metadata)
+	await db.none(
+		`INSERT INTO email_suppressions (email, category, reason, metadata)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (email, category) DO UPDATE SET reason = EXCLUDED.reason,
                                                   metadata = EXCLUDED.metadata,
                                                   created_at = now()`,
-    [email.toLowerCase(), category, reason, metadata ?? null],
-  );
+		[email.toLowerCase(), category, reason, metadata ?? null],
+	);
 }
 ```
 
@@ -370,7 +374,7 @@ export async function addSuppression(
    recovers. Hard bounce is permanent — never expires (until
    manual-review unsuppression).
 4. **Complaint suppresses `all`.** A user who hit "mark as spam"
-   should never receive *anything* — even transactional — unless
+   should never receive _anything_ — even transactional — unless
    they explicitly re-opt-in. Sending more after complaint is an
    ISP-reputation disaster.
 5. **Unsubscribe via List-Unsubscribe suppresses `marketing`
@@ -393,42 +397,47 @@ import { POSTMARK_WEBHOOK_SECRET } from '$env/static/private';
 import { z } from 'zod';
 
 const PostmarkBounceEvent = z.object({
-  RecordType: z.enum(['Bounce', 'SpamComplaint', 'Delivery', 'Open', 'Click', 'SubscriptionChange']),
-  Email: z.string().email(),
-  Type: z.string().optional(),
-  TypeCode: z.number().optional(),
-  MessageID: z.string().optional(),
-  Metadata: z.record(z.string()).optional(),
+	RecordType: z.enum([
+		'Bounce',
+		'SpamComplaint',
+		'Delivery',
+		'Open',
+		'Click',
+		'SubscriptionChange',
+	]),
+	Email: z.string().email(),
+	Type: z.string().optional(),
+	TypeCode: z.number().optional(),
+	MessageID: z.string().optional(),
+	Metadata: z.record(z.string()).optional(),
 });
 
 export const POST: RequestHandler = async ({ request }) => {
-  const raw = await request.text();
-  verifyWebhookSignature(raw, request.headers, POSTMARK_WEBHOOK_SECRET);
+	const raw = await request.text();
+	verifyWebhookSignature(raw, request.headers, POSTMARK_WEBHOOK_SECRET);
 
-  const event = PostmarkBounceEvent.parse(JSON.parse(raw));
+	const event = PostmarkBounceEvent.parse(JSON.parse(raw));
 
-  if (event.RecordType === 'Bounce') {
-    const isHard = event.TypeCode === 1 || event.Type === 'HardBounce';
-    await addSuppression(
-      event.Email,
-      'all',
-      isHard ? 'hard_bounce' : 'soft_bounce',
-      { providerMessageId: event.MessageID, typeCode: event.TypeCode },
-    );
-  } else if (event.RecordType === 'SpamComplaint') {
-    await addSuppression(event.Email, 'all', 'complaint', {
-      providerMessageId: event.MessageID,
-    });
-  }
+	if (event.RecordType === 'Bounce') {
+		const isHard = event.TypeCode === 1 || event.Type === 'HardBounce';
+		await addSuppression(event.Email, 'all', isHard ? 'hard_bounce' : 'soft_bounce', {
+			providerMessageId: event.MessageID,
+			typeCode: event.TypeCode,
+		});
+	} else if (event.RecordType === 'SpamComplaint') {
+		await addSuppression(event.Email, 'all', 'complaint', {
+			providerMessageId: event.MessageID,
+		});
+	}
 
-  await recordEmailEvent({
-    email: event.Email,
-    action: event.RecordType.toLowerCase() as never,
-    providerId: event.MessageID,
-    correlationId: event.Metadata?.correlationId ?? null,
-  });
+	await recordEmailEvent({
+		email: event.Email,
+		action: event.RecordType.toLowerCase() as never,
+		providerId: event.MessageID,
+		correlationId: event.Metadata?.correlationId ?? null,
+	});
 
-  return new Response(null, { status: 200 });
+	return new Response(null, { status: 200 });
 };
 ```
 
@@ -459,31 +468,31 @@ import { addSuppression } from '$lib/email/suppression';
 import { recordEmailEvent } from '$lib/email/events';
 
 export const POST: RequestHandler = async ({ request, url }) => {
-  const token = url.searchParams.get('token');
-  if (!token) return new Response('missing token', { status: 400 });
+	const token = url.searchParams.get('token');
+	if (!token) return new Response('missing token', { status: 400 });
 
-  const parsed = verifyUnsubToken(token);
-  if (!parsed) return new Response('invalid token', { status: 400 });
+	const parsed = verifyUnsubToken(token);
+	if (!parsed) return new Response('invalid token', { status: 400 });
 
-  await addSuppression(parsed.email, parsed.category, 'unsubscribe');
-  await recordEmailEvent({
-    email: parsed.email,
-    action: 'unsubscribed',
-    category: parsed.category,
-  });
+	await addSuppression(parsed.email, parsed.category, 'unsubscribe');
+	await recordEmailEvent({
+		email: parsed.email,
+		action: 'unsubscribed',
+		category: parsed.category,
+	});
 
-  return new Response(null, { status: 204 });
+	return new Response(null, { status: 204 });
 };
 
 export const GET: RequestHandler = async ({ url }) => {
-  const token = url.searchParams.get('token');
-  if (!token) return new Response('missing token', { status: 400 });
-  const parsed = verifyUnsubToken(token);
-  if (!parsed) return new Response('invalid token', { status: 400 });
+	const token = url.searchParams.get('token');
+	if (!token) return new Response('missing token', { status: 400 });
+	const parsed = verifyUnsubToken(token);
+	if (!parsed) return new Response('invalid token', { status: 400 });
 
-  return new Response(renderUnsubConfirmPage(parsed), {
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  });
+	return new Response(renderUnsubConfirmPage(parsed), {
+		headers: { 'content-type': 'text/html; charset=utf-8' },
+	});
 };
 ```
 
@@ -552,32 +561,32 @@ import { subDays } from 'date-fns';
 import { now } from '$lib/clock';
 
 export const POST: RequestHandler = async ({ request }) => {
-  verifyCronRequest(request);
+	verifyCronRequest(request);
 
-  return withCronRun('email-health', async () => {
-    const removed = await db.result(
-      `DELETE FROM email_suppressions
+	return withCronRun('email-health', async () => {
+		const removed = await db.result(
+			`DELETE FROM email_suppressions
          WHERE reason = 'soft_bounce'
            AND created_at < $1`,
-      [subDays(now(), 1)],
-    );
+			[subDays(now(), 1)],
+		);
 
-    const retryable = await db.result(
-      `DELETE FROM email_suppressions
+		const retryable = await db.result(
+			`DELETE FROM email_suppressions
          WHERE reason = 'hard_bounce'
            AND created_at < $1`,
-      [subDays(now(), 180)],
-    );
+			[subDays(now(), 180)],
+		);
 
-    return {
-      processed: (removed.rowCount ?? 0) + (retryable.rowCount ?? 0),
-      skipped: 0,
-      details: {
-        softBounceExpired: removed.rowCount ?? 0,
-        hardBounceRetryable: retryable.rowCount ?? 0,
-      },
-    };
-  });
+		return {
+			processed: (removed.rowCount ?? 0) + (retryable.rowCount ?? 0),
+			skipped: 0,
+			details: {
+				softBounceExpired: removed.rowCount ?? 0,
+				hardBounceRetryable: retryable.rowCount ?? 0,
+			},
+		};
+	});
 };
 ```
 
@@ -597,25 +606,25 @@ export const POST: RequestHandler = async ({ request }) => {
 
 ```typescript
 it('suppresses hard-bounce email permanently', async () => {
-  await addSuppression('bad@example.com', 'all', 'hard_bounce');
-  expect(await isSuppressed('bad@example.com', 'transactional')).toBe(true);
-  expect(await isSuppressed('bad@example.com', 'marketing')).toBe(true);
+	await addSuppression('bad@example.com', 'all', 'hard_bounce');
+	expect(await isSuppressed('bad@example.com', 'transactional')).toBe(true);
+	expect(await isSuppressed('bad@example.com', 'marketing')).toBe(true);
 });
 
 it('soft-bounce expires after 24h', async () => {
-  vi.setSystemTime(new Date('2026-04-18T00:00:00Z'));
-  await addSuppression('slow@example.com', 'all', 'soft_bounce');
-  expect(await isSuppressed('slow@example.com', 'transactional')).toBe(true);
+	vi.setSystemTime(new Date('2026-04-18T00:00:00Z'));
+	await addSuppression('slow@example.com', 'all', 'soft_bounce');
+	expect(await isSuppressed('slow@example.com', 'transactional')).toBe(true);
 
-  vi.setSystemTime(new Date('2026-04-19T01:00:00Z'));
-  expect(await isSuppressed('slow@example.com', 'transactional')).toBe(false);
+	vi.setSystemTime(new Date('2026-04-19T01:00:00Z'));
+	expect(await isSuppressed('slow@example.com', 'transactional')).toBe(false);
 });
 
 it('POST /unsubscribe with valid token returns 204 and suppresses', async () => {
-  const token = signUnsubToken('user@x.com', 'marketing');
-  const res = await app.request(`/unsubscribe?token=${token}`, { method: 'POST' });
-  expect(res.status).toBe(204);
-  expect(await isSuppressed('user@x.com', 'marketing')).toBe(true);
+	const token = signUnsubToken('user@x.com', 'marketing');
+	const res = await app.request(`/unsubscribe?token=${token}`, { method: 'POST' });
+	expect(res.status).toBe(204);
+	expect(await isSuppressed('user@x.com', 'marketing')).toBe(true);
 });
 ```
 
@@ -668,7 +677,7 @@ it('POST /unsubscribe with valid token returns 204 and suppresses', async () => 
     breaks alignment, don't find out for weeks, users see
     `via amazonses.com` warnings.
 13. **`From:` address that nobody reads.** `noreply@...` is
-    fine; but the domain must be able to *receive* bounces
+    fine; but the domain must be able to _receive_ bounces
     (MX records + a processing address). Otherwise providers
     treat you as suspicious.
 14. **Batching 10k sends in one API call.** If one address in

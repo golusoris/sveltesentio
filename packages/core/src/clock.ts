@@ -10,8 +10,7 @@ export interface Clock {
 
 export const systemClock: Clock = {
 	now: () => new Date(),
-	monotonic: () =>
-		BROWSER ? performance.now() : Number(process.hrtime.bigint()) / 1e6,
+	monotonic: () => (BROWSER ? performance.now() : Number(process.hrtime.bigint()) / 1e6),
 };
 
 const CLOCK_KEY = Symbol.for('sveltesentio.clock');

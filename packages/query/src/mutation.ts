@@ -8,8 +8,10 @@ import type { ProblemError } from '@sveltesentio/core';
 
 export type { CreateMutationOptions };
 
-export interface SentioMutationOptions<TData, TVariables, TContext = unknown>
-	extends Omit<CreateMutationOptions<TData, ProblemError, TVariables, TContext>, 'mutationFn'> {
+export interface SentioMutationOptions<TData, TVariables, TContext = unknown> extends Omit<
+	CreateMutationOptions<TData, ProblemError, TVariables, TContext>,
+	'mutationFn'
+> {
 	mutationFn: (variables: TVariables) => Promise<TData>;
 	/** Query keys to invalidate once the mutation settles. */
 	invalidates?: readonly QueryKey[];

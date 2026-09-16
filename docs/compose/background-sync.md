@@ -55,17 +55,17 @@ for custom handlers):
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 export default defineConfig({
-  plugins: [
-    sveltekit(),
-    SvelteKitPWA({
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
-      registerType: 'prompt',
-      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'] },
-      manifest: { /* … per pwa.md */ },
-    }),
-  ],
+	plugins: [
+		sveltekit(),
+		SvelteKitPWA({
+			strategies: 'injectManifest',
+			srcDir: 'src',
+			filename: 'sw.ts',
+			registerType: 'prompt',
+			injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'] },
+			manifest: {/* … per pwa.md */},
+		}),
+	],
 });
 ```
 
@@ -86,49 +86,49 @@ precacheAndRoute(self.__WB_MANIFEST);
 const MAX_RETENTION_MINUTES = 24 * 60;
 
 const mutationPlugin = new BackgroundSyncPlugin('sveltesentio-mutations', {
-  maxRetentionTime: MAX_RETENTION_MINUTES,
-  onSync: async ({ queue }) => {
-    let entry: { request: Request; timestamp: number } | undefined;
-    while ((entry = await queue.shiftRequest())) {
-      try {
-        const response = await fetch(entry.request.clone());
-        if (!response.ok && response.status < 500) {
-          await notifyClients({
-            kind: 'sync.drop',
-            url: entry.request.url,
-            status: response.status,
-          });
-          continue;
-        }
-        if (!response.ok) throw new Error(`status ${response.status}`);
-        await notifyClients({ kind: 'sync.success', url: entry.request.url });
-      } catch (err) {
-        await queue.unshiftRequest(entry);
-        await notifyClients({ kind: 'sync.retry', url: entry.request.url });
-        throw err;
-      }
-    }
-  },
+	maxRetentionTime: MAX_RETENTION_MINUTES,
+	onSync: async ({ queue }) => {
+		let entry: { request: Request; timestamp: number } | undefined;
+		while ((entry = await queue.shiftRequest())) {
+			try {
+				const response = await fetch(entry.request.clone());
+				if (!response.ok && response.status < 500) {
+					await notifyClients({
+						kind: 'sync.drop',
+						url: entry.request.url,
+						status: response.status,
+					});
+					continue;
+				}
+				if (!response.ok) throw new Error(`status ${response.status}`);
+				await notifyClients({ kind: 'sync.success', url: entry.request.url });
+			} catch (err) {
+				await queue.unshiftRequest(entry);
+				await notifyClients({ kind: 'sync.retry', url: entry.request.url });
+				throw err;
+			}
+		}
+	},
 });
 
 registerRoute(
-  ({ request, url }) =>
-    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
-    url.pathname.startsWith('/api/') &&
-    url.pathname !== '/api/auth',
-  new NetworkOnly({ plugins: [mutationPlugin] }),
-  'POST',
+	({ request, url }) =>
+		['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
+		url.pathname.startsWith('/api/') &&
+		url.pathname !== '/api/auth',
+	new NetworkOnly({ plugins: [mutationPlugin] }),
+	'POST',
 );
 
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
-  new NetworkFirst({ cacheName: 'api-reads', networkTimeoutSeconds: 3 }),
-  'GET',
+	({ url }) => url.pathname.startsWith('/api/'),
+	new NetworkFirst({ cacheName: 'api-reads', networkTimeoutSeconds: 3 }),
+	'GET',
 );
 
 async function notifyClients(message: object) {
-  const clients = await self.clients.matchAll({ includeUncontrolled: true });
-  for (const client of clients) client.postMessage(message);
+	const clients = await self.clients.matchAll({ includeUncontrolled: true });
+	for (const client of clients) client.postMessage(message);
 }
 ```
 
@@ -170,18 +170,18 @@ import createClient from 'openapi-fetch';
 import { v7 as uuid } from 'uuid';
 
 export const api = createClient<paths>({
-  baseUrl: '/api',
-  fetch: (input, init) => {
-    const method = (init?.method ?? 'GET').toUpperCase();
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      return fetch(input, init);
-    }
-    const headers = new Headers(init?.headers);
-    if (!headers.has('Idempotency-Key')) {
-      headers.set('Idempotency-Key', uuid());
-    }
-    return fetch(input, { ...init, headers });
-  },
+	baseUrl: '/api',
+	fetch: (input, init) => {
+		const method = (init?.method ?? 'GET').toUpperCase();
+		if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+			return fetch(input, init);
+		}
+		const headers = new Headers(init?.headers);
+		if (!headers.has('Idempotency-Key')) {
+			headers.set('Idempotency-Key', uuid());
+		}
+		return fetch(input, { ...init, headers });
+	},
 });
 ```
 
@@ -207,46 +207,53 @@ just enforces the client-side half.
 ```svelte
 <!-- src/lib/pwa/SyncBanner.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 
-  type SyncEvent =
-    | { kind: 'sync.retry'; url: string }
-    | { kind: 'sync.success'; url: string }
-    | { kind: 'sync.drop'; url: string; status: number };
+	type SyncEvent =
+		| { kind: 'sync.retry'; url: string }
+		| { kind: 'sync.success'; url: string }
+		| { kind: 'sync.drop'; url: string; status: number };
 
-  const state = $state<{ pending: number; lastError: string | null }>({
-    pending: 0,
-    lastError: null,
-  });
+	const state = $state<{ pending: number; lastError: string | null }>({
+		pending: 0,
+		lastError: null,
+	});
 
-  onMount(() => {
-    if (!navigator.serviceWorker) return;
-    const onMessage = (ev: MessageEvent<SyncEvent>) => {
-      const msg = ev.data;
-      if (msg.kind === 'sync.retry') {
-        state.pending += 1;
-      } else if (msg.kind === 'sync.success') {
-        state.pending = Math.max(0, state.pending - 1);
-      } else if (msg.kind === 'sync.drop') {
-        state.pending = Math.max(0, state.pending - 1);
-        state.lastError = `Server rejected ${msg.url} (${msg.status})`;
-      }
-    };
-    navigator.serviceWorker.addEventListener('message', onMessage);
-    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
-  });
+	onMount(() => {
+		if (!navigator.serviceWorker) return;
+		const onMessage = (ev: MessageEvent<SyncEvent>) => {
+			const msg = ev.data;
+			if (msg.kind === 'sync.retry') {
+				state.pending += 1;
+			} else if (msg.kind === 'sync.success') {
+				state.pending = Math.max(0, state.pending - 1);
+			} else if (msg.kind === 'sync.drop') {
+				state.pending = Math.max(0, state.pending - 1);
+				state.lastError = `Server rejected ${msg.url} (${msg.status})`;
+			}
+		};
+		navigator.serviceWorker.addEventListener('message', onMessage);
+		return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+	});
 </script>
 
 {#if state.pending > 0}
-  <div role="status" aria-live="polite" class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded bg-warning px-3 py-2 shadow">
-    Sending {state.pending} queued change{state.pending > 1 ? 's' : ''}…
-  </div>
+	<div
+		role="status"
+		aria-live="polite"
+		class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded bg-warning px-3 py-2 shadow"
+	>
+		Sending {state.pending} queued change{state.pending > 1 ? 's' : ''}…
+	</div>
 {/if}
 
 {#if state.lastError}
-  <div role="alert" class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded bg-danger px-3 py-2 shadow">
-    {state.lastError}
-  </div>
+	<div
+		role="alert"
+		class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded bg-danger px-3 py-2 shadow"
+	>
+		{state.lastError}
+	</div>
 {/if}
 ```
 
@@ -258,25 +265,25 @@ loud queues build it. `role="status"` for pending (polite announce),
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte';
-  const online = $state(navigator.onLine);
+	import { onMount } from 'svelte';
+	const online = $state(navigator.onLine);
 
-  onMount(() => {
-    const up = () => (online = true);
-    const down = () => (online = false);
-    addEventListener('online', up);
-    addEventListener('offline', down);
-    return () => {
-      removeEventListener('online', up);
-      removeEventListener('offline', down);
-    };
-  });
+	onMount(() => {
+		const up = () => (online = true);
+		const down = () => (online = false);
+		addEventListener('online', up);
+		addEventListener('offline', down);
+		return () => {
+			removeEventListener('online', up);
+			removeEventListener('offline', down);
+		};
+	});
 </script>
 
 {#if !online}
-  <div role="status" aria-live="polite" class="bg-muted px-3 py-2 text-sm">
-    You're offline. Your changes will sync when you're back online.
-  </div>
+	<div role="status" aria-live="polite" class="bg-muted px-3 py-2 text-sm">
+		You're offline. Your changes will sync when you're back online.
+	</div>
 {/if}
 ```
 
@@ -292,18 +299,18 @@ Background Sync has no public inspection API. Emit introspection via
 ```ts
 // src/sw.ts (continued)
 self.addEventListener('message', async (event) => {
-  if (event.data?.kind === 'sync.introspect') {
-    const queue = new Queue('sveltesentio-mutations');
-    const requests = await queue.getAll();
-    event.source?.postMessage({
-      kind: 'sync.queue',
-      items: requests.map((r) => ({
-        url: r.request.url,
-        method: r.request.method,
-        timestamp: r.timestamp,
-      })),
-    });
-  }
+	if (event.data?.kind === 'sync.introspect') {
+		const queue = new Queue('sveltesentio-mutations');
+		const requests = await queue.getAll();
+		event.source?.postMessage({
+			kind: 'sync.queue',
+			items: requests.map((r) => ({
+				url: r.request.url,
+				method: r.request.method,
+				timestamp: r.timestamp,
+			})),
+		});
+	}
 });
 ```
 
@@ -323,48 +330,50 @@ into queue debuggers.
 import type { RequestHandler } from '@sveltejs/kit';
 
 type CachedResponse = {
-  status: number;
-  body: string;
-  contentType: string;
-  createdAt: Date;
+	status: number;
+	body: string;
+	contentType: string;
+	createdAt: Date;
 };
 
-export function withIdempotency(
-  handler: RequestHandler,
-): RequestHandler {
-  return async (event) => {
-    const key = event.request.headers.get('Idempotency-Key');
-    const method = event.request.method;
-    if (!key || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      return handler(event);
-    }
+export function withIdempotency(handler: RequestHandler): RequestHandler {
+	return async (event) => {
+		const key = event.request.headers.get('Idempotency-Key');
+		const method = event.request.method;
+		if (!key || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+			return handler(event);
+		}
 
-    const userId = event.locals.session?.user.id ?? 'anon';
-    const cacheKey = `${userId}:${key}`;
+		const userId = event.locals.session?.user.id ?? 'anon';
+		const cacheKey = `${userId}:${key}`;
 
-    const cached = await event.locals.db.idempotency.get(cacheKey);
-    if (cached) {
-      return new Response(cached.body, {
-        status: cached.status,
-        headers: {
-          'Content-Type': cached.contentType,
-          'Idempotent-Replay': 'true',
-        },
-      });
-    }
+		const cached = await event.locals.db.idempotency.get(cacheKey);
+		if (cached) {
+			return new Response(cached.body, {
+				status: cached.status,
+				headers: {
+					'Content-Type': cached.contentType,
+					'Idempotent-Replay': 'true',
+				},
+			});
+		}
 
-    const response = await handler(event);
-    if (response.status < 500) {
-      const body = await response.clone().text();
-      await event.locals.db.idempotency.set(cacheKey, {
-        status: response.status,
-        body,
-        contentType: response.headers.get('Content-Type') ?? 'application/json',
-        createdAt: new Date(),
-      }, { ttlSeconds: 86400 });
-    }
-    return response;
-  };
+		const response = await handler(event);
+		if (response.status < 500) {
+			const body = await response.clone().text();
+			await event.locals.db.idempotency.set(
+				cacheKey,
+				{
+					status: response.status,
+					body,
+					contentType: response.headers.get('Content-Type') ?? 'application/json',
+					createdAt: new Date(),
+				},
+				{ ttlSeconds: 86400 },
+			);
+		}
+		return response;
+	};
 }
 ```
 
@@ -388,17 +397,17 @@ import 'fake-indexeddb/auto';
 import { Queue } from 'workbox-background-sync';
 
 test('queue replays requests on sync', async () => {
-  const queue = new Queue('test-queue');
-  await queue.pushRequest({
-    request: new Request('/api/orders', {
-      method: 'POST',
-      headers: { 'Idempotency-Key': 'test-key' },
-      body: JSON.stringify({ item: 'x' }),
-    }),
-  });
-  const stored = await queue.getAll();
-  expect(stored).toHaveLength(1);
-  expect(stored[0].request.headers.get('Idempotency-Key')).toBe('test-key');
+	const queue = new Queue('test-queue');
+	await queue.pushRequest({
+		request: new Request('/api/orders', {
+			method: 'POST',
+			headers: { 'Idempotency-Key': 'test-key' },
+			body: JSON.stringify({ item: 'x' }),
+		}),
+	});
+	const stored = await queue.getAll();
+	expect(stored).toHaveLength(1);
+	expect(stored[0].request.headers.get('Idempotency-Key')).toBe('test-key');
 });
 ```
 
@@ -406,13 +415,13 @@ E2E: Playwright with network throttling + offline toggle:
 
 ```ts
 test('offline submit queues + replays', async ({ page, context }) => {
-  await page.goto('/orders/new');
-  await context.setOffline(true);
-  await page.fill('input[name="item"]', 'Widget');
-  await page.click('button[type="submit"]');
-  await expect(page.getByRole('status')).toContainText(/queued/);
-  await context.setOffline(false);
-  await expect(page.getByRole('status')).toBeHidden({ timeout: 10_000 });
+	await page.goto('/orders/new');
+	await context.setOffline(true);
+	await page.fill('input[name="item"]', 'Widget');
+	await page.click('button[type="submit"]');
+	await expect(page.getByRole('status')).toContainText(/queued/);
+	await context.setOffline(false);
+	await expect(page.getByRole('status')).toBeHidden({ timeout: 10_000 });
 });
 ```
 
@@ -453,7 +462,7 @@ test('offline submit queues + replays', async ({ page, context }) => {
   the error explicitly.
 - **Single `Queue` for mixed domains.** Run separate queues per
   concern (mutations, telemetry, file-upload-finalise) so retention
-  + backoff are tunable.
+  - backoff are tunable.
 - **`maxRetentionTime: Infinity` or > 72 h.** Replays of week-old
   requests hit changed data. Shorter is safer.
 - **Silent queue UI.** Users think their action failed, re-submit,
