@@ -1,5 +1,4 @@
-import { appendBounded } from './bounded-history.js';
-import { createBufferedEmitter } from './buffered-emitter.js';
+import { createMessageBuffer } from './message-buffer.svelte.js';
 import {
 	SseClient,
 	type SseClientOptions,
@@ -53,19 +52,9 @@ export function useSSE(options: UseSseOptions): UseSse {
 	const { autoConnect = true, bufferMs = 0, historyLimit = 100, ...clientOptions } = options;
 
 	let state = $state<SseClientState>('idle');
-	let messages = $state<SseEventLike[]>([]);
-	let lastMessage = $state<SseEventLike | undefined>(undefined);
 	let error = $state<unknown>(undefined);
 	let attempt = $state(0);
-
-	const append = (batch: readonly SseEventLike[]): void => {
-		if (batch.length === 0) return;
-		lastMessage = batch[batch.length - 1];
-		messages = appendBounded(messages, batch, historyLimit);
-	};
-
-	const emitter =
-		bufferMs > 0 ? createBufferedEmitter<SseEventLike>({ bufferMs, onFlush: append }) : undefined;
+	const buffer = createMessageBuffer<SseEventLike>(historyLimit, bufferMs);
 
 	const client = new SseClient({
 		...clientOptions,
@@ -76,8 +65,7 @@ export function useSSE(options: UseSseOptions): UseSse {
 			error = undefined;
 		},
 		onMessage: (event) => {
-			if (emitter) emitter.push(event);
-			else append([event]);
+			buffer.push(event);
 		},
 		onError: (err, nextAttempt) => {
 			error = err;
@@ -88,7 +76,7 @@ export function useSSE(options: UseSseOptions): UseSse {
 	$effect(() => {
 		if (autoConnect) client.start();
 		return () => {
-			emitter?.stop();
+			buffer.stop();
 			client.close();
 		};
 	});
@@ -98,10 +86,10 @@ export function useSSE(options: UseSseOptions): UseSse {
 			return state;
 		},
 		get lastMessage() {
-			return lastMessage;
+			return buffer.lastMessage;
 		},
 		get messages() {
-			return messages;
+			return buffer.messages;
 		},
 		get error() {
 			return error;
@@ -116,7 +104,7 @@ export function useSSE(options: UseSseOptions): UseSse {
 			client.start();
 		},
 		close() {
-			emitter?.stop();
+			buffer.stop();
 			client.close();
 		},
 	};

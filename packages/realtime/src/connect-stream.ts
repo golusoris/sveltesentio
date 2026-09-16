@@ -1,4 +1,5 @@
-import { computeBackoff, type BackoffOptions } from './backoff.js';
+import { type BackoffOptions } from './backoff.js';
+import { createReconnectScheduler } from './reconnect-scheduler.js';
 
 /**
  * Lifecycle of a server-streaming consumer.
@@ -59,16 +60,38 @@ export interface ConnectStream {
  * Natural completion (the iterator finishing without throwing) is a terminal
  * `closed` — only thrown errors trigger backoff + reconnect.
  */
+/**
+ * Drains an async iterable, handing each item to `onMessage`.
+ *
+ * Resolves true when the run completed while still current, and false the moment
+ * `isCurrent` turns false — a newer start()/stop() has superseded this run and
+ * its completion must not be acted on. Lives at module scope rather than inside
+ * the factory so it is independently testable, and so its body does not count
+ * against the factory's length (HISS-04).
+ */
+async function drainStream<TMessage>(
+	source: AsyncIterable<TMessage>,
+	isCurrent: () => boolean,
+	onMessage: (message: TMessage) => void,
+): Promise<boolean> {
+	for await (const message of source) {
+		if (!isCurrent()) return false;
+		onMessage(message);
+	}
+	return isCurrent();
+}
+
 export function createConnectStream<TMessage>(
 	options: ConnectStreamOptions<TMessage>,
 ): ConnectStream {
-	const setTimer = options.setTimeoutImpl ?? setTimeout;
-	const clearTimer = options.clearTimeoutImpl ?? clearTimeout;
+	const reconnect = createReconnectScheduler({
+		backoff: options.backoff,
+		setTimeoutImpl: options.setTimeoutImpl,
+		clearTimeoutImpl: options.clearTimeoutImpl,
+	});
 
 	let state: ConnectStreamState = 'idle';
-	let attempt = 0;
 	let controller: AbortController | undefined;
-	let reconnectHandle: ReturnType<typeof setTimeout> | undefined;
 	/** Bumped on every stop()/start() so a stale in-flight loop self-cancels. */
 	let runToken = 0;
 
@@ -78,44 +101,34 @@ export function createConnectStream<TMessage>(
 		options.onStateChange?.(next);
 	};
 
-	const clearReconnect = (): void => {
-		if (reconnectHandle !== undefined) {
-			clearTimer(reconnectHandle);
-			reconnectHandle = undefined;
-		}
-	};
-
 	const consume = (token: number): void => {
+		const isCurrent = (): boolean => token === runToken;
 		controller = new AbortController();
 		const signal = controller.signal;
 		setState('streaming');
 		void (async () => {
 			try {
-				for await (const message of options.call(signal)) {
-					if (token !== runToken) return;
-					attempt = 0;
+				const completed = await drainStream(options.call(signal), isCurrent, (message) => {
+					reconnect.reset();
 					options.onMessage?.(message);
-				}
-				if (token !== runToken) return;
+				});
+				if (!completed) return;
 				setState('closed');
 				options.onClose?.();
 			} catch (error) {
 				if (token !== runToken || signal.aborted) return;
-				options.onError?.(error, attempt + 1);
+				options.onError?.(error, reconnect.attempt + 1);
 				scheduleReconnect(token);
 			}
 		})();
 	};
 
 	const scheduleReconnect = (token: number): void => {
-		attempt += 1;
-		const delay = computeBackoff(attempt, options.backoff);
 		setState('streaming');
-		reconnectHandle = setTimer(() => {
-			reconnectHandle = undefined;
+		reconnect.schedule(() => {
 			if (token !== runToken) return;
 			consume(token);
-		}, delay);
+		});
 	};
 
 	return {
@@ -123,17 +136,17 @@ export function createConnectStream<TMessage>(
 			return state;
 		},
 		get attempt(): number {
-			return attempt;
+			return reconnect.attempt;
 		},
 		start(): void {
 			if (state === 'streaming') return;
 			runToken += 1;
-			attempt = 0;
+			reconnect.reset();
 			consume(runToken);
 		},
 		stop(): void {
 			runToken += 1;
-			clearReconnect();
+			reconnect.clear();
 			controller?.abort();
 			controller = undefined;
 			setState('closed');

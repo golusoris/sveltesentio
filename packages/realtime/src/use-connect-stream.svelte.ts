@@ -1,5 +1,4 @@
-import { appendBounded } from './bounded-history.js';
-import { createBufferedEmitter } from './buffered-emitter.js';
+import { createMessageBuffer } from './message-buffer.svelte.js';
 import {
 	createConnectStream,
 	type ConnectStreamOptions,
@@ -57,19 +56,9 @@ export function useConnectStream<TMessage>(
 	const { autoStart = true, bufferMs = 0, historyLimit = 100, ...streamOptions } = options;
 
 	let state = $state<ConnectStreamState>('idle');
-	let messages = $state<TMessage[]>([]);
-	let lastMessage = $state<TMessage | undefined>(undefined);
 	let error = $state<unknown>(undefined);
 	let attempt = $state(0);
-
-	const append = (batch: readonly TMessage[]): void => {
-		if (batch.length === 0) return;
-		lastMessage = batch[batch.length - 1];
-		messages = appendBounded(messages, batch, historyLimit);
-	};
-
-	const emitter =
-		bufferMs > 0 ? createBufferedEmitter<TMessage>({ bufferMs, onFlush: append }) : undefined;
+	const buffer = createMessageBuffer<TMessage>(historyLimit, bufferMs);
 
 	const stream = createConnectStream<TMessage>({
 		...streamOptions,
@@ -79,8 +68,7 @@ export function useConnectStream<TMessage>(
 		onMessage: (message) => {
 			error = undefined;
 			attempt = 0;
-			if (emitter) emitter.push(message);
-			else append([message]);
+			buffer.push(message);
 		},
 		onError: (err, nextAttempt) => {
 			error = err;
@@ -91,7 +79,7 @@ export function useConnectStream<TMessage>(
 	$effect(() => {
 		if (autoStart) stream.start();
 		return () => {
-			emitter?.stop();
+			buffer.stop();
 			stream.stop();
 		};
 	});
@@ -101,10 +89,10 @@ export function useConnectStream<TMessage>(
 			return state;
 		},
 		get lastMessage() {
-			return lastMessage;
+			return buffer.lastMessage;
 		},
 		get messages() {
-			return messages;
+			return buffer.messages;
 		},
 		get error() {
 			return error;
@@ -119,7 +107,7 @@ export function useConnectStream<TMessage>(
 			stream.start();
 		},
 		stop() {
-			emitter?.stop();
+			buffer.stop();
 			stream.stop();
 		},
 	};
