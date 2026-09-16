@@ -21,7 +21,11 @@ interface Section {
 	body: string;
 }
 
-const HEADING = /^##\s+§(\d+\.\d+)\s+(.*)$/;
+// One `\s` before the title rather than `\s+`: with `\s+(.*)$` the two can both
+// consume a run of spaces, which is the ambiguity CodeQL reports as
+// js/polynomial-redos on lines like `## §9.9` followed by many spaces. The title
+// is trimmed at the capture instead, so the parsed result is unchanged.
+const HEADING = /^##\s+§(\d+\.\d+)\s(.*)$/;
 
 /** Split principles.md into its `## §N.M Title` sections, in document order. */
 export function parseSections(markdown: string): Section[] {
@@ -33,7 +37,7 @@ export function parseSections(markdown: string): Section[] {
 		const match = HEADING.exec(line);
 		if (match) {
 			const id = match[1] ?? '';
-			const title = `§${id} ${match[2] ?? ''}`.trimEnd();
+			const title = `§${id} ${match[2]?.trim() ?? ''}`.trimEnd();
 			current = { id, title, body: line };
 			sections.push(current);
 		} else if (current) {
@@ -41,7 +45,8 @@ export function parseSections(markdown: string): Section[] {
 		}
 	}
 
-	return sections.map((s) => ({ ...s, body: s.body.replace(/\s+$/, '') }));
+	// `trimEnd()` removes exactly the set `/\s+$/` matches, without backtracking.
+	return sections.map((s) => ({ ...s, body: s.body.trimEnd() }));
 }
 
 /** Normalise an id query to bare 'N.M' form, or undefined if not id-shaped. */
