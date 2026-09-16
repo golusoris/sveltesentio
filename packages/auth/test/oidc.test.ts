@@ -31,6 +31,36 @@ describe('buildAuthorizationUrl', () => {
 		expect(p.get('code_challenge_method')).toBe('S256');
 	});
 
+	it('strips every trailing slash from the issuer, not just one', () => {
+		// The regex this replaced (`/\\/+$/`) backtracked polynomially on a run of
+		// slashes, and the issuer is caller-supplied. Behaviour must be identical.
+		for (const issuer of [
+			'https://idp.example',
+			'https://idp.example/',
+			'https://idp.example///',
+		]) {
+			const url = buildAuthorizationUrl({
+				issuer,
+				clientId: 'app',
+				redirectUri: 'https://app.example/cb',
+				state: 's',
+				codeChallenge: 'c',
+			});
+			expect(url.startsWith('https://idp.example/authorize?')).toBe(true);
+		}
+	});
+
+	it('leaves an issuer with no trailing slash untouched, including a bare host', () => {
+		const url = buildAuthorizationUrl({
+			issuer: 'https://idp.example/tenant/a',
+			clientId: 'app',
+			redirectUri: 'https://app.example/cb',
+			state: 's',
+			codeChallenge: 'c',
+		});
+		expect(url.startsWith('https://idp.example/tenant/a/authorize?')).toBe(true);
+	});
+
 	it('derives the endpoint from issuer and defaults scope to openid', () => {
 		const url = buildAuthorizationUrl({
 			issuer: 'https://idp.example/',

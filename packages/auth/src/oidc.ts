@@ -175,9 +175,24 @@ export async function exchangeAuthorizationCode(init: TokenExchangeInit): Promis
 	return parsed;
 }
 
+/**
+ * Strips trailing slashes without a regular expression.
+ *
+ * `replace(/\/+$/, '')` backtracks polynomially on a string of many slashes
+ * (CodeQL js/polynomial-redos), and `issuer` is caller-supplied — an OIDC
+ * discovery document or app config, neither of which this package controls. The
+ * loop is bounded by the string's length, which is the scalar bound HISS-02
+ * asks for.
+ */
+function stripTrailingSlashes(value: string): string {
+	let end = value.length;
+	while (end > 0 && value.charCodeAt(end - 1) === 0x2f) end -= 1;
+	return value.slice(0, end);
+}
+
 function resolveAuthorizationEndpoint(init: AuthorizationUrlInit): string {
 	if (init.authorizationEndpoint) return init.authorizationEndpoint;
-	if (init.issuer) return `${init.issuer.replace(/\/+$/, '')}/authorize`;
+	if (init.issuer) return `${stripTrailingSlashes(init.issuer)}/authorize`;
 	throw new ProblemError({
 		type: TOKEN_EXCHANGE_FAILED,
 		title: 'Missing authorization endpoint',

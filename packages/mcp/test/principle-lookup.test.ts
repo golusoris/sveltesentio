@@ -7,6 +7,21 @@ import { callTool, connectClient, repoRoot } from './helpers.js';
 import { parseSections } from '../src/tools/principle-lookup.js';
 
 describe('parseSections', () => {
+	it('parses a heading with several spaces before the title the same as one', () => {
+		// The heading pattern used `\\s+(.*)$`, where both halves could consume the
+		// same run of spaces — the ambiguity CodeQL flags as polynomial ReDoS. The
+		// title is trimmed at the capture now, so the parse is unchanged.
+		const one = parseSections('## §9.9 Title\nbody');
+		const many = parseSections('## §9.9    Title\nbody');
+		expect(many[0]?.title).toBe(one[0]?.title);
+		expect(many[0]?.id).toBe('9.9');
+	});
+
+	it('strips trailing whitespace from a section body', () => {
+		const [section] = parseSections('## §1.1 T\nbody   \t  ');
+		expect(section?.body.endsWith('body')).toBe(true);
+	});
+
 	it('splits a principles doc into §N.M sections in order', () => {
 		const md = [
 			'# Title',
