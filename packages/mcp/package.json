@@ -42,7 +42,7 @@
 	],
 	"name": "@sveltesentio/mcp",
 	"peerDependencies": {
-		"zod": "\u003e=4.0.0"
+		"zod": ">=4.0.0"
 	},
 	"private": false,
 	"publishConfig": {
@@ -57,5 +57,5 @@
 	},
 	"sideEffects": false,
 	"type": "module",
-	"version": "0.2.0"
+	"version": "0.2.1"
 }

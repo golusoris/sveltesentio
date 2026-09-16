@@ -1,5 +1,5 @@
 {
-	"description": "SSR-safe EmulatorJS loader (Svelte 5 <Emulator>) + platform\u2192core map + strict-CSP additions for WASM/worker cores",
+	"description": "SSR-safe EmulatorJS loader (Svelte 5 <Emulator>) + platform→core map + strict-CSP additions for WASM/worker cores",
 	"devDependencies": {
 		"@storybook/addon-svelte-csf": "5.1.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
@@ -65,5 +65,5 @@
 	},
 	"sideEffects": false,
 	"type": "module",
-	"version": "0.1.0"
+	"version": "0.2.0"
 }
