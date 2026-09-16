@@ -60,7 +60,11 @@ const config: Linter.Config[] = [
 			parserOptions: { parser: tsParser },
 		},
 		rules: {
-			// a11y rules are included in eslint-plugin-svelte flat/recommended
+			// Not a11y rules: eslint-plugin-svelte 3.23's flat/recommended carries 39
+			// rules and none of them is an a11y rule, despite an earlier comment here
+			// saying otherwise. Accessibility is covered by `svelte/valid-compile`
+			// below, which surfaces the compiler's own a11y_* diagnostics, and by
+			// axe-core in the component tests (@sveltesentio/testing, ADR-0031).
 			'no-undef': 'off',
 			'svelte/no-at-html-tags': 'error',
 			'svelte/valid-compile': 'error',
