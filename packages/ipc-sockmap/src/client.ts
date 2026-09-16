@@ -1,4 +1,5 @@
 import { ProblemError } from '@sveltesentio/core';
+import { createPendingQueue, type PendingQueue } from './pending-queue.js';
 import {
 	FrameDecoder,
 	detectTransport,
@@ -58,12 +59,6 @@ export interface IpcClient {
 	close(): void;
 }
 
-interface PendingRequest {
-	resolve(payload: Uint8Array): void;
-	reject(error: ProblemError): void;
-	timer: ReturnType<typeof setTimeout> | undefined;
-}
-
 let defaultConnect: ConnectFn | undefined;
 
 async function resolveConnect(connect: ConnectFn | undefined): Promise<ConnectFn> {
@@ -105,6 +100,54 @@ function requestError(detail: string, status: number, cause?: unknown): ProblemE
  *
  * @throws {ProblemError} when no tier is reachable or the socket errors before connecting.
  */
+/** Resolves once the socket connects, rejecting if it errors first. */
+async function awaitConnect(socket: SocketLike): Promise<void> {
+	let connected = false;
+	await new Promise<void>((resolve, reject) => {
+		socket.on('connect', () => {
+			connected = true;
+			resolve();
+		});
+		socket.on('error', (error: Error) => {
+			if (!connected) reject(connectError('Socket errored before connect', error));
+		});
+	});
+}
+
+/**
+ * Attaches the post-connect handlers: transport errors and peer close fail every
+ * waiter, and each decoded frame settles the oldest one.
+ *
+ * `markClosed` reports whether the client had already closed, so a close the
+ * caller initiated is not reported as the peer hanging up.
+ */
+function wireSocket(
+	socket: SocketLike,
+	decoder: FrameDecoder,
+	pending: PendingQueue,
+	markClosed: () => boolean,
+): void {
+	socket.on('error', (error: Error) => {
+		pending.failAll(requestError('Socket transport error', 502, error));
+	});
+	socket.on('close', () => {
+		if (!markClosed()) pending.failAll(requestError('Socket closed by peer', 502));
+	});
+	socket.on('data', (chunk: Uint8Array) => {
+		let result;
+		try {
+			result = decoder.push(chunk);
+		} catch (error) {
+			pending.failAll(
+				error instanceof ProblemError ? error : requestError('Frame decode error', 422, error),
+			);
+			socket.destroy();
+			return;
+		}
+		for (const frame of result.frames) pending.settleNext(frame);
+	});
+}
+
 export async function createIpcClient(options: IpcClientOptions): Promise<IpcClient> {
 	const tier = await detectTransport({
 		socketPath: options.socketPath,
@@ -117,84 +160,31 @@ export async function createIpcClient(options: IpcClientOptions): Promise<IpcCli
 
 	const connect = await resolveConnect(options.connect);
 	const decoder = new FrameDecoder();
-	const queue: PendingRequest[] = [];
+	const pending = createPendingQueue();
 	let closed = false;
-	let connected = false;
-	let fatal: ProblemError | undefined;
 
 	const socket = connect({ path: options.socketPath });
-
-	const failAll = (error: ProblemError): void => {
-		fatal = error;
-		while (queue.length > 0) {
-			const pending = queue.shift();
-			if (!pending) continue;
-			if (pending.timer !== undefined) clearTimeout(pending.timer);
-			pending.reject(error);
-		}
-	};
-
-	await new Promise<void>((resolve, reject) => {
-		const onConnect = (): void => {
-			connected = true;
-			resolve();
-		};
-		const onConnectError = (error: Error): void => {
-			if (!connected) reject(connectError('Socket errored before connect', error));
-		};
-		socket.on('connect', onConnect);
-		socket.on('error', onConnectError);
-	});
-
-	socket.on('error', (error: Error) => {
-		failAll(requestError('Socket transport error', 502, error));
-	});
-	socket.on('close', () => {
-		if (!closed) failAll(requestError('Socket closed by peer', 502));
+	await awaitConnect(socket);
+	wireSocket(socket, decoder, pending, () => {
+		const wasClosed = closed;
 		closed = true;
-	});
-	socket.on('data', (chunk: Uint8Array) => {
-		let result;
-		try {
-			result = decoder.push(chunk);
-		} catch (error) {
-			failAll(
-				error instanceof ProblemError ? error : requestError('Frame decode error', 422, error),
-			);
-			socket.destroy();
-			return;
-		}
-		for (const frame of result.frames) {
-			const pending = queue.shift();
-			if (!pending) continue;
-			if (pending.timer !== undefined) clearTimeout(pending.timer);
-			pending.resolve(frame);
-		}
+		return wasClosed;
 	});
 
 	return {
 		tier,
 		request(payload: Uint8Array): Promise<Uint8Array> {
-			if (fatal) return Promise.reject(fatal);
-			if (closed) {
-				return Promise.reject(requestError('Client is closed', 409));
-			}
+			if (pending.failure) return Promise.reject(pending.failure);
+			if (closed) return Promise.reject(requestError('Client is closed', 409));
 			return new Promise<Uint8Array>((resolve, reject) => {
-				const pending: PendingRequest = { resolve, reject, timer: undefined };
-				if (options.requestTimeoutMs !== undefined) {
-					pending.timer = setTimeout(() => {
-						const index = queue.indexOf(pending);
-						if (index >= 0) queue.splice(index, 1);
-						reject(requestError(`Request timed out after ${options.requestTimeoutMs}ms`, 504));
-					}, options.requestTimeoutMs);
-				}
-				queue.push(pending);
+				const timeoutMs = options.requestTimeoutMs;
+				const handle = pending.add({ resolve, reject }, timeoutMs, () => {
+					reject(requestError(`Request timed out after ${timeoutMs}ms`, 504));
+				});
 				try {
 					socket.write(encodeFrame(payload));
 				} catch (error) {
-					const index = queue.indexOf(pending);
-					if (index >= 0) queue.splice(index, 1);
-					if (pending.timer !== undefined) clearTimeout(pending.timer);
+					handle.cancel();
 					reject(
 						error instanceof ProblemError ? error : requestError('Socket write failed', 502, error),
 					);
