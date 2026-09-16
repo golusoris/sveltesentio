@@ -5,7 +5,7 @@
 	"description": "Colocated-IPC client for SvelteKit ↔ Golusoris: AF_UNIX (Tier 1) + length-prefixed framing + transport-ladder detection + eBPF SK_MSG sockhash (Tier 3) observe/handoff client — capability probe, systemd socket-activation, key-count/Prometheus observability, degrades to Tier 1. Node + Linux.",
 	"devDependencies": {
 		"@types/node": "^24.13.4",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^4.1.11"
 	},
 	"engines": {
