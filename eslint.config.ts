@@ -87,6 +87,12 @@ const config: Linter.Config[] = [
 		rules: {
 			complexity: ['error', 10],
 
+			// HISS-04 length. The effective policy resolves max_func_loc to 60, and
+			// nothing enforced it until the six functions that exceeded it were brought
+			// down (BUG-007). Blank lines and comments are skipped so documenting a
+			// function cannot push it over its own cap.
+			'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
+
 			// HISS-08 static determinism. Measured as free: zero violations in shipped
 			// source when enabled, so the rules pin the current state rather than
 			// demanding a cleanup. `no-implied-eval` is included because
