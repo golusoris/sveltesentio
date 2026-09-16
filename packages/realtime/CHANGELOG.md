@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.4.0...realtime-v0.5.0) (2026-09-16)
+
+
+### Features
+
+* **governance:** declare HISS-20 enforcement evidence, backed by fixtures ([e803ea4](https://github.com/golusoris/sveltesentio/commit/e803ea401055b15ea7e9df5eeb0a4c37cf714963))
+* **hiss-04:** enforce the function-length cap, with one recorded exception ([#273](https://github.com/golusoris/sveltesentio/issues/273)) ([30ecd8f](https://github.com/golusoris/sveltesentio/commit/30ecd8f4b071c79ebb7482ee456b76fab401d3c9))
+
+
+### Bug Fixes
+
+* **deps:** repair regressions introduced by the Praetor dependency pass ([f14552b](https://github.com/golusoris/sveltesentio/commit/f14552be15d1fe0c9e94ce4caecae098a8789106))
+* **types:** put test code under a TypeScript project, and fix the 32 errors ([1138831](https://github.com/golusoris/sveltesentio/commit/11388316e60e6f3fb738255750b2e5606a52d848))
+
+
+### Code Refactoring
+
+* clear two more length violations and dedupe the history trim ([20a0b36](https://github.com/golusoris/sveltesentio/commit/20a0b36ad33ad25b43969ae09b0249f6c85f6f6c))
+* **realtime:** extract the two things both transports were doing twice ([#269](https://github.com/golusoris/sveltesentio/issues/269)) ([5202779](https://github.com/golusoris/sveltesentio/commit/52027798c220c6d6a822f0064d235ccfc60308d0))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.3.0...realtime-v0.4.0) (2026-06-15)
 
 ### Features

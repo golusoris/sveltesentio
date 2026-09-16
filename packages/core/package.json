@@ -1,5 +1,5 @@
 {
-	"description": "Vite plugin, env schema, error types, id/clock utils \u2014 sveltesentio core",
+	"description": "Vite plugin, env schema, error types, id/clock utils — sveltesentio core",
 	"devDependencies": {
 		"@sveltejs/kit": "^2.70.3",
 		"@types/node": "^24.13.4",
@@ -90,5 +90,5 @@
 	},
 	"sideEffects": false,
 	"type": "module",
-	"version": "0.3.0"
+	"version": "0.4.0"
 }

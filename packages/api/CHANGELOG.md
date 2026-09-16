@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/api-v0.3.0...api-v0.4.0) (2026-09-16)
+
+
+### Features
+
+* **governance:** declare HISS-20 enforcement evidence, backed by fixtures ([e803ea4](https://github.com/golusoris/sveltesentio/commit/e803ea401055b15ea7e9df5eeb0a4c37cf714963))
+
+
+### Bug Fixes
+
+* **deps:** repair regressions introduced by the Praetor dependency pass ([f14552b](https://github.com/golusoris/sveltesentio/commit/f14552be15d1fe0c9e94ce4caecae098a8789106))
+* **types:** put test code under a TypeScript project, and fix the 32 errors ([1138831](https://github.com/golusoris/sveltesentio/commit/11388316e60e6f3fb738255750b2e5606a52d848))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/api-v0.2.0...api-v0.3.0) (2026-06-19)
 
 ### Features

@@ -1,5 +1,5 @@
 {
-	"description": "Device-class layout + input primitives \u2014 classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
+	"description": "Device-class layout + input primitives — classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
 		"@playwright/test": "^1.63.0",
@@ -78,5 +78,5 @@
 	},
 	"sideEffects": false,
 	"type": "module",
-	"version": "0.2.0"
+	"version": "0.3.0"
 }
