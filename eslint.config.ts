@@ -108,6 +108,10 @@ const config: Linter.Config[] = [
 		plugins: { '@sveltesentio': sentio },
 		rules: {
 			'@sveltesentio/no-direct-time': 'error',
+			// HISS-01: the call graph must be a DAG. Measured free before enabling —
+			// zero self-recursive call sites across all 163 shipped modules — so this
+			// pins the current state rather than demanding a cleanup.
+			'@sveltesentio/no-recursion': 'error',
 			// HISS-08's other half: `{@html}` is covered by svelte/no-at-html-tags,
 			// but nothing checked the TypeScript side until this rule existed.
 			'@sveltesentio/no-unsanitised-html': 'error',

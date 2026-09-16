@@ -27,7 +27,7 @@ rules:
     title: Acyclic Control Flow
     coverage:
       - language: typescript
-        state: partial
+        state: enforced
         runner: node
         mechanism: >-
           scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
@@ -35,7 +35,9 @@ rules:
           import/export specifiers and from dynamic `import()` calls with a
           literal specifier -- modules within packages/*/src, and packages via
           @sveltesentio/* specifiers -- and fails on the first cycle in either,
-          printing the path. An ESLint rule would have meant a new dependency,
+          printing the path. Self-recursion is covered separately by the
+          `@sveltesentio/no-recursion` ESLint rule, which resolves a self-call
+          through scope analysis rather than by name. An ESLint rule would have meant a new dependency,
           which hard rule 2 puts behind a D-row; a script needs none.
         rationale: >-
           Three cycle shapes are reported, each verified by planting it and
@@ -45,9 +47,14 @@ rules:
           shape was measured both ways -- the previous checker reported "OK: no
           import cycles" on it.
 
-          The remaining gap is recursion: self-recursion within one function is
-          not an import edge and goes unreported, which is what the gap fixture
-          now holds. Resolution is no longer listed as a gap for aliases, which
+          Self-recursion is reported too, by `@sveltesentio/no-recursion`, which
+          was measured free before being enabled -- zero self-calls across all
+          163 shipped modules, so it pins the current state rather than
+          demanding a cleanup. Scope analysis is what makes it trustworthy: a
+          shadowing inner binding of the same name is not reported, and an arrow
+          bound to a const is, which name matching gets backwards in both
+          directions. Mutual recursion between two functions stays out of scope
+          and is stated on the rule. Resolution is no longer listed as a gap for aliases, which
           would need the TypeScript resolver: no package declares
           `compilerOptions.paths` and no package source imports through an alias,
           so it is vacuous here rather than a silent hole. A computed specifier

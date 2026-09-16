@@ -99,6 +99,32 @@ describe('reachableFrom', () => {
 		expect([...reached]).toEqual([]);
 	});
 
+	it('walks a chain far deeper than the call stack would allow', () => {
+		// findCycles used a recursive DFS, so a long enough chain overflowed the
+		// call stack — and the graph comes from user data in the editor. The
+		// iterative form is bounded by the node count instead. 50k nodes is well
+		// past the recursion limit and returns in milliseconds.
+		const depth = 50_000;
+		const chain = Array.from({ length: depth }, (_, i) => ({ id: `n${i}` }));
+		const links = Array.from({ length: depth - 1 }, (_, i) => ({
+			id: `e${i}`,
+			source: `n${i}`,
+			target: `n${i + 1}`,
+		}));
+		expect(findCycles(chain, links)).toEqual([]);
+	});
+
+	it('still finds a cycle closed at the far end of a deep chain', () => {
+		const depth = 20_000;
+		const chain = Array.from({ length: depth }, (_, i) => ({ id: `n${i}` }));
+		const links = Array.from({ length: depth }, (_, i) => ({
+			id: `e${i}`,
+			source: `n${i}`,
+			target: `n${(i + 1) % depth}`,
+		}));
+		expect(findCycles(chain, links).length).toBeGreaterThan(0);
+	});
+
 	it('handles cycles without infinite looping', () => {
 		const reached = reachableFrom(
 			nodes('a', 'b', 'c'),
