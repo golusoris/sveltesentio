@@ -1,0 +1,12 @@
+{
+	// Type-checks src together with test. The package's own tsconfig.json cannot do
+	// this: it sets `rootDir: "src"` so the emitted dist/ stays flat, and a file
+	// outside rootDir is an error. This one never emits, so rootDir can widen
+	// without touching the published layout.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"rootDir": "."
+	},
+	"include": ["src/**/*", "test/**/*"]
+}

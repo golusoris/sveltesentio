@@ -1,9 +1,17 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
+		// `rootDir: "."` rather than "src" as elsewhere, because bin/ ships the CLI
+		// entry point and a file outside rootDir is an error. dist/ is a local
+		// artifact either way — `files` publishes src/, so the layout never reaches
+		// a consumer.
+		// bin/ imports node:url, node:path and process. Every other package picks
+		// @types/node up ambiently, but mcp only did so because test/** was in
+		// `include` and dragged it in — moving tests to tsconfig.test.json exposed
+		// that bin/ had no node types of its own. Declared rather than inherited.
+		"types": ["node"],
 		"rootDir": ".",
-		"outDir": "dist",
-		"types": ["node"]
+		"outDir": "dist"
 	},
-	"include": ["src/**/*", "bin/**/*", "test/**/*"]
+	"include": ["src/**/*", "bin/**/*"]
 }

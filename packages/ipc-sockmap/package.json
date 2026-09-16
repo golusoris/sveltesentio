@@ -51,7 +51,7 @@
 		"build": "tsc",
 		"lint": "eslint src/",
 		"test": "vitest run --coverage",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit -p tsconfig.test.json"
 	},
 	"sideEffects": false,
 	"type": "module",
