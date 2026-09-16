@@ -172,12 +172,19 @@ rules:
           skipping it made the bracket form a silent bypass. Measured both ways --
           against the previous rule the same fixture produced no diagnostic.
 
-          It is partial rather than enforced because the rule still recognises
-          sanitisation only at the sink: a value sanitised further up the call
-          chain and passed in as a bare identifier is reported as though it were
-          raw, which is the remaining gap fixture. A genuinely dynamic
-          `host[name]` stays unresolved by design, since accusing it would flag
-          every computed property assignment.
+          Both halves of what used to be the gap are closed by resolving one
+          hop through a `const` that is assigned exactly once: `const prop =
+          'innerHTML'; host[prop] = raw` is now reported, and `const clean =
+          sanitizeHtml(raw); host.innerHTML = clean` is no longer reported as
+          though it were raw. Measured both ways -- against the previous rule the
+          first produced no diagnostic and the second produced a false one.
+
+          It stays partial because a key or value that is not statically knowable
+          stays unresolved: a parameter, or a `let` written again between its
+          initialiser and the sink. That is deliberate rather than pending.
+          Guessing safe would hide an injection; guessing unsafe would report
+          every computed property assignment in the tree and train people to
+          disable the rule. The gap fixture now holds that shape.
       - language: svelte
         state: partial
         runner: eslint
