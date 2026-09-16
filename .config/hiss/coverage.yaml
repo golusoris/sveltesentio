@@ -32,18 +32,26 @@ rules:
         mechanism: >-
           scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
           Lint job and in verify-all. It builds two graphs from static
-          import/export specifiers -- modules within packages/*/src, and packages
-          via @sveltesentio/* specifiers -- and fails on the first cycle in
-          either, printing the path. An ESLint rule would have meant a new
-          dependency, which hard rule 2 puts behind a D-row; a script needs none.
+          import/export specifiers and from dynamic `import()` calls with a
+          literal specifier -- modules within packages/*/src, and packages via
+          @sveltesentio/* specifiers -- and fails on the first cycle in either,
+          printing the path. An ESLint rule would have meant a new dependency,
+          which hard rule 2 puts behind a D-row; a script needs none.
         rationale: >-
-          Both cycle shapes are reported, verified by planting one of each and
-          watching the checker exit 1 with the path before removing them: a
-          two-module cycle inside core, and a core-to-ui-to-core package cycle.
-          The gaps are resolution and recursion. Specifiers are read
-          syntactically, so a cycle formed through `import()` or a path alias is
-          missed, and self-recursion within one function is not an import edge
-          and goes unreported -- the gap fixtures are exactly those two shapes.
+          Three cycle shapes are reported, each verified by planting it and
+          watching the checker exit 1 with the path before removing it: a
+          two-module static cycle inside core, a core-to-ui-to-core package
+          cycle, and a cycle closed by `await import('./peer.js')`. The dynamic
+          shape was measured both ways -- the previous checker reported "OK: no
+          import cycles" on it.
+
+          The remaining gap is recursion: self-recursion within one function is
+          not an import edge and goes unreported, which is what the gap fixture
+          now holds. Resolution is no longer listed as a gap for aliases, which
+          would need the TypeScript resolver: no package declares
+          `compilerOptions.paths` and no package source imports through an alias,
+          so it is vacuous here rather than a silent hole. A computed specifier
+          -- `import(name)` -- still cannot be followed syntactically.
       - language: svelte
         state: unsupported
         mechanism: none. No component-graph or import-cycle check runs anywhere.
@@ -135,10 +143,18 @@ rules:
           `@sveltesentio/no-unsanitised-html` was written for this gap after the
           catalog named it, and reports `innerHTML`, `outerHTML` and
           `insertAdjacentHTML` unless the value comes from `sanitizeHtml()` or a
-          `.sanitize()` call. It is partial rather than enforced because the rule
-          recognises sanitisation at the sink: a value sanitised further up the
-          call chain and passed in as a bare identifier is still reported, and a
-          sink reached through a computed member is not.
+          `.sanitize()` call. A sink reached through bracket notation is reported too:
+          the rule resolves a string-literal computed key, because
+          `host['innerHTML']` is as statically known as `host.innerHTML` and
+          skipping it made the bracket form a silent bypass. Measured both ways --
+          against the previous rule the same fixture produced no diagnostic.
+
+          It is partial rather than enforced because the rule still recognises
+          sanitisation only at the sink: a value sanitised further up the call
+          chain and passed in as a bare identifier is reported as though it were
+          raw, which is the remaining gap fixture. A genuinely dynamic
+          `host[name]` stays unresolved by design, since accusing it would flag
+          every computed property assignment.
       - language: svelte
         state: partial
         runner: eslint
