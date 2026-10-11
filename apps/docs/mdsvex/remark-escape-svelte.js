@@ -184,8 +184,8 @@ function looksLikeIntentionalHtml(value) {
 	// stray `<` left over once the tags are removed.
 	const tokens = trimmed.match(/<[^>]*>/g);
 	if (!tokens) return false;
-	const stripped = trimmed.replace(/<[^>]*>/g, '');
-	if (stripped.includes('<') || stripped.includes('>')) return false;
+	const between = trimmed.split(/<[^>]*>/);
+	if (between.some((text) => text.includes('<') || text.includes('>'))) return false;
 	return tokens.every(isHtmlTag);
 }
 

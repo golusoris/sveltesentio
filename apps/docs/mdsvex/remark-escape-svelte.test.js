@@ -79,6 +79,20 @@ describe('remarkEscapeSvelte', () => {
 		assert.equal(tree.children[2].value, '&lt;DialogPrimitive&gt;');
 	});
 
+	it('escapes html nodes that carry a stray bracket between known tags', () => {
+		const tree = {
+			type: 'root',
+			children: [
+				{ type: 'html', value: '<div>a > b</div>' },
+				{ type: 'html', value: '<div></div> <' },
+			],
+		};
+
+		remarkEscapeSvelte()(tree);
+		assert.equal(tree.children[0].value, '&lt;div&gt;a &gt; b&lt;/div&gt;');
+		assert.equal(tree.children[1].value, '&lt;div&gt;&lt;/div&gt; &lt;');
+	});
+
 	it('traverses nested children 4 levels deep', () => {
 		const leaf = { type: 'text', value: 'nested < 42 {x}' };
 		const tree = {
