@@ -51,7 +51,7 @@ This package does **not**:
   - Nodes keyboard-reachable via Tab (`tabindex="0"` default).
   - Arrow keys move focus between connected nodes (via DAG adjacency).
   - Screen-reader label: each node has `aria-label={type}: {name}` + `aria-describedby` linking to node description.
-  - Canvas has `role="application"` (opt-out when read-only -> `role="img"` with off-screen `<table>` alternative).
+  - Canvas has `role="application"`. Read-only -> `role="img"` with inert content: no focus, no drag, no pan or zoom. A text alternative beyond `ariaLabel` (for example a table of nodes and edges) is the consumer's to render; the package ships none.
   - Pan/zoom animations respect `prefers-reduced-motion: reduce`.
 
 ## Rejected alternatives
