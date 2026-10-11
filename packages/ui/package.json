@@ -127,6 +127,12 @@
 		"CHANGELOG.md",
 		"!src/**/*.stories.svelte"
 	],
+	"imports": {
+		"#server-window": {
+			"browser": "./src/markdown/server-window.browser.ts",
+			"default": "./src/markdown/server-window.node.ts"
+		}
+	},
 	"keywords": [
 		"sveltesentio",
 		"ui",

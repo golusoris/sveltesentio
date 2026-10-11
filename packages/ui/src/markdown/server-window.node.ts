@@ -1,8 +1,8 @@
 /**
- * SSR-only seam: builds a jsdom `window` for DOMPurify when no browser DOM
- * exists. Isolated in its own module so the browser code path (guarded by the
- * `BROWSER` const in `sanitize.ts`) never imports jsdom, keeping the ~3 MB jsdom
- * cost out of client bundles while remaining a plain synchronous call on Node.
+ * Server variant of the `#server-window` seam: builds a jsdom `window` for
+ * DOMPurify when no browser DOM exists. The package.json `imports` map picks
+ * the browser variant under the `browser` condition, which keeps jsdom out of
+ * client bundles and out of the browser dev server.
  */
 
 import { JSDOM } from 'jsdom';
