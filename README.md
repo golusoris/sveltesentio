@@ -70,7 +70,7 @@ pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/
 - **Colors**: oklch only — no hex, no rgb, no hsl
 - **Spacing**: 8pt grid (`--space-1` → `--space-24`)
 - **Interface types**: desktop, 10-foot, handheld, dashboard (see [ADR-0047](docs/adr/0047-per-interface-presets.md))
-- **Standards**: WCAG 2.2 AA, OWASP ASVS L2, SLSA L3, EU AI Act Art. 12, Svelte 5 runes-first
+- **Standards**: WCAG 2.2 AA, OWASP ASVS L2, SLSA Build Level 2 (Level 3 is open, [#280](https://github.com/golusoris/sveltesentio/issues/280)), EU AI Act Art. 12, Svelte 5 runes-first
 
 See [`docs/principles.md`](docs/principles.md) and [`docs/ux-principles.md`](docs/ux-principles.md).
 

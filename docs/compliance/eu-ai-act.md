@@ -29,7 +29,7 @@
 | Role                       | Definition (AI Act Art. 3)                                                          | Applies to                                                                        |
 | -------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **Provider**               | Develops / has developed an AI system / GPAI model + places it on the market.       | Third-party model vendors; sveltesentio consumers who fine-tune their own models. |
-| **Deployer**               | Uses an AI system under its authority (except personal non-professional).           | `golusoris/app-*` consumers + commercial sveltesentio consumers.                  |
+| **Deployer**               | Uses an AI system under its authority (except personal non-professional).           | Consuming applications, commercial ones included.                                 |
 | **Distributor / Importer** | Makes AI systems available on the Union market without provider-like modifications. | N/A for sveltesentio.                                                             |
 | **Product manufacturer**   | Places a product on the market with an AI system embedded.                          | Consumers embedding on-device models (ADR-0044).                                  |
 
