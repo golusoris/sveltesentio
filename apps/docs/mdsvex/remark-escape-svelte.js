@@ -184,34 +184,53 @@ function looksLikeIntentionalHtml(value) {
 	// stray `<` left over once the tags are removed.
 	const tokens = trimmed.match(/<[^>]*>/g);
 	if (!tokens) return false;
-	const stripped = trimmed.replace(/<[^>]*>/g, '');
-	if (stripped.includes('<') || stripped.includes('>')) return false;
+	const between = trimmed.split(/<[^>]*>/);
+	if (between.some((text) => text.includes('<') || text.includes('>'))) return false;
 	return tokens.every(isHtmlTag);
 }
 
 /**
- * @param {{ type: string; value?: string; children?: unknown[] }} node
+ * Upper bound on nodes one `walk` visits (HISS-02). Running into it is an
+ * error, not a partly escaped page.
  */
-function walk(node) {
-	if (node.type === 'text' && typeof node.value === 'string') {
-		node.value = escapeForSvelte(node.value);
-		// mdast `text` renders verbatim; tag as already-safe HTML so the entities
-		// survive instead of being re-escaped downstream.
-		node.type = 'html';
-		return;
-	}
-	if (node.type === 'html' && typeof node.value === 'string') {
-		if (!looksLikeIntentionalHtml(node.value)) {
+const WALK_LIMIT = 200_000;
+
+/**
+ * @param {{ type: string; value?: string; children?: unknown[] }} root
+ */
+function walk(root) {
+	const stack = [root];
+
+	for (let step = 0; step < WALK_LIMIT && stack.length > 0; step += 1) {
+		const node = /** @type {typeof root} */ (stack.pop());
+
+		if (node.type === 'text' && typeof node.value === 'string') {
 			node.value = escapeForSvelte(node.value);
+			// mdast `text` renders verbatim; tag as already-safe HTML so the entities
+			// survive instead of being re-escaped downstream.
+			node.type = 'html';
+			continue;
 		}
-		return;
+		if (node.type === 'html' && typeof node.value === 'string') {
+			if (!looksLikeIntentionalHtml(node.value)) {
+				node.value = escapeForSvelte(node.value);
+			}
+			continue;
+		}
+		if (node.type === 'code' || node.type === 'inlineCode') {
+			continue;
+		}
+
+		const children = node.children;
+		if (Array.isArray(children)) {
+			for (let i = children.length - 1; i >= 0; i -= 1) {
+				stack.push(/** @type {never} */ (children[i]));
+			}
+		}
 	}
-	if (node.type === 'code' || node.type === 'inlineCode') return;
-	const children = node.children;
-	if (Array.isArray(children)) {
-		for (const child of children) {
-			walk(/** @type {never} */ (child));
-		}
+
+	if (stack.length > 0) {
+		throw new Error(`walk exceeded limit of ${WALK_LIMIT} steps`);
 	}
 }
 

@@ -48,6 +48,28 @@ describe('topologicalSort', () => {
 		);
 	});
 
+	it('returns an empty order for an empty graph', () => {
+		expect(topologicalSort([], [])).toEqual([]);
+	});
+
+	it('orders a chain that uses every step the node count allows', () => {
+		// Kahn's loop is bounded by the node count; a single chain emits one node
+		// per step, so it spends the whole bound and must still come out complete.
+		const depth = 2_000;
+		const chain = Array.from({ length: depth }, (_, i) => ({
+			id: `n${String(i).padStart(4, '0')}`,
+		}));
+		const links = Array.from({ length: depth - 1 }, (_, i) => ({
+			source: chain[i]?.id ?? '',
+			target: chain[i + 1]?.id ?? '',
+		}));
+		expect(topologicalSort(chain, links)).toEqual(chain.map((n) => n.id));
+	});
+
+	it('counts a doubled edge once per edge and still orders both ends', () => {
+		expect(topologicalSort(nodes('a', 'b'), [edge('a', 'b'), edge('a', 'b')])).toEqual(['a', 'b']);
+	});
+
 	it('handles a disconnected graph', () => {
 		const order = topologicalSort(nodes('a', 'b', 'c', 'd'), [edge('a', 'b'), edge('c', 'd')]);
 		// Kahn's algorithm with alphabetical tie-break: a precedes b, c precedes d;
@@ -123,6 +145,21 @@ describe('reachableFrom', () => {
 			target: `n${(i + 1) % depth}`,
 		}));
 		expect(findCycles(chain, links).length).toBeGreaterThan(0);
+	});
+
+	it('reaches the far node when doubled edges fill the queue to its bound', () => {
+		// The walk is bounded by edge count + 1. Doubled edges queue the same node
+		// twice, so this graph spends exactly that many steps before it sees `c`.
+		const reached = reachableFrom(
+			nodes('a', 'b', 'c'),
+			[edge('a', 'b'), edge('a', 'b'), edge('b', 'c')],
+			'a',
+		);
+		expect([...reached].sort()).toEqual(['b', 'c']);
+	});
+
+	it('returns an empty set for a start id that is not in the graph', () => {
+		expect([...reachableFrom(nodes('a', 'b'), [edge('a', 'b')], 'missing')]).toEqual([]);
 	});
 
 	it('handles cycles without infinite looping', () => {

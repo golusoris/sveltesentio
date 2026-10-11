@@ -1,6 +1,6 @@
 import { ProblemError } from '@sveltesentio/core';
 import type { TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
-import { createTusLauncher } from './tus-launcher.js';
+import { createTusLauncher, type TusLauncher } from './tus-launcher.js';
 
 // Resumable upload wrapper over `tus-js-client` (peer dep, ADR-0041). The tus
 // `Upload` constructor is injected so the lifecycle unit-tests with a fake — no
@@ -183,27 +183,71 @@ function buildTusOptions(options: ResumableUploadOptions, sink: UploadSink): Tus
 	};
 }
 
+/** The mutable part of one upload, shared by the tus callbacks and the public handle. */
+interface UploadRun {
+	state: ResumableState;
+	progress: ResumableProgress;
+}
+
+/**
+ * The public handle: guards each transition on the current state, then acts.
+ *
+ * Separate from the factory because the factory wires tus to the run and this
+ * is the state machine a caller drives; together they ran past the length cap
+ * (HISS-04).
+ */
+function createHandle(run: UploadRun, launcher: TusLauncher, begin: () => void): ResumableUpload {
+	return {
+		get state(): ResumableState {
+			return run.state;
+		},
+		get progress(): ResumableProgress {
+			return run.progress;
+		},
+		get url(): string | null {
+			return launcher.url;
+		},
+		start(): void {
+			if (run.state === 'uploading' || run.state === 'success') return;
+			begin();
+		},
+		pause(): void {
+			if (run.state !== 'uploading') return;
+			run.state = 'paused';
+			void launcher.abort(false);
+		},
+		resume(): void {
+			if (run.state !== 'paused') return;
+			begin();
+		},
+		async abort(terminate = false): Promise<void> {
+			if (run.state === 'success' || run.state === 'aborted') return;
+			run.state = 'aborted';
+			await launcher.abort(terminate);
+		},
+	};
+}
+
 export function createResumableUpload(
 	file: Blob,
 	options: ResumableUploadOptions,
 ): ResumableUpload {
 	assertDestinationConfigured(options);
 
-	let state: ResumableState = 'idle';
-	let progress: ResumableProgress = toProgress(0, Math.max(file.size, 0));
+	const run: UploadRun = { state: 'idle', progress: toProgress(0, Math.max(file.size, 0)) };
 	/** Enter the terminal error state and report. tus and the loader both land here. */
 	const fail = (error: unknown): void => {
-		state = 'error';
+		run.state = 'error';
 		options.onError?.(toProblem(asError(error)));
 	};
 
 	const tusOptions = buildTusOptions(options, {
 		onProgress: (next) => {
-			progress = next;
+			run.progress = next;
 			options.onProgress?.(next);
 		},
 		onSuccess: () => {
-			state = 'success';
+			run.state = 'success';
 			options.onSuccess?.(handle);
 		},
 		onFailure: fail,
@@ -211,40 +255,11 @@ export function createResumableUpload(
 
 	const launcher = createTusLauncher(file, tusOptions, options.UploadConstructor);
 
-	function begin(): void {
-		state = 'uploading';
-		launcher.start(() => state === 'uploading', fail);
-	}
-
-	const handle: ResumableUpload = {
-		get state(): ResumableState {
-			return state;
-		},
-		get progress(): ResumableProgress {
-			return progress;
-		},
-		get url(): string | null {
-			return launcher.url;
-		},
-		start(): void {
-			if (state === 'uploading' || state === 'success') return;
-			begin();
-		},
-		pause(): void {
-			if (state !== 'uploading') return;
-			state = 'paused';
-			void launcher.abort(false);
-		},
-		resume(): void {
-			if (state !== 'paused') return;
-			begin();
-		},
-		async abort(terminate = false): Promise<void> {
-			if (state === 'success' || state === 'aborted') return;
-			state = 'aborted';
-			await launcher.abort(terminate);
-		},
+	const begin = (): void => {
+		run.state = 'uploading';
+		launcher.start(() => run.state === 'uploading', fail);
 	};
 
+	const handle = createHandle(run, launcher, begin);
 	return handle;
 }

@@ -12,13 +12,16 @@ Paraglide v2 is locked (ADR-0017). Open questions: locale detection strategy, RT
 ## Decision
 
 - **Strategy default** in `@sveltesentio/i18n`:
+
   ```ts
   paraglideVitePlugin({
-  	strategy: ['url', 'cookie', 'baseLocale'],
-  	// ...
+    strategy: ['url', 'cookie', 'baseLocale'],
+    // ...
   });
   ```
+
   URL wins (SEO, shareable); cookie is the persistence override; baseLocale is the fallback.
+
 - **RTL**: `@sveltesentio/i18n` ships `getTextDirection(locale)` + a SvelteKit hook that sets `<html lang dir>` server-side from the detected locale. Tailwind 4 logical properties are the framework default; ESLint rule (warn) flags `ml-*`/`mr-*`/`pl-*`/`pr-*` in new code — guides authors to `ms-*`/`me-*`/`ps-*`/`pe-*`.
 - **Intl formatters**: fold `formatCurrency`, `formatNumber`, `formatDate`, `formatRelativeTime` into `@sveltesentio/i18n/format`. No separate module (reversing D53 from open to fold-in).
 

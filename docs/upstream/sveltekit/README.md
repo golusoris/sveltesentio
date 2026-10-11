@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # SvelteKit — v2.x snapshot
 
 Pinned: **`@sveltejs/kit ^2.0.0`** (peerDependency in `@sveltesentio/core`)
-Canonical: https://svelte.dev/docs/kit
+Canonical: <https://svelte.dev/docs/kit>
 
 ## Routing
 
@@ -31,9 +31,9 @@ Dynamic segments: `[slug]`, `[...rest]`, `[[optional]]`, `(group)/`, `[[lang=lan
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals, fetch, depends }) => {
-	depends('app:posts'); // for invalidate('app:posts')
-	const post = await locals.db.post.find(params.id);
-	return { post }; // typed in +page.svelte via PageData
+  depends('app:posts'); // for invalidate('app:posts')
+  const post = await locals.db.post.find(params.id);
+  return { post }; // typed in +page.svelte via PageData
 };
 ```
 
@@ -41,8 +41,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, depends }) =
 // +page.ts — universal
 import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ fetch, parent, data }) => {
-	const { user } = await parent();
-	return { ...data, user };
+  const { user } = await parent();
+  return { ...data, user };
 };
 ```
 
@@ -54,14 +54,14 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		const form = await request.formData();
-		if (!form.get('email')) return fail(400, { error: 'email required' });
-		redirect(303, '/dashboard');
-	},
-	delete: async ({ request, locals }) => {
-		/* named action */
-	},
+  default: async ({ request, locals }) => {
+    const form = await request.formData();
+    if (!form.get('email')) return fail(400, { error: 'email required' });
+    redirect(303, '/dashboard');
+  },
+  delete: async ({ request, locals }) => {
+    /* named action */
+  },
 };
 ```
 
@@ -72,14 +72,14 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	const items = await locals.db.list();
-	return json(items);
+  const items = await locals.db.list();
+  return json(items);
 };
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	// validate with Zod at the boundary (principles §2.2)
-	return json({ ok: true }, { status: 201 });
+  const body = await request.json();
+  // validate with Zod at the boundary (principles §2.2)
+  return json({ ok: true }, { status: 201 });
 };
 ```
 
@@ -89,15 +89,15 @@ export const POST: RequestHandler = async ({ request }) => {
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	event.locals.user = await getUser(event);
-	return resolve(event, {
-		transformPageChunk: ({ html }) => html,
-		filterSerializedResponseHeaders: () => false,
-	});
+  event.locals.user = await getUser(event);
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html,
+    filterSerializedResponseHeaders: () => false,
+  });
 };
 
 export const handleError: HandleServerError = ({ error, event, status, message }) => {
-	return { message: 'Internal error', code: 'E_INTERNAL' };
+  return { message: 'Internal error', code: 'E_INTERNAL' };
 };
 ```
 
@@ -129,5 +129,5 @@ await invalidate('app:posts'); // re-runs loads with depends('app:posts')
 
 ## Links
 
-- v2 migration: https://svelte.dev/docs/kit/migrating-to-sveltekit-2
-- Adapters: https://svelte.dev/docs/kit/adapters
+- v2 migration: <https://svelte.dev/docs/kit/migrating-to-sveltekit-2>
+- Adapters: <https://svelte.dev/docs/kit/adapters>

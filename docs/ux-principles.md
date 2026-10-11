@@ -332,10 +332,10 @@ CSS for safe areas:
 
 ```css
 .bottom-nav {
-	padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 .top-bar {
-	padding-top: max(16px, env(safe-area-inset-top));
+  padding-top: max(16px, env(safe-area-inset-top));
 }
 ```
 
@@ -353,12 +353,12 @@ Principles:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.01ms !important;
-		transition-duration: 0.01ms !important;
-	}
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 ```
 
@@ -391,24 +391,24 @@ Standard animations:
 /* xs: 0–479px — single column, bottom nav */
 /* sm: 480–767px — still mobile, larger touch targets */
 @media (min-width: 640px) {
-	/* sm  — Tailwind default */
+  /* sm  — Tailwind default */
 }
 @media (min-width: 768px) {
-	/* md  — tablet portrait */
+  /* md  — tablet portrait */
 }
 @media (min-width: 1024px) {
-	/* lg  — tablet landscape, small desktop */
+  /* lg  — tablet landscape, small desktop */
 }
 @media (min-width: 1280px) {
-	/* xl  — standard desktop */
+  /* xl  — standard desktop */
 }
 @media (min-width: 1536px) {
-	/* 2xl — wide desktop, 4K */
+  /* 2xl — wide desktop, 4K */
 }
 
 /* TV / 10-foot UI */
 @media (min-width: 1920px) and (hover: none) {
-	/* TV remote navigation */
+  /* TV remote navigation */
 }
 ```
 
@@ -416,7 +416,7 @@ Container queries for component-level responsiveness:
 
 ```css
 @container (min-width: 400px) {
-	/* card switches from stacked to inline */
+  /* card switches from stacked to inline */
 }
 ```
 

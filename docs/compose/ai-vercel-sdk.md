@@ -91,85 +91,85 @@ import { uuidv7 } from '@sveltesentio/core/id';
 import { emit } from '@sveltesentio/ai/audit';
 
 const ChatRequest = z.object({
-	messages: z
-		.array(
-			z.object({
-				role: z.enum(['user', 'assistant', 'system']),
-				content: z.string().min(1).max(10_000),
-			}),
-		)
-		.min(1)
-		.max(50),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string().min(1).max(10_000),
+      }),
+    )
+    .min(1)
+    .max(50),
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const session = locals.session;
-	if (!session) return new Response('Unauthorized', { status: 401 });
+  const session = locals.session;
+  if (!session) return new Response('Unauthorized', { status: 401 });
 
-	const parsed = ChatRequest.safeParse(await request.json());
-	if (!parsed.success) {
-		return new Response(
-			JSON.stringify({
-				type: 'urn:sveltesentio:ai:invalid-request',
-				title: 'Invalid request',
-				status: 400,
-				detail: parsed.error.message,
-				extensions: { correlationId: locals.correlationId },
-			}),
-			{ status: 400, headers: { 'Content-Type': 'application/problem+json' } },
-		);
-	}
+  const parsed = ChatRequest.safeParse(await request.json());
+  if (!parsed.success) {
+    return new Response(
+      JSON.stringify({
+        type: 'urn:sveltesentio:ai:invalid-request',
+        title: 'Invalid request',
+        status: 400,
+        detail: parsed.error.message,
+        extensions: { correlationId: locals.correlationId },
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/problem+json' } },
+    );
+  }
 
-	const correlationId = uuidv7();
-	await emit(
-		{
-			timestamp: new Date().toISOString(),
-			kind: 'prompt',
-			provider: 'anthropic',
-			model: 'claude-opus-4-7',
-			correlationId,
-			userId: session.user.id,
-		},
-		locals.onAudit,
-	);
+  const correlationId = uuidv7();
+  await emit(
+    {
+      timestamp: new Date().toISOString(),
+      kind: 'prompt',
+      provider: 'anthropic',
+      model: 'claude-opus-4-7',
+      correlationId,
+      userId: session.user.id,
+    },
+    locals.onAudit,
+  );
 
-	const result = streamText({
-		model: anthropic('claude-opus-4-7'),
-		messages: convertToCoreMessages(parsed.data.messages),
-		abortSignal: request.signal, // propagate client disconnect
-		onFinish: async ({ usage }) => {
-			await emit(
-				{
-					timestamp: new Date().toISOString(),
-					kind: 'response',
-					provider: 'anthropic',
-					model: 'claude-opus-4-7',
-					correlationId,
-					userId: session.user.id,
-					metadata: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens },
-				},
-				locals.onAudit,
-			);
-		},
-		onError: async ({ error }) => {
-			await emit(
-				{
-					timestamp: new Date().toISOString(),
-					kind: 'error',
-					provider: 'anthropic',
-					model: 'claude-opus-4-7',
-					correlationId,
-					userId: session.user.id,
-					metadata: { message: String(error) },
-				},
-				locals.onAudit,
-			);
-		},
-	});
+  const result = streamText({
+    model: anthropic('claude-opus-4-7'),
+    messages: convertToCoreMessages(parsed.data.messages),
+    abortSignal: request.signal, // propagate client disconnect
+    onFinish: async ({ usage }) => {
+      await emit(
+        {
+          timestamp: new Date().toISOString(),
+          kind: 'response',
+          provider: 'anthropic',
+          model: 'claude-opus-4-7',
+          correlationId,
+          userId: session.user.id,
+          metadata: { promptTokens: usage.promptTokens, completionTokens: usage.completionTokens },
+        },
+        locals.onAudit,
+      );
+    },
+    onError: async ({ error }) => {
+      await emit(
+        {
+          timestamp: new Date().toISOString(),
+          kind: 'error',
+          provider: 'anthropic',
+          model: 'claude-opus-4-7',
+          correlationId,
+          userId: session.user.id,
+          metadata: { message: String(error) },
+        },
+        locals.onAudit,
+      );
+    },
+  });
 
-	return result.toDataStreamResponse({
-		headers: { 'X-Correlation-Id': correlationId },
-	});
+  return result.toDataStreamResponse({
+    headers: { 'X-Correlation-Id': correlationId },
+  });
 };
 ```
 
@@ -189,45 +189,45 @@ Five invariants ported from [ai-streaming.md](ai-streaming.md):
 ```svelte
 <!-- src/lib/ai/Chat.svelte -->
 <script lang="ts">
-	import { useChat } from '@ai-sdk/svelte';
-	import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
+  import { useChat } from '@ai-sdk/svelte';
+  import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
 
-	const chat = useChat({
-		api: '/api/ai/chat',
-		onError: (err) => console.error('[ai-vercel] stream failed', err),
-	});
+  const chat = useChat({
+    api: '/api/ai/chat',
+    onError: (err) => console.error('[ai-vercel] stream failed', err),
+  });
 </script>
 
 <ol role="log" aria-live="polite" aria-relevant="additions">
-	{#each chat.messages as msg, i (i)}
-		<li class={msg.role}>
-			{#if msg.role === 'assistant'}
-				{@html sanitizeMarkdown(msg.content)}
-			{:else}
-				{msg.content}
-			{/if}
-		</li>
-	{/each}
+  {#each chat.messages as msg, i (i)}
+    <li class={msg.role}>
+      {#if msg.role === 'assistant'}
+        {@html sanitizeMarkdown(msg.content)}
+      {:else}
+        {msg.content}
+      {/if}
+    </li>
+  {/each}
 </ol>
 
 <form onsubmit={chat.handleSubmit}>
-	<textarea
-		bind:value={chat.input}
-		disabled={chat.isLoading}
-		onkeydown={(e) => {
-			if (e.key === 'Enter' && !e.shiftKey) {
-				e.preventDefault();
-				chat.handleSubmit();
-			}
-		}}></textarea>
-	<button type="submit" disabled={chat.isLoading}>Send</button>
-	{#if chat.isLoading}
-		<button type="button" onclick={chat.stop}>Stop</button>
-	{/if}
+  <textarea
+    bind:value={chat.input}
+    disabled={chat.isLoading}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chat.handleSubmit();
+      }
+    }}></textarea>
+  <button type="submit" disabled={chat.isLoading}>Send</button>
+  {#if chat.isLoading}
+    <button type="button" onclick={chat.stop}>Stop</button>
+  {/if}
 </form>
 
 {#if chat.error}
-	<p role="alert">Failed: {chat.error.message}</p>
+  <p role="alert">Failed: {chat.error.message}</p>
 {/if}
 ```
 
@@ -251,58 +251,58 @@ import { streamText, tool } from 'ai';
 import { z } from 'zod';
 
 const result = streamText({
-	model: anthropic('claude-opus-4-7'),
-	messages: convertToCoreMessages(parsed.data.messages),
-	maxSteps: 5, // bounded agent loop
-	tools: {
-		searchOrders: tool({
-			description: "Search the user's order history",
-			parameters: z.object({
-				query: z.string().min(1).max(200),
-				limit: z.number().int().min(1).max(50).default(10),
-			}),
-			execute: async ({ query, limit }, { abortSignal }) => {
-				const orders = await db.orders.search({
-					userId: session.user.id,
-					query,
-					limit,
-					abortSignal,
-				});
-				return { orders };
-			},
-		}),
-		placeOrder: tool({
-			description: 'Place a new order. Always confirm with user first.',
-			parameters: z.object({
-				sku: z.string(),
-				quantity: z.number().int().positive(),
-			}),
-			execute: async ({ sku, quantity }) => {
-				// Side effect — extra audit + idempotency-key per http-client.md
-				return await placeOrderWithIdempotency({
-					userId: session.user.id,
-					sku,
-					quantity,
-				});
-			},
-		}),
-	},
-	onStepFinish: async ({ toolCalls }) => {
-		for (const call of toolCalls) {
-			await emit(
-				{
-					timestamp: new Date().toISOString(),
-					kind: 'response',
-					provider: 'anthropic',
-					model: 'claude-opus-4-7',
-					correlationId,
-					userId: session.user.id,
-					metadata: { tool: call.toolName, args: 'redacted' },
-				},
-				locals.onAudit,
-			);
-		}
-	},
+  model: anthropic('claude-opus-4-7'),
+  messages: convertToCoreMessages(parsed.data.messages),
+  maxSteps: 5, // bounded agent loop
+  tools: {
+    searchOrders: tool({
+      description: "Search the user's order history",
+      parameters: z.object({
+        query: z.string().min(1).max(200),
+        limit: z.number().int().min(1).max(50).default(10),
+      }),
+      execute: async ({ query, limit }, { abortSignal }) => {
+        const orders = await db.orders.search({
+          userId: session.user.id,
+          query,
+          limit,
+          abortSignal,
+        });
+        return { orders };
+      },
+    }),
+    placeOrder: tool({
+      description: 'Place a new order. Always confirm with user first.',
+      parameters: z.object({
+        sku: z.string(),
+        quantity: z.number().int().positive(),
+      }),
+      execute: async ({ sku, quantity }) => {
+        // Side effect — extra audit + idempotency-key per http-client.md
+        return await placeOrderWithIdempotency({
+          userId: session.user.id,
+          sku,
+          quantity,
+        });
+      },
+    }),
+  },
+  onStepFinish: async ({ toolCalls }) => {
+    for (const call of toolCalls) {
+      await emit(
+        {
+          timestamp: new Date().toISOString(),
+          kind: 'response',
+          provider: 'anthropic',
+          model: 'claude-opus-4-7',
+          correlationId,
+          userId: session.user.id,
+          metadata: { tool: call.toolName, args: 'redacted' },
+        },
+        locals.onAudit,
+      );
+    }
+  },
 });
 ```
 
@@ -327,27 +327,27 @@ import { streamObject } from 'ai';
 import { z } from 'zod';
 
 const Plan = z.object({
-	title: z.string(),
-	steps: z
-		.array(
-			z.object({
-				description: z.string(),
-				estimateMinutes: z.number().int().positive(),
-			}),
-		)
-		.min(1)
-		.max(20),
+  title: z.string(),
+  steps: z
+    .array(
+      z.object({
+        description: z.string(),
+        estimateMinutes: z.number().int().positive(),
+      }),
+    )
+    .min(1)
+    .max(20),
 });
 
 const { partialObjectStream } = streamObject({
-	model: anthropic('claude-opus-4-7'),
-	schema: Plan,
-	prompt: 'Plan a weekend trip to Lisbon',
+  model: anthropic('claude-opus-4-7'),
+  schema: Plan,
+  prompt: 'Plan a weekend trip to Lisbon',
 });
 
 for await (const partial of partialObjectStream) {
-	// partial is Partial<Plan> — incremental as the model streams JSON
-	send({ kind: 'object-update', partial });
+  // partial is Partial<Plan> — incremental as the model streams JSON
+  send({ kind: 'object-update', partial });
 }
 ```
 
@@ -371,9 +371,9 @@ import { openai } from '@ai-sdk/openai';
 import { ollama } from '@ai-sdk/ollama';
 
 const providers = {
-	anthropic: () => anthropic('claude-opus-4-7'),
-	openai: () => openai('gpt-4o'),
-	ollama: () => ollama('llama3.2'),
+  anthropic: () => anthropic('claude-opus-4-7'),
+  openai: () => openai('gpt-4o'),
+  ollama: () => ollama('llama3.2'),
 } satisfies Record<string, () => LanguageModel>;
 
 const model = providers[parsed.data.provider]();
@@ -394,7 +394,7 @@ The AI SDK's `experimental_resume` lets a stream survive page reloads
 ```ts
 const { resumableStream } = await streamText({/* ... */});
 return resumableStream.toDataStreamResponse({
-	headers: { 'X-Correlation-Id': correlationId },
+  headers: { 'X-Correlation-Id': correlationId },
 });
 ```
 
@@ -453,16 +453,16 @@ import { simulateReadableStream } from 'ai';
 import { MockLanguageModelV1 } from 'ai/test';
 
 const model = new MockLanguageModelV1({
-	doStream: async () => ({
-		stream: simulateReadableStream({
-			chunks: [
-				{ type: 'text-delta', textDelta: 'Hello ' },
-				{ type: 'text-delta', textDelta: 'world' },
-				{ type: 'finish', finishReason: 'stop', usage: { promptTokens: 10, completionTokens: 2 } },
-			],
-		}),
-		rawCall: { rawPrompt: '', rawSettings: {} },
-	}),
+  doStream: async () => ({
+    stream: simulateReadableStream({
+      chunks: [
+        { type: 'text-delta', textDelta: 'Hello ' },
+        { type: 'text-delta', textDelta: 'world' },
+        { type: 'finish', finishReason: 'stop', usage: { promptTokens: 10, completionTokens: 2 } },
+      ],
+    }),
+    rawCall: { rawPrompt: '', rawSettings: {} },
+  }),
 });
 
 const result = streamText({ model, prompt: 'hi' });

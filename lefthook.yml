@@ -1,65 +1,47 @@
-# Lefthook Configuration (pnpm workspace & HISS-16 Governance)
-# Governance commands fail closed: a failing or missing praetorctl blocks the commit or push.
+# Lefthook Configuration (HISS Governance)
+# Go and Rust jobs follow the detected languages; both when none was detected.
+# Governance commands fail closed: a failing or missing praetorctl blocks the
+# commit or push. The pre-commit audit runs --offline; the pre-push audit
+# reads the forge's live Actions state when a token and a github.com origin
+# are present. The pre-push gate job signs a receipt only after a Go
+# (go.mod) or Cargo (Cargo.lock) toolchain stage ran. A root with neither
+# gets no receipt: the job names the languages it could not verify and
+# admits the push; a root with either fails when its stages did not run.
+---
 agent-checkpoint-tool:
   commands:
     checkpoint:
-      run: python3 -B .config/lefthook/scripts/checkpoint.py --event tool --json --marker
+      run: >-
+        sh .config/lefthook/python.sh -B .config/lefthook/scripts/checkpoint.py
+        --event tool --json --marker
 agent-checkpoint-stop:
   commands:
     checkpoint:
-      run: python3 -B .config/lefthook/scripts/checkpoint.py --event stop --json --marker
+      run: >-
+        sh .config/lefthook/python.sh -B .config/lefthook/scripts/checkpoint.py
+        --event stop --json --marker
 pre-commit:
   parallel: true
   commands:
-    format:
-      # Source included again. This was data and prose only, because
-      # prettier.config.js said useTabs: false against a tree that is 80%
-      # tab-indented, so formatting a touched file rewrote all of it — one
-      # 20-line change arrived as 1351 insertions. The config now says
-      # useTabs: true and the tree has been normalised to match, so formatting a
-      # touched file is a no-op unless the edit itself is unformatted. CI checks
-      # the whole tree with `pnpm format:check`, and this hook keeps a commit
-      # from being the thing that breaks it.
-      glob: '*.{ts,svelte,js,mjs,json,md,yaml,yml,css,html}'
-      run: pnpm exec prettier --write {staged_files}
-      stage_fixed: true
-    lint:
-      # src only, matching what the packages themselves lint. Every package's
-      # tsconfig is `include: ["src/**/*"]` and its lint script is `eslint src/`,
-      # so test files belong to no TypeScript project — type-aware parsing fails
-      # on them outright rather than degrading. Linting tests would need them in
-      # a project first; that is a gap worth closing, but not by making this hook
-      # fail on any staged test file.
-      glob: '*.{ts,svelte,js,mjs}'
-      exclude:
-        - '**/test/**'
-        - '**/e2e/**'
-        - '**/*.test.ts'
-        - '**/*.spec.ts'
-      run: pnpm exec eslint --fix {staged_files}
-      stage_fixed: true
     context-check:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl compile-context --verify; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl compile-context --verify; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh compile-context --verify
     hiss-audit:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl audit; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl audit; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh audit --offline
 
 post-commit:
   commands:
     state-sync:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl state sync .; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl state sync .; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh state sync .
     dedupe-cadence:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl dedupe cadence --threshold=20 --record .; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl dedupe cadence --threshold=20 --record .; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: >-
+        sh .config/lefthook/engine.sh dedupe cadence --threshold=20 --record .
 
 pre-push:
   parallel: false
   commands:
-    verify:
-      run: pnpm run ci
-    security:
-      run: pnpm audit --audit-level=high
     flavor-audit:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl flavor audit .; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl flavor audit .; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh flavor audit .
     audit:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl audit; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl audit; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh audit
     gate:
-      run: if command -v praetorctl >/dev/null 2>&1; then praetorctl gate run --path=.; elif [ -d ./cmd/standardsctl ]; then go run ./cmd/standardsctl gate run --path=.; else echo HISS-16 governance hook cannot run because praetorctl is not installed >&2; exit 1; fi
+      run: sh .config/lefthook/engine.sh gate run --path=. --admit-unsupported

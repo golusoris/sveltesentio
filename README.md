@@ -1,6 +1,34 @@
 # sveltesentio
 
-[![HISS-16 Compliant](https://img.shields.io/badge/Standards-HISS--16%20Compliant-brightgreen)](AGENTS.md)
+<!-- prettier-ignore-start -->
+<!-- praetor:readme-governance:start -->
+[![HISS Adopted][praetor-hiss-badge]][praetor-hiss-agents]
+[![Documentation Governance][praetor-docs-badge]][praetor-docs-runs]
+
+Praetor manages this repository's declared governance policy. This managed
+block records adoption state; it is not a verification certificate.
+
+**Verification**: `make verify-all` runs the repository's configured
+verification cascade.
+
+**HISS Audit**: `praetorctl audit` enforces policy, generated-surface
+integrity, and the debt ratchet.
+
+**Context Sync**: `praetorctl compile-context --verify` verifies every
+generated agent context against `AGENTS.md`.
+
+**Documentation**: `make docs-lint` enforces locked Markdown style and the
+private scratch-link policy.
+
+**Debt Baseline**: `.standards-baseline.json` anchors the debt ratchet at
+0 recorded infractions; audit forbids growth.
+
+[praetor-hiss-badge]: https://img.shields.io/badge/Standards-HISS%20Adopted-blue
+[praetor-hiss-agents]: https://github.com/golusoris/sveltesentio/blob/HEAD/AGENTS.md
+[praetor-docs-badge]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg
+[praetor-docs-runs]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml
+<!-- praetor:readme-governance:end -->
+<!-- prettier-ignore-end -->
 
 > Composable SvelteKit framework — opt-in modules, Svelte 5 runes, production-grade.
 

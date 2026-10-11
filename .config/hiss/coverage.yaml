@@ -3,12 +3,19 @@
 # Every claim here is replayed against .config/hiss/testdata by
 # `praetorctl hiss coverage --verify`, which runs inside verify-all.
 #
-# Almost every claim in this repository carries a `runner`, because nothing here
-# is decided by praetor's HISS scanner: it dispatches on .c/.cpp/.h/.cu/.py/.go/.rs
-# and has no case for .ts, .js or .svelte, so on this tree it reads 3 files out of
-# 875 and reports 0 violations (cordanaLLM/praetor#79). A claim with a runner is
+# Most claims in this repository carry a `runner`: ESLint, tsc, vitest or a
+# script decides them, not praetor's HISS scanner. A claim with a runner is
 # verified for *attribution* rather than enforcement — the scanner must report
 # none of its fixtures, and if it reports one, the claim credits the wrong tool.
+#
+# Since engine 7cf9cbb2d8cc the scanner reads TypeScript and reports three
+# shapes here: direct self-recursion (HISS-01), `while (true)` with no scalar
+# bound (HISS-02) and `eval` (HISS-08). Those three claims carry no runner and
+# are replayed. The catalog allows one decider per rule and language, so the
+# shapes of the same rules that `pnpm check:cycles` or ESLint decide cannot sit
+# in positive/ beside them: they are filed under gap/, and each mechanism names
+# the gate that refuses them. cordanaLLM/praetor#1241 asks for more than one
+# decider per claim; when it lands, those fixtures move back to positive/.
 #
 # States:
 #   enforced       every shape the corpus describes is reported
@@ -17,7 +24,8 @@
 #   not_applicable the axiom does not apply to this language
 #   manual         upheld by review, not by a runnable check -- never report it as a gate
 #
-# Every state below was measured during the 2026-09-15 adoption, not assumed.
+# Every state below was measured during the 2026-09-15 adoption, not assumed;
+# HISS-01, HISS-02 and HISS-08 for TypeScript were measured again on 2026-10-11.
 # `eslint --print-config` was used to confirm which rules are actually on rather
 # than reading the config's intent. An absent claim is honest; an unbacked one is
 # the defect this mechanism exists to prevent.
@@ -27,19 +35,29 @@ rules:
     title: Acyclic Control Flow
     coverage:
       - language: typescript
-        state: enforced
-        runner: node
+        state: partial
         mechanism: >-
+          The engine scanner, run as `praetorctl audit` in the lefthook
+          pre-commit and pre-push hooks and in verify-all, reports direct
+          self-recursion; with a baseline of 0 any finding fails the run. That
+          is the shape replayed here. Import cycles have a second decider the
+          scanner does not see:
           scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
           Lint job and in verify-all. It builds two graphs from static
           import/export specifiers and from dynamic `import()` calls with a
           literal specifier -- modules within packages/*/src, and packages via
           @sveltesentio/* specifiers -- and fails on the first cycle in either,
-          printing the path. Self-recursion is covered separately by the
+          printing the path. Self-recursion is also reported by the
           `@sveltesentio/no-recursion` ESLint rule, which resolves a self-call
-          through scope analysis rather than by name. An ESLint rule would have meant a new dependency,
-          which hard rule 2 puts behind a D-row; a script needs none.
+          through scope analysis rather than by name. An ESLint rule for cycles
+          would have meant a new dependency, which hard rule 2 puts behind a
+          D-row; a script needs none.
         rationale: >-
+          Partial is the state of the replay, not of the repository: every
+          shape in the corpus is refused by a gate, but only self-recursion by
+          the decider this entry can name. The three cycle fixtures sit under
+          gap/ for that reason alone (cordanaLLM/praetor#1241).
+
           Three cycle shapes are reported, each verified by planting it and
           watching the checker exit 1 with the path before removing it: a
           two-module static cycle inside core, a core-to-ui-to-core package
@@ -71,15 +89,18 @@ rules:
     title: Bounded Loops and I/O
     coverage:
       - language: typescript
-        state: unsupported
+        state: partial
         mechanism: >-
-          none. No rule requires an AbortSignal on fetch, and no rule bounds a
-          loop. `@typescript-eslint/recommended-type-checked` contains nothing
-          for either.
+          The engine scanner, run as `praetorctl audit` in the lefthook
+          pre-commit and pre-push hooks and in verify-all, reports a
+          `while (true)` with no scalar bound. No rule requires an AbortSignal
+          on fetch; `@typescript-eslint/recommended-type-checked` contains
+          nothing for either shape.
         rationale: >-
-          Both gap fixtures are genuine -- an unbounded `while (true)` with no
-          scalar ceiling, and a `fetch` with no signal -- and neither is reported
-          by anything this repository runs.
+          The unbounded loop was a gap fixture until engine 7cf9cbb2d8cc, whose
+          scanner reads TypeScript and reports it; the fixture moved to
+          positive/. The `fetch` with no signal stays a genuine gap: nothing
+          this repository runs reports it.
 
   - id: HISS-04
     title: Complexity Bounds
@@ -100,18 +121,26 @@ rules:
           Length is enforced too, as of BUG-007. Six functions were over the
           effective max_func_loc of 60 -- useForm 100, createIpcClient 98,
           createResumableUpload 76, createConnectStream 74, useConnectStream 67,
-          useSSE 66. Five are under it now, and every one came down by removing
+          useSSE 66. All six are under it now, and five came down by removing
           duplication rather than by shaving: the message buffer and the
           reconnect scheduler that two transports each carried, the in-flight
           request queue, and the store-to-rune mirror that useForm had written
           out nine times.
 
-          One documented exception remains. createConnectStream sits at 66 with
-          an `eslint-disable-next-line` carrying its reason in place: the two
-          separable concerns are already extracted, and every further split
-          measured out at about one line for a parameter object and an extra
-          indirection. It is a recorded exception rather than a rule left off
-          for 875 files, and it is visible at the site rather than only here.
+          No exception remains. createConnectStream carried an
+          `eslint-disable-next-line` at 66 lines while it was a closure factory;
+          it is a class now, its longest method is 16 lines, and no
+          `max-lines-per-function` suppression is left in the tree.
+
+          The engine scan measures the raw line span of a function, blank lines
+          and comments included, so it is stricter than the ESLint entry. At
+          engine 7cf9cbb2d8cc it reported seven functions over 60 that ESLint
+          accepted or did not cover -- useLLMChat 62, useSSE 61,
+          createResumableUpload 62, createConnectStream 70, the e2e `mount` 74,
+          the test helper createFakeStream 63 and analyzeChanges 73 in
+          scripts/. All seven were split, each behind tests written first, and
+          `praetorctl baseline --verify --all-violations` reports 0. useSSE and
+          useLLMChat sit at exactly 60.
       - language: svelte
         state: partial
         runner: eslint
@@ -153,8 +182,11 @@ rules:
     coverage:
       - language: typescript
         state: partial
-        runner: eslint
         mechanism: >-
+          The engine scanner, run as `praetorctl audit` in the lefthook
+          pre-commit and pre-push hooks and in verify-all, reports `eval`;
+          that is the shape replayed here. ESLint is the second decider and
+          the only one for HTML sinks:
           `no-eval`, `no-new-func` and `no-implied-eval` over packages/*/src,
           enabled by this repository after the first version of this catalog
           recorded them as OFF, plus the local
@@ -179,12 +211,17 @@ rules:
           though it were raw. Measured both ways -- against the previous rule the
           first produced no diagnostic and the second produced a false one.
 
+          The three sink fixtures ESLint reports sit under gap/ beside the one
+          genuine gap, because this entry can name one decider and the scanner
+          is silent on them (cordanaLLM/praetor#1241). `dynamic-sink-key.ts` is
+          the only fixture there that no gate reports.
+
           It stays partial because a key or value that is not statically knowable
           stays unresolved: a parameter, or a `let` written again between its
           initialiser and the sink. That is deliberate rather than pending.
           Guessing safe would hide an injection; guessing unsafe would report
           every computed property assignment in the tree and train people to
-          disable the rule. The gap fixture now holds that shape.
+          disable the rule. `dynamic-sink-key.ts` holds that shape.
       - language: svelte
         state: partial
         runner: eslint
@@ -305,9 +342,9 @@ rules:
       - language: typescript
         state: manual
         mechanism: >-
-          none runnable. `praetorctl dedupe scan` exists and reports 0 files for
-          this tree, because it reads the same extensions the HISS scanner does
-          and therefore sees no TypeScript.
+          none runnable. `praetorctl dedupe scan` exists and reports "Not
+          applicable: no Go sources found" for this tree: the detector reads Go
+          only.
         rationale: >-
           Upheld by review only. Two live examples from this adoption: an
           identical bounded-history trim duplicated across useSSE and

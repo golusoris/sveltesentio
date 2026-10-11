@@ -117,13 +117,13 @@ No single dependency. The flow composes:
 import { z } from 'zod';
 
 export const DeletionReason = z.enum([
-	'no_longer_needed',
-	'too_expensive',
-	'privacy_concern',
-	'switching_service',
-	'account_compromised',
-	'duplicate_account',
-	'other',
+  'no_longer_needed',
+  'too_expensive',
+  'privacy_concern',
+  'switching_service',
+  'account_compromised',
+  'duplicate_account',
+  'other',
 ]);
 export type DeletionReason = z.infer<typeof DeletionReason>;
 
@@ -131,17 +131,17 @@ export const AccountStatus = z.enum(['active', 'suspended', 'scheduled_deletion'
 export type AccountStatus = z.infer<typeof AccountStatus>;
 
 export const DeletionRequest = z.object({
-	userId: z.string().uuid(),
-	requestedAt: z.string().datetime(),
-	runAt: z.string().datetime(),
-	reason: DeletionReason,
-	reasonNote: z.string().max(500).optional(),
-	confirmTokenHash: z.string().length(64),
-	tokenExpiresAt: z.string().datetime(),
-	graceDays: z.literal(30),
-	requestedBy: z.enum(['self', 'admin', 'automated_coppa']),
-	cancelledAt: z.string().datetime().optional(),
-	completedAt: z.string().datetime().optional(),
+  userId: z.string().uuid(),
+  requestedAt: z.string().datetime(),
+  runAt: z.string().datetime(),
+  reason: DeletionReason,
+  reasonNote: z.string().max(500).optional(),
+  confirmTokenHash: z.string().length(64),
+  tokenExpiresAt: z.string().datetime(),
+  graceDays: z.literal(30),
+  requestedBy: z.enum(['self', 'admin', 'automated_coppa']),
+  cancelledAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
 });
 export type DeletionRequest = z.infer<typeof DeletionRequest>;
 ```
@@ -173,55 +173,55 @@ import { DeletionReason } from './types';
 import { z } from 'zod';
 
 const RequestSchema = z.object({
-	password: z.string().min(1),
-	typedMatch: z.string(),
-	reason: DeletionReason,
-	reasonNote: z.string().max(500).optional(),
+  password: z.string().min(1),
+  typedMatch: z.string(),
+  reason: DeletionReason,
+  reasonNote: z.string().max(500).optional(),
 });
 
 export async function requestDeletion(userId: string, input: unknown) {
-	const parsed = RequestSchema.parse(input);
-	const user = await db.users.findByIdOrThrow(userId);
+  const parsed = RequestSchema.parse(input);
+  const user = await db.users.findByIdOrThrow(userId);
 
-	if (parsed.typedMatch !== `DELETE ${user.email}`) {
-		throw new ProblemError({
-			status: 422,
-			title: 'Confirmation text mismatch',
-			type: 'https://sveltesentio.dev/problems/deletion-confirmation',
-		});
-	}
+  if (parsed.typedMatch !== `DELETE ${user.email}`) {
+    throw new ProblemError({
+      status: 422,
+      title: 'Confirmation text mismatch',
+      type: 'https://sveltesentio.dev/problems/deletion-confirmation',
+    });
+  }
 
-	await verifyReauthentication(user, parsed.password);
+  await verifyReauthentication(user, parsed.password);
 
-	const raw = randomToken(32);
-	const now = clock.now();
-	const runAt = new Date(now.getTime() + 30 * 86_400_000).toISOString();
-	const tokenExpiresAt = new Date(now.getTime() + 3_600_000).toISOString();
+  const raw = randomToken(32);
+  const now = clock.now();
+  const runAt = new Date(now.getTime() + 30 * 86_400_000).toISOString();
+  const tokenExpiresAt = new Date(now.getTime() + 3_600_000).toISOString();
 
-	await db.deletionRequests.insert({
-		userId: user.id,
-		requestedAt: now.toISOString(),
-		runAt,
-		reason: parsed.reason,
-		reasonNote: parsed.reasonNote,
-		confirmTokenHash: await hashToken(raw),
-		tokenExpiresAt,
-		graceDays: 30,
-		requestedBy: 'self',
-	});
+  await db.deletionRequests.insert({
+    userId: user.id,
+    requestedAt: now.toISOString(),
+    runAt,
+    reason: parsed.reason,
+    reasonNote: parsed.reasonNote,
+    confirmTokenHash: await hashToken(raw),
+    tokenExpiresAt,
+    graceDays: 30,
+    requestedBy: 'self',
+  });
 
-	await sendEmail({
-		template: 'account-deletion-confirm',
-		to: user.email,
-		data: { confirmUrl: `${PUBLIC_ORIGIN}/account/delete/confirm?t=${raw}` },
-	});
+  await sendEmail({
+    template: 'account-deletion-confirm',
+    to: user.email,
+    data: { confirmUrl: `${PUBLIC_ORIGIN}/account/delete/confirm?t=${raw}` },
+  });
 
-	await audit.emit({
-		type: 'account.deletion_requested',
-		actorId: user.id,
-		targetId: user.id,
-		meta: { reason: parsed.reason, runAt },
-	});
+  await audit.emit({
+    type: 'account.deletion_requested',
+    actorId: user.id,
+    targetId: user.id,
+    meta: { reason: parsed.reason, runAt },
+  });
 }
 ```
 
@@ -258,41 +258,41 @@ import { audit } from '$lib/server/audit';
 import { error } from '@sveltejs/kit';
 
 export async function GET({ url, cookies }) {
-	const raw = url.searchParams.get('t');
-	if (!raw) throw error(400, 'Missing token');
-	const hash = await hashToken(raw);
-	const req = await db.deletionRequests.findByTokenHash(hash);
-	if (!req) throw error(404, 'Not found');
-	if (req.cancelledAt) throw error(410, 'Request cancelled');
-	if (req.completedAt) throw error(410, 'Already deleted');
-	if (new Date(req.tokenExpiresAt) < clock.now()) {
-		throw error(410, 'Token expired');
-	}
+  const raw = url.searchParams.get('t');
+  if (!raw) throw error(400, 'Missing token');
+  const hash = await hashToken(raw);
+  const req = await db.deletionRequests.findByTokenHash(hash);
+  if (!req) throw error(404, 'Not found');
+  if (req.cancelledAt) throw error(410, 'Request cancelled');
+  if (req.completedAt) throw error(410, 'Already deleted');
+  if (new Date(req.tokenExpiresAt) < clock.now()) {
+    throw error(410, 'Token expired');
+  }
 
-	await db.users.setStatus(req.userId, 'scheduled_deletion');
-	await db.sessions.revokeAll(req.userId);
+  await db.users.setStatus(req.userId, 'scheduled_deletion');
+  await db.sessions.revokeAll(req.userId);
 
-	await queue.enqueue(
-		'account.delete',
-		{
-			userId: req.userId,
-			runAt: req.runAt,
-		},
-		{
-			jobId: `deletion:${req.userId}`,
-			delay: new Date(req.runAt).getTime() - clock.now().getTime(),
-		},
-	);
+  await queue.enqueue(
+    'account.delete',
+    {
+      userId: req.userId,
+      runAt: req.runAt,
+    },
+    {
+      jobId: `deletion:${req.userId}`,
+      delay: new Date(req.runAt).getTime() - clock.now().getTime(),
+    },
+  );
 
-	await audit.emit({
-		type: 'account.deletion_scheduled',
-		actorId: req.userId,
-		targetId: req.userId,
-		meta: { runAt: req.runAt },
-	});
+  await audit.emit({
+    type: 'account.deletion_scheduled',
+    actorId: req.userId,
+    targetId: req.userId,
+    meta: { runAt: req.runAt },
+  });
 
-	cookies.delete('session', { path: '/' });
-	throw redirect(303, '/goodbye');
+  cookies.delete('session', { path: '/' });
+  throw redirect(303, '/goodbye');
 }
 ```
 
@@ -325,49 +325,49 @@ import { revokeSSO } from './sso';
 import { z } from 'zod';
 
 const Payload = z.object({
-	userId: z.string().uuid(),
-	runAt: z.string().datetime(),
+  userId: z.string().uuid(),
+  runAt: z.string().datetime(),
 });
 
 export const deletionWorker = makeWorker('account.delete', Payload, async (p) => {
-	const req = await db.deletionRequests.findActive(p.userId);
-	if (!req) return { skipped: 'cancelled_or_completed' };
+  const req = await db.deletionRequests.findActive(p.userId);
+  if (!req) return { skipped: 'cancelled_or_completed' };
 
-	const user = await db.users.findById(p.userId);
-	if (!user) return { skipped: 'already_deleted' };
+  const user = await db.users.findById(p.userId);
+  if (!user) return { skipped: 'already_deleted' };
 
-	const exportBundle = await buildExport(user.id);
-	const downloadUrl = await storeExport(user.id, exportBundle);
+  const exportBundle = await buildExport(user.id);
+  const downloadUrl = await storeExport(user.id, exportBundle);
 
-	await db.transaction(async (tx) => {
-		await tx.orders.orphanize(user.id); // foreign-key tombstones
-		await tx.userPrefs.delete(user.id);
-		await tx.uploads.markForDeletion(user.id); // async S3 cleanup
-		await tx.sessions.deleteByUser(user.id);
-		await tx.notifications.deleteByUser(user.id);
-		await tx.users.tombstone(user.id, {
-			deletedAt: new Date().toISOString(),
-			reasonCategory: req.reason,
-		});
-		await tx.deletionRequests.markCompleted(req.userId);
-	});
+  await db.transaction(async (tx) => {
+    await tx.orders.orphanize(user.id); // foreign-key tombstones
+    await tx.userPrefs.delete(user.id);
+    await tx.uploads.markForDeletion(user.id); // async S3 cleanup
+    await tx.sessions.deleteByUser(user.id);
+    await tx.notifications.deleteByUser(user.id);
+    await tx.users.tombstone(user.id, {
+      deletedAt: new Date().toISOString(),
+      reasonCategory: req.reason,
+    });
+    await tx.deletionRequests.markCompleted(req.userId);
+  });
 
-	await revokeSSO(user.id);
+  await revokeSSO(user.id);
 
-	await sendEmail({
-		template: 'account-deletion-completed',
-		to: user.email,
-		data: { downloadUrl, downloadExpiresInHours: 72 },
-	});
+  await sendEmail({
+    template: 'account-deletion-completed',
+    to: user.email,
+    data: { downloadUrl, downloadExpiresInHours: 72 },
+  });
 
-	await audit.emit({
-		type: 'account.deletion_completed',
-		actorId: 'system',
-		targetId: user.id,
-		meta: { reason: req.reason },
-	});
+  await audit.emit({
+    type: 'account.deletion_completed',
+    actorId: 'system',
+    targetId: user.id,
+    meta: { reason: req.reason },
+  });
 
-	return { completed: true };
+  return { completed: true };
 });
 ```
 
@@ -403,29 +403,29 @@ Nine worker rules:
 ```ts
 // packages/auth/src/deletion/cancel.ts
 export async function cancelDeletion(userId: string) {
-	const req = await db.deletionRequests.findActive(userId);
-	if (!req) return { status: 'no_active_request' };
+  const req = await db.deletionRequests.findActive(userId);
+  if (!req) return { status: 'no_active_request' };
 
-	await db.transaction(async (tx) => {
-		await tx.deletionRequests.markCancelled(userId);
-		await tx.users.setStatus(userId, 'active');
-	});
+  await db.transaction(async (tx) => {
+    await tx.deletionRequests.markCancelled(userId);
+    await tx.users.setStatus(userId, 'active');
+  });
 
-	await queue.remove(`deletion:${userId}`);
+  await queue.remove(`deletion:${userId}`);
 
-	await audit.emit({
-		type: 'account.deletion_cancelled',
-		actorId: userId,
-		targetId: userId,
-	});
+  await audit.emit({
+    type: 'account.deletion_cancelled',
+    actorId: userId,
+    targetId: userId,
+  });
 
-	await sendEmail({
-		template: 'account-deletion-cancelled',
-		to: user.email,
-		data: {},
-	});
+  await sendEmail({
+    template: 'account-deletion-cancelled',
+    to: user.email,
+    data: {},
+  });
 
-	return { status: 'cancelled' };
+  return { status: 'cancelled' };
 }
 ```
 
@@ -449,31 +449,31 @@ invokes internally:
 ```ts
 // packages/auth/src/deletion/export.ts
 export async function buildExport(userId: string): Promise<Buffer> {
-	const [user, orders, uploads, prefs, sessions, audits] = await Promise.all([
-		db.users.findById(userId),
-		db.orders.findByUser(userId),
-		db.uploads.findByUser(userId),
-		db.userPrefs.findByUser(userId),
-		db.sessions.findByUser(userId),
-		db.auditLog.findByTarget(userId),
-	]);
+  const [user, orders, uploads, prefs, sessions, audits] = await Promise.all([
+    db.users.findById(userId),
+    db.orders.findByUser(userId),
+    db.uploads.findByUser(userId),
+    db.userPrefs.findByUser(userId),
+    db.sessions.findByUser(userId),
+    db.auditLog.findByTarget(userId),
+  ]);
 
-	const manifest = {
-		exportedAt: new Date().toISOString(),
-		userId,
-		schemaVersion: 1,
-		format: 'json+csv',
-		files: ['profile.json', 'orders.csv', 'uploads.csv', 'preferences.json', 'audit.csv'],
-	};
+  const manifest = {
+    exportedAt: new Date().toISOString(),
+    userId,
+    schemaVersion: 1,
+    format: 'json+csv',
+    files: ['profile.json', 'orders.csv', 'uploads.csv', 'preferences.json', 'audit.csv'],
+  };
 
-	return zip([
-		{ path: 'manifest.json', data: JSON.stringify(manifest, null, 2) },
-		{ path: 'profile.json', data: JSON.stringify(user, null, 2) },
-		{ path: 'orders.csv', data: toCsv(orders) },
-		{ path: 'uploads.csv', data: toCsv(uploads) },
-		{ path: 'preferences.json', data: JSON.stringify(prefs, null, 2) },
-		{ path: 'audit.csv', data: toCsv(audits) },
-	]);
+  return zip([
+    { path: 'manifest.json', data: JSON.stringify(manifest, null, 2) },
+    { path: 'profile.json', data: JSON.stringify(user, null, 2) },
+    { path: 'orders.csv', data: toCsv(orders) },
+    { path: 'uploads.csv', data: toCsv(uploads) },
+    { path: 'preferences.json', data: JSON.stringify(prefs, null, 2) },
+    { path: 'audit.csv', data: toCsv(audits) },
+  ]);
 }
 ```
 
@@ -503,19 +503,19 @@ import { verifyToken } from '$lib/server/crypto';
 import { storage } from '$lib/server/storage';
 
 export async function GET({ url }) {
-	const token = url.searchParams.get('t');
-	const { userId, expiresAt } = verifyToken(token);
-	if (new Date(expiresAt) < new Date()) throw error(410, 'Expired');
+  const token = url.searchParams.get('t');
+  const { userId, expiresAt } = verifyToken(token);
+  if (new Date(expiresAt) < new Date()) throw error(410, 'Expired');
 
-	const stream = await storage.stream(`exports/${userId}/latest.zip`);
-	return new Response(stream, {
-		headers: {
-			'Content-Type': 'application/zip',
-			'Content-Disposition': 'attachment; filename="account-export.zip"',
-			'Cache-Control': 'private, no-store',
-			'X-Content-Type-Options': 'nosniff',
-		},
-	});
+  const stream = await storage.stream(`exports/${userId}/latest.zip`);
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename="account-export.zip"',
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
 ```
 
@@ -541,12 +541,12 @@ contained the user and relies on **natural aging** to erase them:
 ```ts
 // packages/auth/src/deletion/backup-registry.ts
 export async function registerForBackupScrub(userId: string) {
-	const activeBackups = await db.backupRegistry.findActive();
-	await db.backupErasureRegistry.insert({
-		userId,
-		backupIds: activeBackups.map((b) => b.id),
-		scheduledEraseAt: latestExpiryOf(activeBackups),
-	});
+  const activeBackups = await db.backupRegistry.findActive();
+  await db.backupErasureRegistry.insert({
+    userId,
+    backupIds: activeBackups.map((b) => b.id),
+    scheduledEraseAt: latestExpiryOf(activeBackups),
+  });
 }
 ```
 
@@ -576,14 +576,14 @@ Six backup rules:
 ```ts
 // packages/auth/src/deletion/sso.ts
 export async function revokeSSO(userId: string) {
-	const providers = await db.ssoIdentities.findByUser(userId);
-	for (const p of providers) {
-		await revokeRefreshToken(p);
-		await revokeProviderSession(p);
-		if (p.scim_provisioned) {
-			await scimDelete(p.scim_user_id);
-		}
-	}
+  const providers = await db.ssoIdentities.findByUser(userId);
+  for (const p of providers) {
+    await revokeRefreshToken(p);
+    await revokeProviderSession(p);
+    if (p.scim_provisioned) {
+      await scimDelete(p.scim_user_id);
+    }
+  }
 }
 ```
 
@@ -656,7 +656,7 @@ Seven a11y rules:
    trap + escape closes + initial focus on the Cancel button
    (destructive default is never focused).
 2. **Typed match input labelled + `aria-describedby`** linking to
-   the instruction text. SR users hear "Type DELETE user@example.com
+   the instruction text. SR users hear "Type DELETE `user@example.com`
    to confirm".
 3. **Countdown timer is `aria-live="polite"` + updated every minute
    not every second** — continuous updates overwhelm SR users.
@@ -677,10 +677,10 @@ Bounded attributes only:
 ```ts
 // packages/core/src/observability/deletion.ts
 export const DELETION_ATTRIBUTES = [
-	'deletion.stage', // request | scheduled | cancelled | completed | failed
-	'deletion.reason', // bounded enum — never free text
-	'deletion.requested_by', // self | admin | automated_coppa
-	'deletion.grace_days_remaining_bucket', // 0-1 | 2-7 | 8-14 | 15-30
+  'deletion.stage', // request | scheduled | cancelled | completed | failed
+  'deletion.reason', // bounded enum — never free text
+  'deletion.requested_by', // self | admin | automated_coppa
+  'deletion.grace_days_remaining_bucket', // 0-1 | 2-7 | 8-14 | 15-30
 ] as const;
 ```
 

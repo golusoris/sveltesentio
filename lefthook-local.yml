@@ -1,0 +1,39 @@
+# This repository's own hook jobs. Lefthook merges this file over lefthook.yml,
+# which the praetor engine generates and must stay byte-exact to keep its
+# enforcement credit, so nothing repository-specific goes there.
+pre-commit:
+  commands:
+    format:
+      # Source included again. This was data and prose only, because
+      # prettier.config.js said useTabs: false against a tree that is 80%
+      # tab-indented, so formatting a touched file rewrote all of it — one
+      # 20-line change arrived as 1351 insertions. The config now says
+      # useTabs: true and the tree has been normalised to match, so formatting a
+      # touched file is a no-op unless the edit itself is unformatted. CI checks
+      # the whole tree with `pnpm format:check`, and this hook keeps a commit
+      # from being the thing that breaks it.
+      glob: '*.{ts,svelte,js,mjs,json,md,yaml,yml,css,html}'
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    lint:
+      # src only, matching what the packages themselves lint. Every package's
+      # tsconfig is `include: ["src/**/*"]` and its lint script is `eslint src/`,
+      # so test files belong to no TypeScript project — type-aware parsing fails
+      # on them outright rather than degrading. Linting tests would need them in
+      # a project first; that is a gap worth closing, but not by making this hook
+      # fail on any staged test file.
+      glob: '*.{ts,svelte,js,mjs}'
+      exclude:
+        - '**/test/**'
+        - '**/e2e/**'
+        - '**/*.test.ts'
+        - '**/*.spec.ts'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  commands:
+    verify:
+      run: pnpm run ci
+    security:
+      run: pnpm audit --audit-level=high

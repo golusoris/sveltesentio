@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,6 +55,46 @@ export const PACKAGE_DIRECTORY_MAP = {
 };
 
 /**
+ * @returns {{
+ *   allAffected: boolean,
+ *   hasCodeChanges: boolean,
+ *   sharedSurfaces: string[],
+ *   affectedPackages: string[],
+ *   turboFilter: string
+ * }}
+ */
+function createEmptyResult() {
+	return {
+		allAffected: false,
+		hasCodeChanges: false,
+		sharedSurfaces: [],
+		affectedPackages: [],
+		turboFilter: '',
+	};
+}
+
+/**
+ * Resolves affected package names from normalized file paths.
+ * @param {string[]} normalizedFiles
+ * @returns {string[]}
+ */
+function findAffectedPackages(normalizedFiles) {
+	const dirEntries = Object.entries(PACKAGE_DIRECTORY_MAP);
+	const affectedPkgSet = new Set();
+	for (let i = 0; i < normalizedFiles.length; i += 1) {
+		const file = normalizedFiles[i];
+		for (let j = 0; j < dirEntries.length; j += 1) {
+			const [dir, pkgName] = dirEntries[j];
+			if (file.startsWith(`${dir}/`)) {
+				affectedPkgSet.add(pkgName);
+				break;
+			}
+		}
+	}
+	return Array.from(affectedPkgSet).sort();
+}
+
+/**
  * Analyzes a list of changed file paths and returns the change impact.
  * @param {string[]} changedFiles
  * @returns {{
@@ -67,17 +107,10 @@ export const PACKAGE_DIRECTORY_MAP = {
  */
 export function analyzeChanges(changedFiles) {
 	if (!changedFiles || changedFiles.length === 0) {
-		return {
-			allAffected: false,
-			hasCodeChanges: false,
-			sharedSurfaces: [],
-			affectedPackages: [],
-			turboFilter: '',
-		};
+		return createEmptyResult();
 	}
 
 	const normalizedFiles = changedFiles.map((f) => f.replace(/\\/g, '/').replace(/^\.\//, ''));
-
 	const sharedSurfaces = normalizedFiles.filter((file) =>
 		SHARED_SURFACE_PATTERNS.some((pattern) => pattern.test(file)),
 	);
@@ -85,15 +118,8 @@ export function analyzeChanges(changedFiles) {
 	const isDocsOnly = normalizedFiles.every((file) =>
 		DOCS_ONLY_PATTERNS.some((pattern) => pattern.test(file)),
 	);
-
 	if (isDocsOnly) {
-		return {
-			allAffected: false,
-			hasCodeChanges: false,
-			sharedSurfaces: [],
-			affectedPackages: [],
-			turboFilter: '',
-		};
+		return createEmptyResult();
 	}
 
 	if (sharedSurfaces.length > 0) {
@@ -106,30 +132,12 @@ export function analyzeChanges(changedFiles) {
 		};
 	}
 
-	const affectedPkgSet = new Set();
-	for (const file of normalizedFiles) {
-		for (const [dir, pkgName] of Object.entries(PACKAGE_DIRECTORY_MAP)) {
-			if (file.startsWith(`${dir}/`)) {
-				affectedPkgSet.add(pkgName);
-				break;
-			}
-		}
-	}
-
-	const affectedPackages = Array.from(affectedPkgSet).sort();
-
+	const affectedPackages = findAffectedPackages(normalizedFiles);
 	if (affectedPackages.length === 0) {
-		return {
-			allAffected: false,
-			hasCodeChanges: false,
-			sharedSurfaces: [],
-			affectedPackages: [],
-			turboFilter: '',
-		};
+		return createEmptyResult();
 	}
 
 	const filterArgs = affectedPackages.map((pkg) => `--filter=...${pkg}...`).join(' ');
-
 	return {
 		allAffected: false,
 		hasCodeChanges: true,
@@ -147,17 +155,24 @@ export function analyzeChanges(changedFiles) {
  */
 export function getGitDiffFiles(baseRef = 'origin/main', headRef = 'HEAD') {
 	try {
-		const output = execSync(`git diff --name-only ${baseRef}...${headRef}`, {
-			encoding: 'utf8',
-			stdio: ['pipe', 'pipe', 'ignore'],
-		});
+		// An argument vector, never a shell string: the refs come from the command line
+		// and the environment, and `--end-of-options` keeps a ref that starts with a
+		// dash from being read as a git option.
+		const output = execFileSync(
+			'git',
+			['diff', '--name-only', '--end-of-options', `${baseRef}...${headRef}`],
+			{
+				encoding: 'utf8',
+				stdio: ['pipe', 'pipe', 'ignore'],
+			},
+		);
 		return output
 			.split('\n')
 			.map((l) => l.trim())
 			.filter(Boolean);
 	} catch {
 		try {
-			const fallback = execSync(`git diff --name-only HEAD~1...HEAD`, {
+			const fallback = execFileSync('git', ['diff', '--name-only', 'HEAD~1...HEAD'], {
 				encoding: 'utf8',
 				stdio: ['pipe', 'pipe', 'ignore'],
 			});

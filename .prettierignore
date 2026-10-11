@@ -35,9 +35,62 @@ CLAUDE.md
 .claude/agents/
 .github/agents/
 
+# Written by `praetorctl adopt` and `praetorctl paperclip harness` and not named in
+# the managed block at the end of this file: the engine's skills in both skill
+# directories, the read-only projection of AGENTS.md, and the Paperclip rules. A
+# formatter rewrite is undone by the next regeneration, and the format check then
+# fails on files nobody here edits.
+.agents/skills/
+.claude/skills/adhd-format/
+.claude/skills/caveman/
+.claude/skills/social-text/
+.paperclip/rules.md
+AGENTS.readonly.md
+
 # The HISS-20 fixture corpus is input to the rules, not source governed by them,
 # which is why eslint.config.ts ignores it too. Its files are written to
 # demonstrate a specific shape -- a function of a given length, an indentation
 # the scanner measures -- so reformatting them would change the evidence the
 # coverage catalog's claims are replayed against.
 .config/hiss/testdata/
+
+# BEGIN praetor-managed artifacts (praetorctl adopt)
+# praetorctl audit owns this canonical content. A formatter rewrite fails;
+# documentation text alone permits consistent LF/CRLF checkout conversion.
+.agents/agents/repo-auditor.md
+.agents/agents/repo-gatekeeper.md
+.config/agent/hooks/block_evasion.py
+.config/labels.yaml
+.devcontainer/devcontainer.json
+.github/rulesets/main.json
+.github/workflows/praetor-docs.yml
+.paperclip/harness.json
+.standards-baseline.json
+.standards.lock
+.standards.yaml
+AGENTS.md
+lefthook.yml
+tools/figures/README.md
+tools/figures/astro.mjs
+tools/figures/build.mjs
+tools/figures/checks.mjs
+tools/figures/core.mjs
+tools/figures/dist/THIRD-PARTY-LICENSES.txt
+tools/figures/dist/loader.js
+tools/figures/dist/player.js
+tools/figures/figures.css
+tools/figures/mkdocs_hook.py
+tools/figures/serve.mjs
+tools/figures/third_party/interfig/VENDOR.md
+tools/figures/third_party/interfig/upstream/LICENSE
+tools/figures/third_party/interfig/upstream/src/geometry.ts
+tools/figures/third_party/interfig/upstream/src/model.ts
+tools/figures/third_party/interfig/upstream/src/svg.ts
+tools/figures/third_party/interfig/vendor.json
+tools/figures/types.ts
+tools/markdownlint/markdownlint-cli2.yaml
+tools/markdownlint/no-private-scratch-links.mjs
+tools/markdownlint/package-lock.json
+tools/markdownlint/package.json
+tools/markdownlint/verify.mjs
+# END praetor-managed artifacts

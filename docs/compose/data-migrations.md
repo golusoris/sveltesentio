@@ -95,33 +95,33 @@ import { z } from 'zod';
 import { clock } from '@sveltesentio/core/clock';
 
 export const MigrationRecord = z.object({
-	id: z.string().regex(/^\d{8}-\d{4}-[a-z0-9-]+$/),
-	kind: z.enum(['schema', 'data']),
-	appliedAt: z.string().datetime(),
-	durationMs: z.number().int().nonnegative(),
-	actor: z.string().min(1),
-	checksum: z.string().length(64),
-	status: z.enum(['running', 'succeeded', 'failed', 'partial']),
+  id: z.string().regex(/^\d{8}-\d{4}-[a-z0-9-]+$/),
+  kind: z.enum(['schema', 'data']),
+  appliedAt: z.string().datetime(),
+  durationMs: z.number().int().nonnegative(),
+  actor: z.string().min(1),
+  checksum: z.string().length(64),
+  status: z.enum(['running', 'succeeded', 'failed', 'partial']),
 });
 
 export async function runMigration(id: string) {
-	const conn = await connect(MIGRATION_ROLE);
-	await conn.query('SET lock_timeout = $1', [LOCK_TIMEOUT_MS]);
-	await conn.query('SET statement_timeout = $1', [STATEMENT_TIMEOUT_MS]);
+  const conn = await connect(MIGRATION_ROLE);
+  await conn.query('SET lock_timeout = $1', [LOCK_TIMEOUT_MS]);
+  await conn.query('SET statement_timeout = $1', [STATEMENT_TIMEOUT_MS]);
 
-	const existing = await conn.findOne('migrations', { id });
-	if (existing?.status === 'succeeded') return { skipped: true };
+  const existing = await conn.findOne('migrations', { id });
+  if (existing?.status === 'succeeded') return { skipped: true };
 
-	const started = clock.now();
-	await conn.insertOrUpdate('migrations', {
-		id,
-		kind: loadKind(id),
-		appliedAt: started.toISOString(),
-		actor: process.env.MIGRATION_ACTOR ?? 'unknown',
-		checksum: await checksum(id),
-		status: 'running',
-	});
-	// run the SQL or TS module; catch, set status 'failed', re-throw
+  const started = clock.now();
+  await conn.insertOrUpdate('migrations', {
+    id,
+    kind: loadKind(id),
+    appliedAt: started.toISOString(),
+    actor: process.env.MIGRATION_ACTOR ?? 'unknown',
+    checksum: await checksum(id),
+    status: 'running',
+  });
+  // run the SQL or TS module; catch, set status 'failed', re-throw
 }
 ```
 
@@ -215,23 +215,23 @@ import { makeBackfill } from '@sveltesentio/db/migrate';
 import { z } from 'zod';
 
 export default makeBackfill({
-	id: '20260418-0002-backfill-users-email-normalized',
-	batchSize: 500,
-	pollInterval: 50,
-	select: `
+  id: '20260418-0002-backfill-users-email-normalized',
+  batchSize: 500,
+  pollInterval: 50,
+  select: `
     SELECT id, email FROM users
     WHERE email_normalized IS NULL
     ORDER BY id ASC
     LIMIT $1
   `,
-	apply: async (tx, rows) => {
-		for (const r of rows) {
-			await tx.query(
-				'UPDATE users SET email_normalized = $1 WHERE id = $2 AND email_normalized IS NULL',
-				[normalize(r.email), r.id],
-			);
-		}
-	},
+  apply: async (tx, rows) => {
+    for (const r of rows) {
+      await tx.query(
+        'UPDATE users SET email_normalized = $1 WHERE id = $2 AND email_normalized IS NULL',
+        [normalize(r.email), r.id],
+      );
+    }
+  },
 });
 ```
 
@@ -262,8 +262,8 @@ remaining` gauge.
 ```ts
 // app code
 const email = (await flags.isOn('users.read.email_normalized', { userId: ctx.userId }))
-	? row.email_normalized
-	: normalize(row.email);
+  ? row.email_normalized
+  : normalize(row.email);
 ```
 
 Six cutover rules:
@@ -321,17 +321,17 @@ NULL) NOT VALID` + `VALIDATE CONSTRAINT`.
 import { makeWorker } from '$lib/server/queue';
 
 export const backfillWorker = makeWorker(
-	'migration.backfill',
-	PayloadSchema,
-	async ({ migrationId, batchSize }) => {
-		const { done, processed } = await runOneBatch(migrationId, batchSize);
-		if (done) {
-			await db.migrations.setStatus(migrationId, 'succeeded');
-			return { completed: true };
-		}
-		await queue.enqueue('migration.backfill', { migrationId, batchSize }, { delay: 50 });
-		return { processed };
-	},
+  'migration.backfill',
+  PayloadSchema,
+  async ({ migrationId, batchSize }) => {
+    const { done, processed } = await runOneBatch(migrationId, batchSize);
+    if (done) {
+      await db.migrations.setStatus(migrationId, 'succeeded');
+      return { completed: true };
+    }
+    await queue.enqueue('migration.backfill', { migrationId, batchSize }, { delay: 50 });
+    return { processed };
+  },
 );
 ```
 
@@ -467,12 +467,12 @@ Bounded attributes only:
 
 ```ts
 export const MIGRATION_ATTRIBUTES = [
-	'migration.id', // bounded per release — not unbounded user input
-	'migration.kind', // schema | data
-	'migration.phase', // expand | backfill | cutover | contract
-	'migration.risk', // r1-r5
-	'migration.outcome', // succeeded | failed | partial | skipped
-	'migration.duration_bucket', // <1s | <10s | <1m | <10m | <1h | >1h
+  'migration.id', // bounded per release — not unbounded user input
+  'migration.kind', // schema | data
+  'migration.phase', // expand | backfill | cutover | contract
+  'migration.risk', // r1-r5
+  'migration.outcome', // succeeded | failed | partial | skipped
+  'migration.duration_bucket', // <1s | <10s | <1m | <10m | <1h | >1h
 ] as const;
 ```
 

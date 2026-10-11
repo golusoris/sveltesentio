@@ -29,7 +29,7 @@
 
 **Labels**: `task, hiss, hygiene`
 
-## Scope
+#### Scope
 
 - Enforce NASA JPL Rule 4: refactor all functions to <= 60 LOC.
 - Eliminate unhandled panics, unwrap(), and raw fatal exits.
@@ -40,7 +40,7 @@
 **Labels**: `task, architecture, decoupling`
 **Depends-On**: `sveltesentio#1`
 
-## Scope
+#### Scope
 
 - Eliminate in-cluster DNS and hardcoded localhost URLs.
 - Externalize secrets and tokens behind environment variables / HashiCorp Vault.
@@ -51,7 +51,7 @@
 **Labels**: `task, dependencies, migration`
 **Depends-On**: `sveltesentio#2`
 
-## Scope
+#### Scope
 
 - Swap 0 external dependencies for github.com/golusoris/golusoris v0.8.0 builder kits.
 - Apply verified import substitutions.
@@ -62,7 +62,7 @@
 **Labels**: `task, verification, gating`
 **Depends-On**: `sveltesentio#3`
 
-## Scope
+#### Scope
 
 - Run `standardsctl gate run --target=.` in isolated worktree.
 - Verify all 5 gates (prefetch, SCA, HISS-16, tests, receipts).
@@ -73,7 +73,7 @@
 **Labels**: `task, activation, governance`
 **Depends-On**: `sveltesentio#4`
 
-## Scope
+#### Scope
 
 - Reconcile and lock branch protection rulesets via `standardsctl sync`.
 - Transition .standards.yaml enforcement level to `strict-zero-debt`.

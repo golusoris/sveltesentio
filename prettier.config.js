@@ -23,5 +23,16 @@ export default {
 				parser: 'svelte',
 			},
 		},
+		{
+			// Code samples inside Markdown are indented with spaces. The documentation
+			// gate lints Markdown with markdownlint's default rule set, whose MD010
+			// refuses a hard tab anywhere in a document, fenced code included, and
+			// Prettier formats embedded code with the options of the Markdown file
+			// around it. Source files keep tabs.
+			files: ['*.md', '*.mdx'],
+			options: {
+				useTabs: false,
+			},
+		},
 	],
 };

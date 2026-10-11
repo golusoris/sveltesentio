@@ -221,7 +221,7 @@ Trusted Types (DOM-XSS defense-in-depth)    → trusted-types.md
 | [websocket.md](websocket.md)                                         | `partysocket` opt-in for ad-hoc bidi JSON                                                                                      | 0038                   |
 
 **116 recipes.** New entries land in batches; see session log in
-[.workingdir/STATE.md](../../.workingdir/STATE.md) for history.
+`.workingdir/STATE.md` for history.
 
 ## Relation to `@sveltesentio/*` wrappers
 
@@ -280,6 +280,6 @@ When writing a new recipe:
 ## History
 
 Batches 1–17 landed 2026-04-17 to 2026-04-18. See
-[.workingdir/STATE.md](../../.workingdir/STATE.md) "docs/compose/
+`.workingdir/STATE.md` "docs/compose/
 expansion batch N LANDED" entries for detailed per-recipe summaries +
 cross-links established per batch. New recipes continue on demand.

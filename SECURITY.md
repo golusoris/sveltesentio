@@ -18,29 +18,32 @@ with a `Migration:` footer.
 
 ## Supply chain
 
-Releases are:
+State measured on 2026-10-11 against the last release (2026-06-20). Releases are:
 
-- Built reproducibly in CI from tagged source (pinned GitHub Actions SHAs).
-- Signed with [cosign](https://docs.sigstore.dev/cosign/) (keyless, GitHub OIDC).
-- Accompanied by a [syft](https://github.com/anchore/syft) CycloneDX 1.6 SBOM.
-- Attested with [SLSA](https://slsa.dev/) L3 provenance.
-- Published with `npm publish --provenance`.
+- Built in CI from `main` with every GitHub Action pinned to a commit SHA.
+- Attested with [SLSA](https://slsa.dev/) provenance at Build Level 2: the
+  release job signs a GitHub artifact attestation over the published source
+  files (`packages/*/src/**`).
 
-Verify a published npm tarball:
+Verify a file of a published package against its attestation:
 
 ```bash
-# Download the tarball + signature + attestation from the GitHub Release,
-# then verify:
-cosign verify-blob \
-  --certificate-identity-regexp '^https://github.com/lusoris/sveltesentio/' \
-  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  --signature sveltesentio-core-X.Y.Z.tgz.sig \
-  --certificate sveltesentio-core-X.Y.Z.tgz.crt \
-  sveltesentio-core-X.Y.Z.tgz
+# From a checkout of the release tag, for example core-v0.3.0:
+gh attestation verify packages/core/src/index.ts --repo golusoris/sveltesentio
 ```
 
-npm registry provenance is visible on each package page via the green
-"Built and signed on GitHub Actions" badge.
+Not in place yet, tracked in
+[#280](https://github.com/golusoris/sveltesentio/issues/280):
+
+- **SLSA Build Level 3.** The standards manifest declares it. The attestation
+  is signed in the job that builds and publishes, which is Level 2. A dated
+  exception (rule `HISS-11` in `.standards.yaml`) records the gap and expires
+  on 2027-01-09.
+- **cosign signatures.** No release carries a signature or certificate file.
+- **npm provenance.** The release job requests it, but none of the 19 published
+  package versions shows a provenance attestation in the registry.
+- **SBOM.** The release job generates a CycloneDX SBOM as a workflow artifact
+  that expires with the run. It is not attached to the release.
 
 ## Dependencies
 

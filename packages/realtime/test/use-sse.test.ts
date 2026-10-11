@@ -261,4 +261,31 @@ describe('useSSE', () => {
 		useSSE({ url: '/s', withCredentials: true, eventSourceFactory: factory });
 		expect(latest().init).toEqual({ withCredentials: true });
 	});
+
+	it('close() is idempotent when called repeatedly', async () => {
+		const { useSSE } = await import('../src/use-sse.svelte.js');
+		const rune = useSSE({ url: '/s', eventSourceFactory: factory });
+		expect(() => {
+			rune.close();
+			rune.close();
+		}).not.toThrow();
+		expect(rune.state).toBe('closed');
+	});
+
+	it('connect() is a no-op if already connecting', async () => {
+		const { useSSE } = await import('../src/use-sse.svelte.js');
+		const rune = useSSE({ url: '/s', eventSourceFactory: factory });
+		expect(FakeEventSource.instances).toHaveLength(1);
+		rune.connect();
+		expect(FakeEventSource.instances).toHaveLength(1);
+	});
+
+	it('retains zero messages in history when historyLimit is 0', async () => {
+		const { useSSE } = await import('../src/use-sse.svelte.js');
+		const rune = useSSE({ url: '/s', historyLimit: 0, eventSourceFactory: factory });
+		latest().emit('open');
+		latest().emit('message', { type: 'message', data: 'dropped' });
+		expect(rune.messages).toEqual([]);
+		expect(rune.lastMessage?.data).toBe('dropped');
+	});
 });

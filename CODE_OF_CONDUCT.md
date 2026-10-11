@@ -17,7 +17,7 @@ The Covenant applies to:
 
 ## Reporting
 
-Report Covenant concerns to the maintainer at **lusoris@pm.me**.
+Report Covenant concerns to the maintainer at **<lusoris@pm.me>**.
 
 Reports are acknowledged within 48 hours. Reporter confidentiality is
 maintained.

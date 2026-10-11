@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+# The engine commit every hook, Makefile target and hosted job runs (.config/lefthook/engine.sh reads it).
+env:
+  PRAETOR_REF: 9bf502ec6ce585110f37bf7c9e08d854d957d550
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -83,6 +87,7 @@ jobs:
       - run: pnpm check:exports
       - run: pnpm check:cycles
       - run: pnpm lint:scripts
+      - run: pnpm test:scripts
       - run: pnpm format:check
 
   typecheck:

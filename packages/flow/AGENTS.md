@@ -1,25 +1,25 @@
 # @sveltesentio/flow — AGENTS.md
 
-> Thin wrapper over `@xyflow/svelte` (SvelteFlow) + `elkjs` auto-layout + DAG helpers. Phase 9 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> Thin wrapper over `@xyflow/svelte` (SvelteFlow) + `elkjs` auto-layout + DAG helpers. Phase 9 per `.workingdir/PLAN.md`.
 
 ## Landed (v0.0.1)
 
-| Sub-export | Contents                                                                                                                                                                                                                                                                                                                                                                                        |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.`        | Barrel re-export of everything below                                                                                                                                                                                                                                                                                                                                                            |
-| `./dag`    | `topologicalSort`, `findCycles`, `hasCycle`, `reachableFrom`, `buildAdjacency`, `CycleError`. Types: `DagNodeLike` (`{id}`) and `DagEdgeLike` (`{source, target}`) — structural, match `@xyflow/svelte` Node/Edge shapes without a hard dep                                                                                                                                                     |
-| `./layout` | `createElkLayout({algorithm?, direction?, nodeSpacing?, layerSpacing?, layoutOptions?}, factory?)` returns `async (nodes, edges) => {nodes, edges, width, height}` — dynamic imports `elkjs/lib/elk.bundled.js` so the main bundle stays unaffected until first call. `ElkFactory` injection for tests. Types: `SizedNode`, `PositionedNode`, `ElkLayoutResult`, `ElkDirection`, `ElkAlgorithm` |
+| Sub-export | Contents                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`        | Barrel re-export of everything below                                                                                                                                                                                                                                                                                                                                                  |
+| `./dag`    | `topologicalSort`, `findCycles`, `hasCycle`, `reachableFrom`, `buildAdjacency`, `CycleError`. Types: `DagNodeLike` (`{id}`) and `DagEdgeLike` (`{source, target}`) — structural, match `@xyflow/svelte` Node/Edge shapes without hard dep                                                                                                                                             |
+| `./layout` | `createElkLayout({algorithm?, direction?, nodeSpacing?, layerSpacing?, layoutOptions?}, factory?)` returns `async (nodes, edges) => {nodes, edges, width, height}` — dynamic imports `elkjs/lib/elk.bundled.js` -> main bundle unaffected until first call. `ElkFactory` injection for tests. Types: `SizedNode`, `PositionedNode`, `ElkLayoutResult`, `ElkDirection`, `ElkAlgorithm` |
 
 ## Landed (v0.4.0)
 
-| Sub-export        | Contents                                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `./canvas`        | `<FlowCanvas>` pre-themed `<SvelteFlowProvider>` wrapper (`FlowCanvas.svelte`) plus its pure `canvas-model` re-export for unit-testing layout/keyboard wiring |
-| `./nodes`         | Node palette components `<ProcessNode>`, `<DecisionNode>`, `<DataNode>` with ARIA, plus `exampleNodeTypes`                                                    |
-| `./node-palette`  | `NodePalette`, `createNodePalette()`, `createCounterIdFactory()` and the node/type-def models                                                                 |
-| `./layout-worker` | `createLayoutWorker()` web-worker layout handle + `layoutWorkerHandler()`, with an SSR/no-worker fallback contract                                            |
+| Sub-export        | Contents                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./canvas`        | `<FlowCanvas>` pre-themed `<SvelteFlowProvider>` wrapper (`FlowCanvas.svelte`) plus pure `canvas-model` re-export for unit-testing layout/keyboard wiring |
+| `./nodes`         | Node palette components `<ProcessNode>`, `<DecisionNode>`, `<DataNode>` with ARIA, plus `exampleNodeTypes`                                                |
+| `./node-palette`  | `NodePalette`, `createNodePalette()`, `createCounterIdFactory()` + node/type-def models                                                                   |
+| `./layout-worker` | `createLayoutWorker()` web-worker layout handle + `layoutWorkerHandler()`, with SSR/no-worker fallback contract                                           |
 
-Flow compose recipes (`docs/compose/flow-basics.md`, `docs/compose/flow-advanced.md`) also landed.
+Flow compose recipes (`docs/compose/flow-basics.md`, `docs/compose/flow-advanced.md`) landed.
 
 ## Follow-through
 
@@ -31,27 +31,27 @@ Flow compose recipes (`docs/compose/flow-basics.md`, `docs/compose/flow-advanced
 
 This package:
 
-- Ships pure DAG helpers typed structurally so consumers can call them over `@xyflow/svelte` Node/Edge arrays (or any `{id}` / `{source, target}` shape) without an import dance.
-- Wraps `elkjs` with a factory that picks preset layout options (`layered` default, `force`/`stress`/`mrtree` opt-in), merges consumer overrides, and returns a typed result.
+- Ships pure DAG helpers typed structurally: consumers call over `@xyflow/svelte` Node/Edge arrays (or `{id}` / `{source, target}` shape) without import dance.
+- Wraps `elkjs` with factory picking preset layout options (`layered` default, `force`/`stress`/`mrtree` opt-in), merges consumer overrides, returns typed result.
 - Stays small — does not re-export `@xyflow/svelte` types. Consumers import from `@xyflow/svelte` directly.
 
 This package does **not**:
 
 - Depend on `dagre` — unmaintained since 2020 (ADR-0054).
-- Ship a React/Vue Flow bridge — strict SvelteKit universe rule.
-- Own the app-specific graph editor UX — it ships a pre-themed `<FlowCanvas>` wrapper plus example node components (`./canvas`, `./nodes`), but the domain editor layer lives in consumer apps.
+- Ship React/Vue Flow bridge — strict SvelteKit universe rule.
+- Own app-specific graph editor UX — ships pre-themed `<FlowCanvas>` wrapper + example node components (`./canvas`, `./nodes`); domain editor layer lives in consumer apps.
 
 ## Invariants
 
-- **`@xyflow/svelte` only.** `svelte-flow` (pre-rename) and hand-rolled node editors are rejected.
-- **Dynamic elkjs import.** The bundled JS (~1.5 MB min / ~400 KB gzip) is loaded on first `createElkLayout()` call, not at module import time. Pages that never layout pay zero.
+- **`@xyflow/svelte` only.** `svelte-flow` (pre-rename) + hand-rolled node editors rejected.
+- **Dynamic elkjs import.** Bundled JS (~1.5 MB min / ~400 KB gzip) loaded on first `createElkLayout()` call, not at module import time. Pages never laying out pay zero.
 - **Deterministic topological sort.** Tie-breaks by id-string sort (stable across runs, stable across machines).
-- **Cycle handling is explicit.** `topologicalSort` throws `CycleError` with the first discovered cycle path; callers decide whether to surface it or fall back to `findCycles()` for error-surfacing.
+- **Cycle handling explicit.** `topologicalSort` throws `CycleError` with first discovered cycle path; callers decide whether to surface or fall back to `findCycles()` for error-surfacing.
 - **Accessibility**:
   - Nodes keyboard-reachable via Tab (`tabindex="0"` default).
   - Arrow keys move focus between connected nodes (via DAG adjacency).
-  - Screen-reader label: each node has `aria-label={type}: {name}` + `aria-describedby` linking to the node's description.
-  - Canvas has `role="application"` (opt-out when read-only → `role="img"` with off-screen `<table>` alternative).
+  - Screen-reader label: each node has `aria-label={type}: {name}` + `aria-describedby` linking to node description.
+  - Canvas has `role="application"` (opt-out when read-only -> `role="img"` with off-screen `<table>` alternative).
   - Pan/zoom animations respect `prefers-reduced-motion: reduce`.
 
 ## Rejected alternatives
@@ -62,12 +62,12 @@ All rejected in [ADR-0004](../../docs/adr/0004-flow-thin-xyflow-wrapper.md) + [A
 - **React Flow wrapped in Svelte** — cross-framework bridge banned.
 - **`dagre`** — unmaintained since 2020; missing orthogonal routing, hierarchical nesting, port constraints.
 - **`d3-force` as default** — destroys DAG reading order; available as `force`/`stress` preset instead.
-- **Roll our own Sugiyama layout** — solved problem; decades of ELK research.
+- **Roll own Sugiyama layout** — solved problem; decades of ELK research.
 
 ## Test policy
 
 - DAG helpers: unit-tested against pathological graphs (disconnected, cyclic, self-loop, dangling endpoints). Coverage ≥ 85%.
-- elkjs layout: unit-tested with an injected `ElkFactory` double (no real `elkjs` at test time to keep tests deterministic + fast).
+- elkjs layout: unit-tested with injected `ElkFactory` double (no real `elkjs` at test time -> tests deterministic + fast).
 - Node components: rendered via `@testing-library/svelte` with `axe-core` a11y assertions (`NodeBody`). Canvas keyboard/layout wiring unit-tested through `canvas-model`.
 - Coverage ≥ 85% on pure helpers.
 

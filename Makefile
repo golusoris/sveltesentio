@@ -1,3 +1,6 @@
+# Resolves $(PRAETORCTL) to the engine the hook launcher uses.
+-include .config/praetor/engine.mk
+
 .PHONY: setup dev build lint typecheck test ci clean
 
 # Bootstrap dev environment (run once after cloning)
@@ -67,9 +70,10 @@ add-package:
 verify-all:
 	@pnpm run ci
 	@pnpm check:cycles
+	@pnpm test:scripts
 	@pnpm audit --audit-level=high
-	@praetorctl audit
-	@praetorctl compile-context --verify
+	@$(PRAETORCTL) audit
+	@$(PRAETORCTL) compile-context --verify
 	@$(MAKE) --no-print-directory hiss-coverage
 	@$(MAKE) --no-print-directory state-audit
 
@@ -77,16 +81,26 @@ verify-all:
 # fails on an unresolved P0 in the bug ledger or a pending question, so a
 # blocker recorded mid-session cannot be forgotten by the end of it.
 state-audit:
-	@praetorctl state audit .
+	@$(PRAETORCTL) state audit .
 
 # HISS-20: every enforcement claim in .config/hiss/coverage.yaml is replayed
 # against its fixture corpus, so a declared state cannot drift from what the
 # tools actually do -- in either direction.
 hiss-coverage:
-	@praetorctl hiss coverage --verify
+	@$(PRAETORCTL) hiss coverage --verify
 
 compile-context:
-	@praetorctl compile-context
+	@$(PRAETORCTL) compile-context
 
 audit:
-	@praetorctl audit
+	@$(PRAETORCTL) audit
+
+# BEGIN praetor documentation gate
+.PHONY: docs-lint docs-figures
+verify-all: docs-lint docs-figures
+docs-lint:
+	@node tools/markdownlint/verify.mjs
+docs-figures:
+	@node tools/figures/build.mjs check
+	@node tools/figures/build.mjs sources
+# END praetor documentation gate

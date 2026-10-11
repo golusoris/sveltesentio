@@ -43,9 +43,9 @@ export const load = () => ({ serverNow: getClock().now() });
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-	import { createHydrationClock, setClock } from '@sveltesentio/core/clock';
-	const { data, children } = $props();
-	setClock(createHydrationClock(data.serverNow));
+  import { createHydrationClock, setClock } from '@sveltesentio/core/clock';
+  const { data, children } = $props();
+  setClock(createHydrationClock(data.serverNow));
 </script>
 
 {@render children()}
@@ -59,9 +59,9 @@ First browser `now()` call returns the SSR timestamp byte-for-byte; subsequent c
 
 ```svelte
 <script lang="ts">
-	import { useClock } from '@sveltesentio/core/clock';
-	const clock = useClock();
-	const current = $derived(clock.now().toISOString());
+  import { useClock } from '@sveltesentio/core/clock';
+  const clock = useClock();
+  const current = $derived(clock.now().toISOString());
 </script>
 
 <time datetime={current}>{current}</time>
@@ -76,8 +76,8 @@ First browser `now()` call returns the SSR timestamp byte-for-byte; subsequent c
 import { getClock } from '@sveltesentio/core/clock';
 
 export const POST = async ({ request }) => {
-	const body = await request.json();
-	return Response.json({ ...body, receivedAt: getClock().now() });
+  const body = await request.json();
+  return Response.json({ ...body, receivedAt: getClock().now() });
 };
 ```
 
@@ -97,7 +97,7 @@ export const load = () => ({ dashboardOpenedAt: getClock().now() });
 import { getClock } from '@sveltesentio/core/clock';
 
 export function stamp<T extends object>(event: T): T & { at: Date } {
-	return { ...event, at: getClock().now() };
+  return { ...event, at: getClock().now() };
 }
 ```
 
@@ -112,24 +112,24 @@ import { describe, expect, it } from 'vitest';
 import { setClock } from '@sveltesentio/core/clock';
 
 function testClock({ now }: { now: Date }) {
-	let t = now.getTime();
-	return {
-		now: () => new Date(t),
-		monotonic: () => t - now.getTime(),
-		advance: (ms: number) => {
-			t += ms;
-		},
-	};
+  let t = now.getTime();
+  return {
+    now: () => new Date(t),
+    monotonic: () => t - now.getTime(),
+    advance: (ms: number) => {
+      t += ms;
+    },
+  };
 }
 
 describe('feature', () => {
-	it('reads time from the injected clock', () => {
-		const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
-		// bind via setClock inside the render root in component tests,
-		// or via withClock(clock) inside hooks.server.ts for integration tests
-		// …
-		expect(clock.now().toISOString()).toBe('2026-04-17T12:00:00.000Z');
-	});
+  it('reads time from the injected clock', () => {
+    const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
+    // bind via setClock inside the render root in component tests,
+    // or via withClock(clock) inside hooks.server.ts for integration tests
+    // …
+    expect(clock.now().toISOString()).toBe('2026-04-17T12:00:00.000Z');
+  });
 });
 ```
 
@@ -156,5 +156,5 @@ export const handle = sequence(withClock(testClock({ now: new Date('2026-04-17T1
 ## Related
 
 - [ADR-0052](../adr/0052-clock-injection-hybrid.md) — decision record.
-- [`.workingdir/research/d13-clock-injection.md`](../../.workingdir/research/d13-clock-injection.md) — live-docs research.
+- `.workingdir/research/d13-clock-injection.md` — live-docs research.
 - Golusoris `pkg/clock` — the Go-side injected clock whose ergonomics this mirrors.

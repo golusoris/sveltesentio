@@ -75,33 +75,33 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { env } from '$env/dynamic/private';
 
 const sdk = new NodeSDK({
-	resource: resourceFromAttributes({
-		[ATTR_SERVICE_NAME]: 'sveltesentio-app',
-		[ATTR_SERVICE_VERSION]: env.APP_VERSION ?? 'dev',
-		'deployment.environment': env.DEPLOY_ENV ?? 'dev',
-	}),
-	traceExporter: new OTLPTraceExporter({
-		url: env.OTEL_EXPORTER_OTLP_ENDPOINT + '/v1/traces',
-		headers: { authorization: env.OTEL_AUTH ?? '' },
-	}),
-	metricReader: new PeriodicExportingMetricReader({
-		exporter: new OTLPMetricExporter({
-			url: env.OTEL_EXPORTER_OTLP_ENDPOINT + '/v1/metrics',
-		}),
-	}),
-	instrumentations: [
-		getNodeAutoInstrumentations({
-			'@opentelemetry/instrumentation-fs': { enabled: false }, // noisy
-			'@opentelemetry/instrumentation-http': { enabled: true },
-			'@opentelemetry/instrumentation-pg': { enabled: true },
-		}),
-	],
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'sveltesentio-app',
+    [ATTR_SERVICE_VERSION]: env.APP_VERSION ?? 'dev',
+    'deployment.environment': env.DEPLOY_ENV ?? 'dev',
+  }),
+  traceExporter: new OTLPTraceExporter({
+    url: env.OTEL_EXPORTER_OTLP_ENDPOINT + '/v1/traces',
+    headers: { authorization: env.OTEL_AUTH ?? '' },
+  }),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter({
+      url: env.OTEL_EXPORTER_OTLP_ENDPOINT + '/v1/metrics',
+    }),
+  }),
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-fs': { enabled: false }, // noisy
+      '@opentelemetry/instrumentation-http': { enabled: true },
+      '@opentelemetry/instrumentation-pg': { enabled: true },
+    }),
+  ],
 });
 
 sdk.start();
 
 process.on('SIGTERM', () => {
-	void sdk.shutdown();
+  void sdk.shutdown();
 });
 ```
 
@@ -127,32 +127,32 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 if (browser) {
-	const provider = new WebTracerProvider({
-		resource: resourceFromAttributes({
-			[ATTR_SERVICE_NAME]: 'sveltesentio-app-web',
-			'browser.user_agent': navigator.userAgent,
-		}),
-		spanProcessors: [
-			new BatchSpanProcessor(
-				new OTLPTraceExporter({
-					url: '/api/otel/v1/traces', // proxy to collector
-				}),
-				{ maxExportBatchSize: 50, scheduledDelayMillis: 5000 },
-			),
-		],
-	});
+  const provider = new WebTracerProvider({
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: 'sveltesentio-app-web',
+      'browser.user_agent': navigator.userAgent,
+    }),
+    spanProcessors: [
+      new BatchSpanProcessor(
+        new OTLPTraceExporter({
+          url: '/api/otel/v1/traces', // proxy to collector
+        }),
+        { maxExportBatchSize: 50, scheduledDelayMillis: 5000 },
+      ),
+    ],
+  });
 
-	provider.register({ contextManager: new ZoneContextManager() });
+  provider.register({ contextManager: new ZoneContextManager() });
 
-	registerInstrumentations({
-		instrumentations: [
-			new FetchInstrumentation({
-				propagateTraceHeaderCorsUrls: [/^\/api\//],
-				clearTimingResources: true,
-			}),
-			new DocumentLoadInstrumentation(),
-		],
-	});
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation({
+        propagateTraceHeaderCorsUrls: [/^\/api\//],
+        clearTimingResources: true,
+      }),
+      new DocumentLoadInstrumentation(),
+    ],
+  });
 }
 ```
 
@@ -182,15 +182,15 @@ import { trace, context } from '@opentelemetry/api';
 import { uuidv7 } from '@sveltesentio/core/id';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const correlationId = event.request.headers.get('x-correlation-id') ?? uuidv7();
-	event.locals.correlationId = correlationId;
+  const correlationId = event.request.headers.get('x-correlation-id') ?? uuidv7();
+  event.locals.correlationId = correlationId;
 
-	const span = trace.getActiveSpan();
-	span?.setAttribute('correlation.id', correlationId);
+  const span = trace.getActiveSpan();
+  span?.setAttribute('correlation.id', correlationId);
 
-	const response = await resolve(event);
-	response.headers.set('x-correlation-id', correlationId);
-	return response;
+  const response = await resolve(event);
+  response.headers.set('x-correlation-id', correlationId);
+  return response;
 };
 ```
 
@@ -211,28 +211,28 @@ Per [http-client.md](http-client.md), problem responses carry
 ```ts
 // @sveltesentio/core/errors
 export function problem(opts: {
-	type: string;
-	title: string;
-	status: number;
-	detail?: string;
-	correlationId: string;
+  type: string;
+  title: string;
+  status: number;
+  detail?: string;
+  correlationId: string;
 }): Response {
-	return new Response(
-		JSON.stringify({
-			type: opts.type,
-			title: opts.title,
-			status: opts.status,
-			detail: opts.detail,
-			extensions: { correlationId: opts.correlationId },
-		}),
-		{
-			status: opts.status,
-			headers: {
-				'Content-Type': 'application/problem+json',
-				'X-Correlation-Id': opts.correlationId,
-			},
-		},
-	);
+  return new Response(
+    JSON.stringify({
+      type: opts.type,
+      title: opts.title,
+      status: opts.status,
+      detail: opts.detail,
+      extensions: { correlationId: opts.correlationId },
+    }),
+    {
+      status: opts.status,
+      headers: {
+        'Content-Type': 'application/problem+json',
+        'X-Correlation-Id': opts.correlationId,
+      },
+    },
+  );
 }
 ```
 
@@ -251,24 +251,24 @@ import { trace, SpanStatusCode } from '@opentelemetry/api';
 const tracer = trace.getTracer('orders');
 
 export async function placeOrder(input: OrderInput, correlationId: string) {
-	return tracer.startActiveSpan('orders.place', async (span) => {
-		span.setAttribute('order.amount_cents', input.amountCents);
-		span.setAttribute('correlation.id', correlationId);
+  return tracer.startActiveSpan('orders.place', async (span) => {
+    span.setAttribute('order.amount_cents', input.amountCents);
+    span.setAttribute('correlation.id', correlationId);
 
-		try {
-			const order = await db.transaction(async (tx) => {
-				/* … */
-			});
-			span.setStatus({ code: SpanStatusCode.OK });
-			return order;
-		} catch (err) {
-			span.recordException(err as Error);
-			span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
-			throw err;
-		} finally {
-			span.end();
-		}
-	});
+    try {
+      const order = await db.transaction(async (tx) => {
+        /* … */
+      });
+      span.setStatus({ code: SpanStatusCode.OK });
+      return order;
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
 }
 ```
 
@@ -288,12 +288,12 @@ import { metrics } from '@opentelemetry/api';
 
 const meter = metrics.getMeter('orders');
 const orderCounter = meter.createCounter('orders.placed', {
-	description: 'Successfully placed orders',
-	unit: '1',
+  description: 'Successfully placed orders',
+  unit: '1',
 });
 const orderLatency = meter.createHistogram('orders.place.duration', {
-	description: 'Time to place an order',
-	unit: 'ms',
+  description: 'Time to place an order',
+  unit: 'ms',
 });
 
 const t0 = performance.now();
@@ -316,17 +316,17 @@ OTel logs are stable but adoption is mid. Pragmatic stack today:
 import { uuidv7 } from '@sveltesentio/core/id';
 
 export function log(event: string, attrs: Record<string, unknown>) {
-	const span = trace.getActiveSpan();
-	console.log(
-		JSON.stringify({
-			event,
-			ts: new Date().toISOString(),
-			correlationId: attrs.correlationId,
-			traceId: span?.spanContext().traceId,
-			spanId: span?.spanContext().spanId,
-			...attrs,
-		}),
-	);
+  const span = trace.getActiveSpan();
+  console.log(
+    JSON.stringify({
+      event,
+      ts: new Date().toISOString(),
+      correlationId: attrs.correlationId,
+      traceId: span?.spanContext().traceId,
+      spanId: span?.spanContext().spanId,
+      ...attrs,
+    }),
+  );
 }
 ```
 
@@ -346,17 +346,17 @@ this `log()` helper is the structured path.
 import { trace } from '@opentelemetry/api';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const tracer = trace.getTracer('api');
-	return tracer.startActiveSpan('POST /api/feed', async (span) => {
-		span.setAttribute('correlation.id', locals.correlationId);
-		try {
-			const body = await request.json();
-			const out = await createFeedItem(body, locals.correlationId);
-			return new Response(JSON.stringify(out), { status: 201 });
-		} finally {
-			span.end();
-		}
-	});
+  const tracer = trace.getTracer('api');
+  return tracer.startActiveSpan('POST /api/feed', async (span) => {
+    span.setAttribute('correlation.id', locals.correlationId);
+    try {
+      const body = await request.json();
+      const out = await createFeedItem(body, locals.correlationId);
+      return new Response(JSON.stringify(out), { status: 201 });
+    } finally {
+      span.end();
+    }
+  });
 };
 ```
 
@@ -368,14 +368,14 @@ adds the **business** span underneath.
 ```ts
 // +page.server.ts
 export const load: PageServerLoad = async (event) => {
-	return trace.getTracer('load').startActiveSpan('load /(app)/feed', async (span) => {
-		span.setAttribute('correlation.id', event.locals.correlationId);
-		try {
-			return { items: await db.feed.list() };
-		} finally {
-			span.end();
-		}
-	});
+  return trace.getTracer('load').startActiveSpan('load /(app)/feed', async (span) => {
+    span.setAttribute('correlation.id', event.locals.correlationId);
+    try {
+      return { items: await db.feed.list() };
+    } finally {
+      span.end();
+    }
+  });
 };
 ```
 
@@ -389,9 +389,9 @@ the most common N+1 bug source.
 import { trace } from '@opentelemetry/api';
 
 export function track(event: string, attrs: Record<string, string | number | boolean>) {
-	const tracer = trace.getTracer('ui');
-	const span = tracer.startSpan(`ui.${event}`, { attributes: attrs });
-	span.end();
+  const tracer = trace.getTracer('ui');
+  const span = tracer.startSpan(`ui.${event}`, { attributes: attrs });
+  span.end();
 }
 
 // usage
@@ -420,14 +420,14 @@ Sanitiser:
 
 ```ts
 function safeAttrs(raw: Record<string, unknown>): Record<string, string | number | boolean> {
-	const out: Record<string, string | number | boolean> = {};
-	for (const [k, v] of Object.entries(raw)) {
-		if (BANNED_KEYS.has(k)) continue;
-		if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-			out[k] = v;
-		}
-	}
-	return out;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (BANNED_KEYS.has(k)) continue;
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      out[k] = v;
+    }
+  }
+  return out;
 }
 ```
 
@@ -443,10 +443,10 @@ Don't ship 100% of traces in production. Default OTel head sampling:
 import { TraceIdRatioBasedSampler, ParentBasedSampler } from '@opentelemetry/sdk-trace-base';
 
 new NodeSDK({
-	// …
-	sampler: new ParentBasedSampler({
-		root: new TraceIdRatioBasedSampler(0.1), // 10% of new traces
-	}),
+  // …
+  sampler: new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(0.1), // 10% of new traces
+  }),
 });
 ```
 
@@ -477,23 +477,23 @@ Unit tests:
 ```ts
 import { trace } from '@opentelemetry/api';
 import {
-	BasicTracerProvider,
-	InMemorySpanExporter,
-	SimpleSpanProcessor,
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-base';
 
 const exporter = new InMemorySpanExporter();
 const provider = new BasicTracerProvider({
-	spanProcessors: [new SimpleSpanProcessor(exporter)],
+  spanProcessors: [new SimpleSpanProcessor(exporter)],
 });
 trace.setGlobalTracerProvider(provider);
 
 test('placeOrder emits a span with correlation id', async () => {
-	await placeOrder(validInput, 'cid-1');
-	const spans = exporter.getFinishedSpans();
-	const order = spans.find((s) => s.name === 'orders.place');
-	expect(order?.attributes['correlation.id']).toBe('cid-1');
-	expect(order?.status.code).toBe(SpanStatusCode.OK);
+  await placeOrder(validInput, 'cid-1');
+  const spans = exporter.getFinishedSpans();
+  const order = spans.find((s) => s.name === 'orders.place');
+  expect(order?.attributes['correlation.id']).toBe('cid-1');
+  expect(order?.status.code).toBe(SpanStatusCode.OK);
 });
 ```
 

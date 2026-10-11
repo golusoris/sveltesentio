@@ -10,26 +10,26 @@
 | EXIF strip         | `exifr`         | `^7.1.3`  | Privacy-by-default metadata removal before upload            |
 | Content sniff      | `file-type`     | `^22.0.1` | Magic-byte content-type validation (never trust `File.type`) |
 
-This package ships three separable primitives — `validateUpload`, `stripExif`, `createResumableUpload` — each usable independently.
+Package ships three separable primitives — `validateUpload`, `stripExif`, `createResumableUpload` — each usable independently.
 
-This package does **not**:
+Package does **not**:
 
-- Depend on Uppy — no Svelte binding, ships UI we don't always want. Uppy lives in [docs/compose/uploads-uppy.md](../../docs/compose/uploads-uppy.md) as opt-in.
-- Own the server — Golusoris `storage/tus` + `storage/safety` + `storage/presign` do.
-- Own the presigned-URL dance — that's a TanStack Query concern on the consumer side.
+- Depend on Uppy — no Svelte binding, ships UI not always wanted. Uppy lives in [docs/compose/uploads-uppy.md](../../docs/compose/uploads-uppy.md) as opt-in.
+- Own server — Golusoris `storage/tus` + `storage/safety` + `storage/presign` do.
+- Own presigned-URL dance — TanStack Query concern on consumer side.
 
 ## Invariants
 
-- **Validate before strip before upload.** Magic-byte check gates the pipeline; failed validation never reaches the tus client.
-- **Validation is magic-byte only.** `File.type` is user-controlled; `file-type` sniffs the first bytes. Extensions are ignored.
-- **EXIF strip is destructive.** Re-encode via canvas loses original byte-identity; documented trade-off. Consumers that need lossless strip must reach for a server-side tool.
-- **Byte cap is enforced client-side AND server-side.** Client cap is UX; Golusoris `storage/safety` enforces the real cap.
-- **No hidden retries.** tus handles resume; we don't wrap it in a second retry layer.
+- **Validate before strip before upload.** Magic-byte check gates pipeline; failed validation never reaches tus client.
+- **Validation magic-byte only.** `File.type` user-controlled; `file-type` sniffs first bytes. Extensions ignored.
+- **EXIF strip destructive.** Re-encode via canvas loses original byte-identity; documented trade-off. Consumers needing lossless strip must reach for server-side tool.
+- **Byte cap enforced client-side AND server-side.** Client cap UX; Golusoris `storage/safety` enforces real cap.
+- **No hidden retries.** tus handles resume; package does not wrap in second retry layer.
 
 ## Test policy
 
 - Unit: `validateUpload` against magic-byte fixtures (JPEG, PNG, fake-PNG-that's-JS). `stripExif` snapshot of pre/post EXIF byte regions.
-- Integration (planned): tus protocol round-trip against a stubbed endpoint.
+- Integration (planned): tus protocol round-trip against stubbed endpoint.
 - Coverage ≥ 70%.
 
 ## Common tasks

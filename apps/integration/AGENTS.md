@@ -1,15 +1,14 @@
 # @sveltesentio/integration — agent guide
 
-Private, **non-published** integration-consumer (issue #30). Imports the public
-`@sveltesentio/*` workspace packages exactly as a downstream SvelteKit app would
-and proves they compose + typecheck + run together. This is a verification
-artifact, not a deployable app: `private: true`, `version 0.0.0`, never in the
-release config.
+Private, **non-published** integration-consumer (issue #30).
+Imports public `@sveltesentio/*` workspace packages exactly as downstream SvelteKit app would.
+Proves packages compose + typecheck + run together.
+Verification artifact, not deployable app: `private: true`, `version 0.0.0`, never in release config.
 
-Run `tsc --noEmit` + `vitest run` here on every package change to catch
-cross-package integration regressions the per-package suites cannot see (each
-package's tsconfig only `include`s `src/**`, so its own `test/**` is never
-typechecked — only transpiled by vitest).
+Run `tsc --noEmit` + `vitest run` on every package change.
+Catches cross-package integration regressions per-package suites cannot see.
+Reason: each package tsconfig only `include`s `src/**`.
+`test/**` never typechecked — only transpiled by vitest.
 
 ## Modules (`src/`)
 
@@ -23,53 +22,50 @@ typechecked — only transpiled by vitest).
 
 ## Tests (`test/`)
 
-25 tests, all green. They CALL the pure/composable bits (not just typecheck):
-`buildAuthorizationUrl` produces a valid URL, the api client throws `ProblemError`
-on problem+json via an injected fetch, the ui command registry search ranks
-results, the forms schema validates, `serverPrefetch` dehydrates, `evaluateCsrf`
-returns the right rejection reason.
+25 tests, all green.
+Tests CALL pure/composable parts (not typecheck only):
 
-`test/mocks/app-*.ts` stub SvelteKit's `$app/*` virtual modules (see findings
-below); `vitest.config.ts` aliases them and loads the svelte plugin so the
-`.svelte` re-exports in the `query`/`forms` barrels resolve under vitest.
+- `buildAuthorizationUrl` produces valid URL.
+- api client throws `ProblemError` on problem+json via injected fetch.
+- ui command registry search ranks results.
+- forms schema validates.
+- `serverPrefetch` dehydrates.
+- `evaluateCsrf` returns right rejection reason.
+
+`test/mocks/app-*.ts` stub SvelteKit `$app/*` virtual modules (see findings below).
+`vitest.config.ts` aliases stubs + loads svelte plugin.
+Reason: `.svelte` re-exports in `query`/`forms` barrels resolve under vitest.
 
 ## Integration findings (the point of this package)
 
-1. **`@sveltesentio/api` `createClient` generic constraint is unusable with typed
-   path calls.** `createClient<Paths extends Record<string, Record<string, unknown>>>`
-   cannot be satisfied by real openapi-typescript output: that codegen emits
-   `paths` as an `interface` with **no** index signature (fails the constraint),
-   and adding an index signature collapses openapi-fetch's `PathsWithMethod` to
-   `never` (typed `GET`/`POST` stop resolving). The two requirements are mutually
-   exclusive. `server-prefetch.ts` therefore composes openapi-fetch +
-   `core/http` `problemMiddleware` directly for the typed path (identical runtime
-   to `createClient`, minus the constraint), and exercises `createClient`'s
-   runtime throw-behaviour through a narrowed structural view. **Recommended fix:**
-   relax `createClient`'s generic to openapi-fetch's own `Paths extends {}` (or
-   drop the constraint), so generated `paths` interfaces work as documented.
+1. **`@sveltesentio/api` `createClient` generic constraint unusable with typed path calls.**
+   `createClient<Paths extends Record<string, Record<string, unknown>>>` cannot be satisfied by real openapi-typescript output.
+   Codegen emits `paths` as `interface` with **no** index signature (fails constraint).
+   Adding index signature collapses openapi-fetch `PathsWithMethod` to `never` (typed `GET`/`POST` stop resolving).
+   Two requirements mutually exclusive.
+   `server-prefetch.ts` composes openapi-fetch + `core/http` `problemMiddleware` directly for typed path.
+   Runtime identical to `createClient`, minus constraint.
+   Exercises `createClient` runtime throw-behaviour through narrowed structural view.
+   **Recommended fix:** relax `createClient` generic to openapi-fetch own `Paths extends {}` (or drop constraint) -> generated `paths` interfaces work as documented.
 
-2. **`@sveltesentio/forms` barrel drags the entire SvelteKit client runtime into
-   any consumer.** The barrel does `export { ... } from 'sveltekit-superforms'`
-   (the client entry), which statically imports `SuperDebug.svelte` + the client
-   `superForm`, pulling in `$app/environment`, `$app/stores`, `$app/navigation`,
-   and `$app/forms`. A non-Kit context (vitest, node script, any server-only
-   consumer that only needs `superValidate`) must stub all four virtual modules.
-   **Recommended fix:** expose a server-safe subpath (e.g. `@sveltesentio/forms/server`)
-   that re-exports only `superValidate` + types without the client surface.
+2. **`@sveltesentio/forms` barrel drags entire SvelteKit client runtime into consumer.**
+   Barrel has `export { ... } from 'sveltekit-superforms'` (client entry).
+   Statically imports `SuperDebug.svelte` + client `superForm`.
+   Pulls in `$app/environment`, `$app/stores`, `$app/navigation`, `$app/forms`.
+   Non-Kit context (vitest, node script, server-only consumer needing only `superValidate`) must stub all 4 virtual modules.
+   **Recommended fix:** expose server-safe subpath (e.g. `@sveltesentio/forms/server`) re-exporting only `superValidate` + types without client surface.
 
-3. **`@sveltesentio/query` barrel re-exports `.svelte` components**
-   (`HydrationBoundary`, `QueryClientProvider`), so any tool loading the barrel
-   needs the svelte plugin even when only the pure `serverPrefetch`/`createSentioQuery`
-   functions are used. Tolerable (a SvelteKit app always has the plugin), but a
-   plain-`.ts`-only subpath would let server tooling import `serverPrefetch`
-   without a svelte transform.
+3. **`@sveltesentio/query` barrel re-exports `.svelte` components.**
+   `HydrationBoundary`, `QueryClientProvider` re-exported in barrel.
+   Tool loading barrel requires svelte plugin even when using only pure `serverPrefetch`/`createSentioQuery` functions.
+   Tolerable: SvelteKit app always has plugin.
+   Plain-`.ts`-only subpath allows server tooling import of `serverPrefetch` without svelte transform.
 
 4. **`serverPrefetch` does not dehydrate failed (problem) prefetches.**
-   `prefetchQuery` swallows the rejection and TanStack's default
-   `shouldDehydrateQuery` excludes errored queries, so a problem prefetch yields
-   an EMPTY dehydrated state and the client refetches on mount. Expected TanStack
-   behaviour — documented here so app authors don't expect the error to hydrate.
+   `prefetchQuery` swallows rejection.
+   TanStack default `shouldDehydrateQuery` excludes errored queries.
+   Problem prefetch yields EMPTY dehydrated state -> client refetches on mount.
+   Expected TanStack behaviour — documented here so app authors do not expect error to hydrate.
 
-Everything else composed as documented: `core` `ProblemError`, `auth`
-`buildAuthorizationUrl`/`evaluateCsrf`, `ui` tokens/presets/cmd-registry, and
-`realtime` `SseClient`/`computeBackoff` all integrated with zero friction.
+Everything else composed as documented:
+`core` `ProblemError`, `auth` `buildAuthorizationUrl`/`evaluateCsrf`, `ui` tokens/presets/cmd-registry, `realtime` `SseClient`/`computeBackoff` integrated with zero friction.

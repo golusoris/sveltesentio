@@ -31,40 +31,40 @@ A SvelteKit `+server.ts` endpoint emits `text/event-stream`:
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ request }) => {
-	const lastId = request.headers.get('Last-Event-ID');
-	const stream = new ReadableStream({
-		async start(controller) {
-			const enc = new TextEncoder();
+  const lastId = request.headers.get('Last-Event-ID');
+  const stream = new ReadableStream({
+    async start(controller) {
+      const enc = new TextEncoder();
 
-			const send = (data: unknown, id: string, event = 'message') => {
-				controller.enqueue(
-					enc.encode(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-				);
-			};
+      const send = (data: unknown, id: string, event = 'message') => {
+        controller.enqueue(
+          enc.encode(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+        );
+      };
 
-			// Replay since lastId if present
-			const since = lastId ? Number(lastId) : 0;
-			for (const item of await fetchSince(since)) {
-				send(item, String(item.seq));
-			}
+      // Replay since lastId if present
+      const since = lastId ? Number(lastId) : 0;
+      for (const item of await fetchSince(since)) {
+        send(item, String(item.seq));
+      }
 
-			// Live tail
-			const sub = subscribe((item) => send(item, String(item.seq)));
-			request.signal.addEventListener('abort', () => {
-				sub.unsubscribe();
-				controller.close();
-			});
-		},
-	});
+      // Live tail
+      const sub = subscribe((item) => send(item, String(item.seq)));
+      request.signal.addEventListener('abort', () => {
+        sub.unsubscribe();
+        controller.close();
+      });
+    },
+  });
 
-	return new Response(stream, {
-		headers: {
-			'Content-Type': 'text/event-stream',
-			'Cache-Control': 'no-cache, no-transform',
-			'X-Accel-Buffering': 'no', // disable nginx proxy buffering
-			Connection: 'keep-alive',
-		},
-	});
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no', // disable nginx proxy buffering
+      Connection: 'keep-alive',
+    },
+  });
 };
 ```
 
@@ -82,19 +82,19 @@ Three header invariants:
 ```ts
 // @sveltesentio/realtime/sse
 export function useSSE<T = MessageEvent>(
-	url: string,
-	options?: {
-		onMessage?: (e: MessageEvent) => void;
-		onOpen?: (e: Event) => void;
-		onError?: (e: Event) => void;
-		auto?: boolean; // default true: open on $effect mount
-		backoff?: { initial: number; max: number; jitter: number };
-		withCredentials?: boolean; // for cross-origin cookies
-	},
+  url: string,
+  options?: {
+    onMessage?: (e: MessageEvent) => void;
+    onOpen?: (e: Event) => void;
+    onError?: (e: Event) => void;
+    auto?: boolean; // default true: open on $effect mount
+    backoff?: { initial: number; max: number; jitter: number };
+    withCredentials?: boolean; // for cross-origin cookies
+  },
 ): {
-	open(): void;
-	close(): void;
-	readonly readyState: 0 | 1 | 2; // CONNECTING | OPEN | CLOSED
+  open(): void;
+  close(): void;
+  readonly readyState: 0 | 1 | 2; // CONNECTING | OPEN | CLOSED
 };
 ```
 
@@ -102,41 +102,41 @@ export function useSSE<T = MessageEvent>(
 
 ```svelte
 <script lang="ts">
-	import { useSSE } from '@sveltesentio/realtime/sse';
-	import { z } from 'zod';
+  import { useSSE } from '@sveltesentio/realtime/sse';
+  import { z } from 'zod';
 
-	const FeedItem = z.object({
-		id: z.string(),
-		seq: z.number(),
-		body: z.string(),
-		ts: z.iso.datetime(),
-	});
+  const FeedItem = z.object({
+    id: z.string(),
+    seq: z.number(),
+    body: z.string(),
+    ts: z.iso.datetime(),
+  });
 
-	let items = $state<z.infer<typeof FeedItem>[]>([]);
+  let items = $state<z.infer<typeof FeedItem>[]>([]);
 
-	const { readyState } = useSSE('/api/feed', {
-		onMessage: (e) => {
-			const parsed = FeedItem.safeParse(JSON.parse(e.data));
-			if (parsed.success) items.push(parsed.data);
-			else console.error('[sse] schema mismatch', parsed.error);
-		},
-		onError: () => {
-			// EventSource auto-reconnects; surface only persistent failures
-		},
-		backoff: { initial: 1000, max: 30000, jitter: 0.3 },
-	});
+  const { readyState } = useSSE('/api/feed', {
+    onMessage: (e) => {
+      const parsed = FeedItem.safeParse(JSON.parse(e.data));
+      if (parsed.success) items.push(parsed.data);
+      else console.error('[sse] schema mismatch', parsed.error);
+    },
+    onError: () => {
+      // EventSource auto-reconnects; surface only persistent failures
+    },
+    backoff: { initial: 1000, max: 30000, jitter: 0.3 },
+  });
 </script>
 
 <ul role="log" aria-live="polite" aria-relevant="additions">
-	{#each items as item (item.id)}
-		<li>{item.body}</li>
-	{/each}
+  {#each items as item (item.id)}
+    <li>{item.body}</li>
+  {/each}
 </ul>
 
 {#if readyState === 0}
-	<span class="sr-only" role="status">Connecting…</span>
+  <span class="sr-only" role="status">Connecting…</span>
 {:else if readyState === 2}
-	<span role="status" class="text-warn">Reconnecting…</span>
+  <span role="status" class="text-warn">Reconnecting…</span>
 {/if}
 ```
 
@@ -153,23 +153,23 @@ runtime validation; SSE is an external boundary.
 
 ```ts
 const Frame = z.discriminatedUnion('kind', [
-	z.object({ kind: z.literal('insert'), item: FeedItem }),
-	z.object({ kind: z.literal('delete'), id: z.string() }),
-	z.object({ kind: z.literal('heartbeat') }),
+  z.object({ kind: z.literal('insert'), item: FeedItem }),
+  z.object({ kind: z.literal('delete'), id: z.string() }),
+  z.object({ kind: z.literal('heartbeat') }),
 ]);
 
 onMessage: (e) => {
-	const f = Frame.parse(JSON.parse(e.data));
-	switch (f.kind) {
-		case 'insert':
-			items.push(f.item);
-			break;
-		case 'delete':
-			items = items.filter((i) => i.id !== f.id);
-			break;
-		case 'heartbeat':
-			/* no-op */ break;
-	}
+  const f = Frame.parse(JSON.parse(e.data));
+  switch (f.kind) {
+    case 'insert':
+      items.push(f.item);
+      break;
+    case 'delete':
+      items = items.filter((i) => i.id !== f.id);
+      break;
+    case 'heartbeat':
+      /* no-op */ break;
+  }
 };
 ```
 
@@ -211,11 +211,11 @@ alive but don't reach `onMessage`. Pair with browser-side timeout:
 ```ts
 let lastSeen = Date.now();
 onMessage: () => {
-	lastSeen = Date.now();
+  lastSeen = Date.now();
 };
 
 setInterval(() => {
-	if (Date.now() - lastSeen > 60_000) sse.close(); // forces reconnect
+  if (Date.now() - lastSeen > 60_000) sse.close(); // forces reconnect
 }, 30_000);
 ```
 
@@ -296,17 +296,17 @@ read is simpler and HTTP-cacheable.
 import { useSSE } from '@sveltesentio/realtime/sse';
 
 test('useSSE handles message + reconnect', async () => {
-	const messages: string[] = [];
-	const sse = useSSE('http://localhost:0/test', {
-		onMessage: (e) => messages.push(e.data),
-		auto: false,
-	});
+  const messages: string[] = [];
+  const sse = useSSE('http://localhost:0/test', {
+    onMessage: (e) => messages.push(e.data),
+    auto: false,
+  });
 
-	// Mock EventSource via msw or a local test server
-	await mockSSEServer.send('hello');
-	await mockSSEServer.send('world');
+  // Mock EventSource via msw or a local test server
+  await mockSSEServer.send('hello');
+  await mockSSEServer.send('world');
 
-	expect(messages).toEqual(['hello', 'world']);
+  expect(messages).toEqual(['hello', 'world']);
 });
 ```
 

@@ -182,6 +182,31 @@ const config: Linter.Config[] = [
 			...ts.configs['disable-type-checked'].rules,
 		},
 	},
+	// --- engine-delivered tooling ------------------------------------------------------
+	// `tools/markdownlint/` and `tools/figures/` are written by `praetorctl adopt` and
+	// their bytes are pinned by `praetorctl audit`, so a finding in them cannot be fixed
+	// here. `turbo lint` never reaches them, but the pre-commit hook lints staged files
+	// and an adoption refresh stages all of them. They are linted like the root scripts
+	// rather than ignored: plain ESM and TypeScript outside every tsconfig, with the Node
+	// globals they use declared.
+	{
+		files: ['tools/**/*.mjs', 'tools/**/*.ts'],
+		languageOptions: {
+			parserOptions: { project: false },
+			globals: {
+				Buffer: 'readonly',
+				TextDecoder: 'readonly',
+				URL: 'readonly',
+				clearTimeout: 'readonly',
+				console: 'readonly',
+				process: 'readonly',
+				setTimeout: 'readonly',
+			},
+		},
+		rules: {
+			...ts.configs['disable-type-checked'].rules,
+		},
+	},
 	{
 		ignores: [
 			// `**/` prefixes: these patterns are resolved from the config's directory,

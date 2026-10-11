@@ -25,7 +25,7 @@ pnpm add @sveltesentio/emulator
 
 Then make the EmulatorJS data directory reachable (self-host):
 
-```
+```text
 static/emulatorjs/data/   # cores, loader.js, art, BIOS shims — from the EmulatorJS release
 ```
 
@@ -33,14 +33,14 @@ static/emulatorjs/data/   # cores, loader.js, art, BIOS shims — from the Emula
 
 ```svelte
 <script lang="ts">
-	import Emulator from '@sveltesentio/emulator/Emulator.svelte';
+  import Emulator from '@sveltesentio/emulator/Emulator.svelte';
 </script>
 
 <Emulator
-	core="snes"
-	gameUrl="/roms/zelda.sfc"
-	dataPath="/emulatorjs/data/"
-	gameName="A Link to the Past"
+  core="snes"
+  gameUrl="/roms/zelda.sfc"
+  dataPath="/emulatorjs/data/"
+  gameName="A Link to the Past"
 />
 ```
 
@@ -53,16 +53,16 @@ import { buildEmulatorConfig, injectEmulatorScript } from '@sveltesentio/emulato
 
 // Pure: typed options -> the EJS_* globals.
 const { globals, loaderUrl, core } = buildEmulatorConfig({
-	core: 'playstation', // human slug or raw core id
-	gameUrl: '/roms/game.bin',
-	biosUrl: '/bios/scph.bin',
-	dataPath: '/emulatorjs/data/',
+  core: 'playstation', // human slug or raw core id
+  gameUrl: '/roms/game.bin',
+  biosUrl: '/bios/scph.bin',
+  dataPath: '/emulatorjs/data/',
 });
 
 // Injects the loader script + globals; returns a cleanup fn.
 const { cleanup } = injectEmulatorScript(
-	{ core: 'snes', gameUrl: '/roms/z.sfc' },
-	{ document, window },
+  { core: 'snes', gameUrl: '/roms/z.sfc' },
+  { document, window },
 );
 ```
 
@@ -91,8 +91,8 @@ import { emulatorCspDirectives, mergeCspDirectives } from '@sveltesentio/emulato
 
 const base = strictCsp({ nonce });
 const policy = mergeCspDirectives(
-	base,
-	emulatorCspDirectives({ dataBaseUrl: 'https://roms.example.com/data/' }),
+  base,
+  emulatorCspDirectives({ dataBaseUrl: 'https://roms.example.com/data/' }),
 );
 
 response.headers.set('Content-Security-Policy', serialiseCsp(policy));

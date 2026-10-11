@@ -162,4 +162,51 @@ describe('useLLMChat', () => {
 		expect(chat.error).toBeUndefined();
 		expect(chat.streaming).toBe(false);
 	});
+
+	it('handles empty message content', async () => {
+		const chat = useLLMChat({ transport: fixedTransport('ack') });
+		await chat.send('');
+		expect(chat.messages).toEqual([
+			{ role: 'user', content: '' },
+			{ role: 'assistant', content: 'ack' },
+		]);
+	});
+
+	it('stop() is a no-op when no stream is in flight', () => {
+		const chat = useLLMChat({ transport: fixedTransport() });
+		expect(() => {
+			chat.stop();
+			chat.stop();
+		}).not.toThrow();
+		expect(chat.streaming).toBe(false);
+	});
+
+	it('reset() aborts an in-flight stream and clears state', async () => {
+		let abortedSignal: AbortSignal | undefined;
+		let release: (() => void) | undefined;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
+		const transport: ChatTransport = async function* (request) {
+			abortedSignal = request.signal;
+			await gate;
+			yield { text: 'late' };
+		};
+		const chat = useLLMChat({
+			transport,
+			initialMessages: [{ role: 'system', content: 'init' }],
+		});
+
+		const pending = chat.send('hi');
+		expect(chat.streaming).toBe(true);
+
+		chat.reset();
+		expect(chat.streaming).toBe(false);
+		expect(chat.messages).toEqual([{ role: 'system', content: 'init' }]);
+		expect(abortedSignal?.aborted).toBe(true);
+
+		release?.();
+		await pending;
+	});
 });

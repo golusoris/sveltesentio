@@ -147,23 +147,23 @@ for `GET`s while `POST`/`PUT`/`DELETE` are already 410.
 ```ts
 // src/routes/api/_shared/deprecation.ts
 export type DeprecationInfo = {
-	deprecated: true; // RFC 7234 Deprecation header
-	sunsetAt: Date; // RFC 8594 Sunset header
-	successorVersion: string; // e.g. 'v2'
-	migrationDoc: string; // https URL
+  deprecated: true; // RFC 7234 Deprecation header
+  sunsetAt: Date; // RFC 8594 Sunset header
+  successorVersion: string; // e.g. 'v2'
+  migrationDoc: string; // https URL
 };
 
 export function applyDeprecationHeaders(response: Response, info: DeprecationInfo): Response {
-	response.headers.set('Deprecation', 'true');
-	response.headers.set('Sunset', info.sunsetAt.toUTCString());
-	response.headers.set(
-		'Link',
-		[
-			`<${info.migrationDoc}>; rel="deprecation"; type="text/html"`,
-			`</api/${info.successorVersion}/openapi.json>; rel="successor-version"`,
-		].join(', '),
-	);
-	return response;
+  response.headers.set('Deprecation', 'true');
+  response.headers.set('Sunset', info.sunsetAt.toUTCString());
+  response.headers.set(
+    'Link',
+    [
+      `<${info.migrationDoc}>; rel="deprecation"; type="text/html"`,
+      `</api/${info.successorVersion}/openapi.json>; rel="successor-version"`,
+    ].join(', '),
+  );
+  return response;
 }
 ```
 
@@ -183,14 +183,14 @@ instead of a bare HTTP status.
 import { error } from '@sveltejs/kit';
 
 export async function GET() {
-	throw error(410, {
-		type: 'urn:sveltesentio:api:sunset',
-		title: 'API v1 has been removed',
-		status: 410,
-		detail: 'API v1 was sunset on 2026-12-31. Use v2.',
-		migrationDoc: 'https://docs.acme.example/migrate-v1-to-v2',
-		successorVersion: 'v2',
-	});
+  throw error(410, {
+    type: 'urn:sveltesentio:api:sunset',
+    title: 'API v1 has been removed',
+    status: 410,
+    detail: 'API v1 was sunset on 2026-12-31. Use v2.',
+    migrationDoc: 'https://docs.acme.example/migrate-v1-to-v2',
+    successorVersion: 'v2',
+  });
 }
 ```
 
@@ -205,19 +205,19 @@ remove v1.**
 import { trace } from '@opentelemetry/api';
 
 export function withApiVersion<T extends (event: unknown) => unknown>(
-	version: string,
-	deprecated: boolean,
-	handler: T,
+  version: string,
+  deprecated: boolean,
+  handler: T,
 ): T {
-	return (async (event) => {
-		const span = trace.getActiveSpan();
-		span?.setAttributes({
-			'api.version': version, // 'v1' | 'v2' | 'v3'
-			'api.deprecated': deprecated,
-			'api.route': new URL(event.request.url).pathname.replace(/\d+/g, ':id'),
-		});
-		return handler(event);
-	}) as T;
+  return (async (event) => {
+    const span = trace.getActiveSpan();
+    span?.setAttributes({
+      'api.version': version, // 'v1' | 'v2' | 'v3'
+      'api.deprecated': deprecated,
+      'api.route': new URL(event.request.url).pathname.replace(/\d+/g, ':id'),
+    });
+    return handler(event);
+  }) as T;
 }
 ```
 
@@ -263,10 +263,10 @@ deprecation clock starts.
 ```ts
 // src/routes/api/v2/orders/+server.ts
 export async function GET({ locals, url }) {
-	if (!(await locals.flags.getBooleanValue('api.v2.orders.enabled', false))) {
-		throw error(404); // NOT 503 — the endpoint doesn't exist yet for this caller
-	}
-	// … v2 handler
+  if (!(await locals.flags.getBooleanValue('api.v2.orders.enabled', false))) {
+    throw error(404); // NOT 503 — the endpoint doesn't exist yet for this caller
+  }
+  // … v2 handler
 }
 ```
 
@@ -308,9 +308,9 @@ import frozen from './fixtures/openapi.v1.frozen.json';
 import current from '../src/routes/api/v1/openapi.snapshot.json';
 
 describe('v1 contract is frozen', () => {
-	test('OpenAPI diff matches frozen baseline', () => {
-		expect(current).toEqual(frozen);
-	});
+  test('OpenAPI diff matches frozen baseline', () => {
+    expect(current).toEqual(frozen);
+  });
 });
 ```
 

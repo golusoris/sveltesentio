@@ -83,18 +83,18 @@ export const SESSION_COOKIE = '__Host-session';
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 export function setSessionCookie(cookies: Cookies, sid: string): void {
-	cookies.set(SESSION_COOKIE, sid, {
-		path: '/',
-		httpOnly: true,
-		secure: true,
-		sameSite: 'lax',
-		maxAge: SESSION_TTL_SECONDS,
-		priority: 'high',
-	});
+  cookies.set(SESSION_COOKIE, sid, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: SESSION_TTL_SECONDS,
+    priority: 'high',
+  });
 }
 
 export function clearSessionCookie(cookies: Cookies): void {
-	cookies.delete(SESSION_COOKIE, { path: '/' });
+  cookies.delete(SESSION_COOKIE, { path: '/' });
 }
 ```
 
@@ -130,34 +130,34 @@ const STATE_COOKIE = '__Host-oidc-state';
 const STATE_TTL_SECONDS = 600;
 
 export function mintStateCookie(cookies: Cookies, returnTo: string): string {
-	const state = randomBytes(32).toString('base64url');
-	const payload = JSON.stringify({ state, returnTo, ts: Date.now() });
-	cookies.set(STATE_COOKIE, payload, {
-		path: '/',
-		httpOnly: true,
-		secure: true,
-		sameSite: 'lax',
-		maxAge: STATE_TTL_SECONDS,
-		priority: 'high',
-	});
-	return state;
+  const state = randomBytes(32).toString('base64url');
+  const payload = JSON.stringify({ state, returnTo, ts: Date.now() });
+  cookies.set(STATE_COOKIE, payload, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: STATE_TTL_SECONDS,
+    priority: 'high',
+  });
+  return state;
 }
 
 export function consumeStateCookie(
-	cookies: Cookies,
-	returned: string,
+  cookies: Cookies,
+  returned: string,
 ): { returnTo: string } | null {
-	const raw = cookies.get(STATE_COOKIE);
-	if (!raw) return null;
-	cookies.delete(STATE_COOKIE, { path: '/' });
-	try {
-		const payload = JSON.parse(raw) as { state: string; returnTo: string; ts: number };
-		if (payload.state !== returned) return null;
-		if (Date.now() - payload.ts > STATE_TTL_SECONDS * 1000) return null;
-		return { returnTo: payload.returnTo };
-	} catch {
-		return null;
-	}
+  const raw = cookies.get(STATE_COOKIE);
+  if (!raw) return null;
+  cookies.delete(STATE_COOKIE, { path: '/' });
+  try {
+    const payload = JSON.parse(raw) as { state: string; returnTo: string; ts: number };
+    if (payload.state !== returned) return null;
+    if (Date.now() - payload.ts > STATE_TTL_SECONDS * 1000) return null;
+    return { returnTo: payload.returnTo };
+  } catch {
+    return null;
+  }
 }
 ```
 
@@ -180,18 +180,18 @@ const THEME_COOKIE = 'theme';
 const THEME_TTL = 60 * 60 * 24 * 365;
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const theme = event.cookies.get(THEME_COOKIE) ?? 'system';
-	return resolve(event, {
-		transformPageChunk: ({ html }) => html.replace('%sveltekit.theme%', theme),
-	});
+  const theme = event.cookies.get(THEME_COOKIE) ?? 'system';
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace('%sveltekit.theme%', theme),
+  });
 };
 ```
 
 ```ts
 // src/lib/theme/set-theme.ts (client)
 export function setTheme(theme: 'light' | 'dark' | 'system'): void {
-	document.cookie = `theme=${theme}; Path=/; Max-Age=${365 * 24 * 60 * 60}; SameSite=Lax; Secure`;
-	document.documentElement.dataset.theme = theme;
+  document.cookie = `theme=${theme}; Path=/; Max-Age=${365 * 24 * 60 * 60}; SameSite=Lax; Secure`;
+  document.documentElement.dataset.theme = theme;
 }
 ```
 
@@ -218,19 +218,19 @@ import { randomBytes } from 'node:crypto';
 const CSRF_COOKIE = '__Host-csrf';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	let csrf = event.cookies.get(CSRF_COOKIE);
-	if (!csrf) {
-		csrf = randomBytes(32).toString('base64url');
-		event.cookies.set(CSRF_COOKIE, csrf, {
-			path: '/',
-			httpOnly: false,
-			secure: true,
-			sameSite: 'strict',
-			priority: 'high',
-		});
-	}
-	event.locals.csrfToken = csrf;
-	return resolve(event);
+  let csrf = event.cookies.get(CSRF_COOKIE);
+  if (!csrf) {
+    csrf = randomBytes(32).toString('base64url');
+    event.cookies.set(CSRF_COOKIE, csrf, {
+      path: '/',
+      httpOnly: false,
+      secure: true,
+      sameSite: 'strict',
+      priority: 'high',
+    });
+  }
+  event.locals.csrfToken = csrf;
+  return resolve(event);
 };
 ```
 
@@ -255,12 +255,12 @@ requests.
 ```ts
 // when embedded in customer iframe
 event.cookies.set('__Host-session', sid, {
-	path: '/',
-	httpOnly: true,
-	secure: true,
-	sameSite: 'none',
-	maxAge: SESSION_TTL_SECONDS,
-	partitioned: true,
+  path: '/',
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: SESSION_TTL_SECONDS,
+  partitioned: true,
 });
 ```
 
@@ -319,11 +319,11 @@ Three domain rules:
 ```ts
 // src/hooks.server.ts
 export const handle: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
-	if (event.cookies.get('__Host-session')) {
-		response.headers.set('Cache-Control', 'private, no-store');
-	}
-	return response;
+  const response = await resolve(event);
+  if (event.cookies.get('__Host-session')) {
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+  return response;
 };
 ```
 

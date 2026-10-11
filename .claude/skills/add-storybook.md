@@ -25,14 +25,14 @@ no per-package config. Stories are EXCLUDED from the npm tarball via
 
 ```svelte
 <script module lang="ts">
-	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import Button from './Button.svelte';
+  import { defineMeta } from '@storybook/addon-svelte-csf';
+  import Button from './Button.svelte';
 
-	const { Story } = defineMeta({
-		title: 'ui/Button',
-		component: Button,
-		args: { variant: 'default' },
-	});
+  const { Story } = defineMeta({
+    title: 'ui/Button',
+    component: Button,
+    args: { variant: 'default' },
+  });
 </script>
 
 <Story name="Primary" args={{ variant: 'default' }} />
@@ -40,7 +40,7 @@ no per-package config. Stories are EXCLUDED from the npm tarball via
 
 <!-- For children/snippet props, give the Story a body: -->
 <Story name="With label">
-	<Button variant="ghost">Ghost</Button>
+  <Button variant="ghost">Ghost</Button>
 </Story>
 ```
 

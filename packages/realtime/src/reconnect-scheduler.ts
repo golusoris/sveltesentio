@@ -6,12 +6,9 @@ import { computeBackoff, type BackoffOptions } from './backoff.js';
  * `SseClient` and `createConnectStream` each carried an attempt counter, a
  * pending-timer handle, a `scheduleReconnect` that incremented the counter and
  * armed `computeBackoff`, and a `clearReconnect` that was byte-identical between
- * them apart from `this.`. One is a class and the other a closure factory, which
- * is why the duplication survived review — the shapes differ, the behaviour does
- * not (HISS-19).
- *
- * Extracting it also brings `createConnectStream` under the 60-line function cap
- * (HISS-04), which it exceeded by holding this inline.
+ * them apart from `this.`. One was a class and the other a closure factory then,
+ * which is why the duplication survived review — the shapes differed, the
+ * behaviour did not (HISS-19).
  */
 export interface ReconnectScheduler {
 	/** Retries since the last {@link reset}; 0 before the first failure. */

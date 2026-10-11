@@ -51,6 +51,6 @@ Both decisions were effectively made in practice before being recorded. By 2026-
 
 - `git remote -v` on 2026-04-18 confirmed `origin = git@github.com:golusoris/sveltesentio.git`.
 - Every scaffolded `packages/*/package.json` already declares `"name": "@sveltesentio/<module>"`.
-- [.workingdir/research/decisions-needed.md](../../.workingdir/research/decisions-needed.md) D1 + D2 rows (original decision request).
-- [.workingdir/research/drow-adr-map.md](../../.workingdir/research/drow-adr-map.md) — authoritative D-row → ADR mapping (this ADR closes D1 + D2).
+- `.workingdir/research/decisions-needed.md` D1 + D2 rows (original decision request).
+- `.workingdir/research/drow-adr-map.md` — authoritative D-row → ADR mapping (this ADR closes D1 + D2).
 - [issue #31](https://github.com/golusoris/sveltesentio/issues/31) — follow-on for 2FA / secret scanning / branch protection configuration.

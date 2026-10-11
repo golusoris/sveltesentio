@@ -37,37 +37,37 @@ shadcn generator already targets the correct name.
 
 ```svelte
 <script lang="ts">
-	import * as Carousel from '$lib/components/ui/carousel';
-	import type { CarouselAPI } from '$lib/components/ui/carousel';
+  import * as Carousel from '$lib/components/ui/carousel';
+  import type { CarouselAPI } from '$lib/components/ui/carousel';
 
-	let api = $state<CarouselAPI>();
-	let current = $state(0);
-	let count = $state(0);
+  let api = $state<CarouselAPI>();
+  let current = $state(0);
+  let count = $state(0);
 
-	$effect(() => {
-		if (!api) return;
-		count = api.scrollSnapList().length;
-		current = api.selectedScrollSnap() + 1;
-		api.on('select', () => {
-			current = api.selectedScrollSnap() + 1;
-		});
-	});
+  $effect(() => {
+    if (!api) return;
+    count = api.scrollSnapList().length;
+    current = api.selectedScrollSnap() + 1;
+    api.on('select', () => {
+      current = api.selectedScrollSnap() + 1;
+    });
+  });
 </script>
 
 <Carousel.Root bind:api>
-	<Carousel.Content>
-		{#each items as item (item.id)}
-			<Carousel.Item class="md:basis-1/2 lg:basis-1/3">
-				<Card {item} />
-			</Carousel.Item>
-		{/each}
-	</Carousel.Content>
-	<Carousel.Previous />
-	<Carousel.Next />
+  <Carousel.Content>
+    {#each items as item (item.id)}
+      <Carousel.Item class="md:basis-1/2 lg:basis-1/3">
+        <Card {item} />
+      </Carousel.Item>
+    {/each}
+  </Carousel.Content>
+  <Carousel.Previous />
+  <Carousel.Next />
 </Carousel.Root>
 
 <p class="text-muted-fg text-center text-sm">
-	Slide {current} of {count}
+  Slide {current} of {count}
 </p>
 ```
 
@@ -83,14 +83,14 @@ anyway. Fix via embla's `breakpoints` option:
 
 ```svelte
 <Carousel.Root
-	bind:api
-	opts={{
-		breakpoints: {
-			'(prefers-reduced-motion: reduce)': { duration: 0 },
-		},
-	}}
+  bind:api
+  opts={{
+    breakpoints: {
+      '(prefers-reduced-motion: reduce)': { duration: 0 },
+    },
+  }}
 >
-	<!-- … -->
+  <!-- … -->
 </Carousel.Root>
 ```
 
@@ -117,13 +117,13 @@ Or scope via the preset attribute:
 /* src/app.css — global override */
 :root[data-preset='handheld'] [data-carousel-prev],
 :root[data-preset='handheld'] [data-carousel-next] {
-	min-width: 44px;
-	min-height: 44px;
+  min-width: 44px;
+  min-height: 44px;
 }
 :root[data-preset='10foot'] [data-carousel-prev],
 :root[data-preset='10foot'] [data-carousel-next] {
-	min-width: 64px;
-	min-height: 64px;
+  min-width: 64px;
+  min-height: 64px;
 }
 ```
 
@@ -141,22 +141,22 @@ add an `aria-live="polite"` announcement:
 
 ```svelte
 <script lang="ts">
-	let announcement = $state('');
+  let announcement = $state('');
 
-	$effect(() => {
-		if (!api) return;
-		api.on('select', () => {
-			announcement = `Slide ${api.selectedScrollSnap() + 1} of ${api.scrollSnapList().length}: ${items[api.selectedScrollSnap()].title}`;
-		});
-	});
+  $effect(() => {
+    if (!api) return;
+    api.on('select', () => {
+      announcement = `Slide ${api.selectedScrollSnap() + 1} of ${api.scrollSnapList().length}: ${items[api.selectedScrollSnap()].title}`;
+    });
+  });
 </script>
 
 <Carousel.Root bind:api>
-	<!-- … -->
+  <!-- … -->
 </Carousel.Root>
 
 <div class="sr-only" aria-live="polite" aria-atomic="true">
-	{announcement}
+  {announcement}
 </div>
 ```
 
@@ -170,15 +170,15 @@ Vertical carousel:
 
 ```svelte
 <Carousel.Root orientation="vertical" opts={{ axis: 'y' }}>
-	<Carousel.Content class="h-[400px]">
-		{#each items as item}
-			<Carousel.Item class="basis-1/3 pt-4">
-				<Card {item} />
-			</Carousel.Item>
-		{/each}
-	</Carousel.Content>
-	<Carousel.Previous />
-	<Carousel.Next />
+  <Carousel.Content class="h-[400px]">
+    {#each items as item}
+      <Carousel.Item class="basis-1/3 pt-4">
+        <Card {item} />
+      </Carousel.Item>
+    {/each}
+  </Carousel.Content>
+  <Carousel.Previous />
+  <Carousel.Next />
 </Carousel.Root>
 ```
 
@@ -195,13 +195,13 @@ pnpm add embla-carousel-autoplay
 
 ```svelte
 <script lang="ts">
-	import Autoplay from 'embla-carousel-autoplay';
+  import Autoplay from 'embla-carousel-autoplay';
 
-	const plugins = [Autoplay({ delay: 4000, stopOnInteraction: true })];
+  const plugins = [Autoplay({ delay: 4000, stopOnInteraction: true })];
 </script>
 
 <Carousel.Root {plugins}>
-	<!-- … -->
+  <!-- … -->
 </Carousel.Root>
 ```
 
@@ -220,7 +220,7 @@ keep them visible:
 
 ```svelte
 <Carousel.Root opts={{ watchFocus: true }}>
-	<!-- focusing an element inside any Item snaps to that Item -->
+  <!-- focusing an element inside any Item snaps to that Item -->
 </Carousel.Root>
 ```
 
@@ -236,10 +236,10 @@ import userEvent from '@testing-library/user-event';
 import MyCarousel from './MyCarousel.svelte';
 
 test('next button advances slide', async () => {
-	render(MyCarousel);
-	const next = screen.getByRole('button', { name: /next slide/i });
-	await userEvent.click(next);
-	expect(screen.getByText(/slide 2 of/i)).toBeInTheDocument();
+  render(MyCarousel);
+  const next = screen.getByRole('button', { name: /next slide/i });
+  await userEvent.click(next);
+  expect(screen.getByText(/slide 2 of/i)).toBeInTheDocument();
 });
 ```
 

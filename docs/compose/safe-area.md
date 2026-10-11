@@ -97,15 +97,15 @@ per-component `dir=` branching.
 
 ```svelte
 <header class="bg-bg border-border sticky top-0 z-10 border-b pt-safe-top">
-	<nav class="px-4 py-3">…</nav>
+  <nav class="px-4 py-3">…</nav>
 </header>
 
 <main class="pb-safe-bottom">
-	{@render children()}
+  {@render children()}
 </main>
 
 <nav class="bg-bg border-border fixed bottom-0 inset-x-0 border-t pb-safe-bottom-or-4 px-safe">
-	<!-- bottom tab bar -->
+  <!-- bottom tab bar -->
 </nav>
 ```
 
@@ -116,12 +116,12 @@ back to `1rem` on devices without one (`-or-4`).
 
 ```svelte
 <figure class="relative">
-	<img src={hero.src} alt={hero.alt} class="h-screen w-full object-cover" />
-	<figcaption
-		class="absolute inset-x-0 bottom-0 bg-black/60 text-white px-safe pb-safe-bottom-or-4 pt-4"
-	>
-		{hero.caption}
-	</figcaption>
+  <img src={hero.src} alt={hero.alt} class="h-screen w-full object-cover" />
+  <figcaption
+    class="absolute inset-x-0 bottom-0 bg-black/60 text-white px-safe pb-safe-bottom-or-4 pt-4"
+  >
+    {hero.caption}
+  </figcaption>
 </figure>
 ```
 
@@ -134,16 +134,16 @@ minimum:
 
 ```css
 :root[data-preset='10foot'] {
-	--overscan-inset: 5%;
+  --overscan-inset: 5%;
 }
 ```
 
 ```svelte
 <main
-	class="min-h-screen p-safe"
-	style="padding: max(env(safe-area-inset-top), var(--overscan-inset, 0))"
+  class="min-h-screen p-safe"
+  style="padding: max(env(safe-area-inset-top), var(--overscan-inset, 0))"
 >
-	…
+  …
 </main>
 ```
 
@@ -163,8 +163,8 @@ Tailwind 4 `@utility` allows dev-only debug:
 ```css
 /* src/app.css — dev only */
 @utility debug-safe {
-	outline: 2px solid oklch(0.7 0.15 250);
-	outline-offset: calc(-1 * env(safe-area-inset-top));
+  outline: 2px solid oklch(0.7 0.15 250);
+  outline-offset: calc(-1 * env(safe-area-inset-top));
 }
 ```
 
@@ -190,7 +190,7 @@ the retractable browser UI (mobile Safari URL bar). Combine:
 
 ```svelte
 <main class="min-h-[100dvh] pb-safe-bottom">
-	<!-- content fills the dynamic viewport; padding sits above the home indicator -->
+  <!-- content fills the dynamic viewport; padding sits above the home indicator -->
 </main>
 ```
 
@@ -206,8 +206,8 @@ to set the env-like values in CSS:
 ```css
 /* playwright fixture */
 :root {
-	--env-safe-area-inset-top: 44px; /* iPhone 14 Pro notch */
-	--env-safe-area-inset-bottom: 34px; /* home indicator */
+  --env-safe-area-inset-top: 44px; /* iPhone 14 Pro notch */
+  --env-safe-area-inset-bottom: 34px; /* home indicator */
 }
 ```
 

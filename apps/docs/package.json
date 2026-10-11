@@ -16,7 +16,8 @@
 		"build": "vite build",
 		"dev": "vite dev",
 		"preview": "vite preview",
-		"lint": "svelte-kit sync && eslint src/"
+		"lint": "svelte-kit sync && eslint src/",
+		"test": "ls mdsvex/*.test.js > /dev/null && node --test \"mdsvex/*.test.js\""
 	},
 	"type": "module",
 	"version": "0.0.0"

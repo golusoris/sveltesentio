@@ -7,6 +7,10 @@
 //
 // The assignment below is reported; the sanitised one on the next function is
 // not.
+//
+// Filed under gap/ although a gate refuses it: the coverage catalog allows one
+// decider per rule and language, the engine scanner is that decider since it
+// reads TypeScript, and the scanner stays silent here (cordanaLLM/praetor#1241).
 export function unsafe(host: HTMLElement, raw: string): void {
 	const prop = 'innerHTML';
 	host[prop] = raw;

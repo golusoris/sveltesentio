@@ -138,39 +138,39 @@ SvelteKit imports secrets via two paths:
 // src/lib/config/env.ts
 import { z } from 'zod';
 import {
-	STRIPE_SECRET,
-	STRIPE_WEBHOOK_SECRET,
-	CRON_SECRET,
-	JWT_SIGNING_KEY,
-	DATABASE_URL,
-	POSTMARK_TOKEN,
-	INFISICAL_TOKEN,
+  STRIPE_SECRET,
+  STRIPE_WEBHOOK_SECRET,
+  CRON_SECRET,
+  JWT_SIGNING_KEY,
+  DATABASE_URL,
+  POSTMARK_TOKEN,
+  INFISICAL_TOKEN,
 } from '$env/static/private';
 import { PUBLIC_ORIGIN, PUBLIC_DOMAIN } from '$env/static/public';
 
 const EnvSchema = z.object({
-	STRIPE_SECRET: z.string().regex(/^sk_(test|live)_[a-zA-Z0-9]+$/),
-	STRIPE_WEBHOOK_SECRET: z.string().regex(/^whsec_[a-zA-Z0-9]+$/),
-	CRON_SECRET: z.string().min(32),
-	JWT_SIGNING_KEY: z.string().min(64),
-	DATABASE_URL: z.string().url(),
-	POSTMARK_TOKEN: z.string().uuid(),
-	INFISICAL_TOKEN: z.string().min(1).optional(),
+  STRIPE_SECRET: z.string().regex(/^sk_(test|live)_[a-zA-Z0-9]+$/),
+  STRIPE_WEBHOOK_SECRET: z.string().regex(/^whsec_[a-zA-Z0-9]+$/),
+  CRON_SECRET: z.string().min(32),
+  JWT_SIGNING_KEY: z.string().min(64),
+  DATABASE_URL: z.string().url(),
+  POSTMARK_TOKEN: z.string().uuid(),
+  INFISICAL_TOKEN: z.string().min(1).optional(),
 
-	PUBLIC_ORIGIN: z.string().url(),
-	PUBLIC_DOMAIN: z.string(),
+  PUBLIC_ORIGIN: z.string().url(),
+  PUBLIC_DOMAIN: z.string(),
 });
 
 export const env = EnvSchema.parse({
-	STRIPE_SECRET,
-	STRIPE_WEBHOOK_SECRET,
-	CRON_SECRET,
-	JWT_SIGNING_KEY,
-	DATABASE_URL,
-	POSTMARK_TOKEN,
-	INFISICAL_TOKEN,
-	PUBLIC_ORIGIN,
-	PUBLIC_DOMAIN,
+  STRIPE_SECRET,
+  STRIPE_WEBHOOK_SECRET,
+  CRON_SECRET,
+  JWT_SIGNING_KEY,
+  DATABASE_URL,
+  POSTMARK_TOKEN,
+  INFISICAL_TOKEN,
+  PUBLIC_ORIGIN,
+  PUBLIC_DOMAIN,
 });
 ```
 
@@ -283,20 +283,20 @@ validateSecretsHealth(env);
 import type { Env } from './env';
 
 export function validateSecretsHealth(env: Env): void {
-	const isLive = env.STRIPE_SECRET.startsWith('sk_live_');
-	const isProd =
-		env.PUBLIC_ORIGIN.includes('example.com') && !env.PUBLIC_ORIGIN.includes('staging');
+  const isLive = env.STRIPE_SECRET.startsWith('sk_live_');
+  const isProd =
+    env.PUBLIC_ORIGIN.includes('example.com') && !env.PUBLIC_ORIGIN.includes('staging');
 
-	if (isProd && !isLive) {
-		throw new Error('CONFIG MISMATCH: prod origin with non-live Stripe key');
-	}
-	if (!isProd && isLive) {
-		throw new Error('CONFIG MISMATCH: non-prod origin with live Stripe key');
-	}
+  if (isProd && !isLive) {
+    throw new Error('CONFIG MISMATCH: prod origin with non-live Stripe key');
+  }
+  if (!isProd && isLive) {
+    throw new Error('CONFIG MISMATCH: non-prod origin with live Stripe key');
+  }
 
-	if (env.PUBLIC_ORIGIN.startsWith('http://') && isProd) {
-		throw new Error('CONFIG MISMATCH: prod must use https');
-	}
+  if (env.PUBLIC_ORIGIN.startsWith('http://') && isProd) {
+    throw new Error('CONFIG MISMATCH: prod must use https');
+  }
 }
 ```
 
@@ -327,23 +327,23 @@ Infisical hot-reload), use a fetcher:
 import { InfisicalClient } from 'infisical-node';
 
 const client = new InfisicalClient({
-	token: process.env.INFISICAL_TOKEN,
+  token: process.env.INFISICAL_TOKEN,
 });
 
 const cache = new Map<string, { value: string; fetchedAt: number }>();
 const TTL_MS = 5 * 60 * 1000;
 
 export async function getSecret(key: string): Promise<string> {
-	const cached = cache.get(key);
-	if (cached && Date.now() - cached.fetchedAt < TTL_MS) return cached.value;
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.fetchedAt < TTL_MS) return cached.value;
 
-	const secret = await client.getSecret({ secretName: key, environment: process.env.NODE_ENV });
-	cache.set(key, { value: secret.secretValue, fetchedAt: Date.now() });
-	return secret.secretValue;
+  const secret = await client.getSecret({ secretName: key, environment: process.env.NODE_ENV });
+  cache.set(key, { value: secret.secretValue, fetchedAt: Date.now() });
+  return secret.secretValue;
 }
 
 export function invalidateSecret(key: string): void {
-	cache.delete(key);
+  cache.delete(key);
 }
 ```
 
@@ -364,35 +364,35 @@ export function invalidateSecret(key: string): void {
 ```typescript
 // src/lib/log/redact.ts
 const SECRET_KEYS = new Set([
-	'authorization',
-	'cookie',
-	'x-api-key',
-	'x-webhook-signature',
-	'stripe-signature',
+  'authorization',
+  'cookie',
+  'x-api-key',
+  'x-webhook-signature',
+  'stripe-signature',
 ]);
 
 const SECRET_PATTERNS = [
-	/sk_(test|live)_[a-zA-Z0-9]{20,}/g,
-	/whsec_[a-zA-Z0-9]{20,}/g,
-	/Bearer\s+[a-zA-Z0-9._-]+/g,
-	/postgres:\/\/[^@]+@/g,
+  /sk_(test|live)_[a-zA-Z0-9]{20,}/g,
+  /whsec_[a-zA-Z0-9]{20,}/g,
+  /Bearer\s+[a-zA-Z0-9._-]+/g,
+  /postgres:\/\/[^@]+@/g,
 ];
 
 export function redact(input: unknown): unknown {
-	if (typeof input === 'string') {
-		let out = input;
-		for (const p of SECRET_PATTERNS) out = out.replace(p, '[REDACTED]');
-		return out;
-	}
-	if (Array.isArray(input)) return input.map(redact);
-	if (input && typeof input === 'object') {
-		const out: Record<string, unknown> = {};
-		for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-			out[k] = SECRET_KEYS.has(k.toLowerCase()) ? '[REDACTED]' : redact(v);
-		}
-		return out;
-	}
-	return input;
+  if (typeof input === 'string') {
+    let out = input;
+    for (const p of SECRET_PATTERNS) out = out.replace(p, '[REDACTED]');
+    return out;
+  }
+  if (Array.isArray(input)) return input.map(redact);
+  if (input && typeof input === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      out[k] = SECRET_KEYS.has(k.toLowerCase()) ? '[REDACTED]' : redact(v);
+    }
+    return out;
+  }
+  return input;
 }
 ```
 
@@ -516,27 +516,27 @@ secret.validation.failure      counter, labels: reason
 
 ```typescript
 it('env schema rejects malformed Stripe key', () => {
-	expect(() => EnvSchema.parse({ ...validEnv, STRIPE_SECRET: 'invalid' })).toThrow(/STRIPE_SECRET/);
+  expect(() => EnvSchema.parse({ ...validEnv, STRIPE_SECRET: 'invalid' })).toThrow(/STRIPE_SECRET/);
 });
 
 it('refuses boot on prod origin with test Stripe key', () => {
-	expect(() =>
-		validateSecretsHealth({
-			...validEnv,
-			PUBLIC_ORIGIN: 'https://example.com',
-			STRIPE_SECRET: 'sk_test_abc',
-		}),
-	).toThrow(/CONFIG MISMATCH/);
+  expect(() =>
+    validateSecretsHealth({
+      ...validEnv,
+      PUBLIC_ORIGIN: 'https://example.com',
+      STRIPE_SECRET: 'sk_test_abc',
+    }),
+  ).toThrow(/CONFIG MISMATCH/);
 });
 
 it('redact strips Stripe key from log', () => {
-	const line = 'error: Stripe returned 401 for sk_live_abc123XYZ456DEFghi';
-	expect(redact(line)).toBe('error: Stripe returned 401 for [REDACTED]');
+  const line = 'error: Stripe returned 401 for sk_live_abc123XYZ456DEFghi';
+  expect(redact(line)).toBe('error: Stripe returned 401 for [REDACTED]');
 });
 
 it('gitleaks scan detects committed key', async () => {
-	const result = await runGitleaks({ fixture: 'with-leaked-key.txt' });
-	expect(result.findings).toHaveLength(1);
+  const result = await runGitleaks({ fixture: 'with-leaked-key.txt' });
+  expect(result.findings).toHaveLength(1);
 });
 ```
 

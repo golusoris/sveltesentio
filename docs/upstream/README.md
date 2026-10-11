@@ -26,7 +26,7 @@ Snapshots are **hand-curated**, not full doc dumps. Length target: 50–100 line
 | TanStack Svelte Query | 5.x            | [tanstack-query/](tanstack-query/) | `@sveltesentio/query`                    |
 | Paraglide             | 2.x            | [paraglide/](paraglide/)           | `@sveltesentio/i18n`                     |
 
-Additional snapshots are added as packages reach the wiring stage; see the [PLAN.md](../../.workingdir/PLAN.md) milestone schedule.
+Additional snapshots are added as packages reach the wiring stage; see the `.workingdir/PLAN.md` milestone schedule.
 
 ## Refresh strategy
 

@@ -7,7 +7,12 @@
 // contract (ADR-0042, Vidstack parity) end-to-end. Authoritative state is
 // mirrored onto `#player-root` `data-*` attributes for deterministic assertions.
 
-import { actionForKey, clampVolume, formatMediaTime } from '../../src/player-controls.ts';
+import {
+	actionForKey,
+	clampVolume,
+	formatMediaTime,
+	type PlayerAction,
+} from '../../src/player-controls.ts';
 import { initialPlaybackState, playbackReducer, type PlaybackState } from '../../src/player.ts';
 
 const SEEK_STEP = 10; // seconds per ← / → press
@@ -36,7 +41,13 @@ const view: PlayerView = {
 	fullscreen: false,
 };
 
-function mount(root: HTMLElement): void {
+interface PlayerElements {
+	figure: HTMLElement;
+	video: HTMLVideoElement;
+	timecode: HTMLElement;
+}
+
+function createPlayerDom(root: HTMLElement): PlayerElements {
 	const figure = document.createElement('figure');
 	figure.id = 'player-root';
 	figure.style.margin = '0';
@@ -57,58 +68,68 @@ function mount(root: HTMLElement): void {
 	figure.append(video, figcaption);
 	root.appendChild(figure);
 
-	const reflect = (): void => {
-		// Best-effort onto the real media element (harmless without a decoded
-		// source); the data-* mirror is what tests assert against.
-		video.volume = view.volume;
-		video.muted = view.muted;
-		figure.dataset.status = view.playback.status;
-		figure.dataset.time = String(view.currentTime);
-		figure.dataset.volume = view.volume.toFixed(2);
-		figure.dataset.muted = String(view.muted);
-		figure.dataset.captions = String(view.captions);
-		figure.dataset.fullscreen = String(view.fullscreen);
-		timecode.textContent = formatMediaTime(view.currentTime);
-	};
+	return { figure, video, timecode };
+}
 
-	video.addEventListener('keydown', (event) => {
+function reflectPlayerState(elements: PlayerElements, currentView: PlayerView): void {
+	// Best-effort onto the real media element (harmless without a decoded
+	// source); the data-* mirror is what tests assert against.
+	elements.video.volume = currentView.volume;
+	elements.video.muted = currentView.muted;
+	elements.figure.dataset.status = currentView.playback.status;
+	elements.figure.dataset.time = String(currentView.currentTime);
+	elements.figure.dataset.volume = currentView.volume.toFixed(2);
+	elements.figure.dataset.muted = String(currentView.muted);
+	elements.figure.dataset.captions = String(currentView.captions);
+	elements.figure.dataset.fullscreen = String(currentView.fullscreen);
+	elements.timecode.textContent = formatMediaTime(currentView.currentTime);
+}
+
+function dispatchPlayerAction(action: PlayerAction, currentView: PlayerView): void {
+	switch (action) {
+		case 'toggle-play':
+			currentView.playback = playbackReducer(
+				currentView.playback,
+				currentView.playback.status === 'playing' ? { type: 'pause' } : { type: 'play' },
+			);
+			break;
+		case 'seek-back':
+			currentView.currentTime = Math.max(0, currentView.currentTime - SEEK_STEP);
+			break;
+		case 'seek-forward':
+			currentView.currentTime = Math.min(CLIP_DURATION, currentView.currentTime + SEEK_STEP);
+			break;
+		case 'volume-up':
+			currentView.volume = clampVolume(currentView.volume, VOLUME_STEP);
+			break;
+		case 'volume-down':
+			currentView.volume = clampVolume(currentView.volume, -VOLUME_STEP);
+			break;
+		case 'toggle-mute':
+			currentView.muted = !currentView.muted;
+			break;
+		case 'toggle-captions':
+			currentView.captions = !currentView.captions;
+			break;
+		case 'toggle-fullscreen':
+			currentView.fullscreen = !currentView.fullscreen;
+			break;
+	}
+}
+
+function mount(root: HTMLElement): void {
+	const elements = createPlayerDom(root);
+
+	elements.video.addEventListener('keydown', (event) => {
 		const action = actionForKey(event);
 		if (action === undefined) return;
 		event.preventDefault();
-		switch (action) {
-			case 'toggle-play':
-				view.playback = playbackReducer(
-					view.playback,
-					view.playback.status === 'playing' ? { type: 'pause' } : { type: 'play' },
-				);
-				break;
-			case 'seek-back':
-				view.currentTime = Math.max(0, view.currentTime - SEEK_STEP);
-				break;
-			case 'seek-forward':
-				view.currentTime = Math.min(CLIP_DURATION, view.currentTime + SEEK_STEP);
-				break;
-			case 'volume-up':
-				view.volume = clampVolume(view.volume, VOLUME_STEP);
-				break;
-			case 'volume-down':
-				view.volume = clampVolume(view.volume, -VOLUME_STEP);
-				break;
-			case 'toggle-mute':
-				view.muted = !view.muted;
-				break;
-			case 'toggle-captions':
-				view.captions = !view.captions;
-				break;
-			case 'toggle-fullscreen':
-				view.fullscreen = !view.fullscreen;
-				break;
-		}
-		reflect();
+		dispatchPlayerAction(action, view);
+		reflectPlayerState(elements, view);
 	});
 
-	reflect();
-	video.focus();
+	reflectPlayerState(elements, view);
+	elements.video.focus();
 }
 
 const app = document.getElementById('app');

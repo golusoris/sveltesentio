@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # Paraglide JS — v2.x snapshot
 
 Pinned: **`@inlang/paraglide-js ^2.0.0`** (peerDependency in `@sveltesentio/i18n`)
-Canonical: https://inlang.com/m/gerre34r/library-inlang-paraglideJs
+Canonical: <https://inlang.com/m/gerre34r/library-inlang-paraglideJs>
 
 Paraglide v2 is a framework-agnostic i18n compiler. The legacy `@inlang/paraglide-sveltekit` adapter is no longer maintained — v2 is consumed via the Vite plugin directly.
 
@@ -26,13 +26,13 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [
-		paraglideVitePlugin({
-			project: './project.inlang',
-			outdir: './src/lib/paraglide',
-		}),
-		sveltekit(),
-	],
+  plugins: [
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/lib/paraglide',
+    }),
+    sveltekit(),
+  ],
 });
 ```
 
@@ -69,9 +69,9 @@ locales; // ['en', 'de', ...]
 
 ```ts
 paraglideVitePlugin({
-	project: './project.inlang',
-	outdir: './src/lib/paraglide',
-	strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+  project: './project.inlang',
+  outdir: './src/lib/paraglide',
+  strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
 });
 ```
 
@@ -85,10 +85,10 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request, locale }) => {
-		event.request = request;
-		return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
-	});
+  paraglideMiddleware(event.request, ({ request, locale }) => {
+    event.request = request;
+    return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
+  });
 ```
 
 ## `sveltesentio` usage
@@ -107,6 +107,6 @@ export const handle: Handle = ({ event, resolve }) =>
 
 ## Links
 
-- v1 → v2 migration: https://inlang.com/m/gerre34r/library-inlang-paraglideJs/migrating-from-v1
-- Strategies: https://inlang.com/m/gerre34r/library-inlang-paraglideJs/strategy
-- ICU MessageFormat: https://unicode-org.github.io/icu/userguide/format_parse/messages/
+- v1 → v2 migration: <https://inlang.com/m/gerre34r/library-inlang-paraglideJs/migrating-from-v1>
+- Strategies: <https://inlang.com/m/gerre34r/library-inlang-paraglideJs/strategy>
+- ICU MessageFormat: <https://unicode-org.github.io/icu/userguide/format_parse/messages/>

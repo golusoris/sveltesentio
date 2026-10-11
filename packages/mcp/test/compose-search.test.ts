@@ -125,6 +125,25 @@ describe('compose_search against a synthetic corpus', () => {
 		expect(hits.some((h) => h.includes('compose://alpha'))).toBe(true);
 	});
 
+	it('counts body occurrences without overlap, each character used once', async () => {
+		await writeFile(join(root, 'docs', 'compose', 'overlap.md'), '# Overlap\nzzzzz\n');
+		const { text } = await callTool(client, 'compose_search', { query: 'zz' });
+		// "zzzzz" holds "zz" twice without overlap (four with overlap).
+		expect(text).toContain('- compose://overlap (score 2)');
+	});
+
+	it('scores a term that fills the whole body exactly once', async () => {
+		await writeFile(join(root, 'docs', 'compose', 'exact.md'), 'qqq');
+		const { text } = await callTool(client, 'compose_search', { query: 'qqq' });
+		expect(text).toContain('- compose://exact (score 1)');
+	});
+
+	it('adds the slug weight to the body count', async () => {
+		const { text } = await callTool(client, 'compose_search', { query: 'alpha' });
+		// slug hit = 5, body "# Alpha" = 1
+		expect(text).toContain('- compose://alpha (score 6)');
+	});
+
 	it('de-duplicates repeated query terms when scoring', async () => {
 		const single = await callTool(client, 'compose_search', { query: 'widget' });
 		const repeated = await callTool(client, 'compose_search', { query: 'widget widget widget' });

@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # Svelte 5 runes — v5.55.4 snapshot
 
 Pinned: **^5.55.4** (root + every package `peerDependency`)
-Canonical: https://svelte.dev/docs/svelte/what-are-runes
+Canonical: <https://svelte.dev/docs/svelte/what-are-runes>
 
 Runes are compiler-recognised symbols (no import). Use them in `.svelte` and `.svelte.ts`/`.svelte.js` files.
 
@@ -15,12 +15,12 @@ Runes are compiler-recognised symbols (no import). Use them in `.svelte` and `.s
 
 ```svelte
 <script lang="ts">
-	let count = $state(0); // primitive
-	let user = $state({ name: 'Ada' }); // deeply reactive object
-	user.name = 'Grace'; // triggers update
+  let count = $state(0); // primitive
+  let user = $state({ name: 'Ada' }); // deeply reactive object
+  user.name = 'Grace'; // triggers update
 
-	let raw = $state.raw({ huge: blob }); // shallow — only assignment is reactive
-	let snap = $state.snapshot(user); // plain JS clone, severs reactivity
+  let raw = $state.raw({ huge: blob }); // shallow — only assignment is reactive
+  let snap = $state.snapshot(user); // plain JS clone, severs reactivity
 </script>
 ```
 
@@ -28,10 +28,10 @@ Class fields:
 
 ```ts
 class Counter {
-	count = $state(0);
-	increment() {
-		this.count++;
-	}
+  count = $state(0);
+  increment() {
+    this.count++;
+  }
 }
 ```
 
@@ -39,9 +39,9 @@ class Counter {
 
 ```svelte
 <script lang="ts">
-	let count = $state(0);
-	let doubled = $derived(count * 2); // expression form
-	let label = $derived.by(() => (count > 10 ? 'big' : 'small')); // function form for blocks
+  let count = $state(0);
+  let doubled = $derived(count * 2); // expression form
+  let label = $derived.by(() => (count > 10 ? 'big' : 'small')); // function form for blocks
 </script>
 ```
 
@@ -49,22 +49,22 @@ class Counter {
 
 ```svelte
 <script lang="ts">
-	let count = $state(0);
+  let count = $state(0);
 
-	$effect(() => {
-		document.title = `count: ${count}`;
-		return () => {
-			/* cleanup on rerun + unmount */
-		};
-	});
+  $effect(() => {
+    document.title = `count: ${count}`;
+    return () => {
+      /* cleanup on rerun + unmount */
+    };
+  });
 
-	$effect.pre(() => {
-		/* before DOM update */
-	});
-	const isMounted = $effect.tracking(); // true inside reactive context
-	$effect.root(() => {
-		/* manual root, returns dispose() */
-	});
+  $effect.pre(() => {
+    /* before DOM update */
+  });
+  const isMounted = $effect.tracking(); // true inside reactive context
+  $effect.root(() => {
+    /* manual root, returns dispose() */
+  });
 </script>
 ```
 
@@ -72,15 +72,15 @@ class Counter {
 
 ```svelte
 <script lang="ts">
-	type Props = {
-		name: string;
-		onClick?: (e: MouseEvent) => void;
-		children?: import('svelte').Snippet;
-	};
-	let { name, onClick, children, ...rest }: Props = $props();
+  type Props = {
+    name: string;
+    onClick?: (e: MouseEvent) => void;
+    children?: import('svelte').Snippet;
+  };
+  let { name, onClick, children, ...rest }: Props = $props();
 
-	let bindable = $bindable(0); // declare prop as 2-way bindable
-	// <Child bind:value={parentValue} />
+  let bindable = $bindable(0); // declare prop as 2-way bindable
+  // <Child bind:value={parentValue} />
 </script>
 ```
 
@@ -88,9 +88,9 @@ class Counter {
 
 ```svelte
 <script>
-	let count = $state(0);
-	$inspect(count); // logs on every change in dev
-	$inspect(count).with((type, val) => {}); // custom logger
+  let count = $state(0);
+  $inspect(count); // logs on every change in dev
+  $inspect(count).with((type, val) => {}); // custom logger
 </script>
 ```
 
@@ -114,5 +114,5 @@ Available only in components compiled as custom elements. Use to dispatch `Custo
 
 ## Links
 
-- Migration guide (Svelte 4 → 5): https://svelte.dev/docs/svelte/v5-migration-guide
-- Runes deep-dive: https://svelte.dev/docs/svelte/$state
+- Migration guide (Svelte 4 → 5): <https://svelte.dev/docs/svelte/v5-migration-guide>
+- Runes deep-dive: <https://svelte.dev/docs/svelte/$state>

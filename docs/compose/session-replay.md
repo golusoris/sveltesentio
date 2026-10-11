@@ -75,20 +75,20 @@ pnpm add @openreplay/tracker-fetch      # network capture (scrubbed)
 import { z } from 'zod';
 
 export const ReplayConfig = z.object({
-	projectKey: z.string().min(16),
-	ingestPoint: z.string().url(), // e.g. https://replay.example.com/ingest
-	sampleRate: z.number().min(0).max(1),
-	retentionDays: z.number().int().min(1).max(30),
-	captureNetwork: z.boolean(),
-	maskAllInputs: z.literal(true), // enforced true — never configurable loose
-	capturedConsentCategory: z.literal('C2'),
+  projectKey: z.string().min(16),
+  ingestPoint: z.string().url(), // e.g. https://replay.example.com/ingest
+  sampleRate: z.number().min(0).max(1),
+  retentionDays: z.number().int().min(1).max(30),
+  captureNetwork: z.boolean(),
+  maskAllInputs: z.literal(true), // enforced true — never configurable loose
+  capturedConsentCategory: z.literal('C2'),
 });
 export type ReplayConfig = z.infer<typeof ReplayConfig>;
 
 export const ScrubRule = z.object({
-	selector: z.string(), // CSS selector
-	action: z.enum(['mask', 'ignore', 'hide']),
-	reason: z.string().min(4), // required doc comment in-schema
+  selector: z.string(), // CSS selector
+  action: z.enum(['mask', 'ignore', 'hide']),
+  reason: z.string().min(4), // required doc comment in-schema
 });
 export type ScrubRule = z.infer<typeof ScrubRule>;
 ```
@@ -118,36 +118,36 @@ import { onConsentChange, hasConsent } from '$lib/consent';
 let tracker: Tracker | null = null;
 
 export async function initReplay(cfg: ReplayConfig): Promise<void> {
-	if (!hasConsent('C2')) return; // no-op until accepted
+  if (!hasConsent('C2')) return; // no-op until accepted
 
-	tracker = new Tracker({
-		projectKey: cfg.projectKey,
-		ingestPoint: cfg.ingestPoint,
-		captureIFrames: false,
-		obscureTextEmails: true,
-		obscureTextNumbers: true,
-		obscureInputEmails: true,
-		obscureInputNumbers: true,
-		obscureInputDates: true,
-		defaultInputMode: 2, // obscure all by default; allow-list via data-openreplay-*
-		capturePerformance: true,
-		captureExceptions: true,
-		network: cfg.captureNetwork ? { sessionTokenHeader: false, capturePayload: false } : undefined,
-	});
-	tracker.use(trackerFetch({ sessionTokenHeader: false }));
+  tracker = new Tracker({
+    projectKey: cfg.projectKey,
+    ingestPoint: cfg.ingestPoint,
+    captureIFrames: false,
+    obscureTextEmails: true,
+    obscureTextNumbers: true,
+    obscureInputEmails: true,
+    obscureInputNumbers: true,
+    obscureInputDates: true,
+    defaultInputMode: 2, // obscure all by default; allow-list via data-openreplay-*
+    capturePerformance: true,
+    captureExceptions: true,
+    network: cfg.captureNetwork ? { sessionTokenHeader: false, capturePayload: false } : undefined,
+  });
+  tracker.use(trackerFetch({ sessionTokenHeader: false }));
 
-	const sampled = Math.random() < cfg.sampleRate;
-	if (!sampled) return;
+  const sampled = Math.random() < cfg.sampleRate;
+  if (!sampled) return;
 
-	await tracker.start();
+  await tracker.start();
 }
 
 onConsentChange((categories) => {
-	if (!categories.includes('C2')) {
-		void tracker?.stop();
-		void tracker?.coldStart(undefined, { forceNew: false }); // flushes + resets
-		tracker = null;
-	}
+  if (!categories.includes('C2')) {
+    void tracker?.stop();
+    void tracker?.coldStart(undefined, { forceNew: false }); // flushes + resets
+    tracker = null;
+  }
 });
 ```
 
@@ -176,7 +176,7 @@ Seven lifecycle rules:
 
 <!-- Explicitly hidden from replay -->
 <section data-openreplay-hidden>
-	<p>API key: {apiKey}</p>
+  <p>API key: {apiKey}</p>
 </section>
 
 <!-- Masked content (shape-preserving) -->
@@ -207,17 +207,17 @@ const HEADER_DENYLIST = ['authorization', 'cookie', 'set-cookie', 'x-api-key', '
 const URL_PARAM_DENYLIST = ['token', 'access_token', 'id_token', 'email'];
 
 export function scrubRequest(req: { url: string; headers: Record<string, string> }): {
-	url: string;
-	headers: Record<string, string>;
+  url: string;
+  headers: Record<string, string>;
 } {
-	const url = new URL(req.url);
-	for (const p of URL_PARAM_DENYLIST)
-		if (url.searchParams.has(p)) url.searchParams.set(p, '[REDACTED]');
-	const headers: Record<string, string> = {};
-	for (const [k, v] of Object.entries(req.headers)) {
-		headers[k] = HEADER_DENYLIST.includes(k.toLowerCase()) ? '[REDACTED]' : v;
-	}
-	return { url: url.toString(), headers };
+  const url = new URL(req.url);
+  for (const p of URL_PARAM_DENYLIST)
+    if (url.searchParams.has(p)) url.searchParams.set(p, '[REDACTED]');
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    headers[k] = HEADER_DENYLIST.includes(k.toLowerCase()) ? '[REDACTED]' : v;
+  }
+  return { url: url.toString(), headers };
 }
 ```
 
