@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { clockStore } from '#clock-store';
 import { getContext, hasContext, setContext } from 'svelte';
 import { BROWSER } from 'esm-env';
 import type { Handle } from '@sveltejs/kit';
@@ -15,10 +15,6 @@ export const systemClock: Clock = {
 
 const CLOCK_KEY = Symbol.for('sveltesentio.clock');
 
-const als: AsyncLocalStorage<Clock> | null = BROWSER
-	? null
-	: new AsyncLocalStorage<Clock>({ name: 'clock', defaultValue: systemClock });
-
 let clientClock: Clock = systemClock;
 
 export function setClock(clock: Clock): void {
@@ -29,19 +25,18 @@ export function setClock(clock: Clock): void {
 export function useClock(): Clock {
 	if (hasContext(CLOCK_KEY)) return getContext<Clock>(CLOCK_KEY);
 	if (BROWSER) return clientClock;
-	return als?.getStore() ?? systemClock;
+	return clockStore.getStore() ?? systemClock;
 }
 
 export function getClock(): Clock {
 	if (BROWSER) return clientClock;
-	return als?.getStore() ?? systemClock;
+	return clockStore.getStore() ?? systemClock;
 }
 
 export function withClock(clock: Clock): Handle {
 	return ({ event, resolve }) => {
 		(event.locals as { clock?: Clock }).clock = clock;
-		if (!als) return resolve(event);
-		return als.run(clock, () => resolve(event));
+		return clockStore.run(clock, () => resolve(event));
 	};
 }
 

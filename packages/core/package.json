@@ -58,6 +58,12 @@
 		"sentio.d.ts",
 		"CHANGELOG.md"
 	],
+	"imports": {
+		"#clock-store": {
+			"browser": "./src/internal/clock-store.browser.ts",
+			"default": "./src/internal/clock-store.node.ts"
+		}
+	},
 	"keywords": [
 		"sveltesentio",
 		"sveltekit",
