@@ -4,7 +4,7 @@
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D13 in `.workingdir/research/decisions-needed.md`
-- **Research**: [d13-clock-injection.md](../../.workingdir/research/d13-clock-injection.md)
+- **Research**: `.workingdir/research/d13-clock-injection.md`
 
 ## Context
 
@@ -59,10 +59,10 @@ All `Date.now()` / `new Date()` / `performance.now()` stays banned in package so
 
 ## Evidence
 
-- [`.workingdir/research/d13-clock-injection.md`](../../.workingdir/research/d13-clock-injection.md) — live-docs research.
-- https://svelte.dev/docs/kit/hooks — `event.locals` canonical population site.
-- https://svelte.dev/docs/svelte/context — "Context … is not shared between requests".
-- https://svelte.dev/docs/kit/state-management — module-level mutable state antipattern.
-- https://svelte.dev/docs/kit/load — devalue serialization (`Date` native).
-- https://nodejs.org/docs/latest-v24.x/api/async_context.html — `AsyncLocalStorage` Stability: 2; Node 24 added `defaultValue` + `name` options.
+- `.workingdir/research/d13-clock-injection.md` — live-docs research.
+- <https://svelte.dev/docs/kit/hooks> — `event.locals` canonical population site.
+- <https://svelte.dev/docs/svelte/context> — "Context … is not shared between requests".
+- <https://svelte.dev/docs/kit/state-management> — module-level mutable state antipattern.
+- <https://svelte.dev/docs/kit/load> — devalue serialization (`Date` native).
+- <https://nodejs.org/docs/latest-v24.x/api/async_context.html> — `AsyncLocalStorage` Stability: 2; Node 24 added `defaultValue` + `name` options.
 - sveltejs/svelte#11509 + captaincodeman "SvelteKit Hydration Gotcha" — hydration-mismatch precedent.

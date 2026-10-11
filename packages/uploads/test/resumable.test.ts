@@ -210,6 +210,16 @@ describe('createResumableUpload — lifecycle', () => {
 		expect(up.state).toBe('success');
 		expect(FakeUpload.last?.aborted).toEqual([]);
 	});
+
+	it('abort() is idempotent when called repeatedly', async () => {
+		const Ctor = fresh();
+		const up = createResumableUpload(blob(), { endpoint: '/tus', UploadConstructor: Ctor });
+		up.start();
+		await up.abort(true);
+		await up.abort(true);
+		expect(up.state).toBe('aborted');
+		expect(FakeUpload.last?.aborted).toEqual([true]);
+	});
 });
 
 describe('createResumableUpload — progress math', () => {
@@ -247,6 +257,15 @@ describe('createResumableUpload — progress math', () => {
 		const up = createResumableUpload(blob(512), { endpoint: '/tus', UploadConstructor: Ctor });
 		expect(up.progress.bytesTotal).toBe(512);
 		expect(up.progress.bytesSent).toBe(0);
+		expect(up.progress.percent).toBe(0);
+	});
+
+	it('seeds initial progress with 0 total for empty blob', () => {
+		const Ctor = fresh();
+		const up = createResumableUpload(blob(0), { endpoint: '/tus', UploadConstructor: Ctor });
+		expect(up.progress.bytesTotal).toBe(0);
+		expect(up.progress.bytesSent).toBe(0);
+		expect(up.progress.fraction).toBe(0);
 		expect(up.progress.percent).toBe(0);
 	});
 });

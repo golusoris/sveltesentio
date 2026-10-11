@@ -5,36 +5,58 @@ import {
 	type StreamCall,
 } from '../src/connect-stream.js';
 
-/**
- * A manually-driven async iterable: tests push messages / errors / completion
- * and the consumer pulls them. Mirrors the `FakeEventSource` injection pattern
- * used by the SSE client tests — no network, no grpc.
- */
-function createFakeStream<T>() {
-	let resolveNext: ((result: IteratorResult<T>) => void) | undefined;
-	let rejectNext: ((error: unknown) => void) | undefined;
-	const queue: IteratorResult<T>[] = [];
-	const errors: unknown[] = [];
-	let aborted = false;
+interface PendingWaiter<T> {
+	resolve: (result: IteratorResult<T>) => void;
+	reject: (error: unknown) => void;
+}
 
-	const iterable: AsyncIterable<T> = {
+interface FakeStreamState<T> {
+	queue: IteratorResult<T>[];
+	errors: unknown[];
+	pending: PendingWaiter<T> | undefined;
+}
+
+interface FakeStream<T> {
+	readonly iterable: AsyncIterable<T>;
+	readonly aborted: boolean;
+	markAborted(): void;
+	emit(value: T): void;
+	complete(): void;
+	fail(error: unknown): void;
+}
+
+function createFakeAsyncIterable<T>(state: FakeStreamState<T>): AsyncIterable<T> {
+	return {
 		[Symbol.asyncIterator](): AsyncIterator<T> {
 			return {
 				next(): Promise<IteratorResult<T>> {
-					if (errors.length > 0) return Promise.reject(errors.shift());
-					const queued = queue.shift();
+					if (state.errors.length > 0) return Promise.reject(state.errors.shift());
+					const queued = state.queue.shift();
 					if (queued) return Promise.resolve(queued);
 					return new Promise<IteratorResult<T>>((resolve, reject) => {
-						resolveNext = resolve;
-						rejectNext = reject;
+						state.pending = { resolve, reject };
 					});
 				},
 			};
 		},
 	};
+}
+
+/**
+ * A manually-driven async iterable: tests push messages / errors / completion
+ * and the consumer pulls them. Mirrors the `FakeEventSource` injection pattern
+ * used by the SSE client tests — no network, no grpc.
+ */
+function createFakeStream<T>(): FakeStream<T> {
+	const state: FakeStreamState<T> = {
+		queue: [],
+		errors: [],
+		pending: undefined,
+	};
+	let aborted = false;
 
 	return {
-		iterable,
+		iterable: createFakeAsyncIterable(state),
 		get aborted(): boolean {
 			return aborted;
 		},
@@ -42,33 +64,30 @@ function createFakeStream<T>() {
 			aborted = true;
 		},
 		emit(value: T): void {
-			if (resolveNext) {
-				const r = resolveNext;
-				resolveNext = undefined;
-				rejectNext = undefined;
-				r({ value, done: false });
+			if (state.pending) {
+				const { resolve } = state.pending;
+				state.pending = undefined;
+				resolve({ value, done: false });
 			} else {
-				queue.push({ value, done: false });
+				state.queue.push({ value, done: false });
 			}
 		},
 		complete(): void {
-			if (resolveNext) {
-				const r = resolveNext;
-				resolveNext = undefined;
-				rejectNext = undefined;
-				r({ value: undefined as never, done: true });
+			if (state.pending) {
+				const { resolve } = state.pending;
+				state.pending = undefined;
+				resolve({ value: undefined as never, done: true });
 			} else {
-				queue.push({ value: undefined as never, done: true });
+				state.queue.push({ value: undefined as never, done: true });
 			}
 		},
 		fail(error: unknown): void {
-			if (rejectNext) {
-				const r = rejectNext;
-				resolveNext = undefined;
-				rejectNext = undefined;
-				r(error);
+			if (state.pending) {
+				const { reject } = state.pending;
+				state.pending = undefined;
+				reject(error);
 			} else {
-				errors.push(error);
+				state.errors.push(error);
 			}
 		},
 	};
@@ -236,6 +255,82 @@ describe('createConnectStream', () => {
 		await flush();
 		await vi.advanceTimersByTimeAsync(5000);
 		expect(opened).toBe(1);
+		expect(stream.state).toBe('closed');
+	});
+
+	it('start() is a no-op while already streaming', () => {
+		let calls = 0;
+		const fake = createFakeStream<number>();
+		const stream = createConnectStream<number>({
+			call: () => {
+				calls += 1;
+				return fake.iterable;
+			},
+		});
+		stream.start();
+		expect(calls).toBe(1);
+		stream.start();
+		expect(calls).toBe(1);
+	});
+
+	it('stop() is idempotent when called repeatedly', () => {
+		const fake = createFakeStream<number>();
+		const stream = createConnectStream<number>({
+			call: () => fake.iterable,
+		});
+		stream.start();
+		expect(() => {
+			stream.stop();
+			stream.stop();
+		}).not.toThrow();
+		expect(stream.state).toBe('closed');
+	});
+
+	it('a stop() issued from inside onStateChange aborts the attempt being opened', () => {
+		const signals: AbortSignal[] = [];
+		const stream = createConnectStream<number>({
+			call: (signal) => {
+				signals.push(signal);
+				return createFakeStream<number>().iterable;
+			},
+			onStateChange: (next) => {
+				if (next === 'streaming') stream.stop();
+			},
+		});
+		stream.start();
+		expect(signals).toHaveLength(1);
+		expect(signals[0]?.aborted).toBe(true);
+		expect(stream.state).toBe('closed');
+	});
+
+	it('start and stop keep working when detached from the handle', () => {
+		let calls = 0;
+		const { start, stop } = createConnectStream<number>({
+			call: () => {
+				calls += 1;
+				return createFakeStream<number>().iterable;
+			},
+		});
+		start();
+		expect(calls).toBe(1);
+		expect(() => {
+			stop();
+		}).not.toThrow();
+	});
+
+	it('handles immediately completing empty stream', async () => {
+		const fake = createFakeStream<number>();
+		let closed = false;
+		const stream = createConnectStream<number>({
+			call: () => fake.iterable,
+			onClose: () => {
+				closed = true;
+			},
+		});
+		stream.start();
+		fake.complete();
+		await flush();
+		expect(closed).toBe(true);
 		expect(stream.state).toBe('closed');
 	});
 });

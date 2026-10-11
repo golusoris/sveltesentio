@@ -154,7 +154,7 @@ async function stripExif(file: File, mime: string): Promise<Blob> {
 ```
 
 `removeJpegAppMarkers` walks APP0..APPn JPEG segments and drops
-EXIF (APP1) and XMP (APP1 "http://ns.adobe.com/xap/1.0/"). ~40 LOC;
+EXIF (APP1) and XMP (APP1 `http://ns.adobe.com/xap/1.0/`). ~40 LOC;
 keep in `$lib/uploads/jpeg-strip.ts`. Pros: lossless bytes. Cons:
 JPEG-only and touches file format; (a) is safer default.
 

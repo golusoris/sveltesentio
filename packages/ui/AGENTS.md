@@ -1,10 +1,10 @@
 # @sveltesentio/ui — AGENTS.md
 
-> Design system, primitive delivery, tokens, and interface-type presets. Phase 3 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> Design system, primitive delivery, tokens, interface-type presets. Phase 3 per `.workingdir/PLAN.md`.
 
 ## Scope
 
-Three orthogonal jobs, each a sub-export:
+Three orthogonal jobs, each sub-export:
 
 | Sub-export  | Purpose                                                                                                                                      | Canonical ADRs                                                                                                                                                                                      |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,7 +12,7 @@ Three orthogonal jobs, each a sub-export:
 | `./presets` | `preset-{desktop,10foot,handheld,dashboard}` Tailwind `@theme` fragments — override spacing / font-size / control heights per interface type | [ADR-0047](../../docs/adr/0047-per-interface-presets.md)                                                                                                                                            |
 | `./tokens`  | oklch palette + typography + radii + semantic layer tokens; compile-time `@theme` default + runtime cookie override + user-customiser opt-in | [ADR-0046](../../docs/adr/0046-three-tier-theming.md), [ADR-0050](../../docs/adr/0050-tenant-theming-minimal-skeleton.md)                                                                           |
 
-Thin wrappers that live here (justified per the **preset theming invariant**, not as generic streamlining wraps):
+Thin wrappers living here (justified per **preset theming invariant**, not generic streamlining wraps):
 
 | Wrapper                                                                    | Justification                                                         | ADR                                                                                                                                                                                        |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -24,39 +24,39 @@ Thin wrappers that live here (justified per the **preset theming invariant**, no
 | `ui/chart` — a11y wrapper over LayerChart Chart + uPlot escape hatch       | `role="img"` + `<title>`/`<desc>` + off-screen table + reduced-motion | [ADR-0013](../../docs/adr/0013-layerchart-charts-with-uplot-escape-hatch.md)                                                                                                               |
 | `ui/theme-toggle` / `ui/theme-customizer` / `ui/font-preset-*`             | Theming tiers per ADR-0046                                            | [ADR-0046](../../docs/adr/0046-three-tier-theming.md), [ADR-0048](../../docs/adr/0048-cookie-backed-dark-mode.md), [ADR-0049](../../docs/adr/0049-system-font-default-fontsource-optin.md) |
 
-Primitives **not** wrapped (use shadcn-svelte CLI directly or escape-hatch to bits-ui): Dialog, Sheet, DropdownMenu, Popover, Tooltip, Accordion, Tabs, Select, Combobox — install via `pnpm dlx shadcn-svelte add <component>` per the `/add-shadcn` skill.
+Primitives **not** wrapped (use shadcn-svelte CLI directly or escape-hatch to bits-ui): Dialog, Sheet, DropdownMenu, Popover, Tooltip, Accordion, Tabs, Select, Combobox — install via `pnpm dlx shadcn-svelte add <component>` per `/add-shadcn` skill.
 
 ## Landed wrapper models (v0.2.0)
 
-Each wrapper splits **pure, unit-tested logic** (`.ts`) from a **thin component** (`.svelte`, tsc/lint-clean, untested in vitest per repo precedent — runes/components need the Svelte compiler). Primitives are **optional peers**; the pure models and default components run without them.
+Each wrapper splits **pure, unit-tested logic** (`.ts`) from **thin component** (`.svelte`, tsc/lint-clean, untested in vitest per repo precedent — runes/components need Svelte compiler). Primitives **optional peers**; pure models + default components run without them.
 
 | Sub-export | Pure (tested)                                                                                                                                                                                          | Component (thin)                                                                                                                                  | Optional peer              |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `./toast`  | `toastPreset(interfaceType)` → `{ position, width, style }` keyed to the interface presets; padding scales with `spacingScale`, min-target-size flows through (ADR-0016)                               | — (re-export `svelte-sonner` in app)                                                                                                              | `svelte-sonner`            |
+| `./toast`  | `toastPreset(interfaceType)` → `{ position, width, style }` keyed to interface presets; padding scales with `spacingScale`, min-target-size flows through (ADR-0016)                                   | — (re-export `svelte-sonner` in app)                                                                                                              | `svelte-sonner`            |
 | `./data`   | `computeRows` (filter→sort→paginate), `toggleSort`/`setFilter`/`setPageSize`/`setPageIndex` reducers, `computeVirtualWindow` (visible-window math), `nextFocusIndex` (roving keys)                     | `DataTable.svelte`, `VirtualList.svelte` — `role=grid`/`row`/`gridcell`, `aria-rowcount`/`aria-colcount`, 1-based `aria-rowindex` (ADR-0011/0024) | `@tanstack/svelte-virtual` |
 | `./cmd`    | `CommandRegistry` (immutable register/unregister), `scoreCommand`/`searchCommands` (exact>prefix>substring>keyword>fuzzy ranking), `parseBinding`/`matchesShortcut`/`resolveKeymap` (`$mod`→Meta/Ctrl) | `CommandPalette.svelte` — combobox/listbox + `aria-activedescendant` (ADR-0025)                                                                   | `bits-ui`, `tinykeys`      |
 
-ARIA contract (ADR-0024): `aria-rowcount`/`aria-colcount` reflect the **full** filtered dataset, not the rendered page; `aria-rowindex` is 1-based and stable across scroll. The shadcn-svelte `Command` primitive is the CLI-delivered escape hatch — `CommandPalette.svelte` is a standalone default driven by the same registry.
+ARIA contract (ADR-0024): `aria-rowcount`/`aria-colcount` reflect **full** filtered dataset, not rendered page; `aria-rowindex` 1-based + stable across scroll. shadcn-svelte `Command` primitive = CLI-delivered escape hatch — `CommandPalette.svelte` = standalone default driven by same registry.
 
 ## Invariants
 
 - **Tailwind 4 only** — v3 configs rejected at build time. `@tailwindcss/vite` plugin; no `tailwind.config.js`.
 - **oklch colors only** — no HSL / RGB / hex in tokens. Matches LayerChart v2-next + shadcn-svelte output.
-- **mode-watcher @ ^1.1.0 <2** — runes-native. `mode-watcher@0.5` is a pre-runes antipattern (flagged in downstream-antipatterns-v0.1.md revenge row).
+- **mode-watcher @ ^1.1.0 <2** — runes-native. `mode-watcher@0.5` = pre-runes antipattern (flagged in downstream-antipatterns-v0.1.md revenge row).
 - **Logical properties in RTL-capable components** — `ms-*` / `me-*` / `ps-*`, not `ml-*` / `mr-*`. Eslint warn on physical properties in new code.
-- **Per-preset target size ≥ 44 × 44 CSS px on touch / TV** — `preset-10foot` and `preset-handheld` enforce this via token.
+- **Per-preset target size ≥ 44 × 44 CSS px on touch / TV** — `preset-10foot` and `preset-handheld` enforce via token.
 - **axe-core clean on every exported component** — runs via `vitest-axe` unit + `@axe-core/playwright` e2e. [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md).
 
 ## Primitive-delivery rules
 
-- Primitives come from **shadcn-svelte CLI** (source in your repo) by default. Never re-export a primitive from this package.
-- Escape hatch to `bits-ui` is documented in `docs/compose/bits-ui-direct.md` (build as needed).
-- `cmdk-sv` is banned (ADR-0025) — migrate any residual use to `bits-ui` Command via `ui/cmd`.
+- Primitives come from **shadcn-svelte CLI** (source in repo) by default. Never re-export primitive from package.
+- Escape hatch to `bits-ui` documented in `docs/compose/bits-ui-direct.md` (build as needed).
+- `cmdk-sv` banned (ADR-0025) — migrate residual use to `bits-ui` Command via `ui/cmd`.
 
 ## Skills
 
-- `/add-shadcn` — canonical way to add a primitive.
-- `/add-storybook` — add a Storybook story for a component.
+- `/add-shadcn` — canonical way to add primitive.
+- `/add-storybook` — add Storybook story for component.
 
 ## Test policy
 

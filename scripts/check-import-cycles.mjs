@@ -29,7 +29,7 @@
 //     silent hole.
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const packagesDir = join(root, 'packages');
@@ -49,23 +49,52 @@ const DYNAMIC = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 const SOURCE_EXT = ['.ts', '.svelte.ts', '.svelte'];
 
-async function walk(dir, out = []) {
-	let entries;
-	try {
-		entries = await readdir(dir, { withFileTypes: true });
-	} catch {
-		return out;
+// Upper bound on directory entries one `walk` visits (HISS-02). The source trees
+// of all packages hold a few hundred entries; the bound stops a mis-pointed root,
+// and running into it is an error, not a truncated result.
+const WALK_LIMIT = 100_000;
+
+export async function walk(dir, out = []) {
+	const stack = [{ isDir: true, path: dir }];
+
+	for (let step = 0; step < WALK_LIMIT; step += 1) {
+		const item = stack.pop();
+		if (item === undefined) break;
+
+		if (!item.isDir) {
+			out.push(item.path);
+			continue;
+		}
+
+		let entries;
+		try {
+			entries = await readdir(item.path, { withFileTypes: true });
+		} catch (error) {
+			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+				continue;
+			}
+			throw error;
+		}
+
+		for (let i = entries.length - 1; i >= 0; i -= 1) {
+			const entry = entries[i];
+			const full = join(item.path, entry.name);
+			if (entry.isDirectory()) {
+				stack.push({ isDir: true, path: full });
+			} else if (SOURCE_EXT.some((e) => entry.name.endsWith(e))) {
+				stack.push({ isDir: false, path: full });
+			}
+		}
 	}
-	for (const entry of entries) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) await walk(full, out);
-		else if (SOURCE_EXT.some((e) => entry.name.endsWith(e))) out.push(full);
+
+	if (stack.length > 0) {
+		throw new Error(`walk exceeded limit of ${WALK_LIMIT} steps`);
 	}
 	return out;
 }
 
 /** Resolves a relative specifier to a real file, trying the extensions TS rewrites. */
-async function resolveRelative(fromFile, spec) {
+export async function resolveRelative(fromFile, spec) {
 	const base = resolve(dirname(fromFile), spec);
 	const candidates = [
 		base,
@@ -74,17 +103,22 @@ async function resolveRelative(fromFile, spec) {
 		`${base}.ts`,
 		join(base, 'index.ts'),
 	];
-	for (const candidate of candidates) {
+	for (let i = 0; i < candidates.length; i += 1) {
+		const candidate = candidates[i];
 		try {
 			if ((await stat(candidate)).isFile()) return candidate;
-		} catch {
-			/* try the next shape */
+		} catch (error) {
+			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+				/* try the next shape */
+				continue;
+			}
+			throw error;
 		}
 	}
 	return undefined;
 }
 
-function specifiersOf(source) {
+export function specifiersOf(source) {
 	const found = new Set();
 	for (const re of [SPECIFIER, BARE, DYNAMIC]) {
 		re.lastIndex = 0;
@@ -94,40 +128,66 @@ function specifiersOf(source) {
 	return [...found];
 }
 
-/** Depth-first cycle search; returns the first cycle found as a node list. */
-function findCycle(graph) {
-	const WHITE = 0,
-		GREY = 1,
-		BLACK = 2;
-	const colour = new Map([...graph.keys()].map((k) => [k, WHITE]));
-	const stack = [];
+const WHITE = 0;
+const GREY = 1;
+const BLACK = 2;
 
-	const visit = (node) => {
-		colour.set(node, GREY);
-		stack.push(node);
-		for (const next of graph.get(node) ?? []) {
-			if (colour.get(next) === GREY) return [...stack.slice(stack.indexOf(next)), next];
-			if (colour.get(next) === WHITE) {
-				const found = visit(next);
-				if (found) return found;
-			}
-		}
-		stack.pop();
-		colour.set(node, BLACK);
-		return undefined;
-	};
+/**
+ * One depth-first search from `root` with an explicit frame stack (HISS-01).
+ * `limit` bounds the loop (HISS-02): a search looks at each edge once and leaves
+ * each node once, so `findCycle` passes nodes + edges + 1.
+ */
+function dfsFromRoot(root, graph, colour, path, limit) {
+	colour.set(root, GREY);
+	path.push(root);
+	const frames = [{ node: root, neighbours: [...(graph.get(root) ?? [])], edgeIndex: 0 }];
 
-	for (const node of graph.keys()) {
-		if (colour.get(node) === WHITE) {
-			const found = visit(node);
-			if (found) return found;
+	for (let step = 0; step < limit; step += 1) {
+		const frame = frames.at(-1);
+		if (frame === undefined) return undefined;
+		if (frame.edgeIndex === frame.neighbours.length) {
+			frames.pop();
+			path.pop();
+			colour.set(frame.node, BLACK);
+			continue;
 		}
+		const next = frame.neighbours[frame.edgeIndex];
+		frame.edgeIndex += 1;
+		if (colour.get(next) === GREY) return [...path.slice(path.indexOf(next)), next];
+		if (colour.get(next) === WHITE) {
+			colour.set(next, GREY);
+			path.push(next);
+			frames.push({ node: next, neighbours: [...(graph.get(next) ?? [])], edgeIndex: 0 });
+		}
+	}
+	throw new Error(`findCycle exceeded its bound of ${limit} steps`);
+}
+
+/**
+ * Depth-first cycle search; returns the first cycle found as a node list.
+ * `graph` maps a node to an iterable of its targets (a Set here, an array in tests).
+ */
+export function findCycle(graph) {
+	const colour = new Map();
+	let edges = 0;
+	for (const [node, targets] of graph) {
+		colour.set(node, WHITE);
+		edges += [...targets].length;
+	}
+	const limit = graph.size + edges + 1;
+	const path = [];
+
+	for (const root of graph.keys()) {
+		if (colour.get(root) !== WHITE) continue;
+		const cycle = dfsFromRoot(root, graph, colour, path, limit);
+		if (cycle) return cycle;
 	}
 	return undefined;
 }
 
-async function main() {
-	const packages = (await readdir(packagesDir, { withFileTypes: true }))
+/** Builds the file and package dependency graphs. */
+export async function buildGraphs(pkgDir = packagesDir) {
+	const packages = (await readdir(pkgDir, { withFileTypes: true }))
 		.filter((e) => e.isDirectory())
 		.map((e) => e.name);
 
@@ -135,7 +195,7 @@ async function main() {
 	const packageGraph = new Map(packages.map((p) => [`@sveltesentio/${p}`, new Set()]));
 
 	for (const pkg of packages) {
-		for (const file of await walk(join(packagesDir, pkg, 'src'))) {
+		for (const file of await walk(join(pkgDir, pkg, 'src'))) {
 			const source = await readFile(file, 'utf8');
 			const edges = new Set();
 			for (const spec of specifiersOf(source)) {
@@ -151,6 +211,12 @@ async function main() {
 			fileGraph.set(file, edges);
 		}
 	}
+
+	return { packages, fileGraph, packageGraph };
+}
+
+export async function main() {
+	const { packages, fileGraph, packageGraph } = await buildGraphs(packagesDir);
 
 	const problems = [];
 	const fileCycle = findCycle(fileGraph);
@@ -174,4 +240,6 @@ async function main() {
 	);
 }
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	await main();
+}

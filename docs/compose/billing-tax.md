@@ -12,7 +12,7 @@
 > boundary schemas are Zod; per
 > [ADR-0023](../adr/0023-compliance-audit-log-contract.md) tax-rate
 > decisions are audit-logged to support tax-authority audits.
-
+>
 > **Don't DIY tax.** Rate tables change daily; nexus rules differ per
 > state/country/city; exemption certificates have validity windows;
 > VAT reverse-charge wording is legally prescribed. Delegate to a
@@ -539,7 +539,7 @@ Integration tests run against Stripe test mode with seeded customers
   [marketplace-payouts.md](marketplace-payouts.md),
   [referral-program.md](referral-program.md),
   [tenant-provisioning.md](tenant-provisioning.md)
-- Stripe Tax docs: https://stripe.com/docs/tax
+- Stripe Tax docs: <https://stripe.com/docs/tax>
 - EU Directive 2006/112/EC — VAT rules
 - IRS 1099-MISC / 1099-NEC thresholds
 - OECD DAC7 (EU Directive 2021/514) — digital platform reporting

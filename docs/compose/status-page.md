@@ -10,7 +10,7 @@
 > proprietary data leaks via component names; per
 > [ADR-0023](../adr/0023-compliance-audit-log-contract.md) every
 > status mutation is audit-logged.
-
+>
 > **The isolation rule.** If your status page renders from the same
 > Postgres that just went down, users see a blank page during the
 > outage. Isolate: separate subdomain, separate deployment, separate
@@ -607,6 +607,6 @@ test('subscribe returns 202 for new and existing emails (no enumeration)', async
   [multi-region-deployment.md](multi-region-deployment.md),
   [structured-emails.md](structured-emails.md),
   [webhooks-outbound.md](webhooks-outbound.md)
-- Atlassian Statuspage reference: https://www.atlassian.com/software/statuspage
+- Atlassian Statuspage reference: <https://www.atlassian.com/software/statuspage>
 - RFC 8058: One-Click Email Unsubscribe
 - Atom: RFC 4287

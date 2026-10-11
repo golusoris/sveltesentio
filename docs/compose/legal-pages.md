@@ -12,7 +12,7 @@
 > (not derived at render time). Non-logged-in pre-signup acceptance
 > is tracked by anonymous id + session; post-signup the two rows are
 > merged.
-
+>
 > **The legal department's contract.** Anything rendered under
 > `/legal/*` is the **authoritative wording** — not marketing copy.
 > If sales says "our Terms basically say X", legal owns the truth.

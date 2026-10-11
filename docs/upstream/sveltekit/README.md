@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # SvelteKit — v2.x snapshot
 
 Pinned: **`@sveltejs/kit ^2.0.0`** (peerDependency in `@sveltesentio/core`)
-Canonical: https://svelte.dev/docs/kit
+Canonical: <https://svelte.dev/docs/kit>
 
 ## Routing
 
@@ -129,5 +129,5 @@ await invalidate('app:posts'); // re-runs loads with depends('app:posts')
 
 ## Links
 
-- v2 migration: https://svelte.dev/docs/kit/migrating-to-sveltekit-2
-- Adapters: https://svelte.dev/docs/kit/adapters
+- v2 migration: <https://svelte.dev/docs/kit/migrating-to-sveltekit-2>
+- Adapters: <https://svelte.dev/docs/kit/adapters>

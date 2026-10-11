@@ -1,21 +1,23 @@
 # @sveltesentio/i18n — AGENTS.md
 
-> Paraglide v2 wrapper with a11y + RTL + direction-sync baked in. Phase 6 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> Paraglide v2 wrapper with a11y + RTL + direction-sync baked in. Phase 6 per `.workingdir/PLAN.md`.
 
 ## Scope
 
-Thin wrapper over `@inlang/paraglide-js@^2.16.0` (ADR-0017). **The deprecated `@inlang/paraglide-sveltekit` adapter is not used** — Paraglide v2 integrates via the framework-agnostic `paraglideVitePlugin()` exported from `@inlang/paraglide-js` directly.
+Thin wrapper over `@inlang/paraglide-js@^2.16.0` (ADR-0017).
+Deprecated `@inlang/paraglide-sveltekit` adapter not used.
+Paraglide v2 integrates via framework-agnostic `paraglideVitePlugin()` exported from `@inlang/paraglide-js` directly.
 
 ### Landed (v0.0.1)
 
-| Export                                                                                 | Purpose                                                                                                                               |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `paraglideVitePlugin`                                                                  | Passthrough from `@inlang/paraglide-js` — callers pass their own `project` / `outdir` / `strategy`                                    |
-| `getTextDirection(locale)`                                                             | BCP-47 script-subtag + language lookup → `'ltr' \| 'rtl'`                                                                             |
-| `announceNavigation(msg)`                                                              | `aria-live="polite"` announcer for SPA nav — writes into a singleton region, cleared-then-set via `queueMicrotask` so SR re-announces |
-| `ensureAnnouncerRegion(opts?)`                                                         | Idempotent creation of the visually-hidden live region; configurable politeness + region id + `document` for SSR testing              |
-| `restoreFocus(selector)`                                                               | Returns `true` on successful `.focus()`, `false` when selector misses                                                                 |
-| `formatCurrency` / `formatNumber` / `formatDate` / `formatRelativeTime` / `formatList` | Intl passthroughs — no separate currency module ([D53 locked](../../.workingdir/research/decisions-needed.md))                        |
+| Export                                                                                 | Purpose                                                                                                                             |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `paraglideVitePlugin`                                                                  | Passthrough from `@inlang/paraglide-js` — callers pass own `project` / `outdir` / `strategy`                                        |
+| `getTextDirection(locale)`                                                             | BCP-47 script-subtag + language lookup → `'ltr' \| 'rtl'`                                                                           |
+| `announceNavigation(msg)`                                                              | `aria-live="polite"` announcer for SPA nav — writes into singleton region, cleared-then-set via `queueMicrotask` -> SR re-announces |
+| `ensureAnnouncerRegion(opts?)`                                                         | Idempotent creation of visually-hidden live region; configurable politeness + region id + `document` for SSR testing                |
+| `restoreFocus(selector)`                                                               | Returns `true` on successful `.focus()`, `false` when selector misses                                                               |
+| `formatCurrency` / `formatNumber` / `formatDate` / `formatRelativeTime` / `formatList` | Intl passthroughs — no separate currency module (D53 locked (`.workingdir/research/decisions-needed.md`))                           |
 
 ### Landed (later)
 
@@ -27,9 +29,9 @@ Thin wrapper over `@inlang/paraglide-js@^2.16.0` (ADR-0017). **The deprecated `@
 
 ### Follow-through (not in v0.0.1)
 
-| Export      | Purpose                                              |
-| ----------- | ---------------------------------------------------- |
-| `typedKeys` | Passthrough of Paraglide's typed message-keys export |
+| Export      | Purpose                                            |
+| ----------- | -------------------------------------------------- |
+| `typedKeys` | Passthrough of Paraglide typed message-keys export |
 
 ## Strategy
 
@@ -50,7 +52,7 @@ paraglideVitePlugin({
 ## RTL invariant
 
 - **Tailwind 4 logical properties only** (`ms-*` / `me-*` / `ps-*` / `pe-*`). ESLint warns on physical `ml-*` / `mr-*` in new code.
-- `<html dir>` auto-set via `getTextDirection(locale)` based on BCP-47 tag script subtag. Arabic, Hebrew, Persian, Urdu, Yiddish → `rtl`.
+- `<html dir>` auto-set via `getTextDirection(locale)` from BCP-47 tag script subtag. Arabic, Hebrew, Persian, Urdu, Yiddish → `rtl`.
 
 ## Six a11y action items (per ADR-0018)
 
@@ -63,9 +65,9 @@ paraglideVitePlugin({
 
 ## Invariants
 
-- **Paraglide v2 only** — v1 integration patterns (adapter, context.json) are obsolete.
+- **Paraglide v2 only** — v1 integration patterns (adapter, context.json) obsolete.
 - **Never re-implement Intl.** Currency / number / date go through `Intl.*` passthroughs.
-- **Messages are compiled, not loaded.** No runtime JSON fetches; tree-shaken per-locale bundles.
+- **Messages compiled, not loaded.** No runtime JSON fetches; tree-shaken per-locale bundles.
 
 ## Sub-exports
 
@@ -81,7 +83,7 @@ paraglideVitePlugin({
 
 ## Test policy
 
-- Unit tests cover `getTextDirection` over the BCP-47 script-subtag table (landed: 4 cases × multiple locales).
+- Unit tests cover `getTextDirection` over BCP-47 script-subtag table (landed: 4 cases × multiple locales).
 - DOM-level tests for `ensureAnnouncerRegion` / `announceNavigation` / `restoreFocus` under jsdom (landed).
 - Intl formatters covered for locale-sensitive output (landed).
 - Integration tests verifying `<html lang>` + `<html dir>` update on route change land with `<LangSync>` (follow-through).

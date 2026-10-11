@@ -12,7 +12,7 @@
 > [ADR-0034](../adr/0034-auth-cookie-and-csrf-contract.md)
 > custom-domain requests use `__Secure-*` cookies with `Domain=`
 > set, not `__Host-` (which forbids `Domain=`).
-
+>
 > **Do not roll your own ACME.** Use a managed primitive — Caddy
 > on-demand TLS, Cloudflare for SaaS, Fly.io Certificates API,
 > Vercel / Netlify domains, or Let's Encrypt behind a dedicated
@@ -558,7 +558,7 @@ test('verification fails when TXT mismatches', async () => {
   [cookies-authoritative.md](cookies-authoritative.md),
   [auth-oidc.md](auth-oidc.md),
   [oauth-provider.md](oauth-provider.md)
-- Caddy on-demand TLS: https://caddyserver.com/docs/automatic-https#on-demand-tls
-- Cloudflare for SaaS: https://developers.cloudflare.com/cloudflare-for-saas/
-- Let's Encrypt rate limits: https://letsencrypt.org/docs/rate-limits/
+- Caddy on-demand TLS: <https://caddyserver.com/docs/automatic-https#on-demand-tls>
+- Cloudflare for SaaS: <https://developers.cloudflare.com/cloudflare-for-saas/>
+- Let's Encrypt rate limits: <https://letsencrypt.org/docs/rate-limits/>
 - RFC 1034 (CNAME at apex invalidity), RFC 6555 (Happy Eyeballs)

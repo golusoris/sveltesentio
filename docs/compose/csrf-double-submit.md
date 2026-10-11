@@ -12,7 +12,7 @@
 > `SameSite=Lax`; the CSRF token is a separate **`__Host-csrf`**
 > cookie readable by JS, sent back as a header, verified server-side
 > as an HMAC of the session id.
-
+>
 > **SvelteKit caveat.** `handleCsrf` ships Origin-check enabled for
 > POST/PUT/PATCH/DELETE + `application/x-www-form-urlencoded`/`multipart/form-data`/`text/plain`. It does **not** cover
 > custom JSON APIs nor cross-subdomain deployments (`api.example.com`

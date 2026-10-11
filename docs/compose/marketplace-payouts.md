@@ -12,7 +12,7 @@
 > pays developer) using Stripe Connect; per
 > [ADR-0023](../adr/0023-compliance-audit-log-contract.md) every
 > payout, hold, reversal, and tax filing is audit-logged.
-
+>
 > **The three legal roles that determine everything.** (1) **Seller-
 > of-record** — platform collects, platform is liable for tax, uses
 > Connect Standard or Custom. (2) **Facilitator-only** — sellers
@@ -603,6 +603,6 @@ test('refund creates clawback against future payouts when prior payout was paid'
   [pricing-plans-changes.md](pricing-plans-changes.md),
   [content-moderation.md](content-moderation.md),
   [webhooks-outbound.md](webhooks-outbound.md)
-- Stripe Connect: https://stripe.com/docs/connect
+- Stripe Connect: <https://stripe.com/docs/connect>
 - IRS 1099-K (post-TCJA thresholds)
 - EU DAC7 (Directive 2021/514)

@@ -25,7 +25,7 @@ pnpm add @sveltesentio/emulator
 
 Then make the EmulatorJS data directory reachable (self-host):
 
-```
+```text
 static/emulatorjs/data/   # cores, loader.js, art, BIOS shims — from the EmulatorJS release
 ```
 

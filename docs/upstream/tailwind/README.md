@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # Tailwind CSS — v4.x snapshot
 
 Pinned: **`tailwindcss ^4.0.0`** (peerDependency in `@sveltesentio/ui`)
-Canonical: https://tailwindcss.com/docs
+Canonical: <https://tailwindcss.com/docs>
 
 Tailwind 4 is a ground-up rewrite. Most v3 patterns no longer apply. **Do not** suggest `tailwind.config.js`, `@tailwind base/components/utilities`, or PostCSS-plugin syntax — these are v3.
 
@@ -93,6 +93,6 @@ Use as `dark:bg-surface`, `data-active:ring-2`.
 
 ## Links
 
-- v3 → v4 upgrade: https://tailwindcss.com/docs/upgrade-guide
-- `@theme` reference: https://tailwindcss.com/docs/theme
-- Vite plugin: https://tailwindcss.com/docs/installation/using-vite
+- v3 → v4 upgrade: <https://tailwindcss.com/docs/upgrade-guide>
+- `@theme` reference: <https://tailwindcss.com/docs/theme>
+- Vite plugin: <https://tailwindcss.com/docs/installation/using-vite>

@@ -12,7 +12,7 @@
 > [ADR-0029](../adr/0029-pwa-safe-area-tailwind4.md) GPU surfaces are
 > **opt-in per app** — no consumer pays the threlte/three.js bundle
 > tax unless they import it.
-
+>
 > **Held opt-in.** This recipe documents the path; the
 > `@sveltesentio/media` package does not bundle threlte. A downstream
 > app promotes it with a concrete need + ADR amendment.

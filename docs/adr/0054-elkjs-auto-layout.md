@@ -58,9 +58,9 @@ Accepting this ADR does **not** include a formal bundle-size measurement; that's
 
 ## Evidence
 
-- [.workingdir/research/decisions-needed.md](../../.workingdir/research/decisions-needed.md) D92 — original decision request; noted `elkjs` as the pinning candidate.
-- [.workingdir/research/decisions-still-open.md](../../.workingdir/research/decisions-still-open.md) — D92 listed as "user verbal approval 2026-04-17, no ADR"; this record closes it.
-- xyflow Svelte Flow docs — https://svelteflow.dev — recommend `elkjs` in the auto-layout examples.
-- ELK project home — https://eclipse.dev/elk/ — algorithm family reference (layered / force / mrtree).
-- `elkjs` npm page — https://www.npmjs.com/package/elkjs — bundle entry point `elkjs/lib/elk.bundled.js`; Web Worker recommended by the project's own README.
+- `.workingdir/research/decisions-needed.md` D92 — original decision request; noted `elkjs` as the pinning candidate.
+- `.workingdir/research/decisions-still-open.md` — D92 listed as "user verbal approval 2026-04-17, no ADR"; this record closes it.
+- xyflow Svelte Flow docs — <https://svelteflow.dev> — recommend `elkjs` in the auto-layout examples.
+- ELK project home — <https://eclipse.dev/elk/> — algorithm family reference (layered / force / mrtree).
+- `elkjs` npm page — <https://www.npmjs.com/package/elkjs> — bundle entry point `elkjs/lib/elk.bundled.js`; Web Worker recommended by the project's own README.
 - [ADR-0004](0004-flow-thin-xyflow-wrapper.md) — parent wrapper decision that this ADR supplements.

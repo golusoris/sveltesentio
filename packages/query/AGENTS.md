@@ -1,27 +1,27 @@
 # @sveltesentio/query — AGENTS.md
 
-> TanStack Svelte Query integration: load helpers, SSR hydration, optimistic updates, pagination. Phase 4 per [.workingdir/PLAN.md](../../.workingdir/PLAN.md).
+> TanStack Svelte Query integration: load helpers, SSR hydration, optimistic updates, pagination. Phase 4 per `.workingdir/PLAN.md`.
 
 ## Scope
 
-Thin composition layer over `@tanstack/svelte-query@^6` (ADR-0008). This package enforces the framework's **"no `writable()` for server state"** rule by making TanStack Query the ergonomic default.
+Thin composition layer over `@tanstack/svelte-query@^6` (ADR-0008). Package enforces framework **"no `writable()` for server state"** rule via TanStack Query default.
 
-| Export                                   | Purpose                                                                                                                                                                                                                                                         |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QueryClient` factory                    | Pre-configured client with RFC 9457 retry-on-typed-errors + monotonic-ID cache keys                                                                                                                                                                             |
-| `load` helpers                           | SSR prefetch into the cache so `+page.svelte` hydrates without a network round-trip                                                                                                                                                                             |
-| `useConnectQuery` / `createConnectQuery` | ConnectRPC bridge (`./connect`): a `queryFn` factory over a typed unary `Client<T>` method, with the v6 `Accessor<Options>` pattern + `ConnectError`→`ProblemError` retry integration ([ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md)) |
-| `useInfiniteQuery` preset                | Pagination patterns with cursor + offset variants; feeds `ui/data` virtual list                                                                                                                                                                                 |
-| `useOptimistic`                          | Optimistic update helper with rollback on RFC 9457 typed error                                                                                                                                                                                                  |
+| Export                                   | Purpose                                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `QueryClient` factory                    | Pre-configured client with RFC 9457 retry-on-typed-errors + monotonic-ID cache keys                                                                                                                                                                     |
+| `load` helpers                           | SSR prefetch into cache -> `+page.svelte` hydrates without network round-trip                                                                                                                                                                           |
+| `useConnectQuery` / `createConnectQuery` | ConnectRPC bridge (`./connect`): `queryFn` factory over typed unary `Client<T>` method, with v6 `Accessor<Options>` pattern + `ConnectError`→`ProblemError` retry integration ([ADR-0038](../../docs/adr/0038-connectrpc-connect-web-connect-query.md)) |
+| `useInfiniteQuery` preset                | Pagination patterns with cursor + offset variants; feeds `ui/data` virtual list                                                                                                                                                                         |
+| `useOptimistic`                          | Optimistic update helper with rollback on RFC 9457 typed error                                                                                                                                                                                          |
 
 ## Invariants
 
-- **Never `writable()` for server state.** Any remote data goes through TanStack Query. Enforced by ESLint `no-restricted-imports` for `svelte/store` `writable` in new code (carve-outs are local UI state only, not fetched data).
-- **Queries are typed via `openapi-fetch` / ConnectRPC** — no hand-written `fetch` + JSON decode. The raw-fetch pattern is a downstream antipattern (flagged in subdo row of [downstream-antipatterns-v0.1.md](../../docs/migrations/downstream-antipatterns-v0.1.md)).
-- **SSR hydration mandatory.** `load` prefetch → `dehydrate` → `HydrationBoundary` in the root layout. First render shows data, not a loading spinner.
+- **Never `writable()` for server state.** Remote data goes through TanStack Query. Enforced by ESLint `no-restricted-imports` for `svelte/store` `writable` in new code (carve-outs: local UI state only, not fetched data).
+- **Queries typed via `openapi-fetch` / ConnectRPC** — no hand-written `fetch` + JSON decode. Raw-fetch pattern flagged downstream antipattern (subdo row of [downstream-antipatterns-v0.1.md](../../docs/migrations/downstream-antipatterns-v0.1.md)).
+- **SSR hydration mandatory.** `load` prefetch → `dehydrate` → `HydrationBoundary` in root layout. First render shows data, not loading spinner.
 - **Typed errors surface as `ProblemError`** (RFC 9457, [ADR-0019](../../docs/adr/0019-openapi-fetch-rfc9457.md)) — retry policy keys off `error.type`, not status code.
-- **Reactive keys use the accessor form.** `createSentioQuery` / `createInfiniteItems` / `useConnectQuery` accept `options | (() => options)`. When `queryKey` derives from `$state`, pass `() => ({...})` so the accessor re-reads on every evaluation and TanStack refetches on key change; the plain-object form freezes the key at call time (static keys only).
-- **The index is optional-peer-free.** `src/index.ts` must NOT re-export `connect-query` — it imports the optional `@connectrpc/connect` + `@bufbuild/protobuf` peers and would break openapi-fetch-only builds. The ConnectRPC bridge is reachable only via the `./connect` subpath.
+- **Reactive keys use accessor form.** `createSentioQuery` / `createInfiniteItems` / `useConnectQuery` accept `options | (() => options)`. When `queryKey` derives from `$state`, pass `() => ({...})` -> accessor re-reads on every evaluation, TanStack refetches on key change. Plain-object form freezes key at call time (static keys only).
+- **Index optional-peer-free.** `src/index.ts` must NOT re-export `connect-query` — imports optional `@connectrpc/connect` + `@bufbuild/protobuf` peers, breaks openapi-fetch-only builds. ConnectRPC bridge reachable only via `./connect` subpath.
 
 ## Canonical recipe
 
@@ -44,15 +44,7 @@ export const load = async ({ fetch }) => {
 
 ## ConnectRPC bridge (`./connect`)
 
-`useConnectQuery` runs a typed unary RPC as a TanStack query. The Connect stack
-(`@connectrpc/connect` + `@bufbuild/protobuf`) is an **optional peer** — the rest
-of the package works without it. The bridge picks a unary method off an injected
-`Client<T>`, forwards TanStack's abort `signal` into the call, and maps a thrown
-`ConnectError` to a `ProblemError` (default `connectErrorToProblem`) so the shared
-RFC 9457 retry policy keys off `error.status`. Pass
-`@sveltesentio/realtime/rpc`'s richer `connectErrorToProblem` via `mapError` when
-the curated URN vocabulary + correlation-id lifting is wanted (`query` does not
-depend on `realtime`).
+`useConnectQuery` runs typed unary RPC as TanStack query. Connect stack (`@connectrpc/connect` + `@bufbuild/protobuf`) = **optional peer** — rest of package works without it. Bridge picks unary method off injected `Client<T>`, forwards TanStack abort `signal` into call, maps thrown `ConnectError` to `ProblemError` (default `connectErrorToProblem`) -> shared RFC 9457 retry policy keys off `error.status`. Pass `@sveltesentio/realtime/rpc` richer `connectErrorToProblem` via `mapError` when curated URN vocabulary + correlation-id lifting wanted (`query` does not depend on `realtime`).
 
 ```ts
 import { useConnectQuery } from '@sveltesentio/query/connect';
@@ -69,8 +61,8 @@ const user = useConnectQuery({
 
 ## Test policy
 
-- Unit tests mock the transport, not TanStack Query itself — test query keys + cache behaviour, not the library.
-- The ConnectRPC bridge unit-tests against a hand-built fake `Client` (no buf codegen): assert the `Accessor<Options>` shape + the `queryFn`'s call-forwarding and `ConnectError`→`ProblemError` mapping.
+- Unit tests mock transport, not TanStack Query itself — test query keys + cache behaviour, not library.
+- ConnectRPC bridge unit-tests against hand-built fake `Client` (no buf codegen): assert `Accessor<Options>` shape + `queryFn` call-forwarding + `ConnectError`→`ProblemError` mapping.
 - SSR hydration assertions live in `@sveltesentio/testing`.
 
 ## Common tasks

@@ -10,7 +10,7 @@
 > transport is shared; per
 > [ADR-0023](../adr/0023-compliance-audit-log-contract.md) resolve /
 > delete events land in the audit log.
-
+>
 > **The anchor is the hard part.** Attaching a comment to "line 42" is
 > trivial until a collaborator inserts 5 lines above it. The recipe
 > uses **Yjs `RelativePosition`** — a position reference that survives

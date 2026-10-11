@@ -72,7 +72,13 @@ thin, a11y-correct view.
 				muted = el.muted;
 				break;
 			case 'toggle-fullscreen':
-				if (BROWSER && el.requestFullscreen) void el.requestFullscreen().catch(() => {});
+				if (BROWSER && el.requestFullscreen) {
+					// A refused request (no user activation, denied permission) leaves the
+					// player inline; report it instead of dropping the rejection.
+					void el.requestFullscreen().catch((error: unknown) => {
+						console.warn('[media/player] fullscreen request rejected:', error);
+					});
+				}
 				break;
 			case 'toggle-captions':
 				break;

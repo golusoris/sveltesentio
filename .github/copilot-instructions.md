@@ -1,80 +1,103 @@
 <!-- markdownlint-disable MD013 -->
-<!-- Compiled automatically by standardsctl compile-context from AGENTS.md. DO NOT EDIT DIRECTLY. -->
+<!-- Compiled automatically by praetorctl compile-context from AGENTS.md. DO NOT EDIT DIRECTLY. -->
 
 <!-- markdownlint-disable MD013 MD025 -->
 
-# sveltesentio Agent Operating Harness
+<!-- markdownlint-disable MD013 -->
+# golusoris/sveltesentio Agent Operating Harness
 
-Run verification before concluding any turn:
+Before concluding any turn:
 
 ```bash
 make verify-all
 ```
 
-```mermaid
-flowchart LR
-    AGENT["Autonomous Agent"] --> CHECK["make verify-all"]
-    CHECK --> CI["pnpm run ci"]
-    CHECK --> AUDIT["praetorctl audit"]
-    CHECK --> COMPILER["praetorctl compile-context --verify"]
-    CHECK --> GATE{"All checks Pass?"}
-    GATE -- Yes --> RECEIPT["Ed25519 Exit-0 Receipt"]
-    GATE -- No --> DISTILL["SARIF Diagnostic Distillation (<= 1500 tokens)"]
-```
+`make verify-all` = repository-owned gate; adoption kept it unread + unexecuted. Steps live in `Makefile`: read there, never restate. Footer commands = project markers only.
+Pass = exit 0. Signed Ed25519 Exit-0 receipt only from `praetorctl gate run`; report no receipt it did not mint. Fail -> SARIF diagnostic distillation (<= 1500 tokens).
 
-## Core Directives & Invariants (Modernized NASA JPL Power-of-10)
+## Core Directives & Invariants
 
-Adapted to TypeScript. HISS-03 (manual heap management) and HISS-09 (pointer arithmetic) have no analogue here. HISS-11..14 are tracked by the upstream HISS-20 coverage catalog, not asserted here.
+Adopted check = check adoption generated here (praetor `lefthook.yml`), as written at adoption; later edits to those files not reflected. `not enforced` = rule binds, no generated check decides it for repository languages.
 
-| Invariant   | Scope                | NASA Rule | Enforcement Mechanism                                                                                                                                             | Failure Action       |
-| :---------- | :------------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
-| **HISS-01** | Control Flow         | Rule 1    | Recursion prohibited; call graph must be a DAG. No circular imports between `@sveltesentio/*` packages.                                                           | Build failure        |
-| **HISS-02** | Loops & I/O          | Rule 2    | Scalar upper bound on all loops; explicit `AbortSignal` timeout on all I/O.                                                                                       | ESLint / review      |
-| **HISS-04** | Complexity           | Rule 4    | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                                       | ESLint `complexity`  |
-| **HISS-07** | Error Handling       | Rule 7    | Zero unchecked errors: no non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457).                   | `@typescript-eslint` |
-| **HISS-08** | Determinism          | Rule 8    | Zero dynamic execution (`eval` / `new Function`); no unsanitised `innerHTML` — DOMPurify at every boundary.                                                       | ESLint / CodeQL      |
-| **HISS-10** | Warning Hygiene      | Rule 10   | Zero-warning tolerance across `tsc`, ESLint, and Prettier. No `any`.                                                                                              | Exit code 1          |
-| **HISS-15** | 3D Testing           | Rule 5    | Positive, negative, and boundary tests mandatory for every public export.                                                                                         | CI coverage gate     |
-| **HISS-16** | Context Integrity    | Fleet     | Single canonical `AGENTS.md`; vendor files compiled via `praetorctl compile-context`.                                                                             | Pre-commit blocker   |
-| **HISS-17** | State Ledger         | Fleet     | Turn start reads `.workingdir/STATE.md` and `OPEN.md`; turn end runs `praetorctl state sync .`.                                                                   | Pre-commit blocker   |
-| **HISS-18** | CI Efficiency        | Fleet     | Diff-aware gating; `scripts/ci-affected.mjs` skips unaffected packages, `CI Gate` still reports.                                                                  | Wasted runner time   |
-| **HISS-19** | Reuse Before Writing | Fleet     | One behaviour, one implementation. Extend or call what exists — upstream libs included (see the streamlining rule).                                               | Review blocker       |
-| **HISS-20** | Enforcement Evidence | Fleet     | `.config/hiss/coverage.yaml` declares what each invariant is enforced by, per language; `praetorctl hiss coverage --verify` replays the fixture corpus both ways. | verify-all blocker   |
+| Invariant | Rule | Adopted check | On fail |
+| :--- | :--- | :--- | :--- |
+| **HISS-01** control flow | recursion prohibited; call graph = DAG | not enforced | advisory |
+| **HISS-02** loops, I/O | scalar upper bound on every loop; explicit deadline on every I/O call | not enforced | advisory |
+| **HISS-03** memory | n/a: no such construct in repository languages; advisory | not enforced | advisory |
+| **HISS-04** complexity | McCabe cyclomatic <= 10, cognitive <= 12, statements <= 40; func LOC <= 60 (audit ceiling) | not enforced | advisory |
+| **HISS-05** scoping | declare every identifier in smallest lexical scope serving it | not enforced | advisory |
+| **HISS-06** concurrency | explicit scalar upper bound on every worker pool + concurrent fan-out | not enforced | advisory |
+| **HISS-07** errors | every error handled or wrapped with context | not enforced | advisory |
+| **HISS-08** determinism | zero dynamic code execution (`eval` / `exec`) | not enforced | advisory |
+| **HISS-09** reference safety | n/a: no such construct in repository languages; advisory | not enforced | advisory |
+| **HISS-10** warnings | zero warnings: compiler, linter, format sweeps | not enforced | advisory |
+| **HISS-11** supply chain | pinned lockfiles; zero floating tags; signed provenance | not enforced | advisory |
+| **HISS-12** secrets | zero credentials in Git history | not enforced | advisory |
+| **HISS-13** debt ratchet | recorded infractions never grow vs committed baseline | `praetorctl audit` ratchet vs `.standards-baseline.json` in lefthook pre-commit/pre-push | growth blocks commit, blocks push |
+| **HISS-14** append-only ABI | public API append-only; breaking change = `!` subject + `Migration:` footer | not enforced | advisory |
+| **HISS-15** 3D testing | positive + negative + boundary tests, every public interface | not enforced | advisory |
+| **HISS-16** context integrity | single canonical `AGENTS.md`; vendor files compiled via `praetorctl compile-context` | `praetorctl compile-context --verify` in lefthook pre-commit | drift blocks commit |
+| **HISS-17** state ledger | turn start `praetorctl state status`; turn end `praetorctl state sync .` | `praetorctl state sync .` in lefthook post-commit | none; records only |
+| **HISS-18** CI efficiency | diff-aware gating via `praetorctl ci filter` | not enforced | advisory |
+| **HISS-19** reuse before writing | one behavior = one implementation; extend or call existing code | not enforced | advisory |
+| **HISS-20** replayable evidence | every enforcement claim backed by fixtures replayed both directions | not enforced | advisory |
+| **HISS-21** platform neutrality | gates, hooks, emitted templates run on Linux, macOS, Windows, or skip with stated reason | not enforced | advisory |
 
 ## Operational Rules
 
-1. **Act on Verified State**:
-   Read source files and run real commands before hypothesising or editing. Never guess flag names, library signatures, or repo configurations from memory.
+1. **Act on verified state.** Read source files, run real commands before hypothesis or edit. Never guess flag names, library signatures, repo configuration from memory.
 
-2. **Lead with Output**:
-   Provide direct answers, diffs, and commands. Avoid filler preambles, restatements, or conversational chatter.
+2. **Lead with output.** Direct answers, diffs, commands. No filler preamble, no "Based on", no restatement, no chatter.
 
-3. **Context Transpiler First**:
-   Never edit `CLAUDE.md`, `.cursor/rules/*.mdc`, `.windsurfrules`, `.gemini/GEMINI.md`, `.codex/rules.md`, or `.github/copilot-instructions.md` manually. Make all agent instruction updates in `AGENTS.md` and execute:
+3. **Context transpiler first.** Never edit `CLAUDE.md`, `.cursor/rules/hiss-invariants.mdc`, `.github/copilot-instructions.md`, `.windsurfrules`, `.gemini/GEMINI.md`, `.codex/rules.md` manually. All agent instruction updates -> `AGENTS.md`, then:
 
    ```bash
    praetorctl compile-context
    ```
 
-4. **SARIF Diagnostic Distillation**:
-   When reporting compiler or linter errors, distil output to $\le 1,500$ tokens ($< 60$ lines). Print the top 3 root-cause failures with file/line pointers and write full logs to ephemeral storage.
+   - `AGENTS.md` = agent-only text -> caveman (internal register). `praetorctl compile-context --verify` + `praetorctl audit` run caveman lint; findings fail gate; no opt-out. Check first: `praetorctl caveman check --kind=context AGENTS.md`.
 
-5. **No Evasion Tolerated**:
-   Do not attempt `--no-verify`, `LEFTHOOK=0`, or modifying `.git/hooks`. All pull requests are authoritatively re-checked in an ephemeral isolated sandbox by `cordana-standards[bot]`.
+4. **SARIF diagnostic distillation.** Compiler/linter errors -> distill to $\le 1,500$ tokens ($< 60$ lines): top 3 root-cause failures with file/line pointers; full SARIF logs -> ephemeral storage.
 
-6. **Anti-Loop Interception**:
-   If the same AST diff and error category repeats $\ge 3$ times, halt execution immediately. Re-evaluate the underlying design instead of making micro-textual retries.
+5. **No evasion.** Never attempt `--no-verify`, `LEFTHOOK=0`, or modifying `.git/hooks`. Hooks = local gate adoption installs. Adoption adds no server-side `praetorctl` gate run. Scaffolded CI: `.github/workflows/praetor-docs.yml` runs step `Stop on a draft pull request`, `node tools/markdownlint/verify.mjs`, step `Verify figures`.
+
+6. **Anti-loop interception.** Same AST diff + error category repeats $\ge 3$ times -> halt immediately. Re-evaluate design; no micro-textual retries.
+
+## Text Register
+
+<!-- praetor:register:start -->
+Register follows the audience, then the task label of your brief (`register:` in `.standards.yaml`; labels are the router's `target_tasks`).
+
+| Register | Where | Form |
+| :--- | :--- | :--- |
+| social | forge: issues, PR bodies, review comments, commit bodies | `social-text` skill: BLUF, full sentences, scannable, enough and no more; conventional commit subject unchanged |
+| docs | docs/, README, ADR bodies | complete without bloat: newcomer path first, expert reference after; every claim points at a file, command or test; no restated code |
+| internal | briefs, agent-to-agent traffic, research fan-outs, workflow returns | `caveman` skill: fragments, no filler, verbatim code/paths/errors; facts, paths, commands, verdict |
+
+- Task rows: social = commit_message_synthesis, waiver_signoff; docs = architecture_synthesis, function_docstrings; every other label and any unlabeled text = internal. Subagent launch brief: `caveman` brief shape with `task:` = routing label.
+- Evidence above 58 lines or 1500 tokens leaves the message as a file under `.workingdir/evidence/`; return `evidence: <path> sha256:<12 hex> lines:<n>` and fetch it only when a decision needs it.
+- An internal return carries verdict, changed paths, commands run, evidence pointers and open questions, nothing else.
+<!-- praetor:register:end -->
 
 ## Primary Verification Commands
 
 ```bash
-pnpm run ci                         # lint, typecheck, test, build, all workspaces
-pnpm audit --audit-level=high       # the supply-chain gate CI enforces
-praetorctl compile-context --verify # regenerate + verify cross-agent context outputs
-praetorctl audit                    # HISS-16 standards
-make verify-all                     # all of the above
+# Fast local test suite
+# Declared commands only; run them before claiming application verification.
+'make' 'verify-all'
+
+# Recompile and verify cross-agent context outputs
+praetorctl compile-context --verify
+
+# Audit repository against declared HISS standards
+praetorctl audit
+
+# Repository gate; steps live in Makefile
+make verify-all
 ```
 
+<!-- markdownlint-enable MD013 -->
+<!-- markdownlint-disable MD025 -->
 <!-- praetor:harness:end -->
 
 ---
@@ -83,121 +106,97 @@ make verify-all                     # all of the above
 
 # Agent guide — sveltesentio
 
-> Cross-tool context for [Claude Code](https://claude.com/claude-code), [Cursor](https://cursor.sh), [Aider](https://aider.chat), [Codex](https://github.com/openai/codex), [Continue](https://continue.dev), and other coding assistants.
-> **Read this before suggesting changes.** Then read the per-subpackage `AGENTS.md` for the area you're touching.
+> Cross-tool context: [Claude Code](https://claude.com/claude-code), [Cursor](https://cursor.sh), [Aider](https://aider.chat), [Codex](https://github.com/openai/codex), [Continue](https://continue.dev), other coding assistants.
+> **Read before suggesting changes.** Then read per-subpackage `AGENTS.md` for touched area.
 
 ## What this repo is
 
-`sveltesentio` is a pnpm workspace monorepo (`github.com/lusoris/sveltesentio`) that wraps a pinned set of best-in-class libraries as opt-in `@sveltesentio/*` packages. Apps compose only what they need — nothing else ships.
+`sveltesentio` = pnpm workspace monorepo (`github.com/lusoris/sveltesentio`). Wraps pinned set of best-in-class libraries as opt-in `@sveltesentio/*` packages. Apps compose only what they need; nothing else ships.
 
-sveltesentio is the **SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (the Go meta-framework this same author maintains). Same opt-in module discipline, same compliance posture (OWASP ASVS L2 / WCAG 2.2 AA / SLSA L3 / EU CRA / EU AI Act), same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks) — expressed in Svelte 5 runes + TypeScript instead of Go + fx.
+**SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (Go meta-framework, same author). Same opt-in module discipline. Same compliance posture (OWASP ASVS L2 / WCAG 2.2 AA / SLSA L3 / EU CRA / EU AI Act). Same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks). Expressed in Svelte 5 runes + TypeScript, not Go + fx.
 
-See [README.md](README.md) for the user-facing pitch and [docs/principles.md](docs/principles.md) for the full coding contract (§2) and [docs/ux-principles.md](docs/ux-principles.md) for UX rules (§3).
+Pointers: [README.md](README.md) = user-facing pitch. [docs/principles.md](docs/principles.md) = full coding contract (§2). [docs/ux-principles.md](docs/ux-principles.md) = UX rules (§3).
+
+## HISS in this repository
+
+Harness above = rule text. Rows below = TypeScript adaptation + repository enforcement.
+
+- HISS-03 (manual heap management), HISS-09 (pointer arithmetic): no analogue in TypeScript.
+- HISS-11..14: tracked by upstream HISS-20 coverage catalog, not asserted here.
+
+| Invariant | Repository rule                                                                                                                                      | Enforced by          |
+| :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
+| HISS-01   | No circular imports between `@sveltesentio/*` packages.                                                                                              | `pnpm check:cycles`  |
+| HISS-02   | Explicit `AbortSignal` timeout on all I/O.                                                                                                           | ESLint / review      |
+| HISS-04   | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                          | ESLint `complexity`  |
+| HISS-07   | No non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457).                             | `@typescript-eslint` |
+| HISS-08   | No `eval` / `new Function`; no unsanitised `innerHTML`, DOMPurify at every boundary.                                                                 | ESLint / CodeQL      |
+| HISS-10   | Zero-warning tolerance across `tsc`, ESLint, Prettier. No `any`.                                                                                     | Exit code 1          |
+| HISS-15   | Positive, negative, boundary tests mandatory for every public export.                                                                                | CI coverage gate     |
+| HISS-17   | Turn start reads `.workingdir/STATE.md` + `OPEN.md`; turn end runs `praetorctl state sync .`.                                                        | `make state-audit`   |
+| HISS-18   | `scripts/ci-affected.mjs` skips unaffected packages; `CI Gate` still reports.                                                                        | Review (runner time) |
+| HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
+| HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
+
+Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
 
 ## Hard rules
 
-1. **Never break public API** without a `Migration:` footer (before/after Svelte snippet) + a codemod (or explicit "manual migration" note with line-level diff guidance). CI runs API-extractor against the previous tag.
-2. **Never add a transitive dependency** without weighing alternatives from the awesome-lists harvest (see `.workingdir/research/svelte-ecosystem-audit.md`). State the choice in the PR if non-obvious.
-3. **Every package's public surface is its `src/index.ts` named exports** (+ documented sub-exports like `ui/toast`, `media/player`). Apps never import internals (anything under `src/internal/` or unexported). Package `exports` map is the enforcement gate.
+1. **Never break public API** without `Migration:` footer (before/after Svelte snippet) + codemod, or explicit "manual migration" note with line-level diff guidance. CI runs API-extractor against previous tag.
+2. **Never add transitive dependency** without weighing alternatives from awesome-lists harvest (`.workingdir/research/svelte-ecosystem-audit.md`). State choice in PR if non-obvious.
+3. **Public surface of every package = `src/index.ts` named exports** (+ documented sub-exports like `ui/toast`, `media/player`). Apps never import internals (anything under `src/internal/` or unexported). Package `exports` map = enforcement gate.
 4. **No top-level side effects in package modules.** No `window.` access, no DOM reads, no `setInterval` at import time. Use vite plugins, SvelteKit hooks, or explicit `register(app)` entry points.
 5. **All errors flow through `@sveltesentio/core/errors`** (RFC 9457 `application/problem+json` parser + typed `ProblemDetails`). Never throw raw `Error` from package code.
-6. **All time uses `@sveltesentio/core/clock`.** `Date.now()` / `new Date()` / `performance.now()` are banned in package source outside `test/` (enforced by custom eslint rule — see `eslint.config.js`).
-7. **No `console.log` in package source.** `console.warn` / `console.error` only, or the structured logger from `@sveltesentio/core/log` once it lands. Enforced by eslint `no-console`.
+6. **All time uses `@sveltesentio/core/clock`.** `Date.now()` / `new Date()` / `performance.now()` banned in package source outside `test/`. Enforced by custom eslint rule (`eslint.config.js`).
+7. **No `console.log` in package source.** `console.warn` / `console.error` only, or structured logger from `@sveltesentio/core/log` once it lands. Enforced by eslint `no-console`.
 8. **Svelte 5 runes-first.** Never `$:`, never `writable()` for server state (use `@sveltesentio/query`), never `export let` (use `$props()`). Enforced by eslint-plugin-svelte.
-9. **No `any` — ever.** Use `unknown` and narrow with Zod or type guards. Enforced by `@typescript-eslint/no-explicit-any: error`.
-10. **Every merged commit: 0 eslint · 0 tsc · 0 `pnpm audit` vulns · axe-clean on stories.** `// eslint-disable-*` requires a justification comment on the adjacent line.
-11. **No guessing on major decisions.** Agents never lock library picks, module surface, API shape, or compliance posture on their own. The agent's job is to present evidence + ≥ 2 named alternatives and open/update a `D*` row in [.workingdir/research/decisions-needed.md](.workingdir/research/decisions-needed.md). Only the project owner (`@lusoris`) closes a `D*` row to `locked (ADR-NNNN)`. Evidence = (a) cited file:line in a `golusoris/app-*` repo, (b) measured benchmark / bundle analysis, or (c) an existing ADR. "Seems good", "commonly used", and awesome-list consensus are **not** evidence — they're pointers to where evidence could be gathered.
-12. **Strict SvelteKit universe.** Library picks must be (a) Svelte 5 runes-native with first-class TS types, or (b) framework-agnostic libraries that compose cleanly with SvelteKit SSR (TanStack, Zod, Yjs, Vite plugins, ConnectRPC, openapi-fetch, elkjs, etc.). Never pull React/Vue/Solid component libraries via cross-framework bridges — a non-Svelte UI dep is an architectural smell. If a capability exists only outside the Svelte ecosystem, open a `D*` row and discuss before adding a bridge.
+9. **No `any` — ever.** Use `unknown`, narrow with Zod or type guards. Enforced by `@typescript-eslint/no-explicit-any: error`.
+10. **Every merged commit: 0 eslint · 0 tsc · 0 `pnpm audit` vulns · axe-clean on stories.** `// eslint-disable-*` requires justification comment on adjacent line.
+11. **No guessing on major decisions.** Agents never lock library picks, module surface, API shape, or compliance posture on their own.
+    - Agent job: present evidence + ≥ 2 named alternatives, open/update `D*` row in `.workingdir/research/decisions-needed.md`.
+    - Only project owner (`@lusoris`) closes `D*` row to `locked (ADR-NNNN)`.
+    - Evidence = (a) cited file:line in `golusoris/app-*` repo, (b) measured benchmark / bundle analysis, or (c) existing ADR.
+    - Not evidence: "Seems good", "commonly used", awesome-list consensus. Those = pointers to where evidence could be gathered.
+12. **Strict SvelteKit universe.** Library picks must be (a) Svelte 5 runes-native with first-class TS types, or (b) framework-agnostic libraries composing cleanly with SvelteKit SSR (TanStack, Zod, Yjs, Vite plugins, ConnectRPC, openapi-fetch, elkjs, etc.).
+    - Never pull React/Vue/Solid component libraries via cross-framework bridges: non-Svelte UI dep = architectural smell.
+    - Capability exists only outside Svelte ecosystem -> open `D*` row, discuss before adding bridge.
 
-See [docs/principles.md](docs/principles.md) for the Power-of-10, OWASP ASVS L2, WCAG 2.2 AA, supply-chain, testing, and performance contract. Deviations require a PR comment citing the subsection.
+[docs/principles.md](docs/principles.md) holds Power-of-10, OWASP ASVS L2, WCAG 2.2 AA, supply-chain, testing, performance contract. Deviations require PR comment citing subsection.
 
 ## Workflow discipline (evidence-driven)
 
-sveltesentio is deliberately **research-first**. The author maintains existing Svelte apps (`golusoris/app-arca`, `app-revenge`, `app-subdo`, `app-lurkarr`) — **those apps are the source of truth** for what patterns deserve to be promoted into the framework.
+sveltesentio = deliberately **research-first**. Author maintains existing Svelte apps (`golusoris/app-arca`, `app-revenge`, `app-subdo`, `app-lurkarr`). **Those apps = source of truth** for which patterns deserve promotion into framework.
 
-Before proposing a new package, sub-export, or API shape, an agent must:
+Before proposing new package, sub-export, or API shape, agent must:
 
-1. Check [.workingdir/research/decisions-needed.md](.workingdir/research/decisions-needed.md) — is the question already open? Add evidence there instead of shipping a guess.
-2. Check [.workingdir/research/svelte-ecosystem-audit.md](.workingdir/research/svelte-ecosystem-audit.md) — is the upstream library already evaluated? Does it obsolete the proposed wrapper?
-3. Check [.workingdir/research/existing-apps-deepread.md](.workingdir/research/existing-apps-deepread.md) — has the pattern been observed in ≥ 2 existing apps? One-off patterns stay in their app.
-4. If no evidence exists yet: **do research, don't guess.** Open a `D*` row in `decisions-needed.md` and wait for evidence.
+1. Check `.workingdir/research/decisions-needed.md`: question already open? Add evidence there, do not ship guess.
+2. Check `.workingdir/research/svelte-ecosystem-audit.md`: upstream library already evaluated? Does it obsolete proposed wrapper?
+3. Check `.workingdir/research/existing-apps-deepread.md`: pattern observed in ≥ 2 existing apps? One-off patterns stay in their app.
+4. No evidence yet: **do research, don't guess.** Open `D*` row in `decisions-needed.md`, wait for evidence.
 
-**Streamlining rule** (2026-04-17): if an existing library in the Svelte / Tailwind / JS ecosystem already solves a problem cleanly, do **not** wrap it into a `@sveltesentio/*` package. Instead, document the composition pattern in `docs/compose/` and let consumers import the upstream library directly. Wrappers are only justified when they (a) enforce a cross-cutting invariant from `docs/principles.md`, (b) compose multiple libraries into a pinned matrix, or (c) encode a decision that would otherwise be re-litigated per app.
+**Streamlining rule** (2026-04-17): existing library in Svelte / Tailwind / JS ecosystem already solves problem cleanly -> do **not** wrap it into `@sveltesentio/*` package. Document composition pattern in `docs/compose/`; consumers import upstream library directly.
+
+Wrappers justified only when they:
+
+- (a) enforce cross-cutting invariant from `docs/principles.md`, or
+- (b) compose multiple libraries into pinned matrix, or
+- (c) encode decision otherwise re-litigated per app.
 
 ## Repository layout
 
-Granular tree — every directory that exists or is planned. Sub-exports (e.g. `ui/toast`) are rendered as sub-directories even when implemented as module subpaths.
+Full annotated tree: [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md).
 
-```text
-sveltesentio/
-├── package.json                    # pnpm workspace root, scripts, pinned devDeps
-├── pnpm-workspace.yaml             # packages/* and apps/*
-├── turbo.json                      # task pipeline (build/lint/typecheck/test/dev)
-├── Makefile                        # setup · dev · build · ci · clean · add-package
-├── tsconfig.base.json              # shared strict TS (ES2022, noUncheckedIndexedAccess, exactOptional)
-├── eslint.config.js                # flat ESLint (TS + Svelte + a11y + prettier + custom rules)
-├── prettier.config.js              # Prettier + prettier-plugin-svelte
-├── commitlint.config.js            # Conventional Commits 1.0 enforcement
-├── release-please-config.json      # release-please per-package versioning
-├── .release-please-manifest.json   # per-package published version manifest
-├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
-│
-├── packages/                       # @sveltesentio/* publishable modules — 19 published; see the package purpose table below
-│   ├── core/                       # every package follows this shape:
-│   │   ├── src/index.ts            #   the entire public API (named exports only)
-│   │   ├── src/internal/           #   off-limits to consumers
-│   │   ├── AGENTS.md               #   per-package conventions — read before touching the area
-│   │   └── README.md
-│   └── …                           # ai · api · auth · charts · collab · emulator · flow · forms · i18n
-│                                   # ipc-sockmap · mcp · media · query · realtime · shell · testing · ui · uploads
-│                                   # Sub-exports (ui/toast, media/player, …) are module subpaths, not directories.
-│
-├── apps/                           # consuming apps (integration tests + showcase)
-│   ├── storybook/                  # Storybook 10 component showcase (Svelte 5; axe via addon-a11y)           [LANDED]
-│   ├── docs/                       # docs site (principles/ADRs rendered via mdsvex)                          [LANDED]
-│   └── integration/                # integration-test app consuming every published package
-│
-├── examples/                       # 19 per-package canonical usage snippets + README
-│
-├── docs/
-│   ├── principles.md               # §2 full coding + security + compliance contract
-│   ├── ux-principles.md            # §3 UI/UX rules per interface type (oklch, 8pt grid, etc.)
-│   ├── adr/                        # Architecture Decision Records (MADR-lite, 52 ADRs as of 2026-04-17)
-│   ├── architecture/               # C4 PlantUML diagrams (Context L1 + Container L2)
-│   ├── migrations/                 # per-version API migration guides + codemods (v0.1 downstream antipatterns live here)
-│   ├── compliance/                 # OWASP ASVS L2 / WCAG 2.2 AA / EU CRA / EU AI Act checklists
-│   ├── compose/                    # composition recipes for upstream libs we deliberately don't wrap
-│   └── upstream/                   # pinned upstream doc snapshots (offline-ready for AI agents; 6 snapshots, refreshed by refresh-upstream-docs.yml)
-│
-├── .claude/
-│   ├── settings.json               # hooks (PreToolUse, PostToolUse prettier, PreCommit `make ci`)
-│   └── skills/                     # /wire-module · /scaffold-route · /add-shadcn · /add-storybook
-│
-├── .github/
-│   ├── CODEOWNERS                  # @lusoris global
-│   ├── ISSUE_TEMPLATE/             # bug / feature / docs
-│   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
-│   └── workflows/                  # ci · ci-sveltekit (reusable) · release-please · refresh-upstream-docs
-│                                   # scorecard · codeql · auto-assign — see "CI gates" for what each enforces
-│
-├── .devcontainer/
-│   └── devcontainer.json           # Node 24 (ADR-0021), pnpm, zsh + oh-my-zsh, 15 VS Code extensions, ports 5173/4173/6006
-│
-├── .workingdir/                    # local-only planning state, gitignored (PLAN · STATE · V0.1.0 · BACKLOG)
-│   └── research/                   # per-library audits, app deep-reads, and the D-row decision ledger
-│                                   # (decisions-needed.md is the one to read first — see "When in doubt")
-│
-├── CLAUDE.md                       # Claude Code-specific guide (hooks, skills, project principles)
-├── AGENTS.md                       # this file
-├── README.md                       # user-facing pitch + module table
-├── SECURITY.md                     # coordinated-disclosure process
-├── LICENSE                         # MIT
-├── CODE_OF_CONDUCT.md              # Contributor Covenant 2.1 (stub pointing to upstream)
-├── CONTRIBUTING.md                 # dev workflow for contributors
-└── CHANGELOG.md                    # Keep a Changelog 1.1 (release-please-managed)
-```
+| Path               | Holds                                                                                                                                                                                                                    |
+| :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/<name>/` | `@sveltesentio/*` publishable module, 19 published. `src/index.ts` = entire public API (named exports only); `src/internal/` = off-limits to consumers; `AGENTS.md` = per-package conventions, read before touching area |
+| `apps/`            | `storybook` (Storybook 10 showcase, axe via addon-a11y), `docs` (docs site, mdsvex), `integration` (integration-test app consuming every published package)                                                              |
+| `examples/`        | 19 per-package canonical usage snippets + README                                                                                                                                                                         |
+| `docs/`            | `principles.md` (§2), `ux-principles.md` (§3), `adr/`, `architecture/`, `migrations/`, `compliance/`, `compose/`, `upstream/`                                                                                            |
+| `.claude/`         | `settings.json` hooks; skills `/wire-module`, `/scaffold-route`, `/add-shadcn`, `/add-storybook`                                                                                                                         |
+| `.github/`         | CODEOWNERS, issue + PR templates, workflows (see "CI gates")                                                                                                                                                             |
+| `.workingdir/`     | local-only planning state, gitignored: PLAN, STATE, V0.1.0, BACKLOG; `research/` = per-library audits, app deep-reads, D-row decision ledger                                                                             |
 
-Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pinned doc URLs. Create one for each package when its Phase lands (not before).
+Sub-exports (`ui/toast`, `media/player`, …) = module subpaths, not directories. Per-subpackage `AGENTS.md` files give package-level conventions, idioms, pinned doc URLs. Create one per package when its Phase lands (not before).
 
 ## Package purpose table
 
@@ -223,9 +222,9 @@ Per-subpackage `AGENTS.md` files give package-level conventions, idioms, and pin
 | `@sveltesentio/testing`     | ortho | vitest (optional peer), @axe-core/playwright                                               | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures                                                                                                                                                    |
 | `@sveltesentio/mcp`         | ortho | @modelcontextprotocol/sdk                                                                  | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue                                                                                                                           |
 
-**All 19 packages above are built and published to npm as of the v0.1.0 milestone — see [.workingdir/V0.1.0.md](.workingdir/V0.1.0.md). The Phase column records the original build order, not pending work.**
+**All 19 packages above: built + published to npm as of v0.1.0 milestone (see `.workingdir/V0.1.0.md`). Phase column records original build order, not pending work.**
 
-Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`. See [.workingdir/research/module-backlog.md](.workingdir/research/module-backlog.md) for the full golusoris cross-reference.
+Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`. Full golusoris cross-reference: `.workingdir/research/module-backlog.md`.
 
 ## Common tasks
 
@@ -243,7 +242,7 @@ Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, 
 
 ## Pinned upstream docs
 
-Version-pinned snapshots live in `docs/upstream/` (maintained by `refresh-upstream-docs.yml`). For any library not yet snapshotted, check the library repo directly for the exact version in `pnpm-lock.yaml`. Public docs may be ahead of or behind the pinned version.
+Version-pinned snapshots live in `docs/upstream/` (maintained by `refresh-upstream-docs.yml`). Library not yet snapshotted -> check library repo directly for exact version in `pnpm-lock.yaml`. Public docs may be ahead of or behind pinned version.
 
 Current peer-range targets (consumers must satisfy these):
 
@@ -264,28 +263,27 @@ Current peer-range targets (consumers must satisfy these):
 Every PR must pass:
 
 - **Conventional Commits** PR title (`commitlint` via `ci.yml`).
-- **ESLint flat config** — 0 errors (TS + Svelte + a11y).
-- **Prettier** — formatted (checked; not auto-fixed in CI).
-- **TypeScript** — 0 errors across workspaces (`turbo typecheck`).
-- **Vitest** — green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
-- **Playwright** — e2e green (via `apps/integration`).
-- **axe-core** — clean on every Storybook story (via `@storybook/addon-a11y`).
-- **`pnpm audit`** — clean (no `>=high` advisories).
-- **`codeql.yml`** — clean.
-- **`scorecard.yml`** — score ≥ 7.
+- **ESLint flat config**: 0 errors (TS + Svelte + a11y).
+- **Prettier**: formatted (checked; not auto-fixed in CI).
+- **TypeScript**: 0 errors across workspaces (`turbo typecheck`).
+- **Vitest**: green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
+- **Playwright**: e2e green (via `apps/integration`).
+- **axe-core**: clean on every Storybook story (via `@storybook/addon-a11y`).
+- **`pnpm audit`**: clean (no `>=high` advisories).
+- **`codeql.yml`**: clean.
+- **`scorecard.yml`**: score ≥ 7.
 
 Release PRs additionally:
 
-- **cosign** — signed artifacts via `release-please.yml`.
-- **syft** — CycloneDX SBOM attached.
-- **SLSA L3 provenance** — attested via `slsa-framework/slsa-github-generator`.
-- **`npm publish --provenance`** — required for the npm registry provenance badge.
+- **SLSA provenance**: Build Level 2 via `actions/attest-build-provenance` in `release-please.yml`.
+- **SBOM**: CycloneDX, workflow artifact only.
+- **Open (#280)**: Level 3, cosign, npm provenance, SBOM on release. Exception `HISS-11` in `.standards.yaml`, expires 2027-01-09.
 
 ## When in doubt
 
-1. Read [docs/principles.md](docs/principles.md) for the coding/security/compliance contract (§2).
-2. Read [docs/ux-principles.md](docs/ux-principles.md) for UI/UX rules per interface type (§3).
-3. Read the per-subpackage `AGENTS.md` for the area you're touching.
-4. Read [.workingdir/STATE.md](.workingdir/STATE.md) for what the author is currently working on + locked decisions.
-5. Read [.workingdir/PLAN.md](.workingdir/PLAN.md) for the full roadmap + framework mission.
-6. If a decision isn't locked yet, check [.workingdir/research/decisions-needed.md](.workingdir/research/decisions-needed.md) and **add evidence, don't ship a guess**.
+1. Read [docs/principles.md](docs/principles.md): coding/security/compliance contract (§2).
+2. Read [docs/ux-principles.md](docs/ux-principles.md): UI/UX rules per interface type (§3).
+3. Read per-subpackage `AGENTS.md` for touched area.
+4. Read `.workingdir/STATE.md`: current author work + locked decisions.
+5. Read `.workingdir/PLAN.md`: full roadmap + framework mission.
+6. Decision not locked yet -> check `.workingdir/research/decisions-needed.md`, **add evidence, don't ship guess**.

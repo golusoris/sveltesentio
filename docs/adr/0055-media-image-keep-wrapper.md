@@ -60,10 +60,10 @@ Keep `@sveltesentio/media/image` as a thin wrapper with preset-aware defaults. T
 
 ## Evidence
 
-- [.workingdir/research/decisions-needed.md](../../.workingdir/research/decisions-needed.md) D171 — original decision request, with the three invariants (`loading="lazy"`, `decoding="async"`, CSP `img-src`, EXIF strip on upload).
-- [.workingdir/research/module-surface-diff.md](../../.workingdir/research/module-surface-diff.md) — issue #12 audit, recommended **keep** with preset-aware rationale.
+- `.workingdir/research/decisions-needed.md` D171 — original decision request, with the three invariants (`loading="lazy"`, `decoding="async"`, CSP `img-src`, EXIF strip on upload).
+- `.workingdir/research/module-surface-diff.md` — issue #12 audit, recommended **keep** with preset-aware rationale.
 - [ADR-0047](0047-per-interface-presets.md) — per-interface preset system that gives the wrapper its preset detection.
 - [ADR-0041](0041-uploads-tus-exifr-filetype.md) — uploads stack that owns EXIF stripping; the image wrapper re-exports the helper.
 - [ADR-0029](0029-tailwind4-safe-area-utilities.md) — safe-area-aware layouts that interact with `sizes` generation on handheld.
 - Feedback memory `feedback_preset_theming_invariant.md` — the carve-out that makes "thin wrapper + preset-aware defaults" a justified exception to the streamlining rule.
-- Svelte enhanced images docs — https://svelte.dev/docs/kit/images — the build-time path the wrapper delegates to for static assets.
+- Svelte enhanced images docs — <https://svelte.dev/docs/kit/images> — the build-time path the wrapper delegates to for static assets.

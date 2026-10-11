@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # Zod — v4.x snapshot
 
 Pinned: **`zod ^4.0.0`** (peerDependency in `@sveltesentio/core`; consumed by `@sveltesentio/forms`)
-Canonical: https://zod.dev
+Canonical: <https://zod.dev>
 
 Zod v4 is a non-trivial bump from v3. Several v3 patterns are renamed or removed.
 
@@ -113,5 +113,5 @@ const Pipe = z.string().pipe(z.coerce.number()); // pipe v4 syntax
 
 ## Links
 
-- v3 → v4 changelog: https://zod.dev/v4/changelog
-- API reference: https://zod.dev/api
+- v3 → v4 changelog: <https://zod.dev/v4/changelog>
+- API reference: <https://zod.dev/api>

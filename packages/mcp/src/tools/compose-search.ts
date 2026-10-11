@@ -35,17 +35,8 @@ function countOccurrences(haystack: string, needle: string): number {
 	if (needle.length === 0) {
 		return 0;
 	}
-	let count = 0;
-	let from = 0;
-	for (;;) {
-		const at = haystack.indexOf(needle, from);
-		if (at === -1) {
-			break;
-		}
-		count += 1;
-		from = at + needle.length;
-	}
-	return count;
+	// `split` cuts at each leftmost non-overlapping match, leaving one more piece than matches.
+	return haystack.split(needle).length - 1;
 }
 
 /** First body line containing any query term, trimmed; empty string if none. */

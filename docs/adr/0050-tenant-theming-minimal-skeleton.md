@@ -17,12 +17,14 @@ Ship a minimal tenant-theming skeleton in v0.1:
 - Server-injected `<style>` block in the SSR HTML declares `:root { --accent: oklch(...); --brand: oklch(...); ... }` for the resolved tenant. Runs inside `app.html` template.
 - CSS custom props flow into Tailwind 4 `@theme` via `theme(--accent)` references — already idiomatic in `ui/preset`.
 - Consumer contract:
+
   ```ts
   export const tenantResolver: TenantResolver = async (event) => ({
   	id: '...',
   	tokens: { accent: 'oklch(0.7 0.15 240)', brand: 'oklch(...)' },
   });
   ```
+
 - Swap-in target: when Golusoris `tenancy/` lands, replace the consumer resolver with a shipped `golusorisTenancyResolver()` that reads from the tenancy API.
 
 **Explicitly out of scope for v0.1**: runtime per-tenant dark mode (multiplicative complexity), per-tenant font presets (too large a surface), per-tenant preset-\* swap. All deferred.

@@ -656,7 +656,7 @@ Seven a11y rules:
    trap + escape closes + initial focus on the Cancel button
    (destructive default is never focused).
 2. **Typed match input labelled + `aria-describedby`** linking to
-   the instruction text. SR users hear "Type DELETE user@example.com
+   the instruction text. SR users hear "Type DELETE `user@example.com`
    to confirm".
 3. **Countdown timer is `aria-live="polite"` + updated every minute
    not every second** — continuous updates overwhelm SR users.

@@ -12,7 +12,7 @@
 > tokens are **not** cookies and do **not** participate in CSRF.
 > Per [ADR-0035](../adr/0035-rbac-authorization-model.md) a token
 > can **never exceed** the scope of its owning principal.
-
+>
 > **The invariant: a key is a bearer secret, shown once.** The UI
 > surfaces the raw token exactly one time, immediately after
 > creation. The DB stores only `sha256(prefix + secret)`. There is no

@@ -73,12 +73,14 @@ export function useSSE(options: UseSseOptions): UseSse {
 		},
 	});
 
+	const teardown = (): void => {
+		buffer.stop();
+		client.close();
+	};
+
 	$effect(() => {
 		if (autoConnect) client.start();
-		return () => {
-			buffer.stop();
-			client.close();
-		};
+		return teardown;
 	});
 
 	return {
@@ -103,9 +105,6 @@ export function useSSE(options: UseSseOptions): UseSse {
 		connect() {
 			client.start();
 		},
-		close() {
-			buffer.stop();
-			client.close();
-		},
+		close: teardown,
 	};
 }

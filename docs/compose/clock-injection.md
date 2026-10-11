@@ -156,5 +156,5 @@ export const handle = sequence(withClock(testClock({ now: new Date('2026-04-17T1
 ## Related
 
 - [ADR-0052](../adr/0052-clock-injection-hybrid.md) — decision record.
-- [`.workingdir/research/d13-clock-injection.md`](../../.workingdir/research/d13-clock-injection.md) — live-docs research.
+- `.workingdir/research/d13-clock-injection.md` — live-docs research.
 - Golusoris `pkg/clock` — the Go-side injected clock whose ergonomics this mirrors.

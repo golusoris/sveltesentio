@@ -1,7 +1,9 @@
-// Seventy statements in one function, against an effective max_func_loc of 60.
-// Cyclomatic complexity is 1, so the `complexity` rule is silent, and
-// `max-lines-per-function` is OFF — this is the length half of HISS-04 going
-// unreported. Six functions in shipped source are over the same bound.
+// Seventy statements in one function, packed several to a line. Cyclomatic
+// complexity is 1, so the `complexity` rule is silent, and both length checks
+// count lines, not statements: `max-lines-per-function` (60, blank lines and
+// comments skipped) and the engine scan (raw line span) accept it. Measured by
+// planting it under packages/core/src: ESLint exits 0. No rule bounds the
+// number of statements in a function.
 export function accumulate(): number {
 	let total = 0;
 	total += 1; total += 2; total += 3; total += 4; total += 5;

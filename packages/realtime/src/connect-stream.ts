@@ -1,5 +1,5 @@
 import { type BackoffOptions } from './backoff.js';
-import { createReconnectScheduler } from './reconnect-scheduler.js';
+import { createReconnectScheduler, type ReconnectScheduler } from './reconnect-scheduler.js';
 
 /**
  * Lifecycle of a server-streaming consumer.
@@ -51,16 +51,6 @@ export interface ConnectStream {
 }
 
 /**
- * Transport-agnostic server-streaming state machine. Consumes an injected
- * async-iterable {@link StreamCall}, surfaces messages + lifecycle, and
- * reconnects with the shared jittered {@link computeBackoff} after a failed
- * attempt. Holds no Svelte / ConnectRPC imports so it unit-tests against a
- * fake stream with no network, grpc, or runes runtime.
- *
- * Natural completion (the iterator finishing without throwing) is a terminal
- * `closed` — only thrown errors trigger backoff + reconnect.
- */
-/**
  * Drains an async iterable, handing each item to `onMessage`.
  *
  * Resolves true when the run completed while still current, and false the moment
@@ -81,84 +71,112 @@ async function drainStream<TMessage>(
 	return isCurrent();
 }
 
-// 66 lines against a cap of 60, and the remainder is structural rather than
-// slack. What is left is the reconnect wiring, setState, consume,
-// scheduleReconnect and the returned object; the two genuinely separable
-// concerns were already taken out — createReconnectScheduler, which SseClient
-// shares, and drainStream at module scope. Every further split measured out at
-// roughly one line in exchange for a parameter object and an extra indirection,
-// which trades a readable factory for a smaller number. Recorded in
-// .config/hiss/coverage.yaml under HISS-04.
-// eslint-disable-next-line max-lines-per-function -- structural; see above
+/**
+ * The state machine behind {@link createConnectStream}.
+ *
+ * A class for the reason `SseClient` is one: each transition is a method
+ * of its own. As one closure factory the same transitions ran past the function
+ * length cap, and every split short of this one cost a parameter object for
+ * about a line (HISS-04). `start` and `stop` are bound fields, so a caller can
+ * still hand them around detached, as the object literal this replaced allowed.
+ */
+class ConnectStreamMachine<TMessage> implements ConnectStream {
+	private readonly options: ConnectStreamOptions<TMessage>;
+	private readonly reconnect: ReconnectScheduler;
+	private current: ConnectStreamState = 'idle';
+	private controller: AbortController | undefined;
+	/** Bumped on every stop()/start() so a stale in-flight loop self-cancels. */
+	private runToken = 0;
+
+	constructor(options: ConnectStreamOptions<TMessage>) {
+		this.options = options;
+		this.reconnect = createReconnectScheduler({
+			backoff: options.backoff,
+			setTimeoutImpl: options.setTimeoutImpl,
+			clearTimeoutImpl: options.clearTimeoutImpl,
+		});
+	}
+
+	get state(): ConnectStreamState {
+		return this.current;
+	}
+
+	get attempt(): number {
+		return this.reconnect.attempt;
+	}
+
+	readonly start = (): void => {
+		if (this.current === 'streaming') return;
+		this.runToken += 1;
+		this.reconnect.reset();
+		this.consume(this.runToken);
+	};
+
+	readonly stop = (): void => {
+		this.runToken += 1;
+		this.reconnect.clear();
+		this.controller?.abort();
+		this.controller = undefined;
+		this.setState('closed');
+	};
+
+	private setState(next: ConnectStreamState): void {
+		if (this.current === next) return;
+		this.current = next;
+		this.options.onStateChange?.(next);
+	}
+
+	/**
+	 * Opens one attempt. The controller is in place before the state change is
+	 * announced, so a stop() issued from inside `onStateChange` aborts this
+	 * attempt and not the one before it.
+	 */
+	private consume(token: number): void {
+		this.controller = new AbortController();
+		const signal = this.controller.signal;
+		this.setState('streaming');
+		void this.runAttempt(token, signal);
+	}
+
+	/** One attempt, start to finish. A superseded or aborted run reports nothing. */
+	private async runAttempt(token: number, signal: AbortSignal): Promise<void> {
+		const isCurrent = (): boolean => token === this.runToken;
+		try {
+			const completed = await drainStream(this.options.call(signal), isCurrent, (message) => {
+				this.reconnect.reset();
+				this.options.onMessage?.(message);
+			});
+			if (!completed) return;
+			this.setState('closed');
+			this.options.onClose?.();
+		} catch (error) {
+			if (!isCurrent() || signal.aborted) return;
+			this.options.onError?.(error, this.reconnect.attempt + 1);
+			this.scheduleReconnect(token);
+		}
+	}
+
+	private scheduleReconnect(token: number): void {
+		this.setState('streaming');
+		this.reconnect.schedule(() => {
+			if (token !== this.runToken) return;
+			this.consume(token);
+		});
+	}
+}
+
+/**
+ * Transport-agnostic server-streaming state machine. Consumes an injected
+ * async-iterable {@link StreamCall}, surfaces messages + lifecycle, and
+ * reconnects with the shared jittered {@link computeBackoff} after a failed
+ * attempt. Holds no Svelte / ConnectRPC imports so it unit-tests against a
+ * fake stream with no network, grpc, or runes runtime.
+ *
+ * Natural completion (the iterator finishing without throwing) is a terminal
+ * `closed` — only thrown errors trigger backoff + reconnect.
+ */
 export function createConnectStream<TMessage>(
 	options: ConnectStreamOptions<TMessage>,
 ): ConnectStream {
-	const reconnect = createReconnectScheduler({
-		backoff: options.backoff,
-		setTimeoutImpl: options.setTimeoutImpl,
-		clearTimeoutImpl: options.clearTimeoutImpl,
-	});
-
-	let state: ConnectStreamState = 'idle';
-	let controller: AbortController | undefined;
-	/** Bumped on every stop()/start() so a stale in-flight loop self-cancels. */
-	let runToken = 0;
-
-	const setState = (next: ConnectStreamState): void => {
-		if (state === next) return;
-		state = next;
-		options.onStateChange?.(next);
-	};
-
-	const consume = (token: number): void => {
-		const isCurrent = (): boolean => token === runToken;
-		controller = new AbortController();
-		const signal = controller.signal;
-		setState('streaming');
-		void (async () => {
-			try {
-				const completed = await drainStream(options.call(signal), isCurrent, (message) => {
-					reconnect.reset();
-					options.onMessage?.(message);
-				});
-				if (!completed) return;
-				setState('closed');
-				options.onClose?.();
-			} catch (error) {
-				if (token !== runToken || signal.aborted) return;
-				options.onError?.(error, reconnect.attempt + 1);
-				scheduleReconnect(token);
-			}
-		})();
-	};
-
-	const scheduleReconnect = (token: number): void => {
-		setState('streaming');
-		reconnect.schedule(() => {
-			if (token !== runToken) return;
-			consume(token);
-		});
-	};
-
-	return {
-		get state(): ConnectStreamState {
-			return state;
-		},
-		get attempt(): number {
-			return reconnect.attempt;
-		},
-		start(): void {
-			if (state === 'streaming') return;
-			runToken += 1;
-			reconnect.reset();
-			consume(runToken);
-		},
-		stop(): void {
-			runToken += 1;
-			reconnect.clear();
-			controller?.abort();
-			controller = undefined;
-			setState('closed');
-		},
-	};
+	return new ConnectStreamMachine(options);
 }

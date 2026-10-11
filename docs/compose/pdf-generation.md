@@ -13,7 +13,7 @@
 > [ADR-0023](../adr/0023-observability-uuidv7.md) every rendered
 > artifact is **content-addressed** (SHA-256 of inputs → filename) so
 > regenerations are idempotent and caches never serve a stale invoice.
-
+>
 > **Server-only.** PDF rendering never runs in the browser. PDFKit
 > writes to a stream; Playwright spins up a worker pool. The client
 > gets a signed URL to S3/R2 and downloads.

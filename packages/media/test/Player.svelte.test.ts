@@ -105,6 +105,51 @@ describe('Player', () => {
 		expect(video.currentTime).toBe(30);
 	});
 
+	it('requests fullscreen on F', async () => {
+		const { container } = render(Player, {
+			src: '/clip.mp4',
+			title: 'Demo reel',
+			tracks: captions,
+		});
+		const video = container.querySelector('video') as HTMLVideoElement;
+		const request = vi.fn().mockResolvedValue(undefined);
+		video.requestFullscreen = request;
+
+		await fireEvent.keyDown(video, { key: 'f' });
+		expect(request).toHaveBeenCalledTimes(1);
+	});
+
+	it('reports a refused fullscreen request instead of swallowing it', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const { container } = render(Player, {
+			src: '/clip.mp4',
+			title: 'Demo reel',
+			tracks: captions,
+		});
+		const video = container.querySelector('video') as HTMLVideoElement;
+		const refusal = new TypeError('Permissions check failed');
+		video.requestFullscreen = vi.fn().mockRejectedValue(refusal);
+
+		await fireEvent.keyDown(video, { key: 'f' });
+		await vi.waitFor(() => {
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining('fullscreen'), refusal);
+		});
+		warn.mockRestore();
+	});
+
+	it('handles F without throwing where the element has no fullscreen API', async () => {
+		const { container } = render(Player, {
+			src: '/clip.mp4',
+			title: 'Demo reel',
+			tracks: captions,
+		});
+		const video = container.querySelector('video') as HTMLVideoElement;
+		Object.defineProperty(video, 'requestFullscreen', { configurable: true, value: undefined });
+
+		// `false` = the key was consumed (default prevented); nothing was called or thrown.
+		expect(await fireEvent.keyDown(video, { key: 'f' })).toBe(false);
+	});
+
 	it('forces muted when autoplay is enabled', () => {
 		const { container } = render(Player, {
 			src: '/clip.mp4',

@@ -78,6 +78,11 @@ function appendChunk(messages: ChatMessage[], index: number, text: string): Chat
 	return next;
 }
 
+/** The conversation with a user turn and an empty assistant reply slot appended. */
+function withNewTurn(messages: ChatMessage[], content: string): ChatMessage[] {
+	return [...messages, { role: 'user', content }, { role: 'assistant', content: '' }];
+}
+
 export function useLLMChat(options: UseLLMChatOptions): UseLLMChat {
 	const seed = options.initialMessages ? [...options.initialMessages] : [];
 
@@ -103,10 +108,8 @@ export function useLLMChat(options: UseLLMChatOptions): UseLLMChat {
 			controller = new AbortController();
 			streaming = true;
 
-			const userMessage: ChatMessage = { role: 'user', content };
-			const reply: ChatMessage = { role: 'assistant', content: '' };
 			// One reassignment per push so each `$state` write is observed.
-			messages = [...messages, userMessage, reply];
+			messages = withNewTurn(messages, content);
 			const replyIndex = messages.length - 1;
 
 			try {

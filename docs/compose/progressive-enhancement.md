@@ -10,7 +10,7 @@
 > [ADR-0003](../adr/0003-forms-superforms.md) Superforms is the
 > default form surface, and `SuperDebug` aside, it is designed to
 > submit with or without JS.
-
+>
 > **The baseline contract.** Curl the page → it works. Disable JS in
 > devtools → it still works. Chromium on cheap Android with JS
 > delayed by 8 seconds on a slow CPU → it works in the meantime.

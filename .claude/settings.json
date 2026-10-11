@@ -7,6 +7,11 @@
 					{
 						"type": "command",
 						"command": "true"
+					},
+					{
+						"type": "command",
+						"command": "praetorctl hook claude pre-tool",
+						"timeout": 15
 					}
 				]
 			}

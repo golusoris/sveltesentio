@@ -12,7 +12,7 @@
 > reward grant is audit-logged; per
 > [ADR-0034](../adr/0034-auth-cookie-and-csrf-contract.md) the
 > attribution cookie is `__Host-ref` with a 30-day TTL.
-
+>
 > **Attribution is where programs die.** Without clear rules — first-
 > touch vs. last-touch, cookie window, self-referral block, fraud
 > heuristics — every reward dispute becomes adversarial. The recipe
@@ -655,5 +655,5 @@ test('self-referral rejected by normalized email', async () => {
   [structured-emails.md](structured-emails.md),
   [cookies-authoritative.md](cookies-authoritative.md)
 - IRS 1099-MISC threshold: $600/year; EU DAC7 (DAC7 Directive 2021/514)
-- Crockford base32: https://www.crockford.com/base32.html
+- Crockford base32: <https://www.crockford.com/base32.html>
 - OWASP cheat sheet — Session Management (cookie attributes)

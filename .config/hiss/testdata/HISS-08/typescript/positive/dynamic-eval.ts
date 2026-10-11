@@ -1,4 +1,5 @@
-// Dynamic execution of a runtime-built string. Reported since this repository
+// Dynamic execution of a runtime-built string. The engine scanner reports it,
+// which is what this bucket replays. ESLint reports it too, since this repository
 // enabled `no-eval`, `no-new-func` and `no-implied-eval` over packages/*/src,
 // which was free: zero violations existed in shipped source.
 //

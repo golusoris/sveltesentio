@@ -7,7 +7,7 @@ last-verified: 2026-04-18
 # Svelte 5 runes — v5.55.4 snapshot
 
 Pinned: **^5.55.4** (root + every package `peerDependency`)
-Canonical: https://svelte.dev/docs/svelte/what-are-runes
+Canonical: <https://svelte.dev/docs/svelte/what-are-runes>
 
 Runes are compiler-recognised symbols (no import). Use them in `.svelte` and `.svelte.ts`/`.svelte.js` files.
 
@@ -114,5 +114,5 @@ Available only in components compiled as custom elements. Use to dispatch `Custo
 
 ## Links
 
-- Migration guide (Svelte 4 → 5): https://svelte.dev/docs/svelte/v5-migration-guide
-- Runes deep-dive: https://svelte.dev/docs/svelte/$state
+- Migration guide (Svelte 4 → 5): <https://svelte.dev/docs/svelte/v5-migration-guide>
+- Runes deep-dive: <https://svelte.dev/docs/svelte/$state>

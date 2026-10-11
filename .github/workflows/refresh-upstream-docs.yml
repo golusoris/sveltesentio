@@ -35,7 +35,7 @@ jobs:
             snapshot="docs/upstream/${dir}/README.md"
             [ -f "$snapshot" ] || continue
             pinned=$(awk '/^pinned-version:/ {print $2; exit}' "$snapshot")
-            latest=$(curl -fsSL "https://registry.npmjs.org/${pkg}/latest" | jq -r '.version')
+            latest=$(curl -fsSL --max-time 30 "https://registry.npmjs.org/${pkg}/latest" | jq -r '.version')
             if [ "$pinned" != "$latest" ] && [ "$pinned" != "${latest%.*}.x" ] && [ "$pinned" != "${latest%%.*}.x" ]; then
               drift_lines+="- \`${pkg}\` — snapshot pinned: \`${pinned}\` · latest on npm: \`${latest}\` · [snapshot](docs/upstream/${dir}/README.md)\n"
             fi

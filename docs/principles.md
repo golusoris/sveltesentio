@@ -47,7 +47,7 @@ Additional hard rules:
 
 CSP header minimum (configure per-app in `hooks.server.ts`):
 
-```
+```text
 Content-Security-Policy:
   default-src 'self';
   script-src 'self' 'nonce-{NONCE}';
@@ -118,14 +118,14 @@ Rules:
 
 ## §2.5 Supply chain
 
-| Standard       | Rule                                                                          |
-| -------------- | ----------------------------------------------------------------------------- |
-| SLSA L3        | Provenance attestation on every release via `actions/attest-build-provenance` |
-| SBOM           | Generated via Syft on release                                                 |
-| Cosign         | Keyless signing via Sigstore on release artifacts                             |
-| Dependabot     | Weekly updates for npm + GitHub Actions, grouped by ecosystem                 |
-| Audit          | `pnpm audit --audit-level=high` must pass on every merge                      |
-| Pinned actions | All GitHub Action `uses:` pinned to commit SHA, not tag                       |
+| Standard       | Rule                                                                                                                                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SLSA           | Build Level 2 today: provenance attestation on every release via `actions/attest-build-provenance` in the release job. Level 3 is declared and open ([#280](https://github.com/golusoris/sveltesentio/issues/280)); exception `HISS-11` in `.standards.yaml` expires 2027-01-09 |
+| SBOM           | CycloneDX SBOM generated on release as a workflow artifact; attaching it to the release is open (#280)                                                                                                                                                                          |
+| Cosign         | Declared, not in place: no release step signs with cosign yet (#280, same exception)                                                                                                                                                                                            |
+| Dependabot     | Weekly updates for npm + GitHub Actions, grouped by ecosystem                                                                                                                                                                                                                   |
+| Audit          | `pnpm audit --audit-level=high` must pass on every merge                                                                                                                                                                                                                        |
+| Pinned actions | All GitHub Action `uses:` pinned to commit SHA, not tag                                                                                                                                                                                                                         |
 
 ---
 
@@ -186,13 +186,13 @@ Font subsetting required for any custom font loaded.
 
 sveltesentio is **evidence-driven by construction**. "Major decisions" — library picks, module surface, public API shape, compliance posture, or anything that touches a package's public API or CI gates — are never locked by an agent or contributor on their own authority.
 
-| Rule                                                                                                                                                       | Enforcement            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Every major decision has a `D*` row in [.workingdir/research/decisions-needed.md](../.workingdir/research/decisions-needed.md) with ≥ 2 named alternatives | PR review              |
-| A `D*` row closes only when evidence cites (a) a `golusoris/app-*` file:line, (b) measurable benchmark / bundle analysis, or (c) an existing ADR           | PR review              |
-| "Seems good", "commonly used", or awesome-list consensus are **pointers to evidence**, not evidence itself                                                 | PR review              |
-| Only the project owner (`@lusoris`) closes a row to `locked (ADR-NNNN)` — that lock creates a Nygard ADR under `docs/adr/`                                 | CODEOWNERS + PR review |
-| Agents working on code adjacent to an open `D*` row must reference it in the PR body and avoid choices that pre-empt the decision                          | PR review              |
+| Rule                                                                                                                                             | Enforcement            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| Every major decision has a `D*` row in `.workingdir/research/decisions-needed.md` with ≥ 2 named alternatives                                    | PR review              |
+| A `D*` row closes only when evidence cites (a) a `golusoris/app-*` file:line, (b) measurable benchmark / bundle analysis, or (c) an existing ADR | PR review              |
+| "Seems good", "commonly used", or awesome-list consensus are **pointers to evidence**, not evidence itself                                       | PR review              |
+| Only the project owner (`@lusoris`) closes a row to `locked (ADR-NNNN)` — that lock creates a Nygard ADR under `docs/adr/`                       | CODEOWNERS + PR review |
+| Agents working on code adjacent to an open `D*` row must reference it in the PR body and avoid choices that pre-empt the decision                | PR review              |
 
 This rule supersedes any library recommendation from awesome-lists, AI-generated suggestions, or previous sessions that weren't closed via a `D*` row. **Observation: a library keeps being recommended** ≠ **decision: sveltesentio uses that library**.
 

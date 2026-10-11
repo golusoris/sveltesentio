@@ -11,8 +11,8 @@ same governance surface, same quality bar. Read this document before opening a P
    OWASP ASVS L2, WCAG 2.2 AA, Svelte 5 runes-first, supply chain, interface-type UX,
    tooling, testing, performance, no-guessing, strict SvelteKit universe.
 3. Read [docs/ux-principles.md](docs/ux-principles.md) before writing UI code.
-4. Check [.workingdir/PLAN.md](.workingdir/PLAN.md) for the current phase and
-   [.workingdir/STATE.md](.workingdir/STATE.md) for in-flight decisions.
+4. Check `.workingdir/PLAN.md` for the current phase and
+   `.workingdir/STATE.md` for in-flight decisions.
 5. Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Prerequisites
@@ -43,12 +43,12 @@ short-lived and named `feat/<package>-<slug>`, `fix/<package>-<slug>`, or
 
 1. **Open a D-row first for major decisions.** New library, new module, new
    public API surface, breaking change — all go through
-   [.workingdir/research/decisions-needed.md](.workingdir/research/decisions-needed.md)
+   `.workingdir/research/decisions-needed.md`
    with evidence from (a) an existing golusoris/app-*, (b) a benchmark, or
    (c) an ADR. AI agents never close a D-row; only the maintainer does.
 2. **Harvest first.** Before proposing a new dependency, confirm it isn't
    already solved by something in
-   [.workingdir/research/awesome-harvest.md](.workingdir/research/awesome-harvest.md)
+   `.workingdir/research/awesome-harvest.md`
    or the shadcn-svelte inventory.
 3. **Stay in the SvelteKit universe.** No React, Vue, Solid, Angular, or
    Qwik bridges — Svelte 5 + framework-agnostic libraries only.
@@ -197,8 +197,11 @@ from the `main` branch. Your Conventional Commits drive the version bump:
 Per-package SemVer. Pre-1.0 breaking changes are allowed but still go through
 the same migration-footer discipline.
 
-Every release ships: SBOM (Syft), SLSA L3 provenance, keyless cosign signing
-via Sigstore, and a `pnpm audit`-clean dependency tree.
+Every release ships a SLSA Build Level 2 provenance attestation and comes from
+a `pnpm audit`-clean dependency tree. Level 3 provenance, cosign signing, npm
+provenance and an SBOM attached to the release are open
+([#280](https://github.com/golusoris/sveltesentio/issues/280)); see
+[SECURITY.md](SECURITY.md) for the measured state.
 
 ## Getting help
 

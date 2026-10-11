@@ -123,12 +123,12 @@ Each item links to the ADR or module that owns it.
 
 ## V14 — Configuration
 
-| #    | Control                                                | Status | Owner                                        | Evidence                                |
-| ---- | ------------------------------------------------------ | ------ | -------------------------------------------- | --------------------------------------- |
-| 14.1 | Debug endpoints never reachable in production.         | ✅     | `process.env.NODE_ENV === 'production'` gate | `@sveltesentio/core` debug helper.      |
-| 14.2 | SBOM published with every release.                     | 🔲     | CI `release-sveltekit`                       | Syft step planned; not yet wired.       |
-| 14.3 | Provenance attestation (SLSA L3) on every release.     | 🔲     | CI `release-sveltekit`                       | GitHub Artifact Attestations planned.   |
-| 14.4 | Dependencies have a signed provenance where available. | ⚠️     | Supply chain                                 | `pnpm audit --signatures` in `make ci`. |
+| #    | Control                                                | Status | Owner                                        | Evidence                                                                                                                 |
+| ---- | ------------------------------------------------------ | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 14.1 | Debug endpoints never reachable in production.         | ✅     | `process.env.NODE_ENV === 'production'` gate | `@sveltesentio/core` debug helper.                                                                                       |
+| 14.2 | SBOM published with every release.                     | 🔲     | CI `release-please.yml`                      | CycloneDX SBOM generated as a workflow artifact; attaching it to the release is open (#280).                             |
+| 14.3 | Provenance attestation (SLSA L3) on every release.     | 🔲     | CI `release-please.yml`                      | Build Level 2 attested via `actions/attest-build-provenance`; Level 3 open (#280), exception `HISS-11` until 2027-01-09. |
+| 14.4 | Dependencies have a signed provenance where available. | ⚠️     | Supply chain                                 | `pnpm audit --signatures` in `make ci`.                                                                                  |
 
 ## Open items
 

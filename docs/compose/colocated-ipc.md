@@ -142,7 +142,7 @@ BPF program attaches to the cgroup v2 hierarchy containing both processes. Liste
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ cgroup v2: /sys/fs/cgroup/.../sveltesentio-deployment/ │
 │                                                         │

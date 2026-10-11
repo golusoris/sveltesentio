@@ -1,5 +1,6 @@
 // Directly self-recursive: the call graph is not a DAG.
-// `@sveltesentio/no-recursion` reports it. The rule resolves the call through
+// The engine scanner reports it, which is what this bucket replays, and so does
+// `@sveltesentio/no-recursion`. The rule resolves the call through
 // scope analysis rather than by name, so a shadowing inner binding is not
 // mistaken for recursion and an arrow bound to a const is still caught.
 export function countdown(n: number): number {

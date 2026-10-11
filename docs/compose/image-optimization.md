@@ -333,7 +333,7 @@ Three dark-mode rules:
 
 ## CSP `img-src`
 
-```
+```text
 img-src 'self' data: blob: https://cdn.example.com https://imagedelivery.net;
 ```
 

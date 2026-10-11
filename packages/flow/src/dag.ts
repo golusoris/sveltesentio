@@ -69,7 +69,8 @@ export function topologicalSort(
 	const { indegree, queue } = initialIndegrees(nodes, incoming);
 
 	const order: string[] = [];
-	for (;;) {
+	// Kahn's algorithm emits each node at most once, so the node count bounds the loop.
+	for (let step = 0; step < nodes.length; step += 1) {
 		const id = queue.shift();
 		// Ends the loop on an empty queue without asserting what `shift` returned.
 		if (id === undefined) break;
@@ -162,7 +163,9 @@ export function reachableFrom(
 	const { outgoing } = buildAdjacency(nodes, edges);
 	const reached = new Set<string>();
 	const queue: string[] = [startId];
-	for (;;) {
+	// Besides the start, every queue entry comes from one edge, so edges + 1 bounds the loop.
+	const maxSteps = edges.length + 1;
+	for (let step = 0; step < maxSteps; step += 1) {
 		const id = queue.shift();
 		// Ends the loop on an empty queue without asserting what `shift` returned.
 		if (id === undefined) break;

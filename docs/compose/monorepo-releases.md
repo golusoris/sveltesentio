@@ -1,6 +1,4 @@
-# Monorepo releases — release-please per-package, Conventional Commits,
-
-# SemVer + provenance
+# Monorepo releases — release-please per-package, Conventional Commits, SemVer + provenance
 
 sveltesentio ships 12 `@sveltesentio/*` packages from a single pnpm
 workspace. Releases are managed by **release-please** (the default per
@@ -417,7 +415,7 @@ reads, so the rule strictness is non-negotiable.
 ## Downstream apps
 
 Downstream consumers (arca, lurkarr, revenge, subdo — see the
-[downstream-apps reference](../../.workingdir/STATE.md)) ship their own
+downstream-apps reference (`.workingdir/STATE.md`)) ship their own
 release cycles via `ci-sveltekit.yml` (the reusable app workflow).
 Their release story is simpler (app, not library):
 
