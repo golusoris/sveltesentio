@@ -44,7 +44,7 @@ short-lived and named `feat/<package>-<slug>`, `fix/<package>-<slug>`, or
 1. **Open a D-row first for major decisions.** New library, new module, new
    public API surface, breaking change — all go through
    `.workingdir/research/decisions-needed.md`
-   with evidence from (a) an existing golusoris/app-*, (b) a benchmark, or
+   with evidence from (a) a consuming application, (b) a benchmark, or
    (c) an ADR. AI agents never close a D-row; only the maintainer does.
 2. **Harvest first.** Before proposing a new dependency, confirm it isn't
    already solved by something in

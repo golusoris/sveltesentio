@@ -9,7 +9,7 @@
 > shipped without commercial activity by its maintainer. Under CRA
 > Art. 2(5) + Recital 18, non-commercial FOSS is **out of scope** for the
 > obligations that apply to "manufacturers" of products with digital
-> elements. However, downstream consumers (`golusoris/app-*` and any
+> elements. However, downstream consumers (consuming applications and any
 > commercial deployment) are in scope and inherit the artifacts listed
 > below. This checklist tracks what sveltesentio ships so that downstream
 > consumers can satisfy **Annex I** (essential cybersecurity requirements)
@@ -44,16 +44,16 @@
 
 ## Annex I Part II — Vulnerability handling requirements
 
-| #   | Requirement                                                                                                | Status | Evidence                                                            |
-| --- | ---------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
-| 1   | Identify + document vulnerabilities + components contained in the product, including SBOM.                 | 🔲     | Syft integration planned in `release-sveltekit.yml`.                |
-| 2   | Address + remediate vulnerabilities without delay, including by providing security updates.                | ✅     | SECURITY.md — 48 h ack, 7 d assessment.                             |
-| 3   | Apply effective + regular tests + reviews of security of the product.                                      | ✅     | `make ci` runs on every PR + nightly Scorecard workflow.            |
-| 4   | Once a security update has been made available, publicly disclose information about fixed vulnerabilities. | ✅     | GitHub Security Advisories + CHANGELOG entry.                       |
-| 5   | Put in place + enforce a coordinated vulnerability disclosure policy.                                      | ✅     | SECURITY.md.                                                        |
-| 6   | Facilitate the sharing of information about potential vulnerabilities.                                     | ✅     | GitHub private advisory + email intake; `security.txt` planned.     |
-| 7   | Provide secure distribution mechanisms for security updates.                                               | 🔲     | npm registry + provenance attestation + Sigstore signing (planned). |
-| 8   | Ensure that security patches are disseminated without delay + free of charge + with advisory information.  | ✅     | npm patch releases + CHANGELOG + GitHub Release notes.              |
+| #   | Requirement                                                                                                | Status | Evidence                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 1   | Identify + document vulnerabilities + components contained in the product, including SBOM.                 | 🔲     | CycloneDX SBOM generated in `release-please.yml` as a workflow artifact; not attached to the release (#280). |
+| 2   | Address + remediate vulnerabilities without delay, including by providing security updates.                | ✅     | SECURITY.md — 48 h ack, 7 d assessment.                                                                      |
+| 3   | Apply effective + regular tests + reviews of security of the product.                                      | ✅     | `make ci` runs on every PR + nightly Scorecard workflow.                                                     |
+| 4   | Once a security update has been made available, publicly disclose information about fixed vulnerabilities. | ✅     | GitHub Security Advisories + CHANGELOG entry.                                                                |
+| 5   | Put in place + enforce a coordinated vulnerability disclosure policy.                                      | ✅     | SECURITY.md.                                                                                                 |
+| 6   | Facilitate the sharing of information about potential vulnerabilities.                                     | ✅     | GitHub private advisory + email intake; `security.txt` planned.                                              |
+| 7   | Provide secure distribution mechanisms for security updates.                                               | 🔲     | npm registry + provenance attestation + Sigstore signing (planned).                                          |
+| 8   | Ensure that security patches are disseminated without delay + free of charge + with advisory information.  | ✅     | npm patch releases + CHANGELOG + GitHub Release notes.                                                       |
 
 ## Annex II — Information + instructions to users
 
@@ -72,14 +72,18 @@
 
 ## Software Bill of Materials (SBOM)
 
-Per Art. 13(24) + Annex I Part II (1). sveltesentio will ship an SBOM in
-[CycloneDX](https://cyclonedx.org/) format with every release, generated via
-[Syft](https://github.com/anchore/syft) in the `release-sveltekit.yml`
-workflow.
+Per Art. 13(24) + Annex I Part II (1). State measured on 2026-10-11:
 
-- Format: CycloneDX 1.6 JSON.
-- Scope: production dependencies only (`--scope runtime`).
-- Publication: GitHub Release asset + npm registry provenance.
+- The release job in `release-please.yml` generates one SBOM per run with
+  [`anchore/sbom-action`](https://github.com/anchore/sbom-action), in
+  [CycloneDX](https://cyclonedx.org/) JSON (`sbom.cdx.json`).
+- The step is best-effort (`continue-on-error`): a failed SBOM run does not
+  fail the release.
+- The file is a workflow artifact that expires with the run. No release
+  carries an SBOM yet.
+
+Open in [#280](https://github.com/golusoris/sveltesentio/issues/280): an
+SBOM attached to every release, and a verifiable npm provenance attestation.
 
 ## Incident reporting
 
@@ -101,8 +105,10 @@ to cooperate with downstream consumers:
 - LTS policy (item 7 of Annex II) — draft before v1.0.
 - Decommission guide (item 10 of Annex II) — add to AGENTS.md under
   "Lifecycle" section.
-- SBOM automation (Annex I Part II #1) — wire Syft step.
-- Sigstore keyless signing (Annex I Part II #7) — wire in release workflow.
+- SBOM on the release (Annex I Part II #1) — generated today as a workflow
+  artifact only; attach it to the release (#280).
+- Sigstore keyless signing (Annex I Part II #7) — not in place; no release
+  carries a signature (#280).
 - `security.txt` (Annex I Part II #6) — add `/.well-known/security.txt`
   template in `@sveltesentio/shell`.
 

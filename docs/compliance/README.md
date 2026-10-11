@@ -17,6 +17,6 @@ Each checklist distinguishes:
 - `🔲` planned, with owner + target milestone;
 - `N/A` not applicable at the framework surface.
 
-Downstream apps (`golusoris/app-*` and other consumers) inherit the
+Downstream apps (every consuming application) inherit the
 framework defaults but remain responsible for application-level controls
 that can only be asserted at deployment time.

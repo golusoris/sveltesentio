@@ -119,7 +119,7 @@ make verify-all
 
 `sveltesentio` = pnpm workspace monorepo (`github.com/lusoris/sveltesentio`). Wraps pinned set of best-in-class libraries as opt-in `@sveltesentio/*` packages. Apps compose only what they need; nothing else ships.
 
-**SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (Go meta-framework, same author). Same opt-in module discipline. Same compliance posture (OWASP ASVS L2 / WCAG 2.2 AA / SLSA L3 / EU CRA / EU AI Act). Same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks). Expressed in Svelte 5 runes + TypeScript, not Go + fx.
+**SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (Go meta-framework, same author). Same opt-in module discipline. Same compliance targets (OWASP ASVS L2 / WCAG 2.2 AA / SLSA Build Level 3 / EU CRA / EU AI Act); SLSA today = Build Level 2, Level 3 open (#280). Same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks). Expressed in Svelte 5 runes + TypeScript, not Go + fx.
 
 Pointers: [README.md](README.md) = user-facing pitch. [docs/principles.md](docs/principles.md) = full coding contract (§2). [docs/ux-principles.md](docs/ux-principles.md) = UX rules (§3).
 
@@ -148,7 +148,7 @@ Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, 
 
 ## Hard rules
 
-1. **Never break public API** without `Migration:` footer (before/after Svelte snippet) + codemod, or explicit "manual migration" note with line-level diff guidance. CI runs API-extractor against previous tag.
+1. **Never break public API** without `Migration:` footer (before/after Svelte snippet) + codemod, or explicit "manual migration" note with line-level diff guidance. No API-diff gate runs in CI yet (#288): reviewer compares public surface by hand.
 2. **Never add transitive dependency** without weighing alternatives from awesome-lists harvest (`.workingdir/research/svelte-ecosystem-audit.md`). State choice in PR if non-obvious.
 3. **Public surface of every package = `src/index.ts` named exports** (+ documented sub-exports like `ui/toast`, `media/player`). Apps never import internals (anything under `src/internal/` or unexported). Package `exports` map = enforcement gate.
 4. **No top-level side effects in package modules.** No `window.` access, no DOM reads, no `setInterval` at import time. Use vite plugins, SvelteKit hooks, or explicit `register(app)` entry points.
@@ -161,7 +161,7 @@ Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, 
 11. **No guessing on major decisions.** Agents never lock library picks, module surface, API shape, or compliance posture on their own.
     - Agent job: present evidence + ≥ 2 named alternatives, open/update `D*` row in `.workingdir/research/decisions-needed.md`.
     - Only project owner (`@lusoris`) closes `D*` row to `locked (ADR-NNNN)`.
-    - Evidence = (a) cited file:line in `golusoris/app-*` repo, (b) measured benchmark / bundle analysis, or (c) existing ADR.
+    - Evidence = (a) cited file:line in consuming application, (b) measured benchmark / bundle analysis, or (c) existing ADR.
     - Not evidence: "Seems good", "commonly used", awesome-list consensus. Those = pointers to where evidence could be gathered.
 12. **Strict SvelteKit universe.** Library picks must be (a) Svelte 5 runes-native with first-class TS types, or (b) framework-agnostic libraries composing cleanly with SvelteKit SSR (TanStack, Zod, Yjs, Vite plugins, ConnectRPC, openapi-fetch, elkjs, etc.).
     - Never pull React/Vue/Solid component libraries via cross-framework bridges: non-Svelte UI dep = architectural smell.
@@ -171,13 +171,13 @@ Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, 
 
 ## Workflow discipline (evidence-driven)
 
-sveltesentio = deliberately **research-first**. Author maintains existing Svelte apps (`golusoris/app-arca`, `app-revenge`, `app-subdo`, `app-lurkarr`). **Those apps = source of truth** for which patterns deserve promotion into framework.
+sveltesentio = deliberately **research-first**. **Consuming applications = source of truth** for which patterns deserve promotion into framework. Four app deep reads from 2026-04 (`.workingdir/research/deepread-*.md`) stay as recorded evidence; those apps have no repository in the organisation today (measured 2026-10-11). Current consumers: `.workingdir/PLAN.md`.
 
 Before proposing new package, sub-export, or API shape, agent must:
 
 1. Check `.workingdir/research/decisions-needed.md`: question already open? Add evidence there, do not ship guess.
 2. Check `.workingdir/research/svelte-ecosystem-audit.md`: upstream library already evaluated? Does it obsolete proposed wrapper?
-3. Check `.workingdir/research/existing-apps-deepread.md`: pattern observed in ≥ 2 existing apps? One-off patterns stay in their app.
+3. Check `.workingdir/research/existing-apps-deepread.md`: pattern observed in ≥ 2 consuming applications? One-off patterns stay in their app.
 4. No evidence yet: **do research, don't guess.** Open `D*` row in `decisions-needed.md`, wait for evidence.
 
 **Streamlining rule** (2026-04-17): existing library in Svelte / Tailwind / JS ecosystem already solves problem cleanly -> do **not** wrap it into `@sveltesentio/*` package. Document composition pattern in `docs/compose/`; consumers import upstream library directly.

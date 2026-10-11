@@ -5,7 +5,7 @@
 > personal data; the default bar for every sveltesentio consumer).
 >
 > Scope: this document covers the framework surface. Downstream
-> `golusoris/app-*` consumers inherit these controls but also own their
+> consuming applications inherit these controls but also own their
 > application-specific verifications. A `✅` below means sveltesentio ships
 > the default; a `⚠️` means the consumer must opt in; a `🔲` means planned.
 
@@ -123,15 +123,16 @@ Each item links to the ADR or module that owns it.
 
 ## V14 — Configuration
 
-| #    | Control                                                | Status | Owner                                        | Evidence                                                                                                                 |
-| ---- | ------------------------------------------------------ | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 14.1 | Debug endpoints never reachable in production.         | ✅     | `process.env.NODE_ENV === 'production'` gate | `@sveltesentio/core` debug helper.                                                                                       |
-| 14.2 | SBOM published with every release.                     | 🔲     | CI `release-please.yml`                      | CycloneDX SBOM generated as a workflow artifact; attaching it to the release is open (#280).                             |
-| 14.3 | Provenance attestation (SLSA L3) on every release.     | 🔲     | CI `release-please.yml`                      | Build Level 2 attested via `actions/attest-build-provenance`; Level 3 open (#280), exception `HISS-11` until 2027-01-09. |
-| 14.4 | Dependencies have a signed provenance where available. | ⚠️     | Supply chain                                 | `pnpm audit --signatures` in `make ci`.                                                                                  |
+| #    | Control                                                | Status | Owner                                        | Evidence                                                                                                                                   |
+| ---- | ------------------------------------------------------ | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 14.1 | Debug endpoints never reachable in production.         | ✅     | `process.env.NODE_ENV === 'production'` gate | `@sveltesentio/core` debug helper.                                                                                                         |
+| 14.2 | SBOM published with every release.                     | 🔲     | CI `release-please.yml`                      | CycloneDX SBOM generated as a workflow artifact; attaching it to the release is open (#280).                                               |
+| 14.3 | Provenance attestation (SLSA L3) on every release.     | 🔲     | CI `release-please.yml`                      | Build Level 2 attested via `actions/attest-build-provenance`; Level 3 open (#280), exception `HISS-11` until 2027-01-09.                   |
+| 14.4 | Dependencies have a signed provenance where available. | 🔲     | Supply chain                                 | Not checked: `make ci` and CI run `pnpm audit --audit-level=high` (advisories only); no step verifies dependency signatures or provenance. |
 
 ## Open items
 
 - `6.1` — author per-package PII boundary notes.
-- `14.2`, `14.3` — wire Syft + attestation steps into `release-sveltekit.yml`.
+- `14.2`, `14.3` — attach the SBOM to the release and reach SLSA Build Level 3 (#280).
+- `14.4` — no dependency signature or provenance check runs yet.
 - Annual review cadence: Q1 each year, post–OWASP ASVS point release.

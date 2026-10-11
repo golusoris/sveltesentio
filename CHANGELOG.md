@@ -56,6 +56,6 @@ release-please cannot infer them from Conventional Commits.
 
 ### Security
 
-- _(none yet — first release will ship SBOM via Syft + SLSA L3 provenance + keyless cosign signing.)_
+- _(none yet. The release job attests SLSA provenance at Build Level 2 and generates a CycloneDX SBOM as a workflow artifact. Build Level 3, cosign signing and an SBOM attached to the release are open in [#280](https://github.com/golusoris/sveltesentio/issues/280).)_
 
 [Unreleased]: https://github.com/lusoris/sveltesentio/compare/HEAD...HEAD
