@@ -24,21 +24,19 @@ const SANCTIONED_TIME_READS = [
 
 // Dated exceptions: one rule and one file each, with a reason and an end date.
 //
-// ESLint reports eight findings in two files that `praetorctl adopt` writes and
+// ESLint reports one finding in a file that `praetorctl adopt` writes and
 // `praetorctl audit` pins byte for byte, so neither a fix nor an inline disable
-// can be made in this repository; the fix belongs to the engine. Seven are
-// `no-useless-escape`. The eighth, `no-regex-spaces`, is auto-fixable, and the
-// pre-commit hook's `eslint --fix` rewrote the pinned file until the audit
-// refused it. Each rule is switched off for exactly the files named, until the
-// end date. After it the block below is empty, the rules apply again, and the
-// lint fails as it would with no exception at all.
+// can be made in this repository; the fix belongs to the engine. It is
+// `no-unused-vars` on an unused `catch (error)` binding in `readLintSource`,
+// which arrived with engine 299d3bebd38e (the eight earlier findings in the
+// engine files left with that engine, and their three entries with them). The
+// rule is switched off for exactly the file named, until the end date. After it
+// the block below is empty, the rule applies again, and the lint fails as it
+// would with no exception at all. Remove the entry at the re-pin that brings
+// the engine's fix.
 const ENGINE_FILE_EXCEPTIONS = {
 	expires: '2027-01-09',
-	entries: [
-		{ rule: 'no-useless-escape', file: 'tools/markdownlint/verify.mjs' },
-		{ rule: 'no-useless-escape', file: 'tools/markdownlint/no-private-scratch-links.mjs' },
-		{ rule: 'no-regex-spaces', file: 'tools/markdownlint/verify.mjs' },
-	],
+	entries: [{ rule: 'no-unused-vars', file: 'tools/markdownlint/verify.mjs' }],
 };
 const engineFileExceptions: Linter.Config[] =
 	new Date().toISOString().slice(0, 10) <= ENGINE_FILE_EXCEPTIONS.expires
