@@ -22,30 +22,6 @@ const SANCTIONED_TIME_READS = [
 	'packages/ai/src/server.ts',
 ];
 
-// Dated exceptions: one rule and one file each, with a reason and an end date.
-//
-// ESLint reports one finding in a file that `praetorctl adopt` writes and
-// `praetorctl audit` pins byte for byte, so neither a fix nor an inline disable
-// can be made in this repository; the fix belongs to the engine. It is
-// `no-unused-vars` on an unused `catch (error)` binding in `readLintSource`,
-// which arrived with engine 299d3bebd38e (the eight earlier findings in the
-// engine files left with that engine, and their three entries with them). The
-// rule is switched off for exactly the file named, until the end date. After it
-// the block below is empty, the rule applies again, and the lint fails as it
-// would with no exception at all. Remove the entry at the re-pin that brings
-// the engine's fix.
-const ENGINE_FILE_EXCEPTIONS = {
-	expires: '2027-01-09',
-	entries: [{ rule: 'no-unused-vars', file: 'tools/markdownlint/verify.mjs' }],
-};
-const engineFileExceptions: Linter.Config[] =
-	new Date().toISOString().slice(0, 10) <= ENGINE_FILE_EXCEPTIONS.expires
-		? ENGINE_FILE_EXCEPTIONS.entries.map(({ rule, file }) => ({
-				files: [file],
-				rules: { [rule]: 'off' },
-			}))
-		: [];
-
 const config: Linter.Config[] = [
 	js.configs.recommended,
 	...svelte.configs['flat/recommended'],
@@ -231,7 +207,6 @@ const config: Linter.Config[] = [
 			...ts.configs['disable-type-checked'].rules,
 		},
 	},
-	...engineFileExceptions,
 	{
 		ignores: [
 			// `**/` prefixes: these patterns are resolved from the config's directory,
