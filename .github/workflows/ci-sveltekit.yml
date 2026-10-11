@@ -23,7 +23,7 @@ jobs:
   pr-title:
     name: PR title (Conventional Commits)
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Check PR title
         env:
@@ -37,7 +37,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -56,7 +56,7 @@ jobs:
 
   typecheck:
     name: Type check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -75,7 +75,7 @@ jobs:
 
   test:
     name: Test (coverage ${{ inputs.coverage-threshold }}%)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -112,7 +112,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -131,7 +131,7 @@ jobs:
 
   audit:
     name: Security audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -151,7 +151,7 @@ jobs:
   e2e:
     name: E2E (Playwright)
     if: inputs.run-e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
