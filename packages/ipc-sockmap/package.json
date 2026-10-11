@@ -42,6 +42,7 @@
 		"golusoris",
 		"colocated"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/ipc-sockmap",
 	"private": false,
 	"publishConfig": {
