@@ -166,4 +166,30 @@ describe('name casing helpers', () => {
 		expect(toKebabCase('AArrowDown')).toBe('a-arrow-down');
 		expect(toKebabCase('home')).toBe('home');
 	});
+
+	it('toKebabCase splits a run of capitals before its last one only', () => {
+		expect(toKebabCase('HTMLParser')).toBe('html-parser');
+		expect(toKebabCase('ABcDEf')).toBe('a-bc-d-ef');
+		expect(toKebabCase('parseHTML')).toBe('parse-html');
+		expect(toKebabCase('HTML')).toBe('html');
+		expect(toKebabCase('A')).toBe('a');
+		expect(toKebabCase('')).toBe('');
+	});
+
+	it('toKebabCase handles digits, underscores and spaces', () => {
+		expect(toKebabCase('arrowDown01')).toBe('arrow-down01');
+		expect(toKebabCase('clock3Fading')).toBe('clock3-fading');
+		expect(toKebabCase('arrow_left  icon')).toBe('arrow-left-icon');
+	});
+
+	it('toKebabCase stays linear on a name that is all capitals', () => {
+		// 200 000 capitals took about twelve seconds with the pattern that consumed
+		// the run, and takes well under a millisecond with the positional one.
+		const name = 'A'.repeat(200_000);
+		const started = performance.now();
+		const slug = toKebabCase(name);
+		const elapsed = performance.now() - started;
+		expect(slug).toBe('a'.repeat(200_000));
+		expect(elapsed).toBeLessThan(1_000);
+	});
 });
