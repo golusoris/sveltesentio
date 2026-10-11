@@ -109,10 +109,10 @@ Platform manifests are declarative:
 ```jsonc
 // vercel.json
 {
-	"crons": [
-		{ "path": "/api/cron/daily-cleanup", "schedule": "0 3 * * *" },
-		{ "path": "/api/cron/quota-recompute", "schedule": "*/15 * * * *" },
-	],
+  "crons": [
+    { "path": "/api/cron/daily-cleanup", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/quota-recompute", "schedule": "*/15 * * * *" },
+  ],
 }
 ```
 
@@ -156,16 +156,16 @@ import { CRON_SECRET } from '$env/static/private';
 import { timingSafeEqual } from 'node:crypto';
 
 export function verifyCronRequest(request: Request): void {
-	const auth = request.headers.get('authorization');
-	if (!auth?.startsWith('Bearer ')) {
-		throw error(401, { type: 'urn:sveltesentio:cron:unauthorized', title: 'Unauthorized' });
-	}
-	const token = auth.slice('Bearer '.length);
-	const expected = Buffer.from(CRON_SECRET);
-	const given = Buffer.from(token);
-	if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
-		throw error(401, { type: 'urn:sveltesentio:cron:unauthorized', title: 'Unauthorized' });
-	}
+  const auth = request.headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) {
+    throw error(401, { type: 'urn:sveltesentio:cron:unauthorized', title: 'Unauthorized' });
+  }
+  const token = auth.slice('Bearer '.length);
+  const expected = Buffer.from(CRON_SECRET);
+  const given = Buffer.from(token);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
+    throw error(401, { type: 'urn:sveltesentio:cron:unauthorized', title: 'Unauthorized' });
+  }
 }
 ```
 
@@ -193,87 +193,87 @@ import type { CronJobName } from './schemas';
 const tracer = trace.getTracer('sveltesentio.cron');
 
 interface CronRunResult {
-	processed: number;
-	skipped: number;
-	details?: Record<string, number | string>;
+  processed: number;
+  skipped: number;
+  details?: Record<string, number | string>;
 }
 
 export async function withCronRun<T extends CronRunResult>(
-	name: CronJobName,
-	handler: (ctx: { runId: string; startedAt: Date }) => Promise<T>,
+  name: CronJobName,
+  handler: (ctx: { runId: string; startedAt: Date }) => Promise<T>,
 ): Promise<Response> {
-	const runId = uuidv7();
-	const startedAt = now();
+  const runId = uuidv7();
+  const startedAt = now();
 
-	return tracer.startActiveSpan(
-		`cron.${name}`,
-		{ attributes: { 'cron.job.name': name, 'cron.run.id': runId } },
-		async (span) => {
-			const lockKey = hashJobName(name);
-			const locked = await db.oneOrNone<{ locked: boolean }>(
-				'SELECT pg_try_advisory_lock($1) AS locked',
-				[lockKey],
-			);
+  return tracer.startActiveSpan(
+    `cron.${name}`,
+    { attributes: { 'cron.job.name': name, 'cron.run.id': runId } },
+    async (span) => {
+      const lockKey = hashJobName(name);
+      const locked = await db.oneOrNone<{ locked: boolean }>(
+        'SELECT pg_try_advisory_lock($1) AS locked',
+        [lockKey],
+      );
 
-			if (!locked?.locked) {
-				span.setAttribute('cron.run.status', 'skipped_overlap');
-				span.end();
-				return new Response(JSON.stringify({ runId, status: 'skipped_overlap' }), {
-					status: 200,
-					headers: { 'content-type': 'application/json' },
-				});
-			}
+      if (!locked?.locked) {
+        span.setAttribute('cron.run.status', 'skipped_overlap');
+        span.end();
+        return new Response(JSON.stringify({ runId, status: 'skipped_overlap' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
 
-			try {
-				await db.none(
-					`INSERT INTO cron_runs (run_id, job_name, started_at, status)
+      try {
+        await db.none(
+          `INSERT INTO cron_runs (run_id, job_name, started_at, status)
            VALUES ($1, $2, $3, 'running')`,
-					[runId, name, startedAt],
-				);
+          [runId, name, startedAt],
+        );
 
-				const result = await handler({ runId, startedAt });
+        const result = await handler({ runId, startedAt });
 
-				await db.none(
-					`UPDATE cron_runs
+        await db.none(
+          `UPDATE cron_runs
              SET status = 'ok', finished_at = $2, processed = $3, skipped = $4
              WHERE run_id = $1`,
-					[runId, now(), result.processed, result.skipped],
-				);
+          [runId, now(), result.processed, result.skipped],
+        );
 
-				span.setAttribute('cron.run.status', 'ok');
-				span.setAttribute('cron.run.processed', result.processed);
-				span.setAttribute('cron.run.skipped', result.skipped);
-				span.setStatus({ code: SpanStatusCode.OK });
+        span.setAttribute('cron.run.status', 'ok');
+        span.setAttribute('cron.run.processed', result.processed);
+        span.setAttribute('cron.run.skipped', result.skipped);
+        span.setStatus({ code: SpanStatusCode.OK });
 
-				return new Response(JSON.stringify({ runId, status: 'ok', ...result }), {
-					status: 200,
-					headers: { 'content-type': 'application/json' },
-				});
-			} catch (err) {
-				await db.none(
-					`UPDATE cron_runs
+        return new Response(JSON.stringify({ runId, status: 'ok', ...result }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      } catch (err) {
+        await db.none(
+          `UPDATE cron_runs
              SET status = 'failed', finished_at = $2, error = $3
              WHERE run_id = $1`,
-					[runId, now(), String(err)],
-				);
+          [runId, now(), String(err)],
+        );
 
-				span.recordException(err as Error);
-				span.setAttribute('cron.run.status', 'failed');
-				span.setStatus({ code: SpanStatusCode.ERROR });
+        span.recordException(err as Error);
+        span.setAttribute('cron.run.status', 'failed');
+        span.setStatus({ code: SpanStatusCode.ERROR });
 
-				throw err;
-			} finally {
-				await db.none('SELECT pg_advisory_unlock($1)', [lockKey]);
-				span.end();
-			}
-		},
-	);
+        throw err;
+      } finally {
+        await db.none('SELECT pg_advisory_unlock($1)', [lockKey]);
+        span.end();
+      }
+    },
+  );
 }
 
 function hashJobName(name: string): number {
-	let h = 0;
-	for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-	return h;
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  return h;
 }
 ```
 
@@ -289,15 +289,15 @@ import { subDays } from 'date-fns';
 import { now } from '$lib/clock';
 
 export const POST: RequestHandler = async ({ request }) => {
-	verifyCronRequest(request);
+  verifyCronRequest(request);
 
-	return withCronRun('daily-cleanup', async () => {
-		const cutoff = subDays(now(), 30);
+  return withCronRun('daily-cleanup', async () => {
+    const cutoff = subDays(now(), 30);
 
-		const result = await db.result(`DELETE FROM sessions WHERE expires_at < $1`, [cutoff]);
+    const result = await db.result(`DELETE FROM sessions WHERE expires_at < $1`, [cutoff]);
 
-		return { processed: result.rowCount ?? 0, skipped: 0 };
-	});
+    return { processed: result.rowCount ?? 0, skipped: 0 };
+  });
 };
 
 export const GET = POST;
@@ -362,10 +362,10 @@ CREATE INDEX cron_runs_status_idx ON cron_runs (status) WHERE status != 'ok';
 
 ```typescript
 const MISSED_RUN_POLICY: Record<CronJobName, 'catchup' | 'skip-forward'> = {
-	'daily-cleanup': 'skip-forward',
-	'quota-recompute': 'catchup',
-	'invoice-finalize': 'catchup',
-	'session-rotate': 'skip-forward',
+  'daily-cleanup': 'skip-forward',
+  'quota-recompute': 'catchup',
+  'invoice-finalize': 'catchup',
+  'session-rotate': 'skip-forward',
 } satisfies Record<CronJobName, 'catchup' | 'skip-forward'>;
 ```
 
@@ -423,14 +423,14 @@ import { CRON_ENABLED } from '$env/static/private';
 import { dailyCleanup, quotaRecompute } from '$lib/cron/handlers';
 
 if (CRON_ENABLED === 'true' && !globalThis.__cronStarted) {
-	globalThis.__cronStarted = true;
+  globalThis.__cronStarted = true;
 
-	new Cron('0 3 * * *', { name: 'daily-cleanup', protect: true, timezone: 'UTC' }, dailyCleanup);
-	new Cron(
-		'*/15 * * * *',
-		{ name: 'quota-recompute', protect: true, timezone: 'UTC' },
-		quotaRecompute,
-	);
+  new Cron('0 3 * * *', { name: 'daily-cleanup', protect: true, timezone: 'UTC' }, dailyCleanup);
+  new Cron(
+    '*/15 * * * *',
+    { name: 'quota-recompute', protect: true, timezone: 'UTC' },
+    quotaRecompute,
+  );
 }
 ```
 
@@ -455,31 +455,31 @@ if (CRON_ENABLED === 'true' && !globalThis.__cronStarted) {
 ```typescript
 // unit: handler runs deterministically under injected clock
 it('daily-cleanup removes expired sessions', async () => {
-	const clock = fixedClock('2026-04-18T00:00:00Z');
-	seedDb([
-		{ id: 's1', expires_at: '2026-03-17T00:00:00Z' }, // 32 days ago → delete
-		{ id: 's2', expires_at: '2026-04-17T00:00:00Z' }, // 1 day ago → keep
-	]);
+  const clock = fixedClock('2026-04-18T00:00:00Z');
+  seedDb([
+    { id: 's1', expires_at: '2026-03-17T00:00:00Z' }, // 32 days ago → delete
+    { id: 's2', expires_at: '2026-04-17T00:00:00Z' }, // 1 day ago → keep
+  ]);
 
-	const result = await dailyCleanup({ runId: 'r1', startedAt: clock.now() });
+  const result = await dailyCleanup({ runId: 'r1', startedAt: clock.now() });
 
-	expect(result).toEqual({ processed: 1, skipped: 0 });
+  expect(result).toEqual({ processed: 1, skipped: 0 });
 });
 
 // integration: HTTP endpoint with auth + DB
 it('POST /api/cron/daily-cleanup returns 401 without bearer', async () => {
-	const res = await app.request('/api/cron/daily-cleanup', { method: 'POST' });
-	expect(res.status).toBe(401);
+  const res = await app.request('/api/cron/daily-cleanup', { method: 'POST' });
+  expect(res.status).toBe(401);
 });
 
 // integration: second concurrent run skips via lock
 it('concurrent runs return skipped_overlap on the loser', async () => {
-	const [a, b] = await Promise.all([
-		app.request('/api/cron/daily-cleanup', { method: 'POST', headers: authHeader() }),
-		app.request('/api/cron/daily-cleanup', { method: 'POST', headers: authHeader() }),
-	]);
-	const statuses = [await a.json(), await b.json()].map((r) => r.status).sort();
-	expect(statuses).toEqual(['ok', 'skipped_overlap']);
+  const [a, b] = await Promise.all([
+    app.request('/api/cron/daily-cleanup', { method: 'POST', headers: authHeader() }),
+    app.request('/api/cron/daily-cleanup', { method: 'POST', headers: authHeader() }),
+  ]);
+  const statuses = [await a.json(), await b.json()].map((r) => r.status).sort();
+  expect(statuses).toEqual(['ok', 'skipped_overlap']);
 });
 ```
 

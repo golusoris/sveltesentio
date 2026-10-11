@@ -84,12 +84,12 @@ env.allowLocalModels = true; // `public/models/...` self-host
 env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency ?? 4;
 
 export async function loadPipeline<T extends PipelineTask>(
-	task: T,
-	model: string,
-	options?: PipelineOptions,
+  task: T,
+  model: string,
+  options?: PipelineOptions,
 ): Promise<Pipeline<T>> {
-	const device = await pickDevice(); // 'webgpu' | 'wasm'
-	return pipeline(task, model, { device, ...options });
+  const device = await pickDevice(); // 'webgpu' | 'wasm'
+  return pipeline(task, model, { device, ...options });
 }
 ```
 
@@ -101,16 +101,16 @@ rebuild per call; downloads redo otherwise.
 ```ts
 // @sveltesentio/ai/on-device/device
 export async function pickDevice(): Promise<'webgpu' | 'wasm'> {
-	if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'wasm';
-	try {
-		const adapter = await navigator.gpu.requestAdapter();
-		if (!adapter) return 'wasm';
-		// Optional: sniff limits to reject tiny integrated GPUs
-		if ((adapter.limits?.maxBufferSize ?? 0) < 256 * 1024 * 1024) return 'wasm';
-		return 'webgpu';
-	} catch {
-		return 'wasm';
-	}
+  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'wasm';
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) return 'wasm';
+    // Optional: sniff limits to reject tiny integrated GPUs
+    if ((adapter.limits?.maxBufferSize ?? 0) < 256 * 1024 * 1024) return 'wasm';
+    return 'webgpu';
+  } catch {
+    return 'wasm';
+  }
 }
 ```
 
@@ -134,87 +134,87 @@ accordingly. Very large models may exceed mobile RAM in WASM; gate by
 ```svelte
 <!-- src/lib/ai/Classifier.svelte -->
 <script lang="ts">
-	import { loadPipeline } from '@sveltesentio/ai/on-device';
-	import { onAudit } from '$lib/ai/audit';
+  import { loadPipeline } from '@sveltesentio/ai/on-device';
+  import { onAudit } from '$lib/ai/audit';
 
-	let { initialText = '' }: { initialText?: string } = $props();
-	let text = $state(initialText);
-	let result = $state<null | { label: string; score: number }>(null);
-	let status = $state<'idle' | 'loading' | 'ready' | 'inferring' | 'error'>('idle');
-	let progress = $state(0);
+  let { initialText = '' }: { initialText?: string } = $props();
+  let text = $state(initialText);
+  let result = $state<null | { label: string; score: number }>(null);
+  let status = $state<'idle' | 'loading' | 'ready' | 'inferring' | 'error'>('idle');
+  let progress = $state(0);
 
-	let classifier: Awaited<ReturnType<typeof loadPipeline>> | null = null;
+  let classifier: Awaited<ReturnType<typeof loadPipeline>> | null = null;
 
-	async function warm() {
-		status = 'loading';
-		try {
-			classifier = await loadPipeline(
-				'text-classification',
-				'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-				{
-					progress_callback: (p: { progress?: number }) => {
-						if (typeof p.progress === 'number') progress = p.progress;
-					},
-				},
-			);
-			status = 'ready';
-		} catch (err) {
-			status = 'error';
-			console.error('[ai.on-device] load failed', err);
-		}
-	}
+  async function warm() {
+    status = 'loading';
+    try {
+      classifier = await loadPipeline(
+        'text-classification',
+        'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+        {
+          progress_callback: (p: { progress?: number }) => {
+            if (typeof p.progress === 'number') progress = p.progress;
+          },
+        },
+      );
+      status = 'ready';
+    } catch (err) {
+      status = 'error';
+      console.error('[ai.on-device] load failed', err);
+    }
+  }
 
-	async function classify() {
-		if (!classifier) return;
-		status = 'inferring';
-		const correlationId = crypto.randomUUID();
-		onAudit({
-			kind: 'prompt',
-			correlationId,
-			model: 'distilbert-sst2',
-			provider: 'on-device',
-			timestamp: new Date().toISOString(),
-		});
-		try {
-			const [out] = (await classifier(text)) as Array<{ label: string; score: number }>;
-			result = out;
-			onAudit({
-				kind: 'response',
-				correlationId,
-				model: 'distilbert-sst2',
-				provider: 'on-device',
-				timestamp: new Date().toISOString(),
-			});
-			status = 'ready';
-		} catch (err) {
-			onAudit({
-				kind: 'error',
-				correlationId,
-				model: 'distilbert-sst2',
-				provider: 'on-device',
-				timestamp: new Date().toISOString(),
-				metadata: { message: String(err) },
-			});
-			status = 'error';
-		}
-	}
+  async function classify() {
+    if (!classifier) return;
+    status = 'inferring';
+    const correlationId = crypto.randomUUID();
+    onAudit({
+      kind: 'prompt',
+      correlationId,
+      model: 'distilbert-sst2',
+      provider: 'on-device',
+      timestamp: new Date().toISOString(),
+    });
+    try {
+      const [out] = (await classifier(text)) as Array<{ label: string; score: number }>;
+      result = out;
+      onAudit({
+        kind: 'response',
+        correlationId,
+        model: 'distilbert-sst2',
+        provider: 'on-device',
+        timestamp: new Date().toISOString(),
+      });
+      status = 'ready';
+    } catch (err) {
+      onAudit({
+        kind: 'error',
+        correlationId,
+        model: 'distilbert-sst2',
+        provider: 'on-device',
+        timestamp: new Date().toISOString(),
+        metadata: { message: String(err) },
+      });
+      status = 'error';
+    }
+  }
 </script>
 
 <div>
-	{#if status === 'idle'}
-		<button onclick={warm}>Load model (~65 MB)</button>
-	{:else if status === 'loading'}
-		<progress value={progress} max="1" aria-label="Loading model" />
-		<span role="status">Downloading model: {Math.round(progress * 100)}%</span>
-	{:else}
-		<textarea bind:value={text} rows="3"></textarea>
-		<button onclick={classify} disabled={status === 'inferring'}>Classify</button>
-		{#if result}
-			<output aria-live="polite">
-				{result.label} ({(result.score * 100).toFixed(1)}%)
-			</output>
-		{/if}
-	{/if}
+  {#if status === 'idle'}
+    <button onclick={warm}>Load model (~65 MB)</button>
+  {:else if status === 'loading'}
+    <progress value={progress} max="1" aria-label="Loading model" />
+    <span role="status">Downloading model: {Math.round(progress * 100)}%</span>
+  {:else}
+    <textarea bind:value={text} rows="3"></textarea>
+    <button onclick={classify} disabled={status === 'inferring'}>Classify</button>
+    {#if result}
+      <output aria-live="polite">
+        {result.label} ({(result.score * 100).toFixed(1)}%)
+      </output>
+    {/if}
+  {/if}
 </div>
 ```
 
@@ -236,15 +236,15 @@ Expose as async iterables — natural fit with `await … of` + runes:
 ```ts
 // @sveltesentio/ai/on-device/stream
 export async function* transcribeStream(
-	audio: ArrayBuffer | Float32Array,
-	model = 'Xenova/whisper-tiny.en',
+  audio: ArrayBuffer | Float32Array,
+  model = 'Xenova/whisper-tiny.en',
 ): AsyncIterable<{ text: string; done: boolean }> {
-	const asr = await loadPipeline('automatic-speech-recognition', model);
-	const chunks = chunk(audio, { seconds: 10 });
-	for (const [i, c] of chunks.entries()) {
-		const out = await asr(c);
-		yield { text: (out as { text: string }).text, done: i === chunks.length - 1 };
-	}
+  const asr = await loadPipeline('automatic-speech-recognition', model);
+  const chunks = chunk(audio, { seconds: 10 });
+  for (const [i, c] of chunks.entries()) {
+    const out = await asr(c);
+    yield { text: (out as { text: string }).text, done: i === chunks.length - 1 };
+  }
 }
 ```
 
@@ -252,15 +252,15 @@ Consumer:
 
 ```svelte
 <script lang="ts">
-	import { transcribeStream } from '@sveltesentio/ai/on-device/stream';
+  import { transcribeStream } from '@sveltesentio/ai/on-device/stream';
 
-	let transcript = $state('');
+  let transcript = $state('');
 
-	async function run(audio: ArrayBuffer) {
-		for await (const { text, done } of transcribeStream(audio)) {
-			transcript += text + (done ? '' : ' ');
-		}
-	}
+  async function run(audio: ArrayBuffer) {
+    for await (const { text, done } of transcribeStream(audio)) {
+      transcript += text + (done ? '' : ' ');
+    }
+  }
 </script>
 
 <output role="log" aria-live="polite">{transcript}</output>
@@ -296,8 +296,8 @@ Raw model outputs are `unknown` shapes — wrap with Zod before consuming
 import { z } from 'zod';
 
 const ClassificationResult = z.object({
-	label: z.string(),
-	score: z.number().min(0).max(1),
+  label: z.string(),
+  score: z.number().min(0).max(1),
 });
 
 const [raw] = (await classifier(text)) as unknown[];
@@ -325,13 +325,13 @@ Eviction controls:
 
 ```ts
 export async function purgeModels() {
-	if (!('storage' in navigator)) return;
-	const dbs = await indexedDB.databases();
-	for (const db of dbs) {
-		if (db.name?.startsWith('transformers-cache')) {
-			indexedDB.deleteDatabase(db.name);
-		}
-	}
+  if (!('storage' in navigator)) return;
+  const dbs = await indexedDB.databases();
+  for (const db of dbs) {
+    if (db.name?.startsWith('transformers-cache')) {
+      indexedDB.deleteDatabase(db.name);
+    }
+  }
 }
 ```
 
@@ -342,7 +342,7 @@ Request persistent storage so cached models survive eviction:
 
 ```ts
 if ('storage' in navigator && 'persist' in navigator.storage) {
-	await navigator.storage.persist();
+  await navigator.storage.persist();
 }
 ```
 
@@ -358,15 +358,15 @@ import { emit } from '@sveltesentio/ai/audit';
 
 const correlationId = crypto.randomUUID();
 await emit(
-	{
-		timestamp: new Date().toISOString(),
-		kind: 'prompt',
-		provider: 'on-device', // distinguishes from anthropic/ollama
-		model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-		correlationId,
-		userId: session?.user.id,
-	},
-	onAudit,
+  {
+    timestamp: new Date().toISOString(),
+    kind: 'prompt',
+    provider: 'on-device', // distinguishes from anthropic/ollama
+    model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+    correlationId,
+    userId: session?.user.id,
+  },
+  onAudit,
 );
 ```
 
@@ -383,8 +383,8 @@ WebAssembly. Gate every import:
 import { browser } from '$app/environment';
 
 if (browser) {
-	const { loadPipeline } = await import('@sveltesentio/ai/on-device');
-	classifier = await loadPipeline('text-classification', 'Xenova/…');
+  const { loadPipeline } = await import('@sveltesentio/ai/on-device');
+  classifier = await loadPipeline('text-classification', 'Xenova/…');
 }
 ```
 
@@ -442,13 +442,13 @@ Unit tests run in Node via the WASM backend (no WebGPU in jsdom):
 import { pipeline } from '@huggingface/transformers';
 
 test('classifier returns a label', async () => {
-	const classifier = await pipeline(
-		'text-classification',
-		'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
-		{ device: 'wasm', quantized: true },
-	);
-	const [out] = await classifier('I love this!');
-	expect(out).toMatchObject({ label: 'POSITIVE', score: expect.any(Number) });
+  const classifier = await pipeline(
+    'text-classification',
+    'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+    { device: 'wasm', quantized: true },
+  );
+  const [out] = await classifier('I love this!');
+  expect(out).toMatchObject({ label: 'POSITIVE', score: expect.any(Number) });
 }, 60_000); // model download + warm-up
 ```
 

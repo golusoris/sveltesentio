@@ -38,12 +38,12 @@ Add sub-export entry to `package.json` whenever new module lands — never rely 
   // eslint.config.ts
   import sentio from '@sveltesentio/core/eslint';
   export default [
-  	{
-  		files: ['packages/*/src/**/*.ts'],
-  		ignores: ['packages/core/src/clock.ts'],
-  		plugins: { '@sveltesentio': sentio },
-  		rules: { '@sveltesentio/no-direct-time': 'error' },
-  	},
+    {
+      files: ['packages/*/src/**/*.ts'],
+      ignores: ['packages/core/src/clock.ts'],
+      plugins: { '@sveltesentio': sentio },
+      rules: { '@sveltesentio/no-direct-time': 'error' },
+    },
   ];
   ```
 

@@ -15,8 +15,8 @@ Paraglide v2 is locked (ADR-0017). Open questions: locale detection strategy, RT
 
   ```ts
   paraglideVitePlugin({
-  	strategy: ['url', 'cookie', 'baseLocale'],
-  	// ...
+    strategy: ['url', 'cookie', 'baseLocale'],
+    // ...
   });
   ```
 

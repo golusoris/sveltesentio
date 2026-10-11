@@ -59,36 +59,36 @@ for this workspace.
 ```json
 // release-please-config.json
 {
-	"release-type": "node",
-	"bump-minor-pre-major": true,
-	"bump-patch-for-minor-pre-major": false,
-	"include-v-in-tag": true,
-	"changelog-path": "CHANGELOG.md",
-	"changelog-sections": [
-		{ "type": "feat", "section": "Features" },
-		{ "type": "fix", "section": "Bug Fixes" },
-		{ "type": "perf", "section": "Performance" },
-		{ "type": "revert", "section": "Reverts" },
-		{ "type": "refactor", "section": "Code Refactoring" },
-		{ "type": "deps", "section": "Dependencies" },
-		{ "type": "docs", "section": "Documentation", "hidden": true },
-		{ "type": "test", "section": "Tests", "hidden": true },
-		{ "type": "ci", "section": "CI", "hidden": true },
-		{ "type": "build", "section": "Build", "hidden": true },
-		{ "type": "chore", "section": "Chores", "hidden": true }
-	],
-	"packages": {
-		"packages/core": { "package-name": "@sveltesentio/core" },
-		"packages/ui": { "package-name": "@sveltesentio/ui" }
-	}
+  "release-type": "node",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "include-v-in-tag": true,
+  "changelog-path": "CHANGELOG.md",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "revert", "section": "Reverts" },
+    { "type": "refactor", "section": "Code Refactoring" },
+    { "type": "deps", "section": "Dependencies" },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "build", "section": "Build", "hidden": true },
+    { "type": "chore", "section": "Chores", "hidden": true }
+  ],
+  "packages": {
+    "packages/core": { "package-name": "@sveltesentio/core" },
+    "packages/ui": { "package-name": "@sveltesentio/ui" }
+  }
 }
 ```
 
 ```json
 // .release-please-manifest.json
 {
-	"packages/core": "0.0.1",
-	"packages/ui": "0.0.1"
+  "packages/core": "0.0.1",
+  "packages/ui": "0.0.1"
 }
 ```
 
@@ -330,13 +330,13 @@ config:
 
 ```json
 {
-	"packages": {
-		"packages/ui": {
-			"package-name": "@sveltesentio/ui",
-			"prerelease": true,
-			"prerelease-type": "rc"
-		}
-	}
+  "packages": {
+    "packages/ui": {
+      "package-name": "@sveltesentio/ui",
+      "prerelease": true,
+      "prerelease-type": "rc"
+    }
+  }
 }
 ```
 
@@ -370,41 +370,41 @@ or malware. Unpublishing breaks consumers that already installed.
 ```js
 // commitlint.config.js
 export default {
-	extends: ['@commitlint/config-conventional'],
-	rules: {
-		'type-enum': [
-			2,
-			'always',
-			['feat', 'fix', 'perf', 'revert', 'refactor', 'deps', 'docs', 'test', 'ci', 'build', 'chore'],
-		],
-		'scope-enum': [
-			2,
-			'always',
-			[
-				'core',
-				'ui',
-				'query',
-				'forms',
-				'i18n',
-				'auth',
-				'realtime',
-				'flow',
-				'media',
-				'charts',
-				'ai',
-				'testing',
-				'ipc-sockmap',
-				'shell',
-				'uploads',
-				'collab',
-				'ci',
-				'deps',
-				'repo',
-			],
-		],
-		'scope-empty': [2, 'never'],
-		'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
-	},
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      ['feat', 'fix', 'perf', 'revert', 'refactor', 'deps', 'docs', 'test', 'ci', 'build', 'chore'],
+    ],
+    'scope-enum': [
+      2,
+      'always',
+      [
+        'core',
+        'ui',
+        'query',
+        'forms',
+        'i18n',
+        'auth',
+        'realtime',
+        'flow',
+        'media',
+        'charts',
+        'ai',
+        'testing',
+        'ipc-sockmap',
+        'shell',
+        'uploads',
+        'collab',
+        'ci',
+        'deps',
+        'repo',
+      ],
+    ],
+    'scope-empty': [2, 'never'],
+    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+  },
 };
 ```
 

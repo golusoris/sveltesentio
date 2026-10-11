@@ -20,10 +20,10 @@ Or pin the range explicitly:
 
 ```json
 {
-	"dependencies": {
-		"vidstack": ">=1.12 <2",
-		"hls.js": "^1.6.16"
-	}
+  "dependencies": {
+    "vidstack": ">=1.12 <2",
+    "hls.js": "^1.6.16"
+  }
 }
 ```
 
@@ -37,14 +37,14 @@ non-Safari, so the 60 KB gzipped cost is off Safari bundles.
 
 ```svelte
 <script lang="ts">
-	import { MediaPlayer } from '@sveltesentio/media/player';
+  import { MediaPlayer } from '@sveltesentio/media/player';
 </script>
 
 <MediaPlayer
-	src="https://cdn.example.com/video.m3u8"
-	poster="https://cdn.example.com/poster.jpg"
-	title="How sveltesentio handles media"
-	viewType="video"
+  src="https://cdn.example.com/video.m3u8"
+  poster="https://cdn.example.com/poster.jpg"
+  title="How sveltesentio handles media"
+  viewType="video"
 />
 ```
 
@@ -60,12 +60,12 @@ The wrapper accepts `src` as:
 
 ```svelte
 <MediaPlayer
-	src={[
-		{ src: 'video.av1.mp4', type: 'video/mp4; codecs=av01.0.05M.08' },
-		{ src: 'video.h265.mp4', type: 'video/mp4; codecs=hvc1.1.6.L93.B0' },
-		{ src: 'video.h264.mp4', type: 'video/mp4; codecs=avc1.64001F' },
-	]}
-	title="Demo reel"
+  src={[
+    { src: 'video.av1.mp4', type: 'video/mp4; codecs=av01.0.05M.08' },
+    { src: 'video.h265.mp4', type: 'video/mp4; codecs=hvc1.1.6.L93.B0' },
+    { src: 'video.h264.mp4', type: 'video/mp4; codecs=avc1.64001F' },
+  ]}
+  title="Demo reel"
 />
 ```
 
@@ -93,8 +93,8 @@ Required props for WCAG 1.2.x:
 
 ```svelte
 <MediaPlayer src="video.m3u8" title="Q1 all-hands" aria-describedby="transcript">
-	<track kind="captions" src="q1.vtt" srclang="en" label="English" default />
-	<track kind="descriptions" src="q1.ad.vtt" srclang="en" label="Audio description" />
+  <track kind="captions" src="q1.vtt" srclang="en" label="English" default />
+  <track kind="descriptions" src="q1.ad.vtt" srclang="en" label="Audio description" />
 </MediaPlayer>
 <div id="transcript" class="sr-only">[full transcript…]</div>
 ```
@@ -107,10 +107,10 @@ Vidstack ships CSS custom properties (`--media-focus-ring`,
 
 ```css
 media-player {
-	--media-focus-ring: oklch(var(--color-ring));
-	--media-controls-color: oklch(var(--color-fg));
-	--media-controls-bg: oklch(var(--color-bg) / 0.85);
-	--media-slider-track-fill: oklch(var(--color-accent));
+  --media-focus-ring: oklch(var(--color-ring));
+  --media-controls-color: oklch(var(--color-fg));
+  --media-controls-bg: oklch(var(--color-bg) / 0.85);
+  --media-slider-track-fill: oklch(var(--color-accent));
 }
 ```
 
@@ -133,15 +133,15 @@ For custom chrome, drop to Vidstack primitives directly:
 
 ```svelte
 <script lang="ts">
-	import { MediaPlayer, MediaProvider, MediaPlayButton } from 'vidstack';
+  import { MediaPlayer, MediaProvider, MediaPlayButton } from 'vidstack';
 </script>
 
 <MediaPlayer src="…">
-	<MediaProvider />
-	<div class="custom-chrome">
-		<MediaPlayButton aria-label="Play" />
-		<!-- … -->
-	</div>
+  <MediaProvider />
+  <div class="custom-chrome">
+    <MediaPlayButton aria-label="Play" />
+    <!-- … -->
+  </div>
 </MediaPlayer>
 ```
 
@@ -155,16 +155,16 @@ store:
 
 ```svelte
 <script lang="ts">
-	import { MediaPlayer, useMediaStore } from '@sveltesentio/media/player';
+  import { MediaPlayer, useMediaStore } from '@sveltesentio/media/player';
 
-	let playerRef: MediaPlayer;
-	const store = $derived(playerRef ? useMediaStore(playerRef) : null);
+  let playerRef: MediaPlayer;
+  const store = $derived(playerRef ? useMediaStore(playerRef) : null);
 </script>
 
 <MediaPlayer bind:this={playerRef} src="live.m3u8" streamType="live" />
 
 {#if store?.isLive}
-	<span role="status" aria-live="polite" class="text-danger">● LIVE</span>
+  <span role="status" aria-live="polite" class="text-danger">● LIVE</span>
 {/if}
 ```
 
@@ -186,7 +186,7 @@ defaulting to the lowest ladder:
 
 ```ts
 if (matchMedia('(prefers-reduced-data: reduce)').matches) {
-	player.qualities.selected = player.qualities.at(0);
+  player.qualities.selected = player.qualities.at(0);
 }
 ```
 
@@ -211,11 +211,11 @@ handle the rest.
 ```ts
 // sw.ts
 registerRoute(
-	({ url }) => /\.(m3u8|vtt|jpg|png|webp)$/.test(url.pathname),
-	new CacheFirst({
-		cacheName: 'media-meta',
-		plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 })],
-	}),
+  ({ url }) => /\.(m3u8|vtt|jpg|png|webp)$/.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'media-meta',
+    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 })],
+  }),
 );
 ```
 
@@ -229,11 +229,11 @@ not per-player:
 
 ```svelte
 <script lang="ts">
-	import { track } from '$lib/telemetry';
+  import { track } from '$lib/telemetry';
 
-	function onplay(e: Event) {
-		track('media.play', { src: (e.target as any).src });
-	}
+  function onplay(e: Event) {
+    track('media.play', { src: (e.target as any).src });
+  }
 </script>
 
 <MediaPlayer src="…" {onplay} />
@@ -253,20 +253,20 @@ import { axe } from '@sveltesentio/testing/axe';
 import { MediaPlayer } from '@sveltesentio/media/player';
 
 test('MediaPlayer is axe-clean', async () => {
-	const { container } = render(MediaPlayer, {
-		props: { src: 'test.mp4', title: 'Test' },
-	});
-	expect(await axe(container)).toHaveNoViolations();
+  const { container } = render(MediaPlayer, {
+    props: { src: 'test.mp4', title: 'Test' },
+  });
+  expect(await axe(container)).toHaveNoViolations();
 });
 
 test('keyboard Space toggles play', async () => {
-	const { container, getByLabelText } = render(MediaPlayer, {
-		props: { src: 'test.mp4', title: 'T' },
-	});
-	const player = container.querySelector('media-player')!;
-	player.focus();
-	await userEvent.keyboard(' ');
-	expect(getByLabelText(/pause/i)).toBeInTheDocument();
+  const { container, getByLabelText } = render(MediaPlayer, {
+    props: { src: 'test.mp4', title: 'T' },
+  });
+  const player = container.querySelector('media-player')!;
+  player.focus();
+  await userEvent.keyboard(' ');
+  expect(getByLabelText(/pause/i)).toBeInTheDocument();
 });
 ```
 
@@ -285,11 +285,11 @@ Lazy-load for pages that don't always play media:
 
 ```svelte
 <script lang="ts">
-	import { onMount } from 'svelte';
-	let MediaPlayer = $state<any>(null);
-	onMount(async () => {
-		({ MediaPlayer } = await import('@sveltesentio/media/player'));
-	});
+  import { onMount } from 'svelte';
+  let MediaPlayer = $state<any>(null);
+  onMount(async () => {
+    ({ MediaPlayer } = await import('@sveltesentio/media/player'));
+  });
 </script>
 
 {#if MediaPlayer}<MediaPlayer src="…" title="…" />{/if}

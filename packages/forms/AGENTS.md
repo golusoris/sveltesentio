@@ -50,14 +50,14 @@ import { superValidate } from '@sveltesentio/forms/server';
 import { fail } from '@sveltejs/kit';
 
 export const actions = {
-	default: formAction(
-		schema,
-		async ({ form }) => {
-			await createUser(form.data); // throws ProblemError on conflict
-			return { form };
-		},
-		{ superValidate, fail },
-	),
+  default: formAction(
+    schema,
+    async ({ form }) => {
+      await createUser(form.data); // throws ProblemError on conflict
+      return { form };
+    },
+    { superValidate, fail },
+  ),
 };
 ```
 

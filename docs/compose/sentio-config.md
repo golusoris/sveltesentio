@@ -28,17 +28,17 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { sentioPlugin, defineSentioConfig } from '@sveltesentio/core';
 
 export default {
-	plugins: [
-		sveltekit(),
-		sentioPlugin({
-			virtualModule: defineSentioConfig({
-				version: process.env.APP_VERSION ?? '0.0.0',
-				interfaceType: 'desktop',
-				features: { beta: true },
-				theme: 'midnight',
-			}),
-		}),
-	],
+  plugins: [
+    sveltekit(),
+    sentioPlugin({
+      virtualModule: defineSentioConfig({
+        version: process.env.APP_VERSION ?? '0.0.0',
+        interfaceType: 'desktop',
+        features: { beta: true },
+        theme: 'midnight',
+      }),
+    }),
+  ],
 };
 ```
 

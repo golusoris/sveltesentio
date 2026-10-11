@@ -87,22 +87,22 @@ The canonical style for all sveltesentio code.
 
 ```svelte
 <script lang="ts">
-	// props via $props() — not export let
-	const { label, onClick }: { label: string; onClick: () => void } = $props();
+  // props via $props() — not export let
+  const { label, onClick }: { label: string; onClick: () => void } = $props();
 
-	// local state via $state() — not let x = ...
-	let count = $state(0);
+  // local state via $state() — not let x = ...
+  let count = $state(0);
 
-	// derived via $derived() — not $: derived = ...
-	const doubled = $derived(count * 2);
+  // derived via $derived() — not $: derived = ...
+  const doubled = $derived(count * 2);
 
-	// side effects via $effect() — not $: { sideEffect() }
-	$effect(() => {
-		console.warn('count changed:', count);
-		return () => {
-			/* cleanup */
-		};
-	});
+  // side effects via $effect() — not $: { sideEffect() }
+  $effect(() => {
+    console.warn('count changed:', count);
+    return () => {
+      /* cleanup */
+    };
+  });
 </script>
 ```
 

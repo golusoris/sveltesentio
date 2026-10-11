@@ -151,28 +151,28 @@ src/routes/
 import { z } from 'zod';
 
 export const AnalyticsEvent = z.enum([
-	// Marketing / top-funnel
-	'pageview', // auto-fired by Plausible
-	'cta_clicked',
-	'pricing_plan_viewed',
+  // Marketing / top-funnel
+  'pageview', // auto-fired by Plausible
+  'cta_clicked',
+  'pricing_plan_viewed',
 
-	// Activation
-	'sign_up_started',
-	'sign_up_completed',
-	'onboarding_step_completed',
-	'first_project_created',
+  // Activation
+  'sign_up_started',
+  'sign_up_completed',
+  'onboarding_step_completed',
+  'first_project_created',
 
-	// Engagement
-	'feature_used',
-	'doc_searched',
+  // Engagement
+  'feature_used',
+  'doc_searched',
 
-	// Retention / billing
-	'subscription_started',
-	'subscription_canceled',
-	'subscription_upgraded',
+  // Retention / billing
+  'subscription_started',
+  'subscription_canceled',
+  'subscription_upgraded',
 
-	// Errors surfaced to user
-	'error_shown',
+  // Errors surfaced to user
+  'error_shown',
 ]);
 export type AnalyticsEvent = z.infer<typeof AnalyticsEvent>;
 ```
@@ -197,19 +197,19 @@ export type AnalyticsEvent = z.infer<typeof AnalyticsEvent>;
 import { browser } from '$app/environment';
 
 type EventProps = {
-	plan?: 'free' | 'pro' | 'team' | 'enterprise'; // bounded enum
-	source?: 'web' | 'email' | 'in-app'; // bounded enum
-	feature?: string; // <64 chars, catalog-enforced
-	locale?: string; // 'en' | 'de' | ...
-	// NEVER: userId, email, name, raw query strings, IPs
+  plan?: 'free' | 'pro' | 'team' | 'enterprise'; // bounded enum
+  source?: 'web' | 'email' | 'in-app'; // bounded enum
+  feature?: string; // <64 chars, catalog-enforced
+  locale?: string; // 'en' | 'de' | ...
+  // NEVER: userId, email, name, raw query strings, IPs
 };
 
 export function track(event: string, props: EventProps = {}): void {
-	if (!browser) return;
-	const plausible = (window as { plausible?: (e: string, opts?: { props?: EventProps }) => void })
-		.plausible;
-	if (!plausible) return; // not loaded (no consent, blocked)
-	plausible(event, { props });
+  if (!browser) return;
+  const plausible = (window as { plausible?: (e: string, opts?: { props?: EventProps }) => void })
+    .plausible;
+  if (!plausible) return; // not loaded (no consent, blocked)
+  plausible(event, { props });
 }
 ```
 
@@ -235,22 +235,22 @@ export function track(event: string, props: EventProps = {}): void {
 ```svelte
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
-	import type { LayoutData } from './$types';
-	import { PUBLIC_PLAUSIBLE_DOMAIN, PUBLIC_PLAUSIBLE_SCRIPT_URL } from '$env/static/public';
-	let { data, children }: { data: LayoutData; children: any } = $props();
+  import type { LayoutData } from './$types';
+  import { PUBLIC_PLAUSIBLE_DOMAIN, PUBLIC_PLAUSIBLE_SCRIPT_URL } from '$env/static/public';
+  let { data, children }: { data: LayoutData; children: any } = $props();
 </script>
 
 <svelte:head>
-	{#if data.consent.c.analytics}
-		<script defer data-domain={PUBLIC_PLAUSIBLE_DOMAIN} src={PUBLIC_PLAUSIBLE_SCRIPT_URL}></script>
-		<script>
-			window.plausible =
-				window.plausible ||
-				function () {
-					(window.plausible.q = window.plausible.q || []).push(arguments);
-				};
-		</script>
-	{/if}
+  {#if data.consent.c.analytics}
+    <script defer data-domain={PUBLIC_PLAUSIBLE_DOMAIN} src={PUBLIC_PLAUSIBLE_SCRIPT_URL}></script>
+    <script>
+      window.plausible =
+        window.plausible ||
+        function () {
+          (window.plausible.q = window.plausible.q || []).push(arguments);
+        };
+    </script>
+  {/if}
 </svelte:head>
 
 {@render children()}
@@ -280,13 +280,13 @@ SvelteKit's client-side routing can lose page-view events. Use the
 ```svelte
 <!-- src/routes/+layout.svelte — if using manual mode -->
 <script lang="ts">
-	import { afterNavigate } from '$app/navigation';
-	import { track } from '$lib/analytics/plausible';
+  import { afterNavigate } from '$app/navigation';
+  import { track } from '$lib/analytics/plausible';
 
-	afterNavigate(({ to }) => {
-		if (!to) return;
-		track('pageview', { path: to.url.pathname }); // built-in; path is the ONE allowed URL-shaped prop
-	});
+  afterNavigate(({ to }) => {
+    if (!to) return;
+    track('pageview', { path: to.url.pathname }); // built-in; path is the ONE allowed URL-shaped prop
+  });
 </script>
 ```
 
@@ -318,23 +318,23 @@ shows this without per-user data.
 const UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const;
 
 export function captureAttribution(url: URL, cookies: Cookies): void {
-	const incoming: Record<string, string> = {};
-	for (const key of UTM_PARAMS) {
-		const v = url.searchParams.get(key);
-		if (v && v.length < 64) incoming[key] = v;
-	}
-	if (Object.keys(incoming).length === 0) return;
+  const incoming: Record<string, string> = {};
+  for (const key of UTM_PARAMS) {
+    const v = url.searchParams.get(key);
+    if (v && v.length < 64) incoming[key] = v;
+  }
+  if (Object.keys(incoming).length === 0) return;
 
-	// First-touch attribution: only set if not already set (90-day window).
-	if (!cookies.get('__Host-attribution')) {
-		cookies.set('__Host-attribution', JSON.stringify({ ...incoming, firstTouchAt: Date.now() }), {
-			path: '/',
-			secure: true,
-			httpOnly: false,
-			sameSite: 'lax',
-			maxAge: 60 * 60 * 24 * 90,
-		});
-	}
+  // First-touch attribution: only set if not already set (90-day window).
+  if (!cookies.get('__Host-attribution')) {
+    cookies.set('__Host-attribution', JSON.stringify({ ...incoming, firstTouchAt: Date.now() }), {
+      path: '/',
+      secure: true,
+      httpOnly: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 90,
+    });
+  }
 }
 ```
 
@@ -352,7 +352,7 @@ Sign-up event includes attribution:
 
 ```ts
 track('sign_up_completed', {
-	source: attribution.utm_source as 'organic' | 'web' | 'email',
+  source: attribution.utm_source as 'organic' | 'web' | 'email',
 });
 ```
 
@@ -370,23 +370,23 @@ PostHog is the escape for per-user analytics. It requires:
 ```ts
 // src/lib/analytics/posthog.ts
 export async function initPosthogIfConsented(
-	consent: ConsentState,
-	user: User | null,
+  consent: ConsentState,
+  user: User | null,
 ): Promise<void> {
-	if (!consent.c.analytics || !user?.advancedAnalyticsOptIn) return;
+  if (!consent.c.analytics || !user?.advancedAnalyticsOptIn) return;
 
-	const { posthog } = await import('posthog-js');
-	posthog.init(env.PUBLIC_POSTHOG_KEY, {
-		api_host: env.PUBLIC_POSTHOG_HOST,
-		autocapture: false, // never auto-capture clicks (over-collection)
-		capture_pageview: false, // we emit via afterNavigate
-		disable_session_recording: true, // opt-in feature; off by default
-		persistence: 'memory', // no cookies by default
-		mask_all_text: true, // if replay ever enabled
-		bootstrap: {
-			distinctID: await hashUserId(user.id, env.POSTHOG_HASH_SALT), // pseudonymous
-		},
-	});
+  const { posthog } = await import('posthog-js');
+  posthog.init(env.PUBLIC_POSTHOG_KEY, {
+    api_host: env.PUBLIC_POSTHOG_HOST,
+    autocapture: false, // never auto-capture clicks (over-collection)
+    capture_pageview: false, // we emit via afterNavigate
+    disable_session_recording: true, // opt-in feature; off by default
+    persistence: 'memory', // no cookies by default
+    mask_all_text: true, // if replay ever enabled
+    bootstrap: {
+      distinctID: await hashUserId(user.id, env.POSTHOG_HASH_SALT), // pseudonymous
+    },
+  });
 }
 ```
 
@@ -416,16 +416,16 @@ import { describe, expect, test, vi } from 'vitest';
 import { track } from '../src/plausible';
 
 describe('plausible track', () => {
-	test('noops when plausible is not on window', () => {
-		expect(() => track('pageview')).not.toThrow();
-	});
+  test('noops when plausible is not on window', () => {
+    expect(() => track('pageview')).not.toThrow();
+  });
 
-	test('emits when plausible exists', () => {
-		const spy = vi.fn();
-		(window as any).plausible = spy;
-		track('cta_clicked', { plan: 'pro' });
-		expect(spy).toHaveBeenCalledWith('cta_clicked', { props: { plan: 'pro' } });
-	});
+  test('emits when plausible exists', () => {
+    const spy = vi.fn();
+    (window as any).plausible = spy;
+    track('cta_clicked', { plan: 'pro' });
+    expect(spy).toHaveBeenCalledWith('cta_clicked', { props: { plan: 'pro' } });
+  });
 });
 ```
 
@@ -448,7 +448,7 @@ metrics.requestDuration.record(ms, { route: '/api/orders' });
 
 // Analytics — product signal (only if authenticated user acted)
 if (authenticatedUserAction) {
-	track('feature_used', { feature: 'order-create' });
+  track('feature_used', { feature: 'order-create' });
 }
 ```
 

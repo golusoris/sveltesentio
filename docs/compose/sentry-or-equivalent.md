@@ -104,14 +104,14 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { env } from '$env/dynamic/private';
 
 Sentry.init({
-	dsn: env.SENTRY_DSN,
-	environment: env.DEPLOYMENT_ENV,
-	release: env.SENTRY_RELEASE,
-	tracesSampleRate: 0,
-	profilesSampleRate: 0,
-	beforeSend(event, hint) {
-		return scrubPii(event);
-	},
+  dsn: env.SENTRY_DSN,
+  environment: env.DEPLOYMENT_ENV,
+  release: env.SENTRY_RELEASE,
+  tracesSampleRate: 0,
+  profilesSampleRate: 0,
+  beforeSend(event, hint) {
+    return scrubPii(event);
+  },
 });
 
 export const handle = sequence(Sentry.sentryHandle(), yourOtherHandle);
@@ -144,22 +144,22 @@ import * as Sentry from '@sentry/sveltekit';
 import { env as publicEnv } from '$env/dynamic/public';
 
 Sentry.init({
-	dsn: publicEnv.PUBLIC_SENTRY_DSN,
-	environment: publicEnv.PUBLIC_DEPLOYMENT_ENV,
-	release: publicEnv.PUBLIC_SENTRY_RELEASE,
-	tracesSampleRate: 0,
-	replaysSessionSampleRate: 0,
-	replaysOnErrorSampleRate: 0.1,
-	integrations: [
-		Sentry.replayIntegration({
-			maskAllText: true,
-			blockAllMedia: true,
-			networkDetailAllowUrls: [],
-		}),
-	],
-	beforeSend(event) {
-		return clientScrubPii(event);
-	},
+  dsn: publicEnv.PUBLIC_SENTRY_DSN,
+  environment: publicEnv.PUBLIC_DEPLOYMENT_ENV,
+  release: publicEnv.PUBLIC_SENTRY_RELEASE,
+  tracesSampleRate: 0,
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0.1,
+  integrations: [
+    Sentry.replayIntegration({
+      maskAllText: true,
+      blockAllMedia: true,
+      networkDetailAllowUrls: [],
+    }),
+  ],
+  beforeSend(event) {
+    return clientScrubPii(event);
+  },
 });
 
 export const handleError = Sentry.handleErrorWithSentry();
@@ -191,18 +191,18 @@ Five client invariants:
 import { sentrySvelteKit } from '@sentry/sveltekit/vite';
 
 export default defineConfig({
-	plugins: [
-		sentrySvelteKit({
-			sourceMapsUploadOptions: {
-				org: process.env.SENTRY_ORG,
-				project: process.env.SENTRY_PROJECT,
-				authToken: process.env.SENTRY_AUTH_TOKEN,
-				telemetry: false,
-			},
-			autoInstrument: false,
-		}),
-		sveltekit(),
-	],
+  plugins: [
+    sentrySvelteKit({
+      sourceMapsUploadOptions: {
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        telemetry: false,
+      },
+      autoInstrument: false,
+    }),
+    sveltekit(),
+  ],
 });
 ```
 
@@ -224,23 +224,23 @@ import * as Sentry from '@sentry/sveltekit';
 import type { ProblemError } from '$lib/errors/problem';
 
 export function captureProblem(err: ProblemError, correlationId: string): void {
-	Sentry.captureException(err, {
-		tags: {
-			'problem.type': err.type,
-			'problem.status': String(err.status),
-		},
-		contexts: {
-			problem: {
-				type: err.type,
-				title: err.title,
-				status: err.status,
-			},
-		},
-		extra: {
-			correlationId,
-		},
-		fingerprint: ['{{ default }}', err.type],
-	});
+  Sentry.captureException(err, {
+    tags: {
+      'problem.type': err.type,
+      'problem.status': String(err.status),
+    },
+    contexts: {
+      problem: {
+        type: err.type,
+        title: err.title,
+        status: err.status,
+      },
+    },
+    extra: {
+      correlationId,
+    },
+    fingerprint: ['{{ default }}', err.type],
+  });
 }
 ```
 
@@ -269,9 +269,9 @@ const span = trace.getActiveSpan();
 const ctx = span?.spanContext();
 
 Sentry.setContext('otel', {
-	trace_id: ctx?.traceId,
-	span_id: ctx?.spanId,
-	correlation_id: locals.correlationId,
+  trace_id: ctx?.traceId,
+  span_id: ctx?.spanId,
+  correlation_id: locals.correlationId,
 });
 ```
 

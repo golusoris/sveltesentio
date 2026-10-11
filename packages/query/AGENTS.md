@@ -32,13 +32,13 @@ import { createQueryClient } from '@sveltesentio/query';
 import { createClient } from '@sveltesentio/api';
 
 export const load = async ({ fetch }) => {
-	const qc = createQueryClient();
-	const api = createClient({ fetch });
-	await qc.prefetchQuery({
-		queryKey: ['user', 'me'],
-		queryFn: () => api.GET('/user/me').then((r) => r.data),
-	});
-	return { dehydratedState: dehydrate(qc) };
+  const qc = createQueryClient();
+  const api = createClient({ fetch });
+  await qc.prefetchQuery({
+    queryKey: ['user', 'me'],
+    queryFn: () => api.GET('/user/me').then((r) => r.data),
+  });
+  return { dehydratedState: dehydrate(qc) };
 };
 ```
 
@@ -53,9 +53,9 @@ import { UserService } from './gen/user_pb';
 
 const client = createClient(UserService, { baseUrl: '/api' });
 const user = useConnectQuery({
-	client,
-	queryKey: ['user', id],
-	call: (c, opts) => c.getUser({ id }, opts),
+  client,
+  queryKey: ['user', id],
+  call: (c, opts) => c.getUser({ id }, opts),
 });
 ```
 

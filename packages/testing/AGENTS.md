@@ -39,14 +39,14 @@ import { setClock } from '@sveltesentio/core/clock';
 import MyComponent from '../src/MyComponent.svelte';
 
 it('formats the current time', () => {
-	const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
-	// bind inside the root during test render
-	const { getByTestId } = render(MyComponent, {
-		context: new Map([[Symbol.for('sveltesentio.clock'), clock]]),
-	});
-	expect(getByTestId('timestamp').textContent).toBe('2026-04-17T12:00:00.000Z');
-	clock.advance(60_000);
-	// re-render or tick to observe rolled-forward value
+  const clock = testClock({ now: new Date('2026-04-17T12:00:00Z') });
+  // bind inside the root during test render
+  const { getByTestId } = render(MyComponent, {
+    context: new Map([[Symbol.for('sveltesentio.clock'), clock]]),
+  });
+  expect(getByTestId('timestamp').textContent).toBe('2026-04-17T12:00:00.000Z');
+  clock.advance(60_000);
+  // re-render or tick to observe rolled-forward value
 });
 ```
 

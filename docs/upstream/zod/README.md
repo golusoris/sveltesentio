@@ -22,12 +22,12 @@ import { z } from 'zod/v4'; // pin v4 import path during transition (if exposed 
 
 ```ts
 const User = z.object({
-	id: z.uuid(), // top-level — was z.string().uuid() in v3
-	email: z.email(), // top-level — was z.string().email()
-	age: z.number().int().nonnegative(),
-	role: z.enum(['admin', 'user']),
-	createdAt: z.iso.datetime(), // ISO 8601 — namespaced under z.iso in v4
-	tags: z.array(z.string()).default([]),
+  id: z.uuid(), // top-level — was z.string().uuid() in v3
+  email: z.email(), // top-level — was z.string().email()
+  age: z.number().int().nonnegative(),
+  role: z.enum(['admin', 'user']),
+  createdAt: z.iso.datetime(), // ISO 8601 — namespaced under z.iso in v4
+  tags: z.array(z.string()).default([]),
 });
 
 type User = z.infer<typeof User>;
@@ -52,9 +52,9 @@ const safe = User.safeParse(input); // { success, data | error }
 const async = await User.parseAsync(input);
 
 if (!safe.success) {
-	// v4: structured error tree
-	const tree = z.treeifyError(safe.error); // { errors, properties: { email: { errors: [...] } } }
-	const flat = z.flattenError(safe.error); // { formErrors, fieldErrors }
+  // v4: structured error tree
+  const tree = z.treeifyError(safe.error); // { errors, properties: { email: { errors: [...] } } }
+  const flat = z.flattenError(safe.error); // { formErrors, fieldErrors }
 }
 ```
 
@@ -62,9 +62,9 @@ if (!safe.success) {
 
 ```ts
 const Coerced = z.object({
-	age: z.coerce.number().int(),
-	active: z.coerce.boolean(),
-	joined: z.coerce.date(),
+  age: z.coerce.number().int(),
+  active: z.coerce.boolean(),
+  joined: z.coerce.date(),
 });
 ```
 
@@ -79,8 +79,8 @@ const Omitted = WithName.omit({ id: true });
 
 const Either = z.union([z.string(), z.number()]);
 const Disc = z.discriminatedUnion('kind', [
-	z.object({ kind: z.literal('a'), aOnly: z.string() }),
-	z.object({ kind: z.literal('b'), bOnly: z.number() }),
+  z.object({ kind: z.literal('a'), aOnly: z.string() }),
+  z.object({ kind: z.literal('b'), bOnly: z.number() }),
 ]);
 ```
 
@@ -88,9 +88,9 @@ const Disc = z.discriminatedUnion('kind', [
 
 ```ts
 const Strong = z
-	.string()
-	.min(8)
-	.refine((s) => /[A-Z]/.test(s) && /[0-9]/.test(s), { message: 'needs upper + digit' });
+  .string()
+  .min(8)
+  .refine((s) => /[A-Z]/.test(s) && /[0-9]/.test(s), { message: 'needs upper + digit' });
 
 const Trimmed = z.string().transform((s) => s.trim());
 const Pipe = z.string().pipe(z.coerce.number()); // pipe v4 syntax

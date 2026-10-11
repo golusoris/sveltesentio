@@ -54,12 +54,12 @@ single `error` parameter:
 ```ts
 // v3
 z.string({ required_error: 'Required', invalid_type_error: 'Must be a string' }).min(1, {
-	message: 'Too short',
+  message: 'Too short',
 });
 
 // v4
 z.string({ error: (iss) => (iss.input === undefined ? 'Required' : 'Must be a string') }).min(1, {
-	error: 'Too short',
+  error: 'Too short',
 });
 ```
 
@@ -139,14 +139,14 @@ Example (auth login form):
 ```ts
 // v3
 const schema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8, { message: 'Min 8 chars' }),
+  email: z.string().email(),
+  password: z.string().min(8, { message: 'Min 8 chars' }),
 });
 
 // v4
 const schema = z.object({
-	email: z.email(),
-	password: z.string().min(8, { error: 'Min 8 chars' }),
+  email: z.email(),
+  password: z.string().min(8, { error: 'Min 8 chars' }),
 });
 ```
 

@@ -67,26 +67,26 @@ Integrator unable to receive webhooks                  → offer polling endpoin
 import { z } from 'zod';
 
 export const EventType = z.enum([
-	'user.created',
-	'user.updated',
-	'user.deleted',
-	'order.placed',
-	'order.paid',
-	'order.refunded',
-	'invoice.generated',
-	'subscription.canceled',
-	'tenant.plan_changed',
+  'user.created',
+  'user.updated',
+  'user.deleted',
+  'order.placed',
+  'order.paid',
+  'order.refunded',
+  'invoice.generated',
+  'subscription.canceled',
+  'tenant.plan_changed',
 ]);
 
 export const OutboundEvent = z.object({
-	id: z.string().uuid(),
-	type: EventType,
-	version: z.number().int().min(1).max(99),
-	tenantId: z.string().uuid(),
-	occurredAt: z.string().datetime(),
-	data: z
-		.record(z.unknown())
-		.refine((d) => JSON.stringify(d).length <= 64 * 1024, 'payload exceeds 64KB'),
+  id: z.string().uuid(),
+  type: EventType,
+  version: z.number().int().min(1).max(99),
+  tenantId: z.string().uuid(),
+  occurredAt: z.string().datetime(),
+  data: z
+    .record(z.unknown())
+    .refine((d) => JSON.stringify(d).length <= 64 * 1024, 'payload exceeds 64KB'),
 });
 ```
 
@@ -113,29 +113,29 @@ Six event rules:
 import { z } from 'zod';
 
 export const SubscriptionStatus = z.enum([
-	'active',
-	'paused',
-	'disabled_by_ops',
-	'disabled_by_failures',
+  'active',
+  'paused',
+  'disabled_by_ops',
+  'disabled_by_failures',
 ]);
 
 export const Subscription = z.object({
-	id: z.string().uuid(),
-	tenantId: z.string().uuid(),
-	url: z
-		.string()
-		.url()
-		.refine((u) => u.startsWith('https://') && !isInternalHost(u), 'must be https public host'),
-	eventTypes: z.array(EventType).min(1).max(50),
-	secretHashed: z.string().length(64),
-	createdAt: z.string().datetime(),
-	createdBy: z.string().uuid(),
-	status: SubscriptionStatus,
-	pauseReason: z.string().max(200).optional(),
-	lastSuccessAt: z.string().datetime().nullable(),
-	lastFailureAt: z.string().datetime().nullable(),
-	failureStreak: z.number().int().nonnegative().max(1_000_000),
-	description: z.string().max(200).optional(),
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  url: z
+    .string()
+    .url()
+    .refine((u) => u.startsWith('https://') && !isInternalHost(u), 'must be https public host'),
+  eventTypes: z.array(EventType).min(1).max(50),
+  secretHashed: z.string().length(64),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().uuid(),
+  status: SubscriptionStatus,
+  pauseReason: z.string().max(200).optional(),
+  lastSuccessAt: z.string().datetime().nullable(),
+  lastFailureAt: z.string().datetime().nullable(),
+  failureStreak: z.number().int().nonnegative().max(1_000_000),
+  description: z.string().max(200).optional(),
 });
 ```
 
@@ -166,12 +166,12 @@ import dns from 'node:dns/promises';
 import ipaddr from 'ipaddr.js';
 
 export async function assertPublicHost(url: URL): Promise<void> {
-	if (url.protocol !== 'https:') throw new Error('https_required');
-	const addrs = await dns.resolve(url.hostname);
-	for (const a of addrs) {
-		const ip = ipaddr.parse(a);
-		if (ip.range() !== 'unicast' || isBogon(ip)) throw new Error('private_host');
-	}
+  if (url.protocol !== 'https:') throw new Error('https_required');
+  const addrs = await dns.resolve(url.hostname);
+  for (const a of addrs) {
+    const ip = ipaddr.parse(a);
+    if (ip.range() !== 'unicast' || isBogon(ip)) throw new Error('private_host');
+  }
 }
 ```
 
@@ -195,22 +195,22 @@ Six SSRF rules:
 ```ts
 // packages/webhooks/src/dispatch.ts
 export async function dispatch(event: OutboundEvent) {
-	const subs = await db.subscriptions.findForEvent(event.tenantId, event.type);
-	for (const sub of subs) {
-		if (sub.status !== 'active') continue;
-		await queue.enqueue(
-			'webhook.deliver',
-			{
-				subscriptionId: sub.id,
-				eventId: event.id,
-			},
-			{
-				jobId: `deliver:${sub.id}:${event.id}`,
-				attempts: 12,
-				backoff: { type: 'exponential', delay: 1000 },
-			},
-		);
-	}
+  const subs = await db.subscriptions.findForEvent(event.tenantId, event.type);
+  for (const sub of subs) {
+    if (sub.status !== 'active') continue;
+    await queue.enqueue(
+      'webhook.deliver',
+      {
+        subscriptionId: sub.id,
+        eventId: event.id,
+      },
+      {
+        jobId: `deliver:${sub.id}:${event.id}`,
+        attempts: 12,
+        backoff: { type: 'exponential', delay: 1000 },
+      },
+    );
+  }
 }
 ```
 
@@ -246,56 +246,56 @@ import { fetch } from 'undici';
 import { clock } from '@sveltesentio/core/clock';
 
 const Payload = z.object({
-	subscriptionId: z.string().uuid(),
-	eventId: z.string().uuid(),
+  subscriptionId: z.string().uuid(),
+  eventId: z.string().uuid(),
 });
 
 export const deliveryWorker = makeWorker(
-	'webhook.deliver',
-	Payload,
-	async ({ subscriptionId, eventId }) => {
-		const [sub, event] = await Promise.all([
-			db.subscriptions.findById(subscriptionId),
-			db.events.findById(eventId),
-		]);
-		if (!sub || sub.status !== 'active') return { skipped: 'not_active' };
+  'webhook.deliver',
+  Payload,
+  async ({ subscriptionId, eventId }) => {
+    const [sub, event] = await Promise.all([
+      db.subscriptions.findById(subscriptionId),
+      db.events.findById(eventId),
+    ]);
+    if (!sub || sub.status !== 'active') return { skipped: 'not_active' };
 
-		await assertPublicHost(new URL(sub.url));
+    await assertPublicHost(new URL(sub.url));
 
-		const body = JSON.stringify(event);
-		const timestamp = String(Math.floor(clock.now().getTime() / 1000));
-		const secret = await db.secrets.getRaw(sub.id);
-		const signature = sign(secret, timestamp, body);
+    const body = JSON.stringify(event);
+    const timestamp = String(Math.floor(clock.now().getTime() / 1000));
+    const secret = await db.secrets.getRaw(sub.id);
+    const signature = sign(secret, timestamp, body);
 
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 10_000);
-		try {
-			const res = await fetch(sub.url, {
-				method: 'POST',
-				body,
-				headers: {
-					'Content-Type': 'application/json',
-					'User-Agent': `sveltesentio-webhooks/1.0 (+${PUBLIC_ORIGIN}/webhooks)`,
-					'X-Webhook-Id': sub.id,
-					'X-Webhook-Event-Id': event.id,
-					'X-Webhook-Event-Type': event.type,
-					'X-Webhook-Timestamp': timestamp,
-					'X-Webhook-Signature': `v1=${signature}`,
-					'Idempotency-Key': event.id,
-				},
-				signal: controller.signal,
-			});
-			await recordDelivery(sub, event, res.status);
-			if (res.status >= 200 && res.status < 300) return { delivered: true };
-			if (res.status === 410) {
-				await db.subscriptions.setStatus(sub.id, 'disabled_by_ops', '410 Gone');
-				return { disabled: true };
-			}
-			throw new Error(`status ${res.status}`);
-		} finally {
-			clearTimeout(timeout);
-		}
-	},
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(sub.url, {
+        method: 'POST',
+        body,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': `sveltesentio-webhooks/1.0 (+${PUBLIC_ORIGIN}/webhooks)`,
+          'X-Webhook-Id': sub.id,
+          'X-Webhook-Event-Id': event.id,
+          'X-Webhook-Event-Type': event.type,
+          'X-Webhook-Timestamp': timestamp,
+          'X-Webhook-Signature': `v1=${signature}`,
+          'Idempotency-Key': event.id,
+        },
+        signal: controller.signal,
+      });
+      await recordDelivery(sub, event, res.status);
+      if (res.status >= 200 && res.status < 300) return { delivered: true };
+      if (res.status === 410) {
+        await db.subscriptions.setStatus(sub.id, 'disabled_by_ops', '410 Gone');
+        return { disabled: true };
+      }
+      throw new Error(`status ${res.status}`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  },
 );
 ```
 
@@ -330,20 +330,20 @@ Ten worker rules:
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export function sign(secret: string, timestamp: string, body: string): string {
-	return createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
+  return createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
 }
 
 export function verify(
-	secret: string,
-	timestamp: string,
-	body: string,
-	headerSig: string,
+  secret: string,
+  timestamp: string,
+  body: string,
+  headerSig: string,
 ): boolean {
-	const expected = sign(secret, timestamp, body);
-	const v1 = headerSig.startsWith('v1=') ? headerSig.slice(3) : '';
-	const a = Buffer.from(expected, 'hex');
-	const b = Buffer.from(v1, 'hex');
-	return a.length === b.length && timingSafeEqual(a, b);
+  const expected = sign(secret, timestamp, body);
+  const v1 = headerSig.startsWith('v1=') ? headerSig.slice(3) : '';
+  const a = Buffer.from(expected, 'hex');
+  const b = Buffer.from(v1, 'hex');
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 ```
 
@@ -369,16 +369,16 @@ Seven signing rules:
 ```ts
 // packages/webhooks/src/rotate.ts
 export async function rotateSecret(subId: string): Promise<{ raw: string }> {
-	const newRaw = randomBytes(32).toString('hex');
-	await db.transaction(async (tx) => {
-		await tx.secrets.insert({
-			subId,
-			key: await hash(newRaw),
-			activeFrom: clock.now().toISOString(),
-		});
-		// old key remains valid for grace period (24h); worker signs with both during rotation
-	});
-	return { raw: newRaw };
+  const newRaw = randomBytes(32).toString('hex');
+  await db.transaction(async (tx) => {
+    await tx.secrets.insert({
+      subId,
+      key: await hash(newRaw),
+      activeFrom: clock.now().toISOString(),
+    });
+    // old key remains valid for grace period (24h); worker signs with both during rotation
+  });
+  return { raw: newRaw };
 }
 ```
 
@@ -521,12 +521,12 @@ Bounded attributes only:
 
 ```ts
 export const WEBHOOK_ATTRIBUTES = [
-	'webhook.subscription_id', // bounded per tenant
-	'webhook.event_type', // bounded enum ≤50
-	'webhook.outcome', // delivered | retry | disabled | skipped
-	'webhook.attempt_bucket', // 1 | 2-5 | 6-10 | 11+
-	'webhook.status_class', // 2xx | 3xx | 4xx | 5xx | network
-	'webhook.duration_bucket', // <100ms | <1s | <5s | <10s | timeout
+  'webhook.subscription_id', // bounded per tenant
+  'webhook.event_type', // bounded enum ≤50
+  'webhook.outcome', // delivered | retry | disabled | skipped
+  'webhook.attempt_bucket', // 1 | 2-5 | 6-10 | 11+
+  'webhook.status_class', // 2xx | 3xx | 4xx | 5xx | network
+  'webhook.duration_bucket', // <100ms | <1s | <5s | <10s | timeout
 ] as const;
 ```
 

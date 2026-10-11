@@ -217,32 +217,32 @@ import { verifyCronRequest } from '../_shared/authn';
 import { runDrill } from '$lib/backup/drill';
 
 export const POST: RequestHandler = async ({ request }) => {
-	verifyCronRequest(request);
+  verifyCronRequest(request);
 
-	return withCronRun('dr-drill', async () => {
-		const result = await runDrill({
-			sourceBackup: 'latest-base-backup',
-			targetPostgres: 'drill-ephemeral',
-			smokeChecks: [
-				'tenants_row_count > 0',
-				'latest_audit_row within_24h',
-				'billing_ledger row_count matches source',
-				'migration_version matches latest',
-			],
-		});
+  return withCronRun('dr-drill', async () => {
+    const result = await runDrill({
+      sourceBackup: 'latest-base-backup',
+      targetPostgres: 'drill-ephemeral',
+      smokeChecks: [
+        'tenants_row_count > 0',
+        'latest_audit_row within_24h',
+        'billing_ledger row_count matches source',
+        'migration_version matches latest',
+      ],
+    });
 
-		return {
-			processed: result.checksPassed,
-			skipped: result.checksSkipped,
-			details: {
-				restoreDurationMinutes: result.restoreDurationMinutes,
-				checksPassedCount: result.checksPassed,
-				checksFailedCount: result.checksFailed,
-				measuredRtoMinutes: result.measuredRtoMinutes,
-				measuredRpoMinutes: result.measuredRpoMinutes,
-			},
-		};
-	});
+    return {
+      processed: result.checksPassed,
+      skipped: result.checksSkipped,
+      details: {
+        restoreDurationMinutes: result.restoreDurationMinutes,
+        checksPassedCount: result.checksPassed,
+        checksFailedCount: result.checksFailed,
+        measuredRtoMinutes: result.measuredRtoMinutes,
+        measuredRpoMinutes: result.measuredRpoMinutes,
+      },
+    };
+  });
 };
 ```
 
@@ -501,24 +501,24 @@ restore.drill.rto.minutes        gauge (measured RTO at drill)
 
 ```typescript
 it('wal-g archives WAL within RPO', async () => {
-	const lastWalTime = await fetchLastArchivedWalTimestamp();
-	const lag = Date.now() - lastWalTime.getTime();
-	expect(lag).toBeLessThan(5 * 60 * 1000);
+  const lastWalTime = await fetchLastArchivedWalTimestamp();
+  const lag = Date.now() - lastWalTime.getTime();
+  expect(lag).toBeLessThan(5 * 60 * 1000);
 });
 
 it('monthly restore drill produces pass status', async () => {
-	const result = await runDrillInStaging({ sourceBackup: 'latest' });
-	expect(result.checksPassedCount).toBeGreaterThan(0);
-	expect(result.checksFailedCount).toBe(0);
-	expect(result.measuredRtoMinutes).toBeLessThan(30);
+  const result = await runDrillInStaging({ sourceBackup: 'latest' });
+  expect(result.checksPassedCount).toBeGreaterThan(0);
+  expect(result.checksFailedCount).toBe(0);
+  expect(result.measuredRtoMinutes).toBeLessThan(30);
 });
 
 it('erasure tombstone re-applies after restore', async () => {
-	await erasureTombstone('user-x');
-	await runDrillInStaging({ sourceBackup: 'pre-erasure' });
-	await reapplyTombstones();
-	const user = await db.oneOrNone('SELECT * FROM users WHERE id = $1', ['user-x']);
-	expect(user).toBeNull();
+  await erasureTombstone('user-x');
+  await runDrillInStaging({ sourceBackup: 'pre-erasure' });
+  await reapplyTombstones();
+  const user = await db.oneOrNone('SELECT * FROM users WHERE id = $1', ['user-x']);
+  expect(user).toBeNull();
 });
 ```
 

@@ -31,12 +31,12 @@ Reject unknown fields. Framework default.
 import { z } from 'zod';
 
 export const createUser = z
-	.object({
-		email: z.email(),
-		name: z.string().min(1).max(120),
-		preferredLang: z.enum(['en', 'de']).default('en'),
-	})
-	.strict();
+  .object({
+    email: z.email(),
+    name: z.string().min(1).max(120),
+    preferredLang: z.enum(['en', 'de']).default('en'),
+  })
+  .strict();
 ```
 
 ```ts
@@ -46,13 +46,13 @@ import type { RequestHandler } from './$types';
 import { createUser } from './schema';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const parsed = createUser.safeParse(await request.json());
-	if (!parsed.success) {
-		// Flatten into an RFC 9457 `application/problem+json` envelope —
-		// `@sveltesentio/core/errors` exports a helper for this.
-		throw error(422, { zodIssues: parsed.error.issues });
-	}
-	// ... use parsed.data
+  const parsed = createUser.safeParse(await request.json());
+  if (!parsed.success) {
+    // Flatten into an RFC 9457 `application/problem+json` envelope —
+    // `@sveltesentio/core/errors` exports a helper for this.
+    throw error(422, { zodIssues: parsed.error.issues });
+  }
+  // ... use parsed.data
 };
 ```
 
@@ -67,17 +67,17 @@ than a bare `z.union`.
 
 ```ts
 export const appEvent = z.discriminatedUnion('kind', [
-	z.object({
-		kind: z.literal('user.created'),
-		userId: z.uuid(),
-		at: z.iso.datetime(),
-	}),
-	z.object({
-		kind: z.literal('upload.completed'),
-		uploadId: z.uuid(),
-		bytes: z.number().int().nonnegative(),
-		at: z.iso.datetime(),
-	}),
+  z.object({
+    kind: z.literal('user.created'),
+    userId: z.uuid(),
+    at: z.iso.datetime(),
+  }),
+  z.object({
+    kind: z.literal('upload.completed'),
+    uploadId: z.uuid(),
+    bytes: z.number().int().nonnegative(),
+    at: z.iso.datetime(),
+  }),
 ]);
 
 export type AppEvent = z.infer<typeof appEvent>;
@@ -87,13 +87,13 @@ Downstream switch exhausts automatically:
 
 ```ts
 function handle(event: AppEvent) {
-	switch (event.kind) {
-		case 'user.created':
-			return greet(event.userId);
-		case 'upload.completed':
-			return index(event.uploadId, event.bytes);
-	}
-	event satisfies never;
+  switch (event.kind) {
+    case 'user.created':
+      return greet(event.userId);
+    case 'upload.completed':
+      return index(event.uploadId, event.bytes);
+  }
+  event satisfies never;
 }
 ```
 
@@ -104,14 +104,14 @@ the rule near the schema — the error message is the UI's error message.
 
 ```ts
 export const dateRange = z
-	.object({
-		from: z.iso.date(),
-		to: z.iso.date(),
-	})
-	.refine((v) => v.from <= v.to, {
-		message: '`from` must be on or before `to`',
-		path: ['to'],
-	});
+  .object({
+    from: z.iso.date(),
+    to: z.iso.date(),
+  })
+  .refine((v) => v.from <= v.to, {
+    message: '`from` must be on or before `to`',
+    path: ['to'],
+  });
 ```
 
 `path` is mandatory when the rule spans fields — it tells Superforms which
@@ -147,11 +147,11 @@ import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 
 const envSchema = z.object({
-	DATABASE_URL: z.url(),
-	OIDC_ISSUER: z.url(),
-	OIDC_CLIENT_ID: z.string().min(1),
-	LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-	SESSION_COOKIE_DOMAIN: z.string().optional(),
+  DATABASE_URL: z.url(),
+  OIDC_ISSUER: z.url(),
+  OIDC_CLIENT_ID: z.string().min(1),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  SESSION_COOKIE_DOMAIN: z.string().optional(),
 });
 
 export const appEnv = envSchema.parse(env);

@@ -87,13 +87,13 @@ only.
 import { z } from 'zod';
 
 export const CsrfToken = z.object({
-	// The double-submit value. URL-safe base64, 32 bytes HMAC output.
-	value: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-	// Session id this token is bound to. Opaque.
-	sid: z.string().min(16).max(128),
-	// Not-before + expiry timestamps (ms). Token rotates on session rotate.
-	nbf: z.number().int().positive(),
-	exp: z.number().int().positive(),
+  // The double-submit value. URL-safe base64, 32 bytes HMAC output.
+  value: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  // Session id this token is bound to. Opaque.
+  sid: z.string().min(16).max(128),
+  // Not-before + expiry timestamps (ms). Token rotates on session rotate.
+  nbf: z.number().int().positive(),
+  exp: z.number().int().positive(),
 });
 export type CsrfToken = z.infer<typeof CsrfToken>;
 ```
@@ -111,40 +111,40 @@ const SECRET = Buffer.from(env.CSRF_HMAC_KEY, 'base64'); // 32 bytes
 const TTL_MS = 60 * 60 * 1000; // 1 hour; rotate w/ session rotation
 
 export function issueCsrfToken(sessionId: string): { token: string; exp: number } {
-	const nonce = crypto.randomBytes(16);
-	const exp = Date.now() + TTL_MS;
-	const payload = Buffer.concat([
-		nonce,
-		Buffer.from(sessionId, 'utf8'),
-		Buffer.from(String(exp), 'utf8'),
-	]);
-	const hmac = crypto.createHmac('sha256', SECRET).update(payload).digest();
-	// value = nonce || hmac (16 + 32 = 48 bytes → 64 b64 chars);
-	// we encode nonce + hmac concatenated, not the full payload — server
-	// recomputes hmac from sid + exp stored out-of-band (session) or in
-	// a companion cookie. Simpler: store the full hmac-bound value.
-	return {
-		token: Buffer.concat([nonce, hmac]).toString('base64url'),
-		exp,
-	};
+  const nonce = crypto.randomBytes(16);
+  const exp = Date.now() + TTL_MS;
+  const payload = Buffer.concat([
+    nonce,
+    Buffer.from(sessionId, 'utf8'),
+    Buffer.from(String(exp), 'utf8'),
+  ]);
+  const hmac = crypto.createHmac('sha256', SECRET).update(payload).digest();
+  // value = nonce || hmac (16 + 32 = 48 bytes → 64 b64 chars);
+  // we encode nonce + hmac concatenated, not the full payload — server
+  // recomputes hmac from sid + exp stored out-of-band (session) or in
+  // a companion cookie. Simpler: store the full hmac-bound value.
+  return {
+    token: Buffer.concat([nonce, hmac]).toString('base64url'),
+    exp,
+  };
 }
 
 export function verifyCsrfToken(token: string, sessionId: string): boolean {
-	try {
-		const buf = Buffer.from(token, 'base64url');
-		if (buf.length !== 16 + 32) return false;
-		const nonce = buf.subarray(0, 16);
-		const tag = buf.subarray(16);
-		// For verification the server needs the `exp` it issued — store
-		// exp in a companion attribute or keep the token short-lived and
-		// replace on every mutation. Simplest: bind to session expiry.
-		// Here we recompute HMAC over nonce||sid||sessionIssuedAt (stable).
-		const payload = Buffer.concat([nonce, Buffer.from(sessionId, 'utf8')]);
-		const expected = crypto.createHmac('sha256', SECRET).update(payload).digest();
-		return crypto.timingSafeEqual(tag, expected);
-	} catch {
-		return false;
-	}
+  try {
+    const buf = Buffer.from(token, 'base64url');
+    if (buf.length !== 16 + 32) return false;
+    const nonce = buf.subarray(0, 16);
+    const tag = buf.subarray(16);
+    // For verification the server needs the `exp` it issued — store
+    // exp in a companion attribute or keep the token short-lived and
+    // replace on every mutation. Simplest: bind to session expiry.
+    // Here we recompute HMAC over nonce||sid||sessionIssuedAt (stable).
+    const payload = Buffer.concat([nonce, Buffer.from(sessionId, 'utf8')]);
+    const expected = crypto.createHmac('sha256', SECRET).update(payload).digest();
+    return crypto.timingSafeEqual(tag, expected);
+  } catch {
+    return false;
+  }
 }
 ```
 
@@ -159,14 +159,14 @@ export function verifyCsrfToken(token: string, sessionId: string): boolean {
 import { issueCsrfToken } from '$lib/server/csrf';
 
 function setCsrfCookie(event: RequestEvent, sessionId: string) {
-	const { token } = issueCsrfToken(sessionId);
-	event.cookies.set('__Host-csrf', token, {
-		path: '/',
-		httpOnly: false, // MUST be readable by first-party JS to put in header/field
-		secure: true,
-		sameSite: 'lax',
-		maxAge: 60 * 60,
-	});
+  const { token } = issueCsrfToken(sessionId);
+  event.cookies.set('__Host-csrf', token, {
+    path: '/',
+    httpOnly: false, // MUST be readable by first-party JS to put in header/field
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60,
+  });
 }
 ```
 
@@ -189,60 +189,60 @@ import { verifyCsrfToken } from '$lib/server/csrf';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SAFE_CONTENT_TYPES = new Set([
-	'application/json',
-	'application/x-www-form-urlencoded',
-	'multipart/form-data',
-	'text/plain',
+  'application/json',
+  'application/x-www-form-urlencoded',
+  'multipart/form-data',
+  'text/plain',
 ]);
 
 export async function handle({ event, resolve }) {
-	if (MUTATING.has(event.request.method)) {
-		// Layer 1: Origin check (SvelteKit baseline does this for forms; we widen to JSON)
-		const origin = event.request.headers.get('origin');
-		const allowed = [event.url.origin, ...trustedOrigins()];
-		if (origin && !allowed.includes(origin)) {
-			return rejectCsrf(event, 'origin_mismatch');
-		}
+  if (MUTATING.has(event.request.method)) {
+    // Layer 1: Origin check (SvelteKit baseline does this for forms; we widen to JSON)
+    const origin = event.request.headers.get('origin');
+    const allowed = [event.url.origin, ...trustedOrigins()];
+    if (origin && !allowed.includes(origin)) {
+      return rejectCsrf(event, 'origin_mismatch');
+    }
 
-		// Layer 2: token verification for all mutating requests (including JSON APIs)
-		const session = await loadSession(event);
-		if (session) {
-			const headerToken = event.request.headers.get('x-csrf-token');
-			const cookieToken = event.cookies.get('__Host-csrf');
-			if (!headerToken || !cookieToken) return rejectCsrf(event, 'token_missing');
-			if (!timingSafeEq(headerToken, cookieToken))
-				return rejectCsrf(event, 'cookie_header_mismatch');
-			if (!verifyCsrfToken(headerToken, session.id)) return rejectCsrf(event, 'hmac_invalid');
-		}
-		// Requests without a session (login form) are governed by Origin check alone;
-		// see login-specific flow below.
-	}
-	return resolve(event);
+    // Layer 2: token verification for all mutating requests (including JSON APIs)
+    const session = await loadSession(event);
+    if (session) {
+      const headerToken = event.request.headers.get('x-csrf-token');
+      const cookieToken = event.cookies.get('__Host-csrf');
+      if (!headerToken || !cookieToken) return rejectCsrf(event, 'token_missing');
+      if (!timingSafeEq(headerToken, cookieToken))
+        return rejectCsrf(event, 'cookie_header_mismatch');
+      if (!verifyCsrfToken(headerToken, session.id)) return rejectCsrf(event, 'hmac_invalid');
+    }
+    // Requests without a session (login form) are governed by Origin check alone;
+    // see login-specific flow below.
+  }
+  return resolve(event);
 }
 
 function rejectCsrf(event: RequestEvent, reason: string) {
-	recordAudit({
-		action: 'security.csrf.rejected',
-		actor: event.locals.user?.id ?? null,
-		payload: {
-			reason,
-			path: event.url.pathname,
-			method: event.request.method,
-			ip: event.getClientAddress(),
-		},
-	});
-	return new Response(
-		JSON.stringify({
-			type: 'about:blank',
-			title: 'CSRF validation failed',
-			status: 403,
-			detail: reason,
-		}),
-		{
-			status: 403,
-			headers: { 'Content-Type': 'application/problem+json' },
-		},
-	);
+  recordAudit({
+    action: 'security.csrf.rejected',
+    actor: event.locals.user?.id ?? null,
+    payload: {
+      reason,
+      path: event.url.pathname,
+      method: event.request.method,
+      ip: event.getClientAddress(),
+    },
+  });
+  return new Response(
+    JSON.stringify({
+      type: 'about:blank',
+      title: 'CSRF validation failed',
+      status: 403,
+      detail: reason,
+    }),
+    {
+      status: 403,
+      headers: { 'Content-Type': 'application/problem+json' },
+    },
+  );
 }
 ```
 
@@ -271,27 +271,27 @@ Login is special: there's no session yet, so no HMAC. Use:
 ```ts
 // src/routes/login/+page.server.ts
 export async function load({ cookies }) {
-	const nonce = crypto.randomBytes(16).toString('base64url');
-	cookies.set('__Host-login-nonce', nonce, {
-		path: '/login',
-		httpOnly: true,
-		secure: true,
-		sameSite: 'lax',
-		maxAge: 5 * 60,
-	});
-	return { nonce };
+  const nonce = crypto.randomBytes(16).toString('base64url');
+  cookies.set('__Host-login-nonce', nonce, {
+    path: '/login',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 5 * 60,
+  });
+  return { nonce };
 }
 
 export const actions = {
-	default: async ({ request, cookies }) => {
-		const form = await request.formData();
-		const nonce = cookies.get('__Host-login-nonce');
-		if (!nonce || form.get('nonce') !== nonce) {
-			return fail(403, { reason: 'nonce_mismatch' });
-		}
-		cookies.delete('__Host-login-nonce', { path: '/login' });
-		// ... handle login
-	},
+  default: async ({ request, cookies }) => {
+    const form = await request.formData();
+    const nonce = cookies.get('__Host-login-nonce');
+    if (!nonce || form.get('nonce') !== nonce) {
+      return fail(403, { reason: 'nonce_mismatch' });
+    }
+    cookies.delete('__Host-login-nonce', { path: '/login' });
+    // ... handle login
+  },
 };
 ```
 
@@ -303,26 +303,26 @@ token for subsequent requests.
 ```ts
 // src/lib/client/fetch-with-csrf.ts
 function readCookie(name: string): string | null {
-	const m = document.cookie.match(
-		new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'),
-	);
-	return m ? decodeURIComponent(m[1]!) : null;
+  const m = document.cookie.match(
+    new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'),
+  );
+  return m ? decodeURIComponent(m[1]!) : null;
 }
 
 export async function fetchWithCsrf(
-	input: RequestInfo | URL,
-	init: RequestInit = {},
+  input: RequestInfo | URL,
+  init: RequestInit = {},
 ): Promise<Response> {
-	const method = (init.method ?? 'GET').toUpperCase();
-	const needsToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  const method = (init.method ?? 'GET').toUpperCase();
+  const needsToken = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-	const headers = new Headers(init.headers);
-	if (needsToken) {
-		const token = readCookie('__Host-csrf');
-		if (token) headers.set('x-csrf-token', token);
-	}
+  const headers = new Headers(init.headers);
+  if (needsToken) {
+    const token = readCookie('__Host-csrf');
+    if (token) headers.set('x-csrf-token', token);
+  }
 
-	return fetch(input, { ...init, headers, credentials: 'same-origin' });
+  return fetch(input, { ...init, headers, credentials: 'same-origin' });
 }
 ```
 
@@ -334,18 +334,18 @@ import createClient from 'openapi-fetch';
 import type { paths } from './openapi';
 
 export const api = createClient<paths>({
-	baseUrl: '/api/v1',
-	credentials: 'same-origin',
+  baseUrl: '/api/v1',
+  credentials: 'same-origin',
 });
 
 api.use({
-	onRequest({ request }) {
-		if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
-			const token = readCookie('__Host-csrf');
-			if (token) request.headers.set('x-csrf-token', token);
-		}
-		return request;
-	},
+  onRequest({ request }) {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+      const token = readCookie('__Host-csrf');
+      if (token) request.headers.set('x-csrf-token', token);
+    }
+    return request;
+  },
 });
 ```
 
@@ -357,17 +357,17 @@ import { superForm } from 'sveltekit-superforms';
 import { readCookie } from './csrf';
 
 export function withCsrf<T extends Record<string, unknown>>(
-	form: T,
-	options?: Parameters<typeof superForm>[1],
+  form: T,
+  options?: Parameters<typeof superForm>[1],
 ) {
-	return superForm(form, {
-		...options,
-		onSubmit: async (args) => {
-			const token = readCookie('__Host-csrf');
-			if (token) args.formData.set('__csrf', token);
-			return options?.onSubmit?.(args);
-		},
-	});
+  return superForm(form, {
+    ...options,
+    onSubmit: async (args) => {
+      const token = readCookie('__Host-csrf');
+      if (token) args.formData.set('__csrf', token);
+      return options?.onSubmit?.(args);
+    },
+  });
 }
 ```
 

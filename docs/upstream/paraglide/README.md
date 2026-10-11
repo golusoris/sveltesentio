@@ -26,13 +26,13 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [
-		paraglideVitePlugin({
-			project: './project.inlang',
-			outdir: './src/lib/paraglide',
-		}),
-		sveltekit(),
-	],
+  plugins: [
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/lib/paraglide',
+    }),
+    sveltekit(),
+  ],
 });
 ```
 
@@ -69,9 +69,9 @@ locales; // ['en', 'de', ...]
 
 ```ts
 paraglideVitePlugin({
-	project: './project.inlang',
-	outdir: './src/lib/paraglide',
-	strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+  project: './project.inlang',
+  outdir: './src/lib/paraglide',
+  strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
 });
 ```
 
@@ -85,10 +85,10 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request, locale }) => {
-		event.request = request;
-		return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
-	});
+  paraglideMiddleware(event.request, ({ request, locale }) => {
+    event.request = request;
+    return resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
+  });
 ```
 
 ## `sveltesentio` usage

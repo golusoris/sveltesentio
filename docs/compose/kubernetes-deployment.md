@@ -64,10 +64,10 @@ helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
 ```jsonc
 // package.json — container image build
 {
-	"scripts": {
-		"docker:build": "docker buildx build --platform=linux/amd64,linux/arm64 -t ghcr.io/org/app:$(git rev-parse --short HEAD) --push .",
-		"kubectl:apply": "kubectl apply -f k8s/ -n production",
-	},
+  "scripts": {
+    "docker:build": "docker buildx build --platform=linux/amd64,linux/arm64 -t ghcr.io/org/app:$(git rev-parse --short HEAD) --push .",
+    "kubectl:apply": "kubectl apply -f k8s/ -n production",
+  },
 }
 ```
 
@@ -81,35 +81,35 @@ export const Environment = z.enum(['dev', 'staging', 'production']);
 export type Environment = z.infer<typeof Environment>;
 
 export const PodResources = z.object({
-	requests: z.object({
-		cpu: z.string().regex(/^\d+m$/, 'use millicores: "250m"'),
-		memory: z.string().regex(/^\d+Mi$/, 'use mebibytes: "512Mi"'),
-	}),
-	limits: z.object({
-		cpu: z.string().regex(/^\d+m?$/),
-		memory: z.string().regex(/^\d+Mi$/),
-	}),
+  requests: z.object({
+    cpu: z.string().regex(/^\d+m$/, 'use millicores: "250m"'),
+    memory: z.string().regex(/^\d+Mi$/, 'use mebibytes: "512Mi"'),
+  }),
+  limits: z.object({
+    cpu: z.string().regex(/^\d+m?$/),
+    memory: z.string().regex(/^\d+Mi$/),
+  }),
 });
 
 export const DeploymentConfig = z.object({
-	appName: z
-		.string()
-		.regex(/^[a-z0-9-]+$/)
-		.max(40),
-	environment: Environment,
-	image: z.string().regex(/^ghcr\.io\/.+:[a-f0-9]{7,40}$/, 'use immutable SHA tag, never :latest'),
-	replicas: z.object({
-		min: z.number().int().min(2, 'HA requires ≥2 pods'),
-		max: z.number().int().min(2).max(100),
-	}),
-	resources: PodResources,
-	podDisruptionBudget: z.object({
-		minAvailable: z.union([z.number().int().min(1), z.string().regex(/^\d+%$/)]),
-	}),
-	hpa: z.object({
-		targetCpuPercent: z.number().int().min(50).max(90).default(70),
-		targetMemoryPercent: z.number().int().min(60).max(90).default(80),
-	}),
+  appName: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .max(40),
+  environment: Environment,
+  image: z.string().regex(/^ghcr\.io\/.+:[a-f0-9]{7,40}$/, 'use immutable SHA tag, never :latest'),
+  replicas: z.object({
+    min: z.number().int().min(2, 'HA requires ≥2 pods'),
+    max: z.number().int().min(2).max(100),
+  }),
+  resources: PodResources,
+  podDisruptionBudget: z.object({
+    minAvailable: z.union([z.number().int().min(1), z.string().regex(/^\d+%$/)]),
+  }),
+  hpa: z.object({
+    targetCpuPercent: z.number().int().min(50).max(90).default(70),
+    targetMemoryPercent: z.number().int().min(60).max(90).default(80),
+  }),
 });
 ```
 
@@ -239,8 +239,8 @@ import { json } from '@sveltejs/kit';
 
 // Startup: "have we finished loading?" — pod-level boot
 export const GET = async () => {
-	if (!globalThis.__ready) return new Response('not ready', { status: 503 });
-	return json({ status: 'started' });
+  if (!globalThis.__ready) return new Response('not ready', { status: 503 });
+  return json({ status: 'started' });
 };
 
 // src/routes/healthz/ready/+server.ts
@@ -249,19 +249,19 @@ import { db } from '$lib/server/db';
 import { redis } from '$lib/server/redis';
 
 export const GET = async () => {
-	try {
-		await Promise.all([db.query('SELECT 1'), redis.ping()]);
-		return json({ status: 'ready' });
-	} catch (e) {
-		return new Response('dependency down', { status: 503 });
-	}
+  try {
+    await Promise.all([db.query('SELECT 1'), redis.ping()]);
+    return json({ status: 'ready' });
+  } catch (e) {
+    return new Response('dependency down', { status: 503 });
+  }
 };
 
 // src/routes/healthz/live/+server.ts
 // Liveness: "is the process in a state kubelet should restart?"
 // DO NOT check dependencies here — only process-health (no event-loop stall, no deadlock).
 export const GET = async () => {
-	return json({ status: 'live', pid: process.pid });
+  return json({ status: 'live', pid: process.pid });
 };
 ```
 

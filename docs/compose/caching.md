@@ -102,51 +102,51 @@ Origin response               (your SvelteKit handler)
 import type { RequestEvent } from '@sveltejs/kit';
 
 export type CachePolicy =
-	| { kind: 'anonymous-page' }
-	| { kind: 'anonymous-api' }
-	| { kind: 'authenticated'; varyCookie?: boolean }
-	| { kind: 'immutable-asset' }
-	| { kind: 'uploaded-image'; private: true }
-	| { kind: 'public-image' }
-	| { kind: 'mutation' }
-	| { kind: 'error' };
+  | { kind: 'anonymous-page' }
+  | { kind: 'anonymous-api' }
+  | { kind: 'authenticated'; varyCookie?: boolean }
+  | { kind: 'immutable-asset' }
+  | { kind: 'uploaded-image'; private: true }
+  | { kind: 'public-image' }
+  | { kind: 'mutation' }
+  | { kind: 'error' };
 
 export function applyCacheHeaders(response: Response, policy: CachePolicy): Response {
-	switch (policy.kind) {
-		case 'anonymous-page':
-			response.headers.set(
-				'Cache-Control',
-				'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
-			);
-			response.headers.set('Vary', 'Accept-Encoding, Accept-Language');
-			return response;
-		case 'anonymous-api':
-			response.headers.set(
-				'Cache-Control',
-				'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
-			);
-			response.headers.set('Vary', 'Accept, Accept-Encoding');
-			return response;
-		case 'authenticated':
-			response.headers.set('Cache-Control', 'private, no-store');
-			return response;
-		case 'immutable-asset':
-			response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-			return response;
-		case 'uploaded-image':
-			response.headers.set('Cache-Control', 'private, max-age=300, no-store');
-			return response;
-		case 'public-image':
-			response.headers.set(
-				'Cache-Control',
-				'public, max-age=604800, stale-while-revalidate=2592000',
-			);
-			return response;
-		case 'mutation':
-		case 'error':
-			response.headers.set('Cache-Control', 'no-store');
-			return response;
-	}
+  switch (policy.kind) {
+    case 'anonymous-page':
+      response.headers.set(
+        'Cache-Control',
+        'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+      );
+      response.headers.set('Vary', 'Accept-Encoding, Accept-Language');
+      return response;
+    case 'anonymous-api':
+      response.headers.set(
+        'Cache-Control',
+        'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+      );
+      response.headers.set('Vary', 'Accept, Accept-Encoding');
+      return response;
+    case 'authenticated':
+      response.headers.set('Cache-Control', 'private, no-store');
+      return response;
+    case 'immutable-asset':
+      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return response;
+    case 'uploaded-image':
+      response.headers.set('Cache-Control', 'private, max-age=300, no-store');
+      return response;
+    case 'public-image':
+      response.headers.set(
+        'Cache-Control',
+        'public, max-age=604800, stale-while-revalidate=2592000',
+      );
+      return response;
+    case 'mutation':
+    case 'error':
+      response.headers.set('Cache-Control', 'no-store');
+      return response;
+  }
 }
 ```
 
@@ -169,12 +169,12 @@ Usage in a route:
 ```ts
 // src/routes/docs/[slug]/+page.server.ts
 export async function load({ params, setHeaders }) {
-	const doc = await loadDoc(params.slug);
-	setHeaders({
-		'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
-		vary: 'Accept-Encoding, Accept-Language',
-	});
-	return { doc };
+  const doc = await loadDoc(params.slug);
+  setHeaders({
+    'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+    vary: 'Accept-Encoding, Accept-Language',
+  });
+  return { doc };
 }
 ```
 
@@ -183,11 +183,11 @@ Or via `hooks.server.ts` for blanket policies:
 ```ts
 // src/hooks.server.ts
 export async function handle({ event, resolve }) {
-	const response = await resolve(event);
-	if (event.locals.session) {
-		response.headers.set('Cache-Control', 'private, no-store');
-	}
-	return response;
+  const response = await resolve(event);
+  if (event.locals.session) {
+    response.headers.set('Cache-Control', 'private, no-store');
+  }
+  return response;
 }
 ```
 
@@ -361,14 +361,14 @@ queue).
 
 ```ts
 span.setAttributes({
-	'cache.policy': policy.kind, // bounded enum
-	'cache.hit': hit, // boolean
-	'cache.age_seconds': ageSeconds, // only if hit
+  'cache.policy': policy.kind, // bounded enum
+  'cache.hit': hit, // boolean
+  'cache.age_seconds': ageSeconds, // only if hit
 });
 
 metrics.cacheHitRate.add(1, {
-	policy: policy.kind,
-	route: normalizedRoute, // /api/orders/:id (no raw IDs)
+  policy: policy.kind,
+  route: normalizedRoute, // /api/orders/:id (no raw IDs)
 });
 ```
 
@@ -387,17 +387,17 @@ Unit-test the helper:
 ```ts
 // packages/http/test/cache.test.ts
 describe('applyCacheHeaders', () => {
-	test('anonymous-page sets public + SWR + Vary', () => {
-		const r = applyCacheHeaders(new Response('x'), { kind: 'anonymous-page' });
-		expect(r.headers.get('Cache-Control')).toBe(
-			'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
-		);
-		expect(r.headers.get('Vary')).toBe('Accept-Encoding, Accept-Language');
-	});
-	test('authenticated sets private, no-store', () => {
-		const r = applyCacheHeaders(new Response('x'), { kind: 'authenticated' });
-		expect(r.headers.get('Cache-Control')).toBe('private, no-store');
-	});
+  test('anonymous-page sets public + SWR + Vary', () => {
+    const r = applyCacheHeaders(new Response('x'), { kind: 'anonymous-page' });
+    expect(r.headers.get('Cache-Control')).toBe(
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=600',
+    );
+    expect(r.headers.get('Vary')).toBe('Accept-Encoding, Accept-Language');
+  });
+  test('authenticated sets private, no-store', () => {
+    const r = applyCacheHeaders(new Response('x'), { kind: 'authenticated' });
+    expect(r.headers.get('Cache-Control')).toBe('private, no-store');
+  });
 });
 ```
 

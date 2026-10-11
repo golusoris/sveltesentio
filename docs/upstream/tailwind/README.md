@@ -28,12 +28,12 @@ Configuration moves from JS to CSS via `@theme`:
 @import 'tailwindcss';
 
 @theme {
-	--color-primary: oklch(0.65 0.2 150);
-	--color-surface: oklch(0.98 0.01 250);
-	--font-display: 'Inter', sans-serif;
-	--spacing: 0.25rem; /* base spacing unit */
-	--breakpoint-3xl: 1920px; /* adds 3xl: variant */
-	--radius-card: 0.75rem;
+  --color-primary: oklch(0.65 0.2 150);
+  --color-surface: oklch(0.98 0.01 250);
+  --font-display: 'Inter', sans-serif;
+  --spacing: 0.25rem; /* base spacing unit */
+  --breakpoint-3xl: 1920px; /* adds 3xl: variant */
+  --radius-card: 0.75rem;
 }
 ```
 
@@ -48,7 +48,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+  plugins: [tailwindcss(), sveltekit()],
 });
 ```
 
@@ -67,7 +67,7 @@ Use as `dark:bg-surface`, `data-active:ring-2`.
 
 ```html
 <div class="@container">
-	<div class="@md:flex @lg:grid-cols-3">…</div>
+  <div class="@md:flex @lg:grid-cols-3">…</div>
 </div>
 ```
 
