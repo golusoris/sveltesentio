@@ -178,6 +178,70 @@ jobs:
             pnpm build
           fi
 
+  stories:
+    name: Stories (axe)
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+      - run: corepack enable && pnpm install --frozen-lockfile
+      # One Playwright version is in the lockfile, so one browser install serves every workspace.
+      - name: Install Chromium
+        run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium
+      # Every story is rendered in Chromium; an axe violation or a render error fails the run.
+      # Stories come from every package, so the run is not narrowed to the affected ones.
+      - name: Run every story with axe
+        run: pnpm test:stories
+
+  e2e:
+    name: End-to-end
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium
+      # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
+      - name: Run end-to-end tests of affected packages
+        env:
+          TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
+        run: |
+          if [ -n "$TURBO_FILTER" ]; then
+            # shellcheck disable=SC2086
+            pnpm exec turbo run test:e2e $TURBO_FILTER
+          else
+            pnpm test:e2e
+          fi
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-traces
+          path: |
+            packages/*/e2e/test-results/
+            packages/*/e2e/playwright-report/
+            packages/*/playwright-report/
+          retention-days: 7
+
   audit:
     name: Security audit
     needs: [detect-changes]
@@ -220,7 +284,7 @@ jobs:
   ci-gate:
     name: CI Gate
     if: always()
-    needs: [pr-title, detect-changes, lint, typecheck, test, build, audit, docs-drift]
+    needs: [pr-title, detect-changes, lint, typecheck, test, build, stories, e2e, audit, docs-drift]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all required jobs succeeded or were legitimately skipped
