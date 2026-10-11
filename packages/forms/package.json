@@ -49,6 +49,7 @@
 		"validation",
 		"rfc9457"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/forms",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.0.0",

@@ -11,6 +11,7 @@
 		"typescript": "^6.0.3",
 		"vite": "^8.2.2"
 	},
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/storybook",
 	"private": true,
 	"scripts": {

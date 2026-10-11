@@ -42,6 +42,7 @@
 		"rfc9457",
 		"rest"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/api",
 	"peerDependencies": {
 		"openapi-fetch": ">=0.17.0",

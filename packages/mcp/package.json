@@ -40,6 +40,7 @@
 		"model-context-protocol",
 		"ai-tools"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/mcp",
 	"peerDependencies": {
 		"zod": "\u003e=4.0.0"

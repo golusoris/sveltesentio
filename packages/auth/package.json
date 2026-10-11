@@ -94,6 +94,7 @@
 		"permissions",
 		"webauthn"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/auth",
 	"peerDependencies": {
 		"@simplewebauthn/browser": ">=13.0.0",

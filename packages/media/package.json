@@ -72,6 +72,7 @@
 		"media-session",
 		"10-foot-ui"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/media",
 	"peerDependencies": {
 		"embla-carousel-svelte": ">=8.6.0",

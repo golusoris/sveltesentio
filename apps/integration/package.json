@@ -20,6 +20,7 @@
 		"vitest": "^4.1.11",
 		"zod": "^4.6.1"
 	},
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/integration",
 	"private": true,
 	"scripts": {
