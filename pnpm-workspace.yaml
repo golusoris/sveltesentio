@@ -17,28 +17,19 @@ onlyBuiltDependencies:
   - onnxruntime-node
   - protobufjs
   - sharp
-# Force-bump vulnerable transitive dev/build deps to their patched releases so
-# `pnpm audit` is clean (§2.5). All reach the tree only via build/dev tooling
-# (vite→esbuild, @vite-pwa→workbox→serialize-javascript, storybook/vite→undici)
-# or consumer-provided peers (@sveltejs/kit→cookie); none ship in the src/-only
-# package tarballs.
+# One override is left. `pnpm audit` is the gate for everything else: a fresh
+# resolution without any other override picks patched releases on its own
+# (measured 2026-10-11, audit clean). Add an override only when no upstream
+# release carries the fix, and give it the reason and the condition that ends it.
 overrides:
-  serialize-javascript: '>=7.0.5'
-  esbuild: '>=0.28.1'
-  cookie: '>=0.7.0 <1' # >=0.7.0 fixes CVE-2024-47764; <1 because 1.x bundles its own
-  # types, which take precedence over @types/cookie and drop CookieParseOptions,
-  # the name SvelteKit's own types use. 2.x additionally removes parse/serialize.
-  undici: '>=7.29.0 <8' # 8.x removes internals jsdom 29 requires; stay on patched 7.x
-  fast-uri: '>=3.1.5'
-  browserslist: '>=4.28.7'
-  brace-expansion@1: '>=1.1.13'
-  brace-expansion@2: '>=2.1.4'
-  brace-expansion@4: '>=5.0.9'
-  brace-expansion: '>=2.1.4 <3 || >=5.0.9'
-  js-yaml: '>=4.3.1 <5'
-  nanoid: '>=3.3.18'
-  postcss: '>=8.5.18'
-  ip-address: '>=10.3.1'
+  # @sveltejs/kit 2.70.3, the newest 2.x, asks for cookie ^0.6.0, which resolves
+  # to 0.6.0 (GHSA-pxg6-pf52-xh8x, fixed in 0.7.0). `<1` because 1.x bundles its
+  # own types, which take precedence over @types/cookie and drop
+  # CookieParseOptions, the name SvelteKit's own types use; 2.x additionally
+  # removes parse/serialize. Ends when the workspace is on @sveltejs/kit 3
+  # (asks for cookie ^2.0.1) or a 2.x release widens the range. Review by
+  # 2027-01-09.
+  cookie: '>=0.7.0 <1'
 allowBuilds:
   esbuild: set this to true or false
   onnxruntime-node: set this to true or false

@@ -59,6 +59,7 @@
 		"connectrpc",
 		"grpc"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/realtime",
 	"peerDependencies": {
 		"@bufbuild/protobuf": ">=2.0.0",

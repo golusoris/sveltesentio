@@ -63,6 +63,7 @@
 		"sveltekit",
 		"vite-plugin"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/core",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.0.0",

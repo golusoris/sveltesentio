@@ -134,6 +134,7 @@
 		"tailwind",
 		"design-tokens"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/ui",
 	"peerDependencies": {
 		"@iconify/svelte": ">=5.0.0",

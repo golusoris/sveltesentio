@@ -57,6 +57,7 @@
 		"rtl",
 		"a11y"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/i18n",
 	"peerDependencies": {
 		"@inlang/paraglide-js": ">=2.0.0",

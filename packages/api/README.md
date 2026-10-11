@@ -54,4 +54,4 @@ On any `application/problem+json` non-2xx response the call **throws** core's
 
 ## License
 
-MIT © lusoris
+EUPL-1.2 © lusoris. Releases up to and including 0.3.0 are MIT.
