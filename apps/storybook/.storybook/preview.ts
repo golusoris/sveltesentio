@@ -9,8 +9,8 @@ const preview: Preview = {
 			},
 		},
 		a11y: {
-			// axe runs on every story; surface violations but don't fail the build.
-			test: 'todo',
+			// axe runs on every story; a violation fails the story's test (`pnpm test:stories`).
+			test: 'error',
 		},
 		layout: 'centered',
 	},
