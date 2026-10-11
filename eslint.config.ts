@@ -22,32 +22,6 @@ const SANCTIONED_TIME_READS = [
 	'packages/ai/src/server.ts',
 ];
 
-// Dated exceptions: one rule and one file each, with a reason and an end date.
-//
-// ESLint reports eight findings in two files that `praetorctl adopt` writes and
-// `praetorctl audit` pins byte for byte, so neither a fix nor an inline disable
-// can be made in this repository; the fix belongs to the engine. Seven are
-// `no-useless-escape`. The eighth, `no-regex-spaces`, is auto-fixable, and the
-// pre-commit hook's `eslint --fix` rewrote the pinned file until the audit
-// refused it. Each rule is switched off for exactly the files named, until the
-// end date. After it the block below is empty, the rules apply again, and the
-// lint fails as it would with no exception at all.
-const ENGINE_FILE_EXCEPTIONS = {
-	expires: '2027-01-09',
-	entries: [
-		{ rule: 'no-useless-escape', file: 'tools/markdownlint/verify.mjs' },
-		{ rule: 'no-useless-escape', file: 'tools/markdownlint/no-private-scratch-links.mjs' },
-		{ rule: 'no-regex-spaces', file: 'tools/markdownlint/verify.mjs' },
-	],
-};
-const engineFileExceptions: Linter.Config[] =
-	new Date().toISOString().slice(0, 10) <= ENGINE_FILE_EXCEPTIONS.expires
-		? ENGINE_FILE_EXCEPTIONS.entries.map(({ rule, file }) => ({
-				files: [file],
-				rules: { [rule]: 'off' },
-			}))
-		: [];
-
 const config: Linter.Config[] = [
 	js.configs.recommended,
 	...svelte.configs['flat/recommended'],
@@ -233,7 +207,6 @@ const config: Linter.Config[] = [
 			...ts.configs['disable-type-checked'].rules,
 		},
 	},
-	...engineFileExceptions,
 	{
 		ignores: [
 			// `**/` prefixes: these patterns are resolved from the config's directory,
