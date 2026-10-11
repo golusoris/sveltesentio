@@ -13,7 +13,7 @@ jobs:
   drift-check:
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Detect snapshot drift
         id: drift
@@ -76,5 +76,5 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --body "$body"
           else
-            gh issue create --title "$title" --body "$body" --label "documentation,chore"
+            gh issue create --title "$title" --body "$body" --label documentation
           fi
