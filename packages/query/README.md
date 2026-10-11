@@ -49,4 +49,4 @@ See the [monorepo README](../../README.md) and [`docs/`](../../docs/) for design
 
 ## License
 
-MIT © lusoris
+EUPL-1.2 © lusoris. Releases up to and including 0.3.0 are MIT.

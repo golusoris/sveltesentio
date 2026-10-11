@@ -50,6 +50,7 @@
 		"sveltekit",
 		"data-fetching"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/query",
 	"peerDependencies": {
 		"@bufbuild/protobuf": ">=2.0.0",

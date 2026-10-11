@@ -38,6 +38,7 @@
 		"a11y",
 		"clock"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/testing",
 	"peerDependencies": {
 		"@sveltesentio/core": "workspace:*",
