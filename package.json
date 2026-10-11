@@ -16,7 +16,7 @@
 		"format:check": "prettier --check .",
 		"check:cycles": "node scripts/check-import-cycles.mjs",
 		"lint:scripts": "eslint scripts/",
-		"test:scripts": "node --test scripts/"
+		"test:scripts": "ls scripts/*.test.mjs > /dev/null && node --test \"scripts/*.test.mjs\""
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.2",

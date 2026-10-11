@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
 	DOCS_ONLY_PATTERNS,
 	PACKAGE_DIRECTORY_MAP,
 	SHARED_SURFACE_PATTERNS,
 	analyzeChanges,
+	getGitDiffFiles,
 } from './ci-affected.mjs';
 
 describe('ci-affected: analyzeChanges', () => {
@@ -140,6 +144,35 @@ describe('ci-affected: analyzeChanges', () => {
 			const res = analyzeChanges([file]);
 			assert.equal(res.allAffected, false);
 			assert.equal(res.hasCodeChanges, false);
+		}
+	});
+});
+
+describe('ci-affected: getGitDiffFiles', () => {
+	it('lists the files that differ between two refs', () => {
+		const files = getGitDiffFiles('HEAD', 'HEAD');
+		assert.deepEqual(files, []);
+	});
+
+	it('never hands a ref to a shell', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-affected-'));
+		try {
+			const files = getGitDiffFiles(`HEAD; touch ${join(dir, 'ran')} #`, 'HEAD');
+			assert.ok(Array.isArray(files));
+			assert.deepEqual(readdirSync(dir), [], 'the ref was executed as a shell command');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('does not read a ref that starts with a dash as a git option', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-affected-'));
+		try {
+			const files = getGitDiffFiles(`--output=${join(dir, 'written')}`, 'HEAD');
+			assert.ok(Array.isArray(files));
+			assert.deepEqual(readdirSync(dir), [], 'the ref was read as a git option');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 });

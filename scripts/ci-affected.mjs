@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -155,17 +155,24 @@ export function analyzeChanges(changedFiles) {
  */
 export function getGitDiffFiles(baseRef = 'origin/main', headRef = 'HEAD') {
 	try {
-		const output = execSync(`git diff --name-only ${baseRef}...${headRef}`, {
-			encoding: 'utf8',
-			stdio: ['pipe', 'pipe', 'ignore'],
-		});
+		// An argument vector, never a shell string: the refs come from the command line
+		// and the environment, and `--end-of-options` keeps a ref that starts with a
+		// dash from being read as a git option.
+		const output = execFileSync(
+			'git',
+			['diff', '--name-only', '--end-of-options', `${baseRef}...${headRef}`],
+			{
+				encoding: 'utf8',
+				stdio: ['pipe', 'pipe', 'ignore'],
+			},
+		);
 		return output
 			.split('\n')
 			.map((l) => l.trim())
 			.filter(Boolean);
 	} catch {
 		try {
-			const fallback = execSync(`git diff --name-only HEAD~1...HEAD`, {
+			const fallback = execFileSync('git', ['diff', '--name-only', 'HEAD~1...HEAD'], {
 				encoding: 'utf8',
 				stdio: ['pipe', 'pipe', 'ignore'],
 			});
