@@ -48,7 +48,7 @@
 {/snippet}
 
 <!-- Default desktop preset; native scroll-snap fallback (no embla peer). -->
-<Story name="Default">
+<Story name="Default" asChild>
 	<div style:max-width="480px">
 		<Carousel label="Featured items">
 			{@render sampleSlides()}
@@ -57,7 +57,7 @@
 </Story>
 
 <!-- Handheld preset upgrades nav buttons to a 44px WCAG 2.5.8 target. -->
-<Story name="Handheld preset">
+<Story name="Handheld preset" asChild>
 	<div style:max-width="480px">
 		<Carousel label="Featured items (handheld)" preset="handheld">
 			{@render sampleSlides()}
@@ -66,7 +66,7 @@
 </Story>
 
 <!-- TV / 10-foot preset; also 44px targets for reach + remote navigation. -->
-<Story name="TV preset">
+<Story name="TV preset" asChild>
 	<div style:max-width="480px">
 		<Carousel label="Featured items (tv)" preset="tv" loop align="center">
 			{@render sampleSlides()}

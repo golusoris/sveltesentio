@@ -30,7 +30,7 @@
 </script>
 
 {#snippet row(item: Item, index: number)}
-	<span style:padding="0 0.75rem">#{index + 1} — {item.label}</span>
+	<span role="gridcell" style:padding="0 0.75rem">#{index + 1} — {item.label}</span>
 {/snippet}
 
 <!--
@@ -38,13 +38,13 @@
 	grid a viewport so virtualization (and roving focus via Home/End/PageUp/Down)
 	is observable. `row` is the required Snippet<[T, number]> prop.
 -->
-<Story exportName="ManyRows" name="10k rows">
+<Story exportName="ManyRows" name="10k rows" asChild>
 	<div style:height="320px" style:width="360px" style:border="1px solid currentColor">
 		<VirtualList items={items10k} rowHeight={36} label="Virtualized 10k rows" {row} />
 	</div>
 </Story>
 
-<Story name="Taller rows">
+<Story name="Taller rows" asChild>
 	<div style:height="320px" style:width="360px" style:border="1px solid currentColor">
 		<VirtualList items={items100} rowHeight={64} label="Virtualized rows (tall)" {row} />
 	</div>
