@@ -23,10 +23,18 @@ export function toPascalCase(name: string): string {
 		.replace(/^(.)/, (_, chr: string) => chr.toUpperCase());
 }
 
-/** `ArrowLeft` / `arrowLeft` / `AArrowDown` → `arrow-left` (Lucide subpath segment). */
+/**
+ * `ArrowLeft` / `arrowLeft` / `AArrowDown` → `arrow-left` (Lucide subpath segment).
+ *
+ * The first step splits a run of capitals before its last one (`AArrow` →
+ * `A-Arrow`). It matches a position, not the run: a pattern that consumes the
+ * run (`[A-Z]+` followed by a capital and a lowercase letter) rescans the rest of
+ * the run from every capital, which is quadratic in the length of a name that
+ * is all capitals.
+ */
 export function toKebabCase(name: string): string {
 	return name
-		.replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
+		.replace(/(?<=[A-Z])(?=[A-Z][a-z])/g, '-')
 		.replace(/([a-z0-9])([A-Z])/g, '$1-$2')
 		.replace(/[\s_]+/g, '-')
 		.toLowerCase();

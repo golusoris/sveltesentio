@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # create releases + tags, upload attestations
       pull-requests: write # open/update the "chore: release main" PR
