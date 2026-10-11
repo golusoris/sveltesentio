@@ -1,6 +1,6 @@
-import type { Handle } from '@sveltejs/kit';
 import { ProblemError } from '@sveltesentio/core';
 import { SESSION_COOKIE_NAME } from './cookies.js';
+import type { Handle } from './internal/kit-handle.js';
 
 /**
  * Resolves a raw session token into the application session object (or `null`

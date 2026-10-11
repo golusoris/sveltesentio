@@ -1,7 +1,16 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { getContext, hasContext, setContext } from 'svelte';
 import { BROWSER } from 'esm-env';
-import type { Handle } from '@sveltejs/kit';
+import type { sequence } from '@sveltejs/kit/hooks';
+
+/**
+ * SvelteKit's `Handle` hook type, derived from `sequence` instead of imported by
+ * name. SvelteKit 2 exports `Handle` from `@sveltejs/kit` only, SvelteKit 3 from
+ * `@sveltejs/kit/hooks` only; `sequence` is exported from `@sveltejs/kit/hooks`
+ * by both, and its parameters are `Handle[]` in both. A named import would tie
+ * this module to one of the two majors.
+ */
+type Handle = Parameters<typeof sequence>[number];
 
 export interface Clock {
 	now(): Date;

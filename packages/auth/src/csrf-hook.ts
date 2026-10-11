@@ -1,6 +1,7 @@
-import type { Handle, RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { CSRF_COOKIE_NAME } from './cookies.js';
 import { verifyCsrfToken } from './csrf.js';
+import type { Handle } from './internal/kit-handle.js';
 
 /** HTTP methods that mutate state and therefore require a valid CSRF token. */
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

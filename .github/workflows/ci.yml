@@ -116,6 +116,11 @@ jobs:
           else
             pnpm typecheck
           fi
+      # Every package with a `@sveltejs/kit` peer, type-checked against SvelteKit 2
+      # and SvelteKit 3. Not filtered by affected package: a dependency update can
+      # change the result for a package whose own files did not move.
+      - name: Typecheck against each supported SvelteKit major
+        run: pnpm check:kit-compat
 
   test:
     name: Test (coverage)
