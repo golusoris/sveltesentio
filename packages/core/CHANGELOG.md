@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/core-v0.3.0...core-v0.4.0) (2026-10-12)
+
+### ⚠ BREAKING CHANGES
+
+- **licence:** licence MIT -> EUPL-1.2. Releases from the next minor of each package on are EUPL-1.2, a copyleft licence; releases already published stay MIT.
+
+### Features
+
+- **governance:** declare HISS-20 enforcement evidence, backed by fixtures ([e803ea4](https://github.com/golusoris/sveltesentio/commit/e803ea401055b15ea7e9df5eeb0a4c37cf714963))
+- **hiss-01:** forbid recursion, and fix the one place that used it ([#267](https://github.com/golusoris/sveltesentio/issues/267)) ([a811b6d](https://github.com/golusoris/sveltesentio/commit/a811b6dd3ea9dd7953d007621354ba81b33d115f))
+
+### Bug Fixes
+
+- **auth,core:** derive the hook type so the packages type-check on sveltekit 3 ([#287](https://github.com/golusoris/sveltesentio/issues/287)) ([169e54b](https://github.com/golusoris/sveltesentio/commit/169e54bfe3c783509a4f3a2954d1e9a30f78b9c1))
+- **deps:** repair regressions introduced by the Praetor dependency pass ([f14552b](https://github.com/golusoris/sveltesentio/commit/f14552be15d1fe0c9e94ce4caecae098a8789106))
+- **hiss-07,hiss-08:** close the gaps the coverage catalog named ([231ccea](https://github.com/golusoris/sveltesentio/commit/231cceaacaa6d9597adb3dfd11a5644c1de6fe21))
+- **hiss-08:** resolve one hop through a const, closing the gap both ways ([#274](https://github.com/golusoris/sveltesentio/issues/274)) ([a259c30](https://github.com/golusoris/sveltesentio/commit/a259c30534dd9a640b93b3c1bb04e194ffff90c4))
+- **hiss:** close two enforcement gaps — dynamic-import cycles and bracket-notation HTML sinks ([#264](https://github.com/golusoris/sveltesentio/issues/264)) ([0f40bae](https://github.com/golusoris/sveltesentio/commit/0f40baecfd67135a0553b445cab30206d3b0ddc1))
+- make every story pass axe in a browser and gate stories and end-to-end tests in ci ([#290](https://github.com/golusoris/sveltesentio/issues/290)) ([88c98d3](https://github.com/golusoris/sveltesentio/commit/88c98d394a59b14c4c44ce18ade88a82bfe44c2e))
+- **packages:** name the source repository and the licensor in every published package ([#299](https://github.com/golusoris/sveltesentio/issues/299)) ([830318a](https://github.com/golusoris/sveltesentio/commit/830318abf9f7339da63b4c7d357a0565b097b746))
+- **types:** put test code under a TypeScript project, and fix the 32 errors ([1138831](https://github.com/golusoris/sveltesentio/commit/11388316e60e6f3fb738255750b2e5606a52d848))
+
+### Code Refactoring
+
+- clear two more length violations and dedupe the history trim ([20a0b36](https://github.com/golusoris/sveltesentio/commit/20a0b36ad33ad25b43969ae09b0249f6c85f6f6c))
+
+### Chores
+
+- **licence:** relicense the project from mit to eupl-1.2 ([#286](https://github.com/golusoris/sveltesentio/issues/286)) ([c07c2ac](https://github.com/golusoris/sveltesentio/commit/c07c2aca14173e2d5bce783a531f47988dc307b0))
+
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/core-v0.2.1...core-v0.3.0) (2026-06-20)
 
 ### Features
