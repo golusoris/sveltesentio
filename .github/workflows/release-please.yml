@@ -3,12 +3,22 @@ name: release-please
 on:
   push:
     branches: [main]
+  # Manual run: publishes the package versions that main already holds and
+  # cuts no release. It recovers a release whose tags and forge releases exist
+  # while the registry refused the publish step. `pnpm -r publish` skips every
+  # version the registry already has, so a repeated run adds nothing. The
+  # trigger lives in this file because the registry's trusted publisher is
+  # bound to the workflow filename.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   release-please:
+    # A manual run started from any other branch is skipped: only main is
+    # published. A push run is on main by its trigger.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-26.04
     permissions:
       contents: write # create releases + tags, upload attestations
@@ -16,13 +26,17 @@ jobs:
       id-token: write # OIDC for npm provenance + Sigstore attestation
       attestations: write # actions/attest-build-provenance
     steps:
+      # Skipped on a manual run, which then has no `releases_created` output
+      # and reaches the publish steps through its event name alone.
       - id: release
+        if: ${{ github.event_name == 'push' }}
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # --- Publish to npm — runs ONLY when release-please cut a release. ---
+      # --- Publish to npm — runs ONLY when release-please cut a release, or
+      # on a manual run (see `workflow_dispatch` above). ---
       # Gated on the SAME-JOB step output (the official release-please-action
       # pattern). The previous setup gated a separate reusable-workflow job on
       # `needs.release-please.outputs.releases_created`; that never fired (the
@@ -32,18 +46,18 @@ jobs:
       # (`pnpm -r publish`); the old `pnpm publish` ran at the private root and
       # would have published nothing even had the gate fired.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           fetch-depth: 0
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -51,13 +65,13 @@ jobs:
 
       # (ignored-build-scripts are tolerated via pnpm-workspace.yaml
       # `strictDepBuilds: false` — esbuild/sharp/etc. aren't needed to pack src/.)
-      - if: ${{ steps.release.outputs.releases_created == 'true' }}
+      - if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         run: corepack enable && pnpm install --frozen-lockfile
 
       # Packages ship files:["src"] with exports → ./src/*.ts, so there is no
       # build step before publish (the tsc `build` output is never shipped).
       - name: Publish packages to npm
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         run: pnpm -r publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -66,7 +80,7 @@ jobs:
       # SLSA provenance over the artifacts that are ACTUALLY published (src/),
       # not the unshipped tsc dist/ the previous workflow mistakenly attested.
       - name: Attest build provenance
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: 'packages/*/src/**'
@@ -74,7 +88,7 @@ jobs:
       # CycloneDX SBOM for the release (§2.5). continue-on-error: SBOM generation
       # must never fail an already-completed publish; the artifact is best-effort.
       - name: Generate SBOM (CycloneDX)
-        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
