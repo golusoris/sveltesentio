@@ -236,6 +236,8 @@ Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, 
 | Add a Storybook story                                    | `/add-storybook` skill                                                                                     |
 | Bootstrap dev environment                                | `make setup`                                                                                               |
 | Run full CI locally                                      | `make ci`                                                                                                  |
+| Run every story with axe                                 | `pnpm test:stories`                                                                                        |
+| Run the end-to-end tests (auth, media, shell)            | `pnpm test:e2e`                                                                                            |
 | Add a new root-level dep                                 | `pnpm add -Dw <dep>`                                                                                       |
 | Add a workspace-package dep                              | `pnpm --filter @sveltesentio/<pkg> add <dep>`                                                              |
 | Create release PR                                        | (automated by release-please — open a branch + Conventional-Commit PR; `release-please.yml` runs on merge) |
@@ -267,8 +269,8 @@ Every PR must pass:
 - **Prettier**: formatted (checked; not auto-fixed in CI).
 - **TypeScript**: 0 errors across workspaces (`turbo typecheck`).
 - **Vitest**: green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
-- **Playwright**: e2e green (via `apps/integration`).
-- **axe-core**: clean on every Storybook story (via `@storybook/addon-a11y`).
+- **Playwright**: end-to-end tests green for `auth`, `media` and `shell` (`End-to-end` job; affected packages only).
+- **axe-core**: clean on every Storybook story (`Stories (axe)` job: each story runs as a Chromium test and fails on a violation, ADR-0056).
 - **`pnpm audit`**: clean (no `>=high` advisories).
 - **`codeql.yml`**: clean.
 - **`scorecard.yml`**: score ≥ 7.

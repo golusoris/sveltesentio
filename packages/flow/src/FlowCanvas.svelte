@@ -10,12 +10,14 @@ helpers never import this file, so the peer stays out of their bundle.
 
 WCAG 2.2 AA (the testable parts live in `./canvas-model`, unit-tested there):
 - The canvas region is `role="application"` (interactive) or `role="img"`
-  (read-only) with an `aria-label` summarising node/edge counts.
+  (read-only) with an `aria-label` summarising node/edge counts. An image has
+  no focusable content, so the read-only canvas is `inert` (`canvasA11yModel`).
 - `aria-roledescription="Flow diagram"` names the widget for screen readers.
 - Pan/zoom animation is suppressed under `prefers-reduced-motion: reduce` (CSS).
 - Each node is keyboard-focusable (`@xyflow/svelte`'s `NodeWrapper` renders the
   Tab stop); arrow-key focus movement is computed by `nextFocusTarget()` for
   consumers wiring `onnodeclick`.
+- The upstream attribution link is recoloured to reach 4.5:1 (1.4.3).
 
 Plain `tsc` does not type-check `.svelte`; the typed core lives in
 `./canvas-model` + `./node-view` and is unit-tested there.
@@ -29,7 +31,12 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 		type NodeTypes,
 	} from '@xyflow/svelte';
 	import type { Snippet } from 'svelte';
-	import { applyElkLayout, canvasAriaLabel, type OnLayout } from './canvas-model.js';
+	import {
+		applyElkLayout,
+		canvasA11yModel,
+		canvasAriaLabel,
+		type OnLayout,
+	} from './canvas-model.js';
 	import type { ElkLayoutOptions } from './layout.js';
 
 	interface Props {
@@ -41,7 +48,7 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 		nodeTypes?: NodeTypes;
 		/** Fit the viewport to all nodes on mount. Default `true`. */
 		fitView?: boolean;
-		/** When `true`, the canvas is non-interactive (`role="img"`, no drag/select). */
+		/** When `true`, the canvas is a non-interactive image (`role="img"`, inert). */
 		readonly?: boolean;
 		/** Accessible label prefix; node/edge counts are appended automatically. */
 		ariaLabel?: string;
@@ -66,7 +73,7 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 	}: Props = $props();
 
 	const label = $derived(canvasAriaLabel(nodes, edges, ariaLabel));
-	const role = $derived(readonly ? 'img' : 'application');
+	const a11y = $derived(canvasA11yModel(readonly));
 
 	/** Run ELK auto-layout over the current graph and commit the new positions. */
 	export async function runLayout(): Promise<void> {
@@ -76,28 +83,50 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 	}
 </script>
 
-<div class="ssentio-flow-canvas" {role} aria-roledescription="Flow diagram" aria-label={label}>
-	<SvelteFlowProvider>
-		<SvelteFlow
-			bind:nodes
-			bind:edges
-			{nodeTypes}
-			{fitView}
-			nodesDraggable={!readonly}
-			nodesConnectable={!readonly}
-			elementsSelectable={!readonly}
-		>
-			{#if children}{@render children()}{/if}
-		</SvelteFlow>
-	</SvelteFlowProvider>
+<div
+	class="ssentio-flow-canvas"
+	role={a11y.role}
+	aria-roledescription="Flow diagram"
+	aria-label={label}
+>
+	<div class="ssentio-flow-canvas__inner" inert={a11y.inert}>
+		<SvelteFlowProvider>
+			<SvelteFlow
+				bind:nodes
+				bind:edges
+				{nodeTypes}
+				{fitView}
+				nodesDraggable={a11y.nodesDraggable}
+				nodesConnectable={a11y.nodesConnectable}
+				elementsSelectable={a11y.elementsSelectable}
+				nodesFocusable={a11y.nodesFocusable}
+				edgesFocusable={a11y.edgesFocusable}
+			>
+				{#if children}{@render children()}{/if}
+			</SvelteFlow>
+		</SvelteFlowProvider>
+	</div>
 </div>
 
 <style>
-	.ssentio-flow-canvas {
+	.ssentio-flow-canvas,
+	.ssentio-flow-canvas__inner {
 		inline-size: 100%;
 		block-size: 100%;
+	}
+
+	.ssentio-flow-canvas {
 		min-block-size: 20rem;
 		position: relative;
+	}
+
+	/* Upstream draws the attribution link in #999 (2.84:1 on white). */
+	.ssentio-flow-canvas :global(.svelte-flow__attribution a) {
+		color: #595959;
+	}
+
+	.ssentio-flow-canvas :global(.svelte-flow.dark .svelte-flow__attribution a) {
+		color: #d4d4d8;
 	}
 
 	@media (prefers-reduced-motion: reduce) {

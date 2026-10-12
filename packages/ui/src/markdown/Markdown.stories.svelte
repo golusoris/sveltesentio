@@ -51,6 +51,6 @@ const html = renderMarkdown(source);
 	args={{
 		source:
 			'# Safe heading\n\n<script>alert(1)</' +
-			'script>\n\n<img src=x onerror="alert(2)">\n\nText after.',
+			'script>\n\n<img src=x alt="" onerror="alert(2)">\n\nText after.',
 	}}
 />

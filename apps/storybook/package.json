@@ -1,15 +1,22 @@
 {
-	"description": "Private Storybook workspace \u2014 runs @sveltesentio/* component stories under Storybook 10 + @storybook/svelte-vite (Svelte 5). Verification/showcase artifact, not a deployable app or published package.",
+	"description": "Private Storybook workspace — runs @sveltesentio/* component stories under Storybook 10 + @storybook/svelte-vite (Svelte 5). Verification/showcase artifact, not a deployable app or published package.",
 	"devDependencies": {
 		"@storybook/addon-a11y": "10.6.1",
 		"@storybook/addon-svelte-csf": "5.1.5",
+		"@storybook/addon-vitest": "10.6.1",
 		"@storybook/svelte-vite": "10.6.1",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
+		"@sveltesentio/testing": "workspace:*",
 		"@sveltesentio/ui": "workspace:*",
+		"@types/node": "^24.13.4",
+		"@vitest/browser": "^4.1.11",
+		"@vitest/browser-playwright": "^4.1.11",
+		"playwright": "^1.63.0",
 		"storybook": "10.6.1",
 		"svelte": "^5.57.0",
 		"typescript": "^6.0.3",
-		"vite": "^8.2.2"
+		"vite": "^8.2.2",
+		"vitest": "^4.1.11"
 	},
 	"license": "EUPL-1.2",
 	"name": "@sveltesentio/storybook",
@@ -18,7 +25,9 @@
 		"build": "storybook build",
 		"build-storybook": "storybook build",
 		"storybook": "storybook dev -p 6006 --no-open",
-		"lint": "eslint .storybook/"
+		"lint": "eslint .storybook/ vitest.config.ts",
+		"test:stories": "vitest run --project=storybook",
+		"typecheck": "tsc --noEmit"
 	},
 	"type": "module",
 	"version": "0.0.0"

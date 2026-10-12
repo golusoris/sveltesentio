@@ -11,7 +11,7 @@ import { BROWSER } from 'esm-env';
 import { Marked } from 'marked';
 import createDOMPurify, { type Config, type DOMPurify, type WindowLike } from 'dompurify';
 import { ALLOWLIST } from './allowlist.js';
-import { createServerWindow } from './server-window.js';
+import { createServerWindow } from '#server-window';
 
 export { ALLOWLIST, ALLOWED_TAGS, ALLOWED_ATTR, ALLOWED_URI_REGEXP } from './allowlist.js';
 

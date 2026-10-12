@@ -41,7 +41,7 @@
 {/snippet}
 
 <!-- A process node with incoming (top) + outgoing (bottom) handles. -->
-<Story name="Process node">
+<Story name="Process node" asChild>
 	{@render canvas(
 		[node('p1', 'process', 80, 80, 'Validate input', 'Reject malformed requests early.')],
 		[],
@@ -49,12 +49,12 @@
 </Story>
 
 <!-- A decision node with one incoming + two outgoing ("yes"/"no") handles. -->
-<Story name="Decision node">
+<Story name="Decision node" asChild>
 	{@render canvas([node('d1', 'decision', 80, 80, 'Is authenticated?')], [])}
 </Story>
 
 <!-- A data node (dashed accent) with left-in / right-out handles. -->
-<Story name="Data node">
+<Story name="Data node" asChild>
 	{@render canvas([node('s1', 'data', 80, 80, 'User table', 'Source of truth for accounts.')], [])}
 </Story>
 
@@ -62,7 +62,7 @@
 	All three kinds wired into one small graph: process → decision, decision (yes)
 	→ data. Exercises the example `nodeTypes` map end-to-end.
 -->
-<Story name="Connected graph">
+<Story name="Connected graph" asChild>
 	{@render canvas(
 		[
 			node('p1', 'process', 40, 20, 'Receive order'),
@@ -77,7 +77,7 @@
 </Story>
 
 <!-- Read-only: `role="img"`, no drag/select/connect; the same nodes render static. -->
-<Story name="Read-only">
+<Story name="Read-only" asChild>
 	{@render canvas(
 		[node('p1', 'process', 40, 20, 'Receive order'), node('d1', 'decision', 40, 140, 'In stock?')],
 		[{ id: 'e1', source: 'p1', target: 'd1' }],

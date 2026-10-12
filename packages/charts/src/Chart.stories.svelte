@@ -37,7 +37,7 @@ is a placeholder standing in for a bespoke composition; the story's value is
 showing the mandatory a11y envelope (figure + role="img" + SR data table) the
 wrapper adds around whatever the caller draws.
 -->
-<Story name="Custom visual">
+<Story name="Custom visual" asChild>
 	<Chart title="Custom composition" {series} {accessors}>
 		{#snippet chart()}
 			<div
@@ -50,7 +50,7 @@ wrapper adds around whatever the caller draws.
 </Story>
 
 <!-- Same envelope with an aria-describedby summary; SR table still emitted. -->
-<Story name="With description">
+<Story name="With description" asChild>
 	<Chart
 		title="Custom composition"
 		description="A bespoke layered chart with the standard a11y envelope."

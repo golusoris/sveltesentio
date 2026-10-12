@@ -5,6 +5,7 @@ import {
 	focusOrder,
 	nextFocusTarget,
 	canvasAriaLabel,
+	canvasA11yModel,
 	type CanvasNodeLike,
 	type CanvasEdgeLike,
 } from '../src/canvas-model.js';
@@ -166,5 +167,46 @@ describe('canvasAriaLabel', () => {
 		expect(canvasAriaLabel([], [], 'Pipeline')).toBe(
 			'Pipeline: Flow diagram, 0 nodes, 0 connections',
 		);
+	});
+});
+
+describe('canvasA11yModel', () => {
+	it('positive: configures read-only canvas with role="img", inert=true and non-interactive flags', () => {
+		const a11y = canvasA11yModel(true);
+		expect(a11y).toEqual({
+			role: 'img',
+			inert: true,
+			nodesDraggable: false,
+			nodesConnectable: false,
+			elementsSelectable: false,
+			nodesFocusable: false,
+			edgesFocusable: false,
+		});
+	});
+
+	it('negative: configures interactive canvas with role="application", inert=false and active flags', () => {
+		const a11y = canvasA11yModel(false);
+		expect(a11y).toEqual({
+			role: 'application',
+			inert: false,
+			nodesDraggable: true,
+			nodesConnectable: true,
+			elementsSelectable: true,
+			nodesFocusable: true,
+			edgesFocusable: true,
+		});
+	});
+
+	it('boundary: defaults to interactive canvas when readonly argument is omitted', () => {
+		const a11y = canvasA11yModel();
+		expect(a11y).toEqual({
+			role: 'application',
+			inert: false,
+			nodesDraggable: true,
+			nodesConnectable: true,
+			elementsSelectable: true,
+			nodesFocusable: true,
+			edgesFocusable: true,
+		});
 	});
 });
