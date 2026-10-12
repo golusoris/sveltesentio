@@ -1,6 +1,7 @@
 {
 	"name": "sveltesentio",
 	"private": true,
+	"license": "EUPL-1.2",
 	"type": "module",
 	"scripts": {
 		"dev": "turbo dev",
@@ -10,6 +11,7 @@
 		"typecheck": "turbo typecheck",
 		"test": "turbo test",
 		"test:e2e": "turbo test:e2e",
+		"test:stories": "pnpm --filter @sveltesentio/storybook run test:stories",
 		"ci": "turbo lint typecheck test build",
 		"check:exports": "node scripts/check-export-targets.mjs",
 		"format": "prettier --write .",

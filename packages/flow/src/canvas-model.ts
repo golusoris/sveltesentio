@@ -138,3 +138,35 @@ export function canvasAriaLabel(
 	const summary = `Flow diagram, ${nodes.length} ${nodeWord}, ${edges.length} ${edgeWord}`;
 	return label ? `${label}: ${summary}` : summary;
 }
+
+/**
+ * Canvas accessibility and interaction attributes derived from the `readonly` state.
+ *
+ * When `readonly` is true:
+ * - `role` is `'img'`, exposing the canvas as an accessible image.
+ * - `inert` is `true`, disabling focus and interaction on all descendants to satisfy
+ *   the WCAG / axe `nested-interactive` invariant (no focusable descendants inside `role="img"`).
+ * - Node and edge interaction flags (`nodesDraggable`, `nodesConnectable`, `elementsSelectable`,
+ *   `nodesFocusable`, `edgesFocusable`) are set to `false`.
+ */
+export interface CanvasA11yModel {
+	readonly role: 'img' | 'application';
+	readonly inert: boolean;
+	readonly nodesDraggable: boolean;
+	readonly nodesConnectable: boolean;
+	readonly elementsSelectable: boolean;
+	readonly nodesFocusable: boolean;
+	readonly edgesFocusable: boolean;
+}
+
+export function canvasA11yModel(readonly = false): CanvasA11yModel {
+	return {
+		role: readonly ? 'img' : 'application',
+		inert: readonly,
+		nodesDraggable: !readonly,
+		nodesConnectable: !readonly,
+		elementsSelectable: !readonly,
+		nodesFocusable: !readonly,
+		edgesFocusable: !readonly,
+	};
+}

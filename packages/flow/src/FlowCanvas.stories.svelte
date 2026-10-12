@@ -38,21 +38,21 @@
 </script>
 
 <!-- Interactive canvas: `role="application"`, drag/select/connect enabled. -->
-<Story name="Interactive">
+<Story name="Interactive" asChild>
 	<div style:height="360px" style:width="520px" style:border="1px solid currentColor">
 		<FlowCanvas {nodes} {edges} nodeTypes={exampleNodeTypes} ariaLabel="Order pipeline" />
 	</div>
 </Story>
 
 <!-- Read-only: `role="img"`, no drag/select; the aria-label still summarises counts. -->
-<Story name="Read-only">
+<Story name="Read-only" asChild>
 	<div style:height="360px" style:width="520px" style:border="1px solid currentColor">
 		<FlowCanvas {nodes} {edges} nodeTypes={exampleNodeTypes} readonly ariaLabel="Order pipeline" />
 	</div>
 </Story>
 
 <!-- Empty: no nodes/edges; the aria-label degrades gracefully to the prefix. -->
-<Story name="Empty">
+<Story name="Empty" asChild>
 	<div style:height="240px" style:width="520px" style:border="1px solid currentColor">
 		<FlowCanvas nodes={[]} edges={[]} nodeTypes={exampleNodeTypes} ariaLabel="Empty canvas" />
 	</div>

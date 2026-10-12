@@ -61,3 +61,4 @@ Sveltesentio ADRs follow **MADR-lite** (Markdown ADR, light variant): a short, s
 | [ADR-0053](0053-namespace-and-npm-scope.md)                   | Repository namespace = `golusoris/sveltesentio`; npm scope = `@sveltesentio/*`                                       | Accepted | D1 + D2            |
 | [ADR-0054](0054-elkjs-auto-layout.md)                         | `elkjs` as the auto-layout engine for `@sveltesentio/flow`                                                           | Accepted | D92                |
 | [ADR-0055](0055-media-image-keep-wrapper.md)                  | Keep `@sveltesentio/media/image` wrapper with preset-aware invariants                                                | Accepted | D171               |
+| [ADR-0056](0056-story-accessibility-gate.md)                  | Every Storybook story is a browser test with axe as a failing check                                                  | Accepted | none               |

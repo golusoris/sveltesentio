@@ -40,6 +40,7 @@
 		"file-type",
 		"resumable"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/uploads",
 	"peerDependencies": {
 		"tus-js-client": ">=4.3.0"

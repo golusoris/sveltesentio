@@ -70,7 +70,7 @@ pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/
 - **Colors**: oklch only — no hex, no rgb, no hsl
 - **Spacing**: 8pt grid (`--space-1` → `--space-24`)
 - **Interface types**: desktop, 10-foot, handheld, dashboard (see [ADR-0047](docs/adr/0047-per-interface-presets.md))
-- **Standards**: WCAG 2.2 AA, OWASP ASVS L2, SLSA L3, EU AI Act Art. 12, Svelte 5 runes-first
+- **Standards**: WCAG 2.2 AA, OWASP ASVS L2, SLSA Build Level 2 (Level 3 is open, [#280](https://github.com/golusoris/sveltesentio/issues/280)), EU AI Act Art. 12, Svelte 5 runes-first
 
 See [`docs/principles.md`](docs/principles.md) and [`docs/ux-principles.md`](docs/ux-principles.md).
 
@@ -86,7 +86,35 @@ Requires Node 24+ (see [ADR-0021](docs/adr/0021-node-24-floor.md)) and pnpm 10+.
 
 ## License
 
-MIT © lusoris
+© lusoris.
+
+- Code: [EUPL-1.2](LICENSE).
+- Documentation, meaning this README and everything under `docs/`: [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt).
+- Third-party files keep the licence of their upstream. [REUSE.toml](REUSE.toml) names each of them with its licence and copyright holder.
+
+The packages were published under MIT up to and including the releases below. Those releases stay MIT. Every later release is EUPL-1.2.
+
+| Package                     | Last MIT release |
+| :-------------------------- | :--------------- |
+| `@sveltesentio/ai`          | 0.4.0            |
+| `@sveltesentio/api`         | 0.3.0            |
+| `@sveltesentio/auth`        | 0.6.0            |
+| `@sveltesentio/charts`      | 0.5.0            |
+| `@sveltesentio/collab`      | 0.4.0            |
+| `@sveltesentio/core`        | 0.3.0            |
+| `@sveltesentio/emulator`    | 0.1.0            |
+| `@sveltesentio/flow`        | 0.4.0            |
+| `@sveltesentio/forms`       | 0.3.0            |
+| `@sveltesentio/i18n`        | 0.3.0            |
+| `@sveltesentio/ipc-sockmap` | 0.2.0            |
+| `@sveltesentio/mcp`         | 0.2.0            |
+| `@sveltesentio/media`       | 0.4.1            |
+| `@sveltesentio/query`       | 0.3.0            |
+| `@sveltesentio/realtime`    | 0.4.0            |
+| `@sveltesentio/shell`       | 0.2.0            |
+| `@sveltesentio/testing`     | 0.1.0            |
+| `@sveltesentio/ui`          | 0.5.0            |
+| `@sveltesentio/uploads`     | 0.2.0            |
 
 ## Standards & Governance
 

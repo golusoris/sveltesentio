@@ -47,7 +47,7 @@ wires it directly with a placeholder. The visually-hidden SR `<table>` is built
 from the same `series` + `accessors`, keeping the text alternative in sync with
 whatever visual the caller draws.
 -->
-<Story name="Default">
+<Story name="Default" asChild>
 	<ChartFigure title="Daily sessions" {series} {accessors}>
 		{#snippet chart()}
 			<div
@@ -60,7 +60,7 @@ whatever visual the caller draws.
 </Story>
 
 <!-- A description promotes aria-describedby on the chart region. -->
-<Story name="With description">
+<Story name="With description" asChild>
 	<ChartFigure
 		title="Daily sessions"
 		description="Authenticated sessions and errors per weekday."
@@ -78,7 +78,7 @@ whatever visual the caller draws.
 </Story>
 
 <!-- Suppress the SR table when an equivalent visible table already exists. -->
-<Story name="No data table">
+<Story name="No data table" asChild>
 	<ChartFigure title="Daily sessions" {series} {accessors} showDataTable={false}>
 		{#snippet chart()}
 			<div

@@ -27,7 +27,7 @@ function pluginName(plugin: unknown): string | undefined {
 
 const config: StorybookConfig = {
 	stories: ['../../../packages/*/src/**/*.stories.@(svelte|ts)'],
-	addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf'],
+	addons: ['@storybook/addon-a11y', '@storybook/addon-svelte-csf', '@storybook/addon-vitest'],
 	framework: {
 		name: '@storybook/svelte-vite',
 		options: {

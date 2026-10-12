@@ -47,6 +47,7 @@
 		"gamepad",
 		"safe-area"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/shell",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.0.0",

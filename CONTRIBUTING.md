@@ -44,7 +44,7 @@ short-lived and named `feat/<package>-<slug>`, `fix/<package>-<slug>`, or
 1. **Open a D-row first for major decisions.** New library, new module, new
    public API surface, breaking change — all go through
    `.workingdir/research/decisions-needed.md`
-   with evidence from (a) an existing golusoris/app-*, (b) a benchmark, or
+   with evidence from (a) a consuming application, (b) a benchmark, or
    (c) an ADR. AI agents never close a D-row; only the maintainer does.
 2. **Harvest first.** Before proposing a new dependency, confirm it isn't
    already solved by something in
@@ -145,7 +145,7 @@ Before adding a runtime dependency:
 - [ ] Evidence it beats the alternatives (awesome-harvest entry + D-row with
       at least 2 alternatives considered).
 - [ ] Actively maintained (commit within 90 days, or justify).
-- [ ] License compatible with MIT (MIT / Apache-2.0 / ISC / BSD-2 / BSD-3).
+- [ ] License compatible with EUPL-1.2 (MIT / Apache-2.0 / ISC / BSD-2 / BSD-3).
 - [ ] ESM-only or ships dual ESM + types.
 - [ ] No React / Vue / Solid / Angular / Qwik peer dependency.
 - [ ] Bundle size measured and within the package budget.

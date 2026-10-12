@@ -80,4 +80,4 @@ pnpm add @sveltesentio/ipc-sockmap
 
 ## License
 
-MIT © lusoris
+EUPL-1.2 © lusoris. Releases up to and including 0.2.0 are MIT.

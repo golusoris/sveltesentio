@@ -5,5 +5,5 @@
 		"noEmit": true,
 		"allowImportingTsExtensions": true
 	},
-	"include": [".storybook/**/*"]
+	"include": [".storybook/**/*", "vitest.config.ts"]
 }

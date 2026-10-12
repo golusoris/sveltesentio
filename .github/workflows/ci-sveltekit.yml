@@ -23,7 +23,7 @@ jobs:
   pr-title:
     name: PR title (Conventional Commits)
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Check PR title
         env:
@@ -37,7 +37,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -56,7 +56,7 @@ jobs:
 
   typecheck:
     name: Type check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -75,7 +75,7 @@ jobs:
 
   test:
     name: Test (coverage ${{ inputs.coverage-threshold }}%)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -104,7 +104,7 @@ jobs:
           echo "Coverage: ${COVERAGE}% (threshold: ${THRESHOLD}%)"
           node -e "if (parseFloat('$COVERAGE') < $THRESHOLD) { console.error('::error::Coverage below threshold'); process.exit(1); }"
       - name: Upload coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
           path: ${{ inputs.working-directory }}/coverage/
@@ -112,7 +112,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -131,7 +131,7 @@ jobs:
 
   audit:
     name: Security audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -151,7 +151,7 @@ jobs:
   e2e:
     name: E2E (Playwright)
     if: inputs.run-e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -170,7 +170,7 @@ jobs:
       - run: pnpm test:e2e
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: ${{ inputs.working-directory }}/playwright-report/

@@ -1,0 +1,70 @@
+version = 1
+
+# The repository's own files. A file's own SPDX header, where it has one, takes
+# precedence.
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 lusoris <lusoris@pm.me>"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# Documentation text: the root README and everything under docs/. Code, the
+# package READMEs that ship inside the npm packages included, stays under the
+# whole-tree licence above. This table comes after the whole-tree one, so it
+# decides for these paths.
+[[annotations]]
+path = ["README.md", "docs/**"]
+SPDX-FileCopyrightText = "2026 lusoris <lusoris@pm.me>"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# Third-party files. Each table names the upstream licence and copyright
+# holder; none of these files is relicensed. The tables come after the two
+# above, so they decide for their paths, and `override` keeps that true for a
+# file that carries a header of its own.
+
+# The interfig engine, vendored from
+# https://github.com/vectorize-io/hindsight (hindsight-interfig) with its
+# licence file beside it. VENDOR.md and vendor.json sit outside upstream/ and
+# stay under the whole-tree licence.
+[[annotations]]
+path = ["tools/figures/third_party/interfig/upstream/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Vectorize AI, Inc."
+SPDX-License-Identifier = "MIT"
+
+# The committed figure player bundles the loader and player code of the
+# governance engine (EUPL-1.2) with interfig, React, react-dom and scheduler
+# (MIT). dist/THIRD-PARTY-LICENSES.txt carries the full MIT texts.
+[[annotations]]
+path = ["tools/figures/dist/**"]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2026 Lusoris <lusoris@proton.me>",
+  "2025 Vectorize AI, Inc.",
+  "Meta Platforms, Inc. and affiliates",
+]
+SPDX-License-Identifier = "EUPL-1.2 AND MIT"
+
+# The agent skills adapted from MIT-licensed upstreams carry that upstream's
+# licence text as a LICENSE file beside each skill, copied byte for byte. The
+# skill texts themselves are EUPL-1.2 and say so in their own header.
+# caveman: https://github.com/JuliusBrussee/caveman
+[[annotations]]
+path = [
+  ".agents/skills/caveman/LICENSE",
+  ".claude/skills/caveman/LICENSE",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Julius Brussee"
+SPDX-License-Identifier = "MIT"
+
+# adhd-format and social-text: https://github.com/ayghri/i-have-adhd
+[[annotations]]
+path = [
+  ".agents/skills/adhd-format/LICENSE",
+  ".agents/skills/social-text/LICENSE",
+  ".claude/skills/adhd-format/LICENSE",
+  ".claude/skills/social-text/LICENSE",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Ayoub Ghriss"
+SPDX-License-Identifier = "MIT"

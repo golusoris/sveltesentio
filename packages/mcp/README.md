@@ -102,4 +102,4 @@ See [AGENTS.md](AGENTS.md) for design invariants and the planned follow-through.
 
 ## License
 
-MIT © lusoris
+EUPL-1.2 © lusoris. Releases up to and including 0.2.0 are MIT.

@@ -14,6 +14,20 @@ This recipe documents the end-to-end flow:
 - Why **release-please** over **Changesets** for this monorepo.
 - Provenance + SBOM attestation wired into the publish workflow.
 
+## State in this repository
+
+Measured on 2026-10-11. The workflows below are the recipe; this repository's
+own release job differs from it:
+
+- One workflow, `release-please.yml`, opens the release pull request,
+  publishes and attests. No `release-sveltekit.yml` exists here.
+- It attests SLSA provenance at Build Level 2 over the published source files
+  and generates one CycloneDX SBOM per run as a workflow artifact.
+- Not in place: an SBOM attached to the release, an SBOM attestation, cosign
+  signatures, a verifiable npm provenance attestation. All four are tracked in
+  [#280](https://github.com/golusoris/sveltesentio/issues/280).
+- 19 packages are published, not the 12 named above.
+
 ## Related
 
 - [ADR-0022](../adr/0022-esm-only.md) — ESM-only package shape.
@@ -269,7 +283,8 @@ Three supply-chain invariants per [principles.md §2.5](../principles.md):
    `actions/attest-sbom`, uploaded as workflow artifact.
 3. **cosign-signable releases** — the GitHub Release already includes
    `checksums.txt`; cosign signing of that file is a separate
-   workflow step (see [SECURITY.md](../../SECURITY.md)).
+   workflow step. This repository does not sign yet (see
+   [SECURITY.md](../../SECURITY.md)).
 
 ## Local release dry-run
 
@@ -477,8 +492,8 @@ created.
 - [principles.md §2.5](../principles.md) — supply chain.
 - [principles.md §2.7](../principles.md) — Conventional Commits,
   SemVer, release-please.
-- [SECURITY.md](../../SECURITY.md) — coordinated disclosure + cosign
-  verify-blob snippet.
+- [SECURITY.md](../../SECURITY.md) — coordinated disclosure, how to
+  verify the provenance attestation, what is not in place yet.
 - release-please: <https://github.com/googleapis/release-please>.
 - release-please-action: <https://github.com/googleapis/release-please-action>.
 - Conventional Commits 1.0: <https://www.conventionalcommits.org/en/v1.0.0/>.

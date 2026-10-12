@@ -47,6 +47,12 @@ CLAUDE.md
 .paperclip/rules.md
 AGENTS.readonly.md
 
+# The hosted REUSE gate, written by `praetorctl adopt` while the root carries
+# REUSE.toml or LICENSES/. Adoption recognises its own rendering by digest and
+# refreshes only a file it recognises, so a formatter rewrite (one space before
+# the two version comments) would freeze it at today's text.
+.github/workflows/reuse.yml
+
 # The HISS-20 fixture corpus is input to the rules, not source governed by them,
 # which is why eslint.config.ts ignores it too. Its files are written to
 # demonstrate a specific shape -- a function of a given length, an indentation

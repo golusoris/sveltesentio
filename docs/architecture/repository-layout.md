@@ -68,7 +68,9 @@ sveltesentio/
 ├── AGENTS.md                       # this file
 ├── README.md                       # user-facing pitch + module table
 ├── SECURITY.md                     # coordinated-disclosure process
-├── LICENSE                         # MIT
+├── LICENSE                         # EUPL-1.2
+├── LICENSES/                       # every licence text in use (EUPL-1.2, CC-BY-SA-4.0, MIT)
+├── REUSE.toml                      # which licence and copyright holder applies to which path
 ├── CODE_OF_CONDUCT.md              # Contributor Covenant 2.1 (stub pointing to upstream)
 ├── CONTRIBUTING.md                 # dev workflow for contributors
 └── CHANGELOG.md                    # Keep a Changelog 1.1 (release-please-managed)

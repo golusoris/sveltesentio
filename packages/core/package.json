@@ -58,11 +58,18 @@
 		"sentio.d.ts",
 		"CHANGELOG.md"
 	],
+	"imports": {
+		"#clock-store": {
+			"browser": "./src/internal/clock-store.browser.ts",
+			"default": "./src/internal/clock-store.node.ts"
+		}
+	},
 	"keywords": [
 		"sveltesentio",
 		"sveltekit",
 		"vite-plugin"
 	],
+	"license": "EUPL-1.2",
 	"name": "@sveltesentio/core",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.0.0",
