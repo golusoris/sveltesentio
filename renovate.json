@@ -4,6 +4,7 @@
 	"minimumReleaseAge": "3 days",
 	"internalChecksFilter": "strict",
 	"rebaseWhen": "auto",
+	"postUpdateOptions": ["pnpmDedupe"],
 	"vulnerabilityAlerts": {
 		"enabled": true,
 		"labels": ["security"],
