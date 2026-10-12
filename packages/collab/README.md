@@ -90,3 +90,7 @@ Pure helpers (no runes, unit-tested) live under `./awareness`:
 
 - [ADR-0009](../../docs/adr/0009-yjs-ywebsocket-framework-lock.md) — Yjs + `y-websocket` framework lock.
 - [ADR-0039](../../docs/adr/0039-y-websocket-createYjsStore.md) — `createYjsStore` rune helper.
+
+## License
+
+EUPL-1.2 © lusoris. Releases up to and including 0.4.0 are MIT.

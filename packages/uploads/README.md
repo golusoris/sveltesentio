@@ -46,3 +46,7 @@ Golusoris runs tus at `/storage/tus` via `storage/tus` + `storage/safety` + `sto
 ## Related ADRs
 
 - [ADR-0041](../../docs/adr/0041-uploads-tus-exifr-filetype.md) — tus + exifr + file-type matrix.
+
+## License
+
+EUPL-1.2 © lusoris. Releases up to and including 0.2.0 are MIT.

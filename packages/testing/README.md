@@ -16,3 +16,7 @@
 - `playwright-axe` — shipped.
 - `fixtures` — shipped.
 - TanStack Query SSR hydration assertions — pending.
+
+## License
+
+EUPL-1.2 © lusoris. Releases up to and including 0.1.0 are MIT.
