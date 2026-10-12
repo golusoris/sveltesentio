@@ -70,7 +70,7 @@ describe('clock store, what the browser side may import', () => {
 			'#clock-store',
 			'svelte',
 			'esm-env',
-			'@sveltejs/kit',
+			'@sveltejs/kit/hooks',
 		]);
 	});
 });
