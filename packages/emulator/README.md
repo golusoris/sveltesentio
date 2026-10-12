@@ -119,3 +119,7 @@ ROM-library browsing, save-state/achievement data shapes, and netplay session or
 
 - [docs/principles.md](../../docs/principles.md) §2.2 — OWASP ASVS L2 / CSP.
 - `@sveltesentio/core/csp` — `strictCsp` / `serialiseCsp` this composes with.
+
+## License
+
+EUPL-1.2 © lusoris. Releases up to and including 0.1.0 are MIT.

@@ -70,6 +70,11 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"repository": {
+		"directory": "packages/shell",
+		"type": "git",
+		"url": "git+https://github.com/golusoris/sveltesentio.git"
+	},
 	"scripts": {
 		"build": "tsc",
 		"lint": "eslint src/",

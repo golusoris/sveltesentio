@@ -2,6 +2,10 @@
 	"name": "sveltesentio",
 	"private": true,
 	"license": "EUPL-1.2",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/golusoris/sveltesentio.git"
+	},
 	"type": "module",
 	"scripts": {
 		"dev": "turbo dev",

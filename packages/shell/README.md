@@ -96,3 +96,7 @@ const update = await registerSW({
 - [ADR-0027](../../docs/adr/0027-custom-focus-graph-10foot.md) — custom focus-graph D-pad router.
 - [ADR-0028](../../docs/adr/0028-vite-pwa-sveltekit.md) — PWA layer via `@vite-pwa/sveltekit`.
 - [ADR-0029](../../docs/adr/0029-tailwind4-safe-area-utilities.md) — Tailwind 4 safe-area helpers + `viewport-fit=cover`.
+
+## License
+
+EUPL-1.2 © lusoris. Releases up to and including 0.2.0 are MIT.
