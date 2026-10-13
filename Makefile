@@ -70,6 +70,7 @@ add-package:
 verify-all:
 	@pnpm run ci
 	@pnpm check:cycles
+	@pnpm check:publint
 	@pnpm check:kit-compat
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high

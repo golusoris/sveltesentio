@@ -23,9 +23,9 @@
 			"types": "./src/index.ts"
 		},
 		"./canvas": {
+			"types": "./src/canvas.ts",
 			"import": "./src/canvas.ts",
-			"svelte": "./src/FlowCanvas.svelte",
-			"types": "./src/canvas.ts"
+			"svelte": "./src/FlowCanvas.svelte"
 		},
 		"./canvas-model": {
 			"import": "./src/canvas-model.ts",

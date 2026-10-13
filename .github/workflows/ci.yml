@@ -85,6 +85,16 @@ jobs:
             pnpm lint
           fi
       - run: pnpm check:exports
+      # publint --strict on every published package: export condition order, files the
+      # manifest names but the tarball lacks (a dangling `bin`), packaging warnings. Called
+      # by name, as eslint and prettier below, so the declared-linters audit sees it; the
+      # check:publint package script runs the same loop for `make verify-all`.
+      - run: |
+          status=0
+          for dir in packages/*/; do
+            node_modules/.bin/publint --strict "$dir" || status=1
+          done
+          exit "$status"
       - run: pnpm check:cycles
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
