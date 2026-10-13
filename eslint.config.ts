@@ -93,14 +93,6 @@ const config: Linter.Config[] = [
 			// function cannot push it over its own cap.
 			'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
 
-			// HISS-08 static determinism. Measured as free: zero violations in shipped
-			// source when enabled, so the rules pin the current state rather than
-			// demanding a cleanup. `no-implied-eval` is included because
-			// `setTimeout('code')` evaluates a string exactly as `eval` does.
-			'no-eval': 'error',
-			'no-new-func': 'error',
-			'no-implied-eval': 'error',
-
 			// HISS-07 checked errors. `!` discards the undefined case that
 			// `noUncheckedIndexedAccess` exists to surface, which is the unchecked
 			// error this invariant names. Also free at the time of enabling.
@@ -152,6 +144,21 @@ const config: Linter.Config[] = [
 		},
 		rules: {
 			'no-self-compare': 'error',
+		},
+	},
+	// --- HISS-08 static determinism, every linted file --------------------------------
+	// AGENTS.md says ESLint enforces HISS-08, and the rule binds every file: CI scripts,
+	// apps and tests run code as surely as shipped source does. The rules sat in the
+	// packages/*/src block until a planted `eval` in scripts/ passed `eslint scripts/`
+	// (gap audit A2-9). Zero violations anywhere when widened. `no-implied-eval` is
+	// included because `setTimeout('code')` evaluates a string exactly as `eval` does;
+	// this block follows the type-checked set, which turns the core rule off.
+	{
+		files: ['**/*.ts', '**/*.js', '**/*.mjs', '**/*.cjs', '**/*.svelte'],
+		rules: {
+			'no-eval': 'error',
+			'no-new-func': 'error',
+			'no-implied-eval': 'error',
 		},
 	},
 	// --- build-time files outside a tsconfig project ---------------------------------
