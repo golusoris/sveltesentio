@@ -19,11 +19,13 @@ describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 		expect(result.turboFilter).toBe('');
 	});
 
+	// docs/principles.md and docs/adr/** were in this list until A2-13: the mcp tests
+	// and the docs app build read them, so a change to them now runs those two
+	// packages (next test). Documentation no package reads still skips.
 	it('marks docs-only changes as non-code changes so builds can skip', () => {
 		const docsFiles = [
 			'README.md',
-			'docs/principles.md',
-			'docs/adr/0001-init.md',
+			'docs/architecture/context.puml',
 			'.workingdir/STATE.md',
 			'LICENSE',
 			'SECURITY.md',
@@ -34,6 +36,14 @@ describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 		expect(result.hasCodeChanges).toBe(false);
 		expect(result.affectedPackages).toEqual([]);
 		expect(result.turboFilter).toBe('');
+	});
+
+	it('runs the packages that read a changed docs file, without their dependents', () => {
+		const result = analyzeChanges(['docs/principles.md', 'docs/adr/0001-init.md']);
+		expect(result.allAffected).toBe(false);
+		expect(result.hasCodeChanges).toBe(true);
+		expect(result.affectedPackages).toEqual(['@sveltesentio/docs', '@sveltesentio/mcp']);
+		expect(result.turboFilter).toBe('--filter=@sveltesentio/docs --filter=@sveltesentio/mcp');
 	});
 
 	it('triggers all packages when a shared root surface is touched', () => {
