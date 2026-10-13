@@ -37,9 +37,9 @@
 		},
 	];
 
-	const single: CartesianSeries<DayPoint>[] = [series[0]];
+	const single: CartesianSeries<DayPoint>[] = series.slice(0, 1);
 
-	const { Story } = defineMeta({
+	const { Story } = defineMeta<unknown, typeof LineChart<DayPoint>>({
 		title: 'charts/LineChart',
 		component: LineChart,
 		tags: ['autodocs'],

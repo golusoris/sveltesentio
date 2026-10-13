@@ -34,15 +34,15 @@ export interface EmblaOptionsLike {
 
 export interface CarouselOptionsInput {
 	/** Wrap from last slide to first. Default `false`. */
-	readonly loop?: boolean;
+	readonly loop?: boolean | undefined;
 	/** Slide alignment within the viewport. Default `'start'`. */
-	readonly align?: 'start' | 'center' | 'end';
+	readonly align?: 'start' | 'center' | 'end' | undefined;
 	/** Scroll axis. Default `'horizontal'`. */
-	readonly orientation?: CarouselOrientation;
+	readonly orientation?: CarouselOrientation | undefined;
 	/** Embla transition duration (embla time units). Default `25`. */
-	readonly duration?: number;
+	readonly duration?: number | undefined;
 	/** Allow free-scroll momentum dragging. Default `false`. */
-	readonly dragFree?: boolean;
+	readonly dragFree?: boolean | undefined;
 }
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';

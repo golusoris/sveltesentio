@@ -34,9 +34,9 @@
 		},
 	];
 
-	const single: CartesianSeries<RegionPoint>[] = [{ key: 'q1', label: 'Q1', data: series[0].data }];
+	const single: CartesianSeries<RegionPoint>[] = series.slice(0, 1);
 
-	const { Story } = defineMeta({
+	const { Story } = defineMeta<unknown, typeof BarChart<RegionPoint>>({
 		title: 'charts/BarChart',
 		component: BarChart,
 		tags: ['autodocs'],

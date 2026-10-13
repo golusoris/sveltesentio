@@ -1,6 +1,8 @@
 // Minimal ambient declarations for Svelte 5 runes so plain `tsc` can
-// type-check `.svelte.ts` files inside this package. Once the monorepo
-// adopts svelte-check globally, this file should be removed.
+// type-check `.svelte.ts` files inside this package. svelte-check
+// (`pnpm check:svelte`) covers the `.svelte` files, but the package's
+// `typecheck` script is still plain tsc; remove this file when that script
+// moves to svelte-check.
 
 declare function $state<T>(initial: T): T;
 declare function $state<T>(): T | undefined;

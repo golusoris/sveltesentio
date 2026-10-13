@@ -29,20 +29,20 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 		/** Accessible name for the figure — required (no anonymous charts). */
 		title: string;
 		/** Optional one-sentence semantic summary, exposed via `aria-describedby`. */
-		description?: string;
+		description?: string | undefined;
 		/** The series rendered by the chart, reused to build the SR table. */
 		series: readonly ChartSeries<T>[];
 		/** x / y accessors for the data table cells. */
 		accessors: ChartAccessors<T>;
 		/** Table formatting / labelling options. */
-		tableOptions?: BuildTableOptions<T>;
+		tableOptions?: BuildTableOptions<T> | undefined;
 		/**
 		 * Whether to render the visually-hidden data table. Default `true`.
 		 * Set `false` only when the chart already has an equivalent visible table.
 		 */
-		showDataTable?: boolean;
+		showDataTable?: boolean | undefined;
 		/** Stable id prefix for aria wiring; auto-derived if omitted. */
-		idBase?: string;
+		idBase?: string | undefined;
 		/** The visual chart. Receives nothing; renders LayerChart/uPlot/etc. */
 		chart: Snippet;
 	}

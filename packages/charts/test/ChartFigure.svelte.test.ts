@@ -3,11 +3,7 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import Harness from './ChartFigureHarness.svelte';
 import type { ChartAccessors, ChartSeries } from '../src/a11y-table.js';
-
-interface Point {
-	t: string;
-	v: number | null;
-}
+import type { Point } from './fixture-types.js';
 
 const accessors: ChartAccessors<Point> = {
 	x: (d) => d.t,

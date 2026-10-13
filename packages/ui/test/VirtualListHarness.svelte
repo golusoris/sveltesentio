@@ -16,7 +16,7 @@ against (`Row <n>: <label>`), plus a `data-index` marker for ordering checks.
 		items: readonly Item[];
 		rowHeight: number;
 		label: string;
-		overscan?: number;
+		overscan?: number | undefined;
 	}
 
 	const { items, rowHeight, label, overscan }: Props = $props();

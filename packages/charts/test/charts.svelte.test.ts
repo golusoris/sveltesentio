@@ -6,11 +6,7 @@ import PieHarness from './PieChartHarness.svelte';
 import ChartHarness from './ChartHarness.svelte';
 import type { CartesianSeries } from '../src/chart-series.js';
 import type { ChartAccessors, ChartSeries } from '../src/a11y-table.js';
-
-interface Point {
-	t: string;
-	v: number | null;
-}
+import type { Point, Slice } from './fixture-types.js';
 
 const accessors: ChartAccessors<Point> = { x: (d) => d.t, y: (d) => d.v };
 
@@ -32,11 +28,6 @@ const series: CartesianSeries<Point>[] = [
 		],
 	},
 ];
-
-interface Slice {
-	name: string;
-	count: number;
-}
 
 const slices: Slice[] = [
 	{ name: 'Chrome', count: 60 },

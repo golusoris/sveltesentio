@@ -4,23 +4,24 @@ Test-only harness: renders whichever cartesian wrapper (`line` / `area` /
 accessors. Lets one test file exercise all four wrappers through one DOM
 contract (they share the <ChartFigure> envelope).
 -->
-<script lang="ts" generics="TDatum">
+<script lang="ts">
 	import LineChart from '../src/LineChart.svelte';
 	import AreaChart from '../src/AreaChart.svelte';
 	import BarChart from '../src/BarChart.svelte';
 	import ScatterChart from '../src/ScatterChart.svelte';
 	import type { CartesianSeries } from '../src/chart-series.js';
 	import type { ChartAccessors, BuildTableOptions } from '../src/a11y-table.js';
+	import type { Point } from './fixture-types.js';
 
-	interface Props<T> {
+	interface Props {
 		kind: 'line' | 'area' | 'bar' | 'scatter';
 		title: string;
-		description?: string;
-		series: readonly CartesianSeries<T>[];
-		accessors: ChartAccessors<T>;
-		tableOptions?: BuildTableOptions<T>;
-		showDataTable?: boolean;
-		idBase?: string;
+		description?: string | undefined;
+		series: readonly CartesianSeries<Point>[];
+		accessors: ChartAccessors<Point>;
+		tableOptions?: BuildTableOptions<Point> | undefined;
+		showDataTable?: boolean | undefined;
+		idBase?: string | undefined;
 	}
 
 	const {
@@ -32,7 +33,7 @@ contract (they share the <ChartFigure> envelope).
 		tableOptions,
 		showDataTable,
 		idBase,
-	}: Props<TDatum> = $props();
+	}: Props = $props();
 </script>
 
 {#if kind === 'line'}

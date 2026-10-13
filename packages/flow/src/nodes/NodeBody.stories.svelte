@@ -14,7 +14,10 @@
 		label?: string,
 		description?: string,
 	): ReturnType<typeof deriveNodeView> {
-		return deriveNodeView(kind, { label, description });
+		return deriveNodeView(kind, {
+			...(label === undefined ? {} : { label }),
+			...(description === undefined ? {} : { description }),
+		});
 	}
 
 	const { Story } = defineMeta({

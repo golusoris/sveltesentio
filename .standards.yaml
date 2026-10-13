@@ -30,10 +30,6 @@ exceptions:
     tool: semgrep
     reason: no workflow runs semgrep; CodeQL (codeql.yml, javascript-typescript, a required check) is the static analysis owner for this code; the semgrep registry rule packs cannot be pinned to a version, so a semgrep job would not be reproducible until a pinned rule source is chosen
     expires: "2027-01-11"
-  - rule: declared-linters
-    tool: svelte-check
-    reason: no workflow or package script runs svelte-check; the packages type-check with tsc --noEmit, which does not read the 64 tracked .svelte files under packages/, so those files are not type-checked in CI; adding svelte-check is a new tooling step, not part of the engine pin sweep
-    expires: "2027-01-11"
 register:
   sources:
     expected: 13

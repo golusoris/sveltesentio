@@ -17,19 +17,19 @@ the same `series` + `x`/`y` accessors that drive the visual.
 		/** Accessible name for the figure — required (no anonymous charts). */
 		title: string;
 		/** Optional one-sentence summary, exposed via `aria-describedby`. */
-		description?: string;
+		description?: string | undefined;
 		/** One or more series; each gets a palette color unless it sets `color`. */
 		series: readonly CartesianSeries<T>[];
 		/** x / y accessors, shared across series (visual + SR table). */
 		accessors: ChartAccessors<T>;
 		/** Swap which axis is the value axis. @default 'horizontal' */
-		orientation?: 'horizontal' | 'vertical';
+		orientation?: 'horizontal' | 'vertical' | undefined;
 		/** SR-table formatting / labelling options. */
-		tableOptions?: BuildTableOptions<T>;
+		tableOptions?: BuildTableOptions<T> | undefined;
 		/** Whether to render the visually-hidden SR data table. @default true */
-		showDataTable?: boolean;
+		showDataTable?: boolean | undefined;
 		/** Stable id prefix for aria wiring; auto-derived from the title if omitted. */
-		idBase?: string;
+		idBase?: string | undefined;
 	}
 
 	const {

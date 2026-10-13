@@ -12,7 +12,7 @@
 | `./csp`             | `emulatorCspDirectives(opts)` → CSP additions EmulatorJS needs (WASM `'wasm-unsafe-eval'`, `blob:` script/worker/child, data-origin connect/img/media); `mergeCspDirectives(base, additions)` unions onto strict base; `originOf(url)`. PURE, unit-tested |
 | `./Emulator.svelte` | Thin Svelte 5 component: `BROWSER`-guarded `injectEmulatorScript` into mount `<div>`, `cleanup` on destroy. UNTESTED (per repo precedent — logic in `./loader`)                                                                                           |
 
-Ships `src/runes-ambient.d.ts` so plain `tsc --noEmit` typechecks `.svelte`-adjacent code until monorepo adopts `svelte-check` globally.
+Ships `src/runes-ambient.d.ts` so plain `tsc --noEmit` typechecks `.svelte`-adjacent code; keep while package `typecheck` script = plain tsc (`pnpm check:svelte` covers `.svelte` files only).
 
 ## Scope
 
