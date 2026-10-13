@@ -27,10 +27,6 @@ exceptions:
     reason: the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)
     expires: "2027-01-09"
   - rule: declared-linters
-    tool: publint
-    reason: no workflow or package script runs publint; scripts/check-export-targets.mjs (ci.yml lint job) checks only that every exports target exists, not the packaging rules publint checks across the 19 published packages; adding publint is a new tooling step, not part of the engine pin sweep
-    expires: "2027-01-11"
-  - rule: declared-linters
     tool: semgrep
     reason: no workflow runs semgrep; CodeQL (codeql.yml, javascript-typescript, a required check) is the static analysis owner for this code; the semgrep registry rule packs cannot be pinned to a version, so a semgrep job would not be reproducible until a pinned rule source is chosen
     expires: "2027-01-11"

@@ -18,7 +18,7 @@ Server **read-only**. Never mutates working tree. Output always doc snippet or s
 | Export                                     | Module                                                           | Status          |
 | ------------------------------------------ | ---------------------------------------------------------------- | --------------- |
 | `@sveltesentio/mcp`                        | `src/index.ts` — `createSveltesentioServer({ rootDir })` factory | shipped (0.2.0) |
-| `sveltesentio-mcp` (bin)                   | `bin/sveltesentio-mcp.ts` — stdio entrypoint                     | shipped (0.2.0) |
+| `bin/sveltesentio-mcp.ts` (checkout only)  | stdio entrypoint; `start` script; not published, no `bin` field  | in-repo         |
 | `@sveltesentio/mcp/tools/compose-search`   | `src/tools/compose-search.ts` — `compose_search` tool            | shipped (0.2.0) |
 | `@sveltesentio/mcp/tools/principle-lookup` | `src/tools/principle-lookup.ts` — `principle_lookup` tool        | shipped (0.2.0) |
 | `@sveltesentio/mcp/subscriptions`          | `src/subscriptions.ts` — resource subscription wiring            | shipped (0.2.0) |

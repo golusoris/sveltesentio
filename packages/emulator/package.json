@@ -19,8 +19,8 @@
 			"types": "./src/index.ts"
 		},
 		"./Emulator.svelte": {
-			"svelte": "./src/Emulator.svelte",
-			"types": "./src/Emulator.svelte"
+			"types": "./src/Emulator.svelte",
+			"svelte": "./src/Emulator.svelte"
 		},
 		"./cores": {
 			"import": "./src/cores.ts",

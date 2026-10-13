@@ -45,13 +45,26 @@ tools it wants rather than taking the whole set.
 
 ## Install
 
+The server runs from a checkout of this repository: it reads `docs/` and
+`packages/` there. The published package carries the library only, no
+executable. In a checkout, with Node 24 or newer:
+
+```bash
+pnpm install
+pnpm --filter @sveltesentio/mcp start   # stdio server; the client normally starts it
+```
+
+To embed the server in your own host instead, add the library and call
+`createSveltesentioServer({ rootDir })` with the path of a checkout:
+
 ```bash
 pnpm add -D @sveltesentio/mcp
 ```
 
-The `sveltesentio-mcp` binary is wired automatically; the client spawns it over stdio.
-
 ## Client configuration
+
+Clients start the server with `node` on the entry file in the checkout.
+`test/bin.test.ts` starts it the same way and calls `module_lookup` over stdio.
 
 ### Claude Code (`claude_desktop_config.json` / `~/.claude/mcp_servers.json`)
 
@@ -59,17 +72,16 @@ The `sveltesentio-mcp` binary is wired automatically; the client spawns it over 
 {
   "mcpServers": {
     "sveltesentio": {
-      "command": "pnpm",
-      "args": ["exec", "sveltesentio-mcp"],
-      "env": {
-        "SVELTESENTIO_ROOT": "/absolute/path/to/sveltesentio/checkout"
-      }
+      "command": "node",
+      "args": ["/absolute/path/to/sveltesentio/packages/mcp/bin/sveltesentio-mcp.ts"]
     }
   }
 }
 ```
 
-`SVELTESENTIO_ROOT` is optional — when omitted the binary resolves the workspace root relative to its own location inside `node_modules/@sveltesentio/mcp/bin/`.
+The server reads the checkout that holds the entry file, three directories up
+from `bin/`. Set `SVELTESENTIO_ROOT` in the client's `env` block to read a
+different checkout.
 
 ### Cursor (`~/.cursor/mcp.json` or workspace `.cursor/mcp.json`)
 
@@ -77,8 +89,8 @@ The `sveltesentio-mcp` binary is wired automatically; the client spawns it over 
 {
   "mcpServers": {
     "sveltesentio": {
-      "command": "pnpm",
-      "args": ["exec", "sveltesentio-mcp"]
+      "command": "node",
+      "args": ["/absolute/path/to/sveltesentio/packages/mcp/bin/sveltesentio-mcp.ts"]
     }
   }
 }
