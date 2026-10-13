@@ -1,3 +1,4 @@
+---
 version: 1
 repository:
   owner: golusoris
@@ -21,10 +22,22 @@ overrides:
 # Declared per-file exceptions: one rule, one file, a reason and an expiry at most 90 days
 # ahead. An expired entry fails its gate like a missing one.
 exceptions:
-  - rule: 'HISS-11'
-    path: '.github/workflows/release-please.yml'
-    reason: 'the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)'
-    expires: '2027-01-09'
+  - rule: HISS-11
+    path: .github/workflows/release-please.yml
+    reason: the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)
+    expires: "2027-01-09"
+  - rule: declared-linters
+    tool: publint
+    reason: no workflow or package script runs publint; scripts/check-export-targets.mjs (ci.yml lint job) checks only that every exports target exists, not the packaging rules publint checks across the 19 published packages; adding publint is a new tooling step, not part of the engine pin sweep
+    expires: "2027-01-11"
+  - rule: declared-linters
+    tool: semgrep
+    reason: no workflow runs semgrep; CodeQL (codeql.yml, javascript-typescript, a required check) is the static analysis owner for this code; the semgrep registry rule packs cannot be pinned to a version, so a semgrep job would not be reproducible until a pinned rule source is chosen
+    expires: "2027-01-11"
+  - rule: declared-linters
+    tool: svelte-check
+    reason: no workflow or package script runs svelte-check; the packages type-check with tsc --noEmit, which does not read the 64 tracked .svelte files under packages/, so those files are not type-checked in CI; adding svelte-check is a new tooling step, not part of the engine pin sweep
+    expires: "2027-01-11"
 register:
   sources:
     expected: 13
