@@ -273,7 +273,8 @@ Every PR must pass:
 - **axe-core**: clean on every Storybook story (`Stories (axe)` job: each story runs as a Chromium test and fails on a violation, ADR-0056).
 - **`pnpm audit`**: clean (no `>=high` advisories).
 - **`codeql.yml`**: clean.
-- **`scorecard.yml`**: score ≥ 7.
+
+Main + weekly schedule, not PRs: `scorecard.yml` job `Scorecard threshold` reads published OpenSSF Scorecard result for pushed commit (`scripts/scorecard-threshold.mjs`); score < 7 -> job fails + opens/updates one issue labelled `scorecard`; next passing run closes it.
 
 Release PRs additionally:
 

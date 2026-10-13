@@ -136,11 +136,17 @@ const config: Linter.Config[] = [
 	// reports exactly that, so the rule is enabled here rather than left to review.
 	//
 	// These files are plain ESM outside every tsconfig, so the type-aware parser does not
-	// apply and the three Node globals they use are declared instead of inferred.
+	// apply and the Node globals they use are declared instead of inferred.
 	{
 		files: ['scripts/**/*.mjs'],
 		languageOptions: {
-			globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
+			globals: {
+				AbortSignal: 'readonly',
+				console: 'readonly',
+				fetch: 'readonly',
+				process: 'readonly',
+				URL: 'readonly',
+			},
 		},
 		rules: {
 			'no-self-compare': 'error',
