@@ -22,17 +22,10 @@ lives in `./sanitize.ts`; this file is a thin, a11y-correct view.
 		'aria-label'?: string;
 	}
 
-	let {
-		source,
-		class: className,
-		'aria-label': ariaLabel,
-		config,
-		window: win,
-		gfm,
-	}: Props = $props();
+	let { source, class: className, 'aria-label': ariaLabel, ...options }: Props = $props();
 
 	// Sanitised on every render — DOMPurify is fast and correctness beats caching.
-	const html = $derived(renderMarkdown(source, { config, window: win, gfm }));
+	const html = $derived(renderMarkdown(source, options));
 </script>
 
 <!--

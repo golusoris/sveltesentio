@@ -4,29 +4,23 @@ snippet (a marker div in place of a custom LayerChart composition) so the test
 can assert the envelope wires the visual + SR table without depending on
 LayerChart's render output.
 -->
-<script lang="ts" generics="TDatum">
+<script lang="ts">
 	import Chart from '../src/Chart.svelte';
 	import type { ChartSeries, ChartAccessors, BuildTableOptions } from '../src/a11y-table.js';
+	import type { Point } from './fixture-types.js';
 
-	interface Props<T> {
+	interface Props {
 		title: string;
-		description?: string;
-		series: readonly ChartSeries<T>[];
-		accessors: ChartAccessors<T>;
-		tableOptions?: BuildTableOptions<T>;
-		showDataTable?: boolean;
-		idBase?: string;
+		description?: string | undefined;
+		series: readonly ChartSeries<Point>[];
+		accessors: ChartAccessors<Point>;
+		tableOptions?: BuildTableOptions<Point> | undefined;
+		showDataTable?: boolean | undefined;
+		idBase?: string | undefined;
 	}
 
-	const {
-		title,
-		description,
-		series,
-		accessors,
-		tableOptions,
-		showDataTable,
-		idBase,
-	}: Props<TDatum> = $props();
+	const { title, description, series, accessors, tableOptions, showDataTable, idBase }: Props =
+		$props();
 </script>
 
 <Chart {title} {description} {series} {accessors} {tableOptions} {showDataTable} {idBase}>

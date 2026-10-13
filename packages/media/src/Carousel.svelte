@@ -31,12 +31,12 @@ The tested logic lives in `./carousel`; this file is a thin, a11y-correct view.
 		/** Slides. Each item should render its own focusable content. */
 		children: Snippet;
 		/** Interface preset governing nav-button target size. Default `desktop`. */
-		preset?: CarouselPreset;
+		preset?: CarouselPreset | undefined;
 		/**
 		 * The `embla-carousel-svelte` action (its default export). When omitted the
 		 * region degrades to native CSS scroll-snap.
 		 */
-		emblaAction?: Action<HTMLElement, EmblaOptionsLike>;
+		emblaAction?: Action<HTMLElement, EmblaOptionsLike> | undefined;
 	}
 
 	const { label, children, preset = 'desktop', emblaAction, ...optionsInput }: Props = $props();

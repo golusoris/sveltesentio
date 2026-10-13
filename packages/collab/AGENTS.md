@@ -18,7 +18,7 @@
 | `./presence-store` | `createPresenceStore<S>(awareness, opts?)` — `$state`-backed rune wrapper exposing reactive `others` / `count` / `local` + `setLocal` / `patchLocal`                                                 |
 
 Ships with ambient rune declarations (`src/runes-ambient.d.ts`).
-Plain `tsc --noEmit` can typecheck `.svelte.ts` files inside package until monorepo adopts `svelte-check` globally.
+Plain `tsc --noEmit` typechecks `.svelte.ts` files inside package; keep file while package `typecheck` script = plain tsc (`pnpm check:svelte` covers `.svelte` files only).
 
 `y-protocols` = **optional** peer (`peerDependenciesMeta.y-protocols.optional`).
 Awareness helpers type against structural `AwarenessLike` (`clientID` / `getStates` / `getLocalState` / `setLocalState` / `on` / `off`).

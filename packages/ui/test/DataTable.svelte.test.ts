@@ -4,40 +4,12 @@
 // through the real DOM (click + keyboard).
 import { fireEvent, render, within } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import DataTable from '../src/data/DataTable.svelte';
-import type { ColumnDef } from '../src/data/model.js';
+import PeopleTableHarness from './PeopleTableHarness.svelte';
 import { expectNoAxeViolations } from './axe-helper.js';
-
-interface Person {
-	id: number;
-	name: string;
-	age: number;
-}
-
-const rows: readonly Person[] = [
-	{ id: 1, name: 'Charlie', age: 30 },
-	{ id: 2, name: 'Alice', age: 41 },
-	{ id: 3, name: 'Bob', age: 22 },
-];
-
-const columns: readonly ColumnDef<Person>[] = [
-	{ id: 'name', header: 'Name', accessor: (r) => r.name },
-	{ id: 'age', header: 'Age', accessor: (r) => r.age },
-	{ id: 'id', header: 'ID', accessor: (r) => r.id, sortable: false },
-];
+import { columns, rows } from './people-fixture.js';
 
 function renderTable() {
-	// Rendered without the `DataTable<Person>` instantiation this used to carry.
-	// Plain tsc resolves a .svelte import as a legacy component type with no call
-	// signatures, so the generic form is an error outside svelte-check — which this
-	// repo does not yet run (see the note in src/runes-ambient.d.ts). The row type
-	// is still pinned by `rows` and the explicitly typed `rowKey` below.
-	return render(DataTable, {
-		rows,
-		columns,
-		label: 'People',
-		rowKey: (r: Person) => r.id,
-	});
+	return render(PeopleTableHarness);
 }
 
 /** Cell text for the `name` column (col 1) across body rows, in render order. */

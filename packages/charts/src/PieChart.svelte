@@ -18,7 +18,7 @@ drive the visual, so the two cannot drift.
 		/** Accessible name for the figure — required (no anonymous charts). */
 		title: string;
 		/** Optional one-sentence summary, exposed via `aria-describedby`. */
-		description?: string;
+		description?: string | undefined;
 		/** Flat slice data; one datum per slice. */
 		data: readonly T[];
 		/** Category accessor (slice label / SR-table row head). */
@@ -26,13 +26,13 @@ drive the visual, so the two cannot drift.
 		/** Magnitude accessor (slice size / SR-table value cell). */
 		value: ValueAccessor<T>;
 		/** Column header for the value series in the SR table. @default 'Value' */
-		valueLabel?: string;
+		valueLabel?: string | undefined;
 		/** SR-table formatting / labelling options. */
-		tableOptions?: BuildTableOptions<T>;
+		tableOptions?: BuildTableOptions<T> | undefined;
 		/** Whether to render the visually-hidden SR data table. @default true */
-		showDataTable?: boolean;
+		showDataTable?: boolean | undefined;
 		/** Stable id prefix for aria wiring; auto-derived from the title if omitted. */
-		idBase?: string;
+		idBase?: string | undefined;
 	}
 
 	const {

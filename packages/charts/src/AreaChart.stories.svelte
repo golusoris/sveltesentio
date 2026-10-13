@@ -34,7 +34,7 @@
 		},
 	];
 
-	const { Story } = defineMeta({
+	const { Story } = defineMeta<unknown, typeof AreaChart<MonthPoint>>({
 		title: 'charts/AreaChart',
 		component: AreaChart,
 		tags: ['autodocs'],

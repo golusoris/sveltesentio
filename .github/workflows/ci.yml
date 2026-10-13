@@ -133,6 +133,20 @@ jobs:
       # change the result for a package whose own files did not move.
       - name: Typecheck against each supported SvelteKit major
         run: pnpm check:kit-compat
+      # tsc reads no .svelte file, so svelte-check type-checks the components, stories
+      # and test harnesses of every package that has them, against its tsconfig.test.json.
+      # Not filtered by affected package, for the same reason as above. Called by name so
+      # the declared-linters audit sees it; check:svelte runs the same loop for
+      # `make verify-all`.
+      - name: Type-check .svelte files
+        run: |
+          status=0
+          for dir in packages/*/; do
+            if find "$dir" -name node_modules -prune -o -name '*.svelte' -print | grep -q .; then
+              node_modules/.bin/svelte-check --workspace "$dir" --tsconfig ./tsconfig.test.json --fail-on-warnings || status=1
+            fi
+          done
+          exit "$status"
 
   test:
     name: Test (coverage)

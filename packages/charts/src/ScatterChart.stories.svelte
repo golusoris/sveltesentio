@@ -37,7 +37,7 @@
 		},
 	];
 
-	const { Story } = defineMeta({
+	const { Story } = defineMeta<unknown, typeof ScatterChart<Sample>>({
 		title: 'charts/ScatterChart',
 		component: ScatterChart,
 		tags: ['autodocs'],

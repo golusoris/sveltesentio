@@ -63,7 +63,7 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 	let {
 		nodes = $bindable([]),
 		edges = $bindable([]),
-		nodeTypes,
+		nodeTypes = {},
 		fitView = true,
 		readonly = false,
 		ariaLabel,

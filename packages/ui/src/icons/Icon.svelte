@@ -47,6 +47,7 @@ by assistive tech. Pass `label` to make it MEANINGFUL — it then becomes
 			};
 		}
 		resolved = value as Component | undefined;
+		return undefined;
 	});
 
 	const decorative = $derived(label === undefined);

@@ -18,7 +18,7 @@
 	const key = (d: Slice): string => d.name;
 	const value = (d: Slice): number => d.count;
 
-	const { Story } = defineMeta({
+	const { Story } = defineMeta<unknown, typeof PieChart<Slice>>({
 		title: 'charts/PieChart',
 		component: PieChart,
 		tags: ['autodocs'],

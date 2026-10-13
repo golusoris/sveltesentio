@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Icon from './Icon.svelte';
-	import StubIcon from '../../../../apps/storybook/.storybook/StubIcon.svelte';
+	import StubIcon from '../../test/StubIcon.svelte';
 	import { registerIconLoader } from './registry.js';
 
 	// The default icon set (@lucide/svelte) is an OPTIONAL peer that is not

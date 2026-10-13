@@ -20,17 +20,17 @@ the simplified-chart `data` prop; the visual is entirely the caller's.
 		/** Accessible name for the figure — required (no anonymous charts). */
 		title: string;
 		/** Optional one-sentence semantic summary, exposed via `aria-describedby`. */
-		description?: string;
+		description?: string | undefined;
 		/** The series rendered by the chart, reused to build the SR table. */
 		series: readonly ChartSeries<T>[];
 		/** x / y accessors for the SR data-table cells. */
 		accessors: ChartAccessors<T>;
 		/** SR-table formatting / labelling options. */
-		tableOptions?: BuildTableOptions<T>;
+		tableOptions?: BuildTableOptions<T> | undefined;
 		/** Whether to render the visually-hidden SR data table. Default `true`. */
-		showDataTable?: boolean;
+		showDataTable?: boolean | undefined;
 		/** Stable id prefix for aria wiring; auto-derived from the title if omitted. */
-		idBase?: string;
+		idBase?: string | undefined;
 		/** The visual — compose `layerchart` marks here. */
 		chart: Snippet;
 	}

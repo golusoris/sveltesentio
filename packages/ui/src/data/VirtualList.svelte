@@ -23,7 +23,7 @@ when variable row heights are needed. Pure logic + ARIA math live in
 		/** Accessible name for the grid. */
 		label: string;
 		/** Extra rows rendered above/below the viewport. Default 3. */
-		overscan?: number;
+		overscan?: number | undefined;
 		/** Renders one row; receives the item and its absolute index. */
 		row: Snippet<[T, number]>;
 	}
