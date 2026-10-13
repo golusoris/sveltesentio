@@ -1,0 +1,17 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"test": {
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/docs/adr/**",
+				"$TURBO_ROOT$/docs/compliance/**",
+				"$TURBO_ROOT$/docs/compose/**",
+				"$TURBO_ROOT$/docs/principles.md",
+				"$TURBO_ROOT$/packages/*/AGENTS.md",
+				"$TURBO_ROOT$/packages/*/package.json"
+			]
+		}
+	}
+}
