@@ -89,3 +89,9 @@ whatever visual the caller draws.
 		{/snippet}
 	</ChartFigure>
 </Story>
+
+<!-- PLANTED DEFECT (never merge): the image renders without alt text, so axe
+image-alt must fail this story on Chromium, Firefox and WebKit. -->
+<Story name="Planted image without alt" asChild>
+	<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt={undefined} width="10" height="10" />
+</Story>
