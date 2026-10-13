@@ -48,6 +48,9 @@ export const MAX_DIFF_FILES = 5000;
 
 export const OPT_OUT = /no docs needed[: ]/i;
 
+// Deadline on every git call (HISS-02).
+const GIT_TIMEOUT_MS = 60_000;
+
 /**
  * Parses the `exports` key set from a package manifest.
  *
@@ -112,17 +115,19 @@ export function findDrift(surfaceChanges, changedFiles) {
 /**
  * Reads a file at a git revision, returning null when it does not exist there.
  *
+ * @param {string} cwd
  * @param {string} ref
  * @param {string} path
  * @returns {string | null}
  */
-function showAtRef(ref, path) {
+function showAtRef(cwd, ref, path) {
 	try {
 		return execFileSync('git', ['show', `${ref}:${path}`], {
-			cwd: root,
+			cwd,
 			encoding: 'utf8',
 			stdio: ['pipe', 'pipe', 'ignore'],
 			maxBuffer: 8 * 1024 * 1024,
+			timeout: GIT_TIMEOUT_MS,
 		});
 	} catch {
 		return null;
@@ -132,15 +137,17 @@ function showAtRef(ref, path) {
 /**
  * Lists the files changed between two revisions, bounded by MAX_DIFF_FILES.
  *
+ * @param {string} cwd
  * @param {string} base
  * @param {string} head
  * @returns {string[]}
  */
-function changedFilesBetween(base, head) {
+function changedFilesBetween(cwd, base, head) {
 	const out = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], {
-		cwd: root,
+		cwd,
 		encoding: 'utf8',
 		maxBuffer: 32 * 1024 * 1024,
+		timeout: GIT_TIMEOUT_MS,
 	});
 	return out
 		.split('\n')
@@ -149,10 +156,15 @@ function changedFilesBetween(base, head) {
 		.slice(0, MAX_DIFF_FILES);
 }
 
-/** Collects every package directory that exists at either revision. */
-function packageDirs(changedFiles) {
+/**
+ * Collects every package directory that exists at either revision.
+ *
+ * @param {string} cwd
+ * @param {string[]} changedFiles
+ */
+function packageDirs(cwd, changedFiles) {
 	const dirs = new Set();
-	const packagesDir = join(root, 'packages');
+	const packagesDir = join(cwd, 'packages');
 	if (existsSync(packagesDir)) {
 		for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
 			if (entry.isDirectory()) dirs.add(`packages/${entry.name}`);
@@ -167,24 +179,29 @@ function packageDirs(changedFiles) {
 	return [...dirs].sort();
 }
 
-function main() {
-	const base = process.env.BASE_SHA ?? '';
-	const head = process.env.HEAD_SHA ?? '';
+/**
+ * Runs the check on a checkout and returns the exit code: 0 clean or opted out,
+ * 1 drift found, 2 a revision missing. A revision git cannot resolve throws.
+ *
+ * @param {{ cwd: string, base: string, head: string, prBody: string }} options
+ * @returns {number}
+ */
+export function runDocsDrift({ cwd, base, head, prBody }) {
 	if (base === '' || head === '') {
 		console.error('docs-drift: BASE_SHA and HEAD_SHA are required');
 		return 2;
 	}
-	if (OPT_OUT.test(process.env.PR_BODY ?? '')) {
+	if (OPT_OUT.test(prBody)) {
 		console.log("docs-drift: opt-out claimed in the pull request body ('no docs needed: ...').");
 		return 0;
 	}
 
-	const changed = changedFilesBetween(base, head);
-	const surfaceChanges = packageDirs(changed).map((dir) => {
+	const changed = changedFilesBetween(cwd, base, head);
+	const surfaceChanges = packageDirs(cwd, changed).map((dir) => {
 		const manifest = `${dir}/package.json`;
 		const { added, removed } = diffKeys(
-			exportKeys(showAtRef(base, manifest)),
-			exportKeys(showAtRef(head, manifest)),
+			exportKeys(showAtRef(cwd, base, manifest)),
+			exportKeys(showAtRef(cwd, head, manifest)),
 		);
 		return { name: dir.slice('packages/'.length), readme: `${dir}/README.md`, added, removed };
 	});
@@ -206,5 +223,12 @@ function main() {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
-	process.exit(main());
+	process.exit(
+		runDocsDrift({
+			cwd: root,
+			base: process.env.BASE_SHA ?? '',
+			head: process.env.HEAD_SHA ?? '',
+			prBody: process.env.PR_BODY ?? '',
+		}),
+	);
 }
