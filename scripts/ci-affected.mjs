@@ -1,6 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const TURBO_ROOT_PREFIX = '$TURBO_ROOT$/';
 
 export const SHARED_SURFACE_PATTERNS = [
 	/^package\.json$/,
@@ -55,6 +59,52 @@ export const PACKAGE_DIRECTORY_MAP = {
 };
 
 /**
+ * The globs outside its own folder that one package's turbo.json declares as
+ * task inputs, without the `$TURBO_ROOT$/` prefix. Inputs inside the package
+ * folder are skipped; a negation, a `../` path or another `$` variable has no
+ * rule here and throws, so the change detection fails instead of guessing.
+ * @param {string} configPath
+ * @returns {string[]}
+ */
+function readRootInputs(configPath) {
+	const tasks = Object.values(JSON.parse(readFileSync(configPath, 'utf8')).tasks ?? {});
+	const globs = [];
+	for (let i = 0; i < tasks.length; i += 1) {
+		const inputs = tasks[i].inputs ?? [];
+		for (let j = 0; j < inputs.length; j += 1) {
+			const input = inputs[j];
+			if (input.startsWith(TURBO_ROOT_PREFIX)) {
+				globs.push(input.slice(TURBO_ROOT_PREFIX.length));
+			} else if (input !== '$TURBO_DEFAULT$' && /^(!|\.\.\/|\$)/.test(input)) {
+				throw new Error(`${configPath}: no rule for the turbo input ${input}`);
+			}
+		}
+	}
+	return globs;
+}
+
+/**
+ * The repository files outside its own folder that each package reads, as
+ * declared by the `$TURBO_ROOT$/` inputs of its turbo.json. Turbo hashes those
+ * files for the cache; the same declaration selects the package here, so a
+ * change to one of them runs the package's jobs even when it is documentation.
+ * @param {string} [rootDir]
+ * @returns {{ glob: string, pkg: string }[]}
+ */
+export function loadRootReaders(rootDir = REPO_ROOT) {
+	const readers = [];
+	const dirEntries = Object.entries(PACKAGE_DIRECTORY_MAP);
+	for (let i = 0; i < dirEntries.length; i += 1) {
+		const [dir, pkg] = dirEntries[i];
+		const configPath = join(rootDir, dir, 'turbo.json');
+		if (existsSync(configPath)) {
+			for (const glob of readRootInputs(configPath)) readers.push({ glob, pkg });
+		}
+	}
+	return readers;
+}
+
+/**
  * @returns {{
  *   allAffected: boolean,
  *   hasCodeChanges: boolean,
@@ -95,8 +145,52 @@ function findAffectedPackages(normalizedFiles) {
 }
 
 /**
+ * Resolves the packages that read a changed file outside their own folder.
+ * @param {string[]} normalizedFiles
+ * @param {{ glob: string, pkg: string }[]} readers
+ * @returns {string[]}
+ */
+function findReaderPackages(normalizedFiles, readers) {
+	const readerPkgSet = new Set();
+	for (let i = 0; i < normalizedFiles.length; i += 1) {
+		for (let j = 0; j < readers.length; j += 1) {
+			if (posix.matchesGlob(normalizedFiles[i], readers[j].glob)) {
+				readerPkgSet.add(readers[j].pkg);
+			}
+		}
+	}
+	return Array.from(readerPkgSet).sort();
+}
+
+/**
+ * A package whose own folder changed runs with its dependencies and dependents
+ * (`...pkg...`). A package that only reads a changed file outside its folder
+ * runs alone (`pkg`): its dependents do not read that file.
+ * @param {string[]} ownPackages
+ * @param {string[]} readerPackages
+ */
+function selectPackages(ownPackages, readerPackages) {
+	const own = new Set(ownPackages);
+	const affectedPackages = Array.from(new Set([...ownPackages, ...readerPackages])).sort();
+	if (affectedPackages.length === 0) {
+		return createEmptyResult();
+	}
+	const filterArgs = affectedPackages
+		.map((pkg) => (own.has(pkg) ? `--filter=...${pkg}...` : `--filter=${pkg}`))
+		.join(' ');
+	return {
+		allAffected: false,
+		hasCodeChanges: true,
+		sharedSurfaces: [],
+		affectedPackages,
+		turboFilter: filterArgs,
+	};
+}
+
+/**
  * Analyzes a list of changed file paths and returns the change impact.
  * @param {string[]} changedFiles
+ * @param {{ glob: string, pkg: string }[]} [readers] defaults to loadRootReaders()
  * @returns {{
  *   allAffected: boolean,
  *   hasCodeChanges: boolean,
@@ -105,7 +199,7 @@ function findAffectedPackages(normalizedFiles) {
  *   turboFilter: string
  * }}
  */
-export function analyzeChanges(changedFiles) {
+export function analyzeChanges(changedFiles, readers) {
 	if (!changedFiles || changedFiles.length === 0) {
 		return createEmptyResult();
 	}
@@ -115,11 +209,12 @@ export function analyzeChanges(changedFiles) {
 		SHARED_SURFACE_PATTERNS.some((pattern) => pattern.test(file)),
 	);
 
+	const readerPackages = findReaderPackages(normalizedFiles, readers ?? loadRootReaders());
 	const isDocsOnly = normalizedFiles.every((file) =>
 		DOCS_ONLY_PATTERNS.some((pattern) => pattern.test(file)),
 	);
 	if (isDocsOnly) {
-		return createEmptyResult();
+		return selectPackages([], readerPackages);
 	}
 
 	if (sharedSurfaces.length > 0) {
@@ -132,19 +227,7 @@ export function analyzeChanges(changedFiles) {
 		};
 	}
 
-	const affectedPackages = findAffectedPackages(normalizedFiles);
-	if (affectedPackages.length === 0) {
-		return createEmptyResult();
-	}
-
-	const filterArgs = affectedPackages.map((pkg) => `--filter=...${pkg}...`).join(' ');
-	return {
-		allAffected: false,
-		hasCodeChanges: true,
-		sharedSurfaces: [],
-		affectedPackages,
-		turboFilter: filterArgs,
-	};
+	return selectPackages(findAffectedPackages(normalizedFiles), readerPackages);
 }
 
 /**
