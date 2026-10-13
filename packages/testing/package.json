@@ -39,6 +39,9 @@
 		"clock"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/testing",
 	"peerDependencies": {
 		"@sveltesentio/core": "workspace:*",

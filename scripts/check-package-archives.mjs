@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Fails if an archive this workspace would publish lacks the licence text, the
-// repository field or the copyright line.
+// repository field, the Node engine or the copyright line.
 //
-// The three reach an archive by different routes, and none of them is visible
+// The four reach an archive by different routes, and none of them is visible
 // in the tree alone:
 //   - the licence text is not in any package folder. `pnpm pack`, the packer
 //     behind the release workflow's `pnpm -r publish`, copies the root LICENSE
@@ -10,6 +10,8 @@
 //   - the `repository` field is what tells a consumer where the source lives,
 //     and the registry refuses a provenance statement whose source repository
 //     differs from it (compared case-sensitively);
+//   - engines.node is declared once in the root package.json, and every
+//     published manifest repeats it (ADR-0021);
 //   - the EUPL text names no licensor, so the copyright line in the package
 //     README is the only notice that travels with the archive.
 //
@@ -105,6 +107,15 @@ function repositoryGaps(manifest, expected) {
 	return gaps;
 }
 
+function enginesGaps(manifest, expected) {
+	if (manifest.engines?.node !== expected.node) {
+		return [
+			`engines.node is ${JSON.stringify(manifest.engines?.node)}, expected "${expected.node}"`,
+		];
+	}
+	return [];
+}
+
 function noticeGaps(files, expected) {
 	const notice = `${expected.license} © ${LICENSOR}`;
 	const readme = files.get('package/README.md')?.toString('utf8') ?? '';
@@ -115,7 +126,8 @@ function noticeGaps(files, expected) {
 /**
  * What one archive lacks. `files` is the map `readArchive` returns; `expected`
  * holds the root `licence` bytes, the `license` identifier, the repository
- * `url` and the `directories` map of package name to workspace folder.
+ * `url`, the Node engine `node` and the `directories` map of package name to
+ * workspace folder.
  *
  * Returns `{ name, published, gaps }`. A private package is not published and
  * has no gaps by definition.
@@ -130,15 +142,23 @@ export function archiveGaps(files, expected) {
 	if (manifest.license !== expected.license) {
 		gaps.push(`license is ${JSON.stringify(manifest.license)}, expected "${expected.license}"`);
 	}
-	gaps.push(...repositoryGaps(manifest, expected), ...noticeGaps(files, expected));
+	gaps.push(
+		...repositoryGaps(manifest, expected),
+		...enginesGaps(manifest, expected),
+		...noticeGaps(files, expected),
+	);
 	return { name: manifest.name, published: true, gaps };
 }
 
 /** Reads what the archives are compared against from the workspace at `dir`. */
 export async function readExpected(dir) {
 	const manifest = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
-	if (typeof manifest.repository?.url !== 'string' || typeof manifest.license !== 'string') {
-		throw new Error('the root package.json needs a license and a repository.url');
+	if (
+		typeof manifest.repository?.url !== 'string' ||
+		typeof manifest.license !== 'string' ||
+		typeof manifest.engines?.node !== 'string'
+	) {
+		throw new Error('the root package.json needs a license, a repository.url and an engines.node');
 	}
 	const entries = await readdir(join(dir, 'packages'), { withFileTypes: true });
 	if (entries.length > ARCHIVE_LIMIT) {
@@ -154,6 +174,7 @@ export async function readExpected(dir) {
 		licence: await readFile(join(dir, 'LICENSE')),
 		license: manifest.license,
 		url: manifest.repository.url,
+		node: manifest.engines.node,
 		directories,
 	};
 }
@@ -213,7 +234,7 @@ export async function main(dir = root, pack = packWorkspace) {
 		return 1;
 	}
 	console.log(
-		`OK: ${published.length} published archives carry the licence text, the repository field and the copyright line.`,
+		`OK: ${published.length} published archives carry the licence text, the repository field, the Node engine and the copyright line.`,
 	);
 	return 0;
 }

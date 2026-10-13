@@ -41,6 +41,9 @@
 		"resumable"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/uploads",
 	"peerDependencies": {
 		"tus-js-client": ">=4.3.0"

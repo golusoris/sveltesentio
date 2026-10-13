@@ -41,6 +41,7 @@ const manifest = (overrides = {}) => ({
 	version: '0.2.0',
 	license: 'EUPL-1.2',
 	repository: { directory: 'packages/alpha', type: 'git', url: URL_OF_SOURCE },
+	engines: { node: '>=24' },
 	...overrides,
 });
 
@@ -60,6 +61,7 @@ const expected = {
 	licence: LICENCE_TEXT,
 	license: 'EUPL-1.2',
 	url: URL_OF_SOURCE,
+	node: '>=24',
 	directories: new Map([['@example/alpha', 'packages/alpha']]),
 };
 
@@ -89,7 +91,11 @@ describe('check-package-archives', () => {
 		return dir;
 	};
 
-	const rootManifest = { license: 'EUPL-1.2', repository: { type: 'git', url: URL_OF_SOURCE } };
+	const rootManifest = {
+		license: 'EUPL-1.2',
+		repository: { type: 'git', url: URL_OF_SOURCE },
+		engines: { node: '>=24' },
+	};
 
 	/** Stands in for the packer: writes the given archives into the destination. */
 	const packer = (archives) => async (_dir, destination) => {
@@ -183,6 +189,28 @@ describe('check-package-archives', () => {
 			]);
 		});
 
+		it('reports missing engines', () => {
+			assert.deepEqual(gapsOf({}, { engines: undefined }), [
+				'engines.node is undefined, expected ">=24"',
+			]);
+		});
+
+		it('reports engines without node', () => {
+			assert.deepEqual(gapsOf({}, { engines: {} }), ['engines.node is undefined, expected ">=24"']);
+		});
+
+		it('reports a different node range', () => {
+			assert.deepEqual(gapsOf({}, { engines: { node: '>=22' } }), [
+				'engines.node is ">=22", expected ">=24"',
+			]);
+		});
+
+		it('reports a whitespace variant in node range', () => {
+			assert.deepEqual(gapsOf({}, { engines: { node: '>= 24' } }), [
+				'engines.node is ">= 24", expected ">=24"',
+			]);
+		});
+
 		it('reports a readme without the copyright line, and no readme at all', () => {
 			const none = 'README.md has 0 lines starting "EUPL-1.2 © lusoris"';
 			assert.deepEqual(gapsOf({ 'package/README.md': '# alpha\n\nEUPL-1.2.\n' }), [none]);
@@ -222,13 +250,31 @@ describe('check-package-archives', () => {
 			const read = await readExpected(await workspace('expected', rootManifest));
 			assert.equal(read.url, URL_OF_SOURCE);
 			assert.equal(read.license, 'EUPL-1.2');
+			assert.equal(read.node, '>=24');
 			assert.ok(read.licence.equals(LICENCE_TEXT));
 			assert.deepEqual([...read.directories], [['@example/alpha', 'packages/alpha']]);
 		});
 
 		it('refuses a root manifest without the address', async () => {
-			const dir = await workspace('no-address', { license: 'EUPL-1.2' });
-			await assert.rejects(readExpected(dir), /needs a license and a repository\.url/);
+			const dir = await workspace('no-address', {
+				license: 'EUPL-1.2',
+				engines: { node: '>=24' },
+			});
+			await assert.rejects(
+				readExpected(dir),
+				/needs a license, a repository\.url and an engines\.node/,
+			);
+		});
+
+		it('refuses a root manifest without engines.node', async () => {
+			const dir = await workspace('no-node', {
+				license: 'EUPL-1.2',
+				repository: { type: 'git', url: URL_OF_SOURCE },
+			});
+			await assert.rejects(
+				readExpected(dir),
+				/needs a license, a repository\.url and an engines\.node/,
+			);
 		});
 	});
 
