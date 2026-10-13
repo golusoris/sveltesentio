@@ -93,7 +93,7 @@ jobs:
       # Options after the script name reach the test script. `pnpm test -- --coverage`
       # hands vitest a literal `--` instead, after which it ignores --coverage and
       # writes no summary (pnpm 11, measured with apps/sveltekit-fixture).
-      - run: pnpm test --coverage
+      - run: pnpm test -- --coverage
       # Needs the json-summary coverage reporter. A missing or unreadable summary, or a
       # figure that is not a number, fails the step; scripts/ci-sveltekit-coverage.test.mjs
       # runs this block against planted summaries.
