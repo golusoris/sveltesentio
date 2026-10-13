@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/golusoris/sveltesentio/compare/ui-v0.6.0...ui-v0.6.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
+* type-check every .svelte file under packages/ with svelte-check ([#316](https://github.com/golusoris/sveltesentio/issues/316)) ([0c394b7](https://github.com/golusoris/sveltesentio/commit/0c394b7bddd23bc47bceb0c7438963a48e17fd19))
+
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.5.0...ui-v0.6.0) (2026-10-12)
 
 ### ⚠ BREAKING CHANGES
