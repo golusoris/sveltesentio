@@ -356,13 +356,17 @@ jobs:
         docs-drift,
       ]
     runs-on: ubuntu-26.04
+    timeout-minutes: 5
     steps:
-      - name: Verify all required jobs succeeded or were legitimately skipped
-        if: >-
-          contains(needs.*.result, 'failure') ||
-          contains(needs.*.result, 'cancelled')
-        run: |
-          echo "::error::One or more required CI jobs failed or were cancelled."
-          exit 1
-      - name: CI Gate Passed
-        run: echo "All required checks passed (or were legitimately skipped for non-affected paths)."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+      # Every need must succeed; scripts/ci-gate.mjs lists the jobs that may skip and when.
+      - name: Verify every required job succeeded or was skipped for a stated reason
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/ci-gate.mjs
