@@ -317,7 +317,10 @@ rules:
         mechanism: >-
           scripts/ci-affected.mjs computes the affected set, and ci.yml gates the
           heavy jobs on `has_code_changes` while the if:always() `CI Gate`
-          aggregator still reports. The script is itself linted by
+          aggregator still reports. The aggregator runs scripts/ci-gate.mjs,
+          which accepts a skipped heavy job only when Detect Changes succeeded
+          and reported no code changes on a non-push event, and requires every
+          other need to succeed (scripts/ci-gate.test.mjs). The script is itself linted by
           `pnpm lint:scripts`, and turbo.json names the root configs as
           globalDependencies so a cached result cannot outlive the config that
           produced it.
