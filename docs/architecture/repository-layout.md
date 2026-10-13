@@ -32,7 +32,8 @@ sveltesentio/
 ├── apps/                           # consuming apps (integration tests + showcase)
 │   ├── storybook/                  # Storybook 10 component showcase (Svelte 5; axe via addon-a11y)           [LANDED]
 │   ├── docs/                       # docs site (principles/ADRs rendered via mdsvex)                          [LANDED]
-│   └── integration/                # integration-test app consuming every published package
+│   ├── integration/                # integration-test app consuming every published package
+│   └── sveltekit-fixture/          # minimal SvelteKit app the reusable ci-sveltekit.yml runs against
 │
 ├── examples/                       # 19 per-package canonical usage snippets + README
 │
@@ -54,7 +55,7 @@ sveltesentio/
 │   ├── CODEOWNERS                  # @lusoris global
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
-│   └── workflows/                  # ci · ci-sveltekit (reusable) · release-please · refresh-upstream-docs
+│   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · release-please · refresh-upstream-docs
 │                                   # scorecard · codeql · auto-assign — see "CI gates" for what each enforces
 │
 ├── .devcontainer/
