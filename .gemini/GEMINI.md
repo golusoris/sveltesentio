@@ -137,6 +137,7 @@ Harness above = rule text. Rows below = TypeScript adaptation + repository enfor
 | HISS-18   | `scripts/ci-affected.mjs` skips unaffected packages; `CI Gate` still reports.                                                                        | Review (runner time) |
 | HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
 | HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
+| HISS-21   | Linux only today: `ci.yml` + `ci-sveltekit.yml` run on `ubuntu-26.04`. macOS + Windows legs open: [#328](https://github.com/golusoris/sveltesentio/issues/328). | not enforced |
 
 Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
 

@@ -35,6 +35,18 @@ export default defineConfig({
 			name: 'chromium',
 			use: { ...devices['Desktop Chrome'] },
 		},
+		// The passkey spec drives a CDP WebAuthn virtual authenticator, which only
+		// Chromium provides; Firefox and WebKit run the MFA specs.
+		{
+			name: 'firefox',
+			use: { ...devices['Desktop Firefox'] },
+			testIgnore: '**/passkey.spec.ts',
+		},
+		{
+			name: 'webkit',
+			use: { ...devices['Desktop Safari'] },
+			testIgnore: '**/passkey.spec.ts',
+		},
 	],
 	webServer: {
 		// Build the harness, then serve the static output. `vite preview` binds the

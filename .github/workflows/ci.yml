@@ -226,9 +226,9 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
       - run: corepack enable && pnpm install --frozen-lockfile
       # One Playwright version is in the lockfile, so one browser install serves every workspace.
-      - name: Install Chromium
-        run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium
-      # Every story is rendered in Chromium; an axe violation or a render error fails the run.
+      - name: Install Chromium, Firefox and WebKit
+        run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium firefox webkit
+      # Every story is rendered in Chromium, Firefox and WebKit; an axe violation or a render error fails the run.
       # Stories come from every package, so the run is not narrowed to the affected ones.
       - name: Run every story with axe
         run: pnpm test:stories
@@ -249,8 +249,8 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
       - run: corepack enable && pnpm install --frozen-lockfile
-      - name: Install Chromium
-        run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium
+      - name: Install Chromium, Firefox and WebKit
+        run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium firefox webkit
       # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
       - name: Run end-to-end tests of affected packages
         env:
