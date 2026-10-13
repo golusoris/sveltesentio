@@ -72,13 +72,14 @@
 
 ## Software Bill of Materials (SBOM)
 
-Per Art. 13(24) + Annex I Part II (1). State measured on 2026-10-11:
+Per Art. 13(24) + Annex I Part II (1). State measured on 2026-10-11, step order changed on 2026-10-13:
 
 - The release job in `release-please.yml` generates one SBOM per run with
   [`anchore/sbom-action`](https://github.com/anchore/sbom-action), in
   [CycloneDX](https://cyclonedx.org/) JSON (`sbom.cdx.json`).
-- The step is best-effort (`continue-on-error`): a failed SBOM run does not
-  fail the release.
+- The step runs before `pnpm -r publish` and has no `continue-on-error`: a
+  failed SBOM run stops the release before any package reaches the registry.
+  `scripts/release-sbom.test.mjs` refuses either regression.
 - The file is a workflow artifact that expires with the run. No release
   carries an SBOM yet.
 
