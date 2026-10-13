@@ -91,18 +91,35 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
       - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm test -- --coverage
+      # Needs the json-summary coverage reporter. A missing or unreadable summary, or a
+      # figure that is not a number, fails the step; scripts/ci-sveltekit-coverage.test.mjs
+      # runs this block against planted summaries.
       - name: Check coverage threshold
+        env:
+          THRESHOLD: ${{ inputs.coverage-threshold }}
         run: |
-          THRESHOLD=${{ inputs.coverage-threshold }}
-          COVERAGE=$(node -e "
-            const fs = require('fs');
+          node -e '
+            const fs = require("fs");
+            const fail = (message) => {
+              console.error("::error::" + message);
+              process.exit(1);
+            };
+            const threshold = Number(process.env.THRESHOLD);
+            if (process.env.THRESHOLD === undefined || process.env.THRESHOLD.trim() === "" || !Number.isFinite(threshold)) {
+              fail("coverage-threshold is not a number: " + JSON.stringify(process.env.THRESHOLD));
+            }
+            let pct;
             try {
-              const s = JSON.parse(fs.readFileSync('coverage/coverage-summary.json','utf8'));
-              console.log(s.total.lines.pct);
-            } catch { console.log(100); }
-          ")
-          echo "Coverage: ${COVERAGE}% (threshold: ${THRESHOLD}%)"
-          node -e "if (parseFloat('$COVERAGE') < $THRESHOLD) { console.error('::error::Coverage below threshold'); process.exit(1); }"
+              pct = JSON.parse(fs.readFileSync("coverage/coverage-summary.json", "utf8")).total.lines.pct;
+            } catch (error) {
+              fail("coverage/coverage-summary.json is missing or unreadable: " + error.message);
+            }
+            if (typeof pct !== "number" || !Number.isFinite(pct)) {
+              fail("total.lines.pct in coverage/coverage-summary.json is not a number: " + JSON.stringify(pct));
+            }
+            console.log("Coverage: " + pct + "% (threshold: " + threshold + "%)");
+            if (pct < threshold) fail("Coverage " + pct + "% is below the threshold of " + threshold + "%");
+          '
       - name: Upload coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
