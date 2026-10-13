@@ -254,10 +254,21 @@ describe('ci-affected: every file a package reads outside the package folders se
 	// The two ways package code names a repository file: a literal that climbs out
 	// of its folder (a glob or a file; a bare directory prefix is no read), and a
 	// join or resolve on the repository-root variable with literal segments
-	// (a file, or a directory the code lists).
+	// (a file, or a directory the code lists). ROOT_JOIN takes the argument list
+	// whole and literalSegments splits it: one regex repeating quoted arguments
+	// backtracks exponentially (CodeQL js/redos).
 	const CLIMB = /['"`]((?:\.\.\/)+[^'"`$]+)['"`]/g;
-	const ROOT_JOIN =
-		/(?:join|resolve)\(\s*(?:rootDir|repoRoot)\s*,\s*((?:['"][^'"]+['"]\s*,?\s*)+)\)/g;
+	const ROOT_JOIN = /(?:join|resolve)\(\s*(?:rootDir|repoRoot)\s*,([^)]*)\)/g;
+
+	/** @returns {string[]} the segments, or none when an argument is not a string literal */
+	function literalSegments(/** @type {string} */ args) {
+		const parts = args
+			.split(',')
+			.map((part) => part.trim())
+			.filter(Boolean);
+		const segments = parts.map((part) => /^['"]([^'"]+)['"]$/.exec(part)?.[1] ?? '');
+		return segments.includes('') ? [] : segments;
+	}
 
 	/** @returns {{ pkg: string, source: string, path: string }[]} */
 	function findReads() {
@@ -275,8 +286,8 @@ describe('ci-affected: every file a package reads outside the package folders se
 						reads.push({ pkg, source, path });
 				}
 				for (const [, args] of text.matchAll(ROOT_JOIN)) {
-					const segments = [...args.matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]);
-					reads.push({ pkg, source, path: posix.join(...segments) });
+					const segments = literalSegments(args);
+					if (segments.length > 0) reads.push({ pkg, source, path: posix.join(...segments) });
 				}
 			}
 		}
