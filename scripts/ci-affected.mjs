@@ -56,6 +56,7 @@ export const PACKAGE_DIRECTORY_MAP = {
 	'apps/docs': '@sveltesentio/docs',
 	'apps/integration': '@sveltesentio/integration',
 	'apps/storybook': '@sveltesentio/storybook',
+	'apps/sveltekit-fixture': '@sveltesentio/sveltekit-fixture',
 };
 
 /**
