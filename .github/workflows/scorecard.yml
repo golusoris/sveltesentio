@@ -73,18 +73,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TITLE: OpenSSF Scorecard score below 7 on main
+          LABEL: scorecard
+          LABEL_COLOR: d93f0b
+          LABEL_DESCRIPTION: The OpenSSF Scorecard score on main is below the threshold in scorecard.yml
           STATUS: ${{ job.status }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh label create scorecard --repo "$GITHUB_REPOSITORY" --color d93f0b --force \
-            --description "The OpenSSF Scorecard score on main is below the threshold in scorecard.yml"
-          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --label scorecard --state open --json number,title \
-            --jq 'map(select(.title == env.TITLE)) | .[0].number // empty')"
-          if [[ "$STATUS" == success ]]; then
-            if [[ -n "$number" ]]; then gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "Score back at or above the threshold: $RUN"; fi
-          elif [[ -n "$number" ]]; then
-            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still below the threshold, or no result for this commit: $RUN"
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label scorecard \
-              --body "The threshold job in scorecard.yml failed in $RUN: the published score is below 7, or no published result matches the commit. The next passing run closes this issue."
-          fi
+          FAIL_BODY: 'The threshold job in scorecard.yml failed in $RUN: the published score is below 7, or no published result matches the commit. The next passing run closes this issue.'
+          REPEAT_COMMENT: 'Still below the threshold, or no result for this commit: $RUN'
+          PASS_COMMENT: 'Score back at or above the threshold: $RUN'
+        run: bash scripts/workflow-issue.sh
