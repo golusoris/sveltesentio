@@ -185,10 +185,29 @@ describe('CI Workflows Configuration (.github/workflows/)', () => {
 
 	it('has aggregate ci-gate job depending on all required checks with if: always()', () => {
 		const content = readFileSync(ciWorkflowPath, 'utf8');
-		expect(content).toContain('ci-gate:');
-		expect(content).toContain(
-			'needs: [pr-title, detect-changes, lint, typecheck, test, build, stories, e2e, audit, docs-drift]',
-		);
+		const start = content.indexOf('\n  ci-gate:');
+		expect(start).toBeGreaterThanOrEqual(0);
+		// Prettier wraps a long flow list over several lines with a trailing comma, so compare
+		// the parsed names, not the text.
+		const needs = /\n {4}needs:\s*\[([^\]]*)\]/.exec(content.slice(start))?.[1];
+		const names = needs
+			?.split(',')
+			.map((name) => name.trim())
+			.filter((name) => name !== '');
+		expect(names).toEqual([
+			'pr-title',
+			'detect-changes',
+			'lint',
+			'typecheck',
+			'test',
+			'build',
+			'stories',
+			'e2e',
+			'audit',
+			'secret-scan',
+			'dependency-scan',
+			'docs-drift',
+		]);
 		expect(content).toContain('if: always()');
 	});
 });

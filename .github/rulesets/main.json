@@ -47,7 +47,13 @@
             "context": "CI Gate"
           },
           {
+            "context": "Dependency and configuration scan (trivy)"
+          },
+          {
             "context": "Detect Changes"
+          },
+          {
+            "context": "Secret scan (gitleaks)"
           },
           {
             "context": "CodeQL analysis"
