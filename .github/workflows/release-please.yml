@@ -68,6 +68,20 @@ jobs:
       - if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
         run: corepack enable && pnpm install --frozen-lockfile
 
+      # CycloneDX SBOM for the release (§2.5), generated before any package
+      # reaches the registry: a release without its SBOM does not publish.
+      # A failed run is repeated through workflow_dispatch, which publishes
+      # only the versions the registry does not hold yet.
+      # scripts/release-sbom.test.mjs refuses this step after publish or with
+      # continue-on-error.
+      - name: Generate SBOM (CycloneDX)
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          artifact-name: sbom.cdx.json
+
       # Packages ship files:["src"] with exports → ./src/*.ts, so there is no
       # build step before publish (the tsc `build` output is never shipped).
       - name: Publish packages to npm
@@ -84,14 +98,3 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: 'packages/*/src/**'
-
-      # CycloneDX SBOM for the release (§2.5). continue-on-error: SBOM generation
-      # must never fail an already-completed publish; the artifact is best-effort.
-      - name: Generate SBOM (CycloneDX)
-        if: ${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}
-        continue-on-error: true
-        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
-        with:
-          format: cyclonedx-json
-          output-file: sbom.cdx.json
-          artifact-name: sbom.cdx.json
