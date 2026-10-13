@@ -39,3 +39,52 @@ jobs:
         uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: results.sarif
+
+  # AGENTS.md promises a Scorecard score of at least 7 on main. The analysis
+  # job above cannot hold a run step while it publishes, so this job reads the
+  # published result for this commit (scripts/scorecard-threshold.mjs). Below
+  # the threshold it fails and opens or updates one issue labelled scorecard;
+  # the next passing run closes that issue. Pull requests are not gated: the
+  # workflow runs on main and on the weekly schedule only.
+  threshold:
+    name: Scorecard threshold
+    needs: analysis
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+      - name: Check the published score
+        env:
+          REPOSITORY: github.com/${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+          THRESHOLD: '7'
+        run: node scripts/scorecard-threshold.mjs
+      - name: Open, update or close the scorecard issue
+        if: always() && (job.status == 'success' || job.status == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: OpenSSF Scorecard score below 7 on main
+          STATUS: ${{ job.status }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create scorecard --repo "$GITHUB_REPOSITORY" --color d93f0b --force \
+            --description "The OpenSSF Scorecard score on main is below the threshold in scorecard.yml"
+          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --label scorecard --state open --json number,title \
+            --jq 'map(select(.title == env.TITLE)) | .[0].number // empty')"
+          if [[ "$STATUS" == success ]]; then
+            if [[ -n "$number" ]]; then gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "Score back at or above the threshold: $RUN"; fi
+          elif [[ -n "$number" ]]; then
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "Still below the threshold, or no result for this commit: $RUN"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label scorecard \
+              --body "The threshold job in scorecard.yml failed in $RUN: the published score is below 7, or no published result matches the commit. The next passing run closes this issue."
+          fi
