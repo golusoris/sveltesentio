@@ -13,6 +13,7 @@ on:
   schedule:
     - cron: '45 5 * * 1'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
       - 'packages/*/package.json'
@@ -34,17 +35,35 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
+      - name: Stop on a draft pull request
+        if: github.event.pull_request.draft == true
+        shell: bash
+        env:
+          TITLE: Gate not run on a draft
+          MESSAGE: >-
+            The gate did not run because the pull request is a draft.
+            It runs when the pull request is marked ready for review.
+        run: |
+          echo "::error title=$TITLE::$MESSAGE"
+          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event.pull_request.draft != true
         with:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event.pull_request.draft != true
         with:
           node-version: '24'
       - name: Pin every peer to the lowest release of its range
+        if: github.event.pull_request.draft != true
         run: node scripts/pin-peer-floors.mjs
       # The overrides change the resolution, so the lockfile cannot be frozen.
       - run: corepack enable && pnpm install --no-frozen-lockfile
+        if: github.event.pull_request.draft != true
       - name: Check that the install holds the floors
+        if: github.event.pull_request.draft != true
         run: node scripts/pin-peer-floors.mjs --verify
       - name: Type-check and test every package at the floors
+        if: github.event.pull_request.draft != true
         run: pnpm exec turbo run typecheck test --filter='./packages/*' --concurrency=2
