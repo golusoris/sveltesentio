@@ -86,6 +86,8 @@ jobs:
           fi
       - run: pnpm check:exports
       - run: pnpm check:component-stories
+      # HISS-15: every exported value is named in a test of its package (scripts/check-export-tests.mjs).
+      - run: pnpm check:export-tests
       # publint --strict on every published package: export condition order, files the
       # manifest names but the tarball lacks (a dangling `bin`), packaging warnings. Called
       # by name, as eslint and prettier below, so the declared-linters audit sees it; the

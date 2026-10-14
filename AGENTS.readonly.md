@@ -125,7 +125,7 @@ Harness above = rule text. Rows below = TypeScript adaptation + repository enfor
 | HISS-07   | No non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457).                             | `@typescript-eslint` |
 | HISS-08   | No `eval` / `new Function`; no unsanitised `innerHTML`, DOMPurify at every boundary.                                                                 | ESLint / CodeQL      |
 | HISS-10   | Zero-warning tolerance across `tsc`, ESLint, Prettier. No `any`.                                                                                     | Exit code 1          |
-| HISS-15   | Positive, negative, boundary tests mandatory for every public export.                                                                                | CI coverage gate     |
+| HISS-15   | Positive, negative, boundary tests mandatory for every public export. Gate: each exported value named in a test of its package; three cases = review. | `pnpm check:export-tests` |
 | HISS-17   | Turn start reads `.workingdir/STATE.md` + `OPEN.md` | read-only run: step dropped |
 | HISS-18   | `scripts/ci-affected.mjs` skips unaffected packages; `CI Gate` still reports.                                                                        | Review (runner time) |
 | HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
