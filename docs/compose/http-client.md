@@ -64,7 +64,7 @@ api.use(problemMiddleware());
 
 ```ts
 // +page.server.ts
-import { api } from '$lib/api/client';
+import { api } from '#lib/api/client.js';
 import { ProblemError } from '@sveltesentio/core/http';
 import { error } from '@sveltejs/kit';
 
@@ -136,7 +136,7 @@ with SSR hydration and automatic cache-key derivation. See
 
 ```ts
 // lib/queries/users.ts
-import { api } from '$lib/api/client';
+import { api } from '#lib/api/client.js';
 import { createQuery } from '@sveltesentio/query';
 
 export function userQuery(id: string) {

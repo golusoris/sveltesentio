@@ -213,7 +213,7 @@ import { Postmark } from 'postmark';
 import { POSTMARK_TOKEN } from '$env/static/private';
 import { isSuppressed, recordEmailEvent } from './suppression';
 import { renderTemplate } from './templates';
-import { checkRateLimit } from '$lib/rate-limiting';
+import { checkRateLimit } from '#lib/rate-limiting.js';
 import type { EmailTemplate } from './schemas';
 
 const postmark = new Postmark.ServerClient(POSTMARK_TOKEN);
@@ -327,7 +327,7 @@ CREATE INDEX email_suppressions_created_idx ON email_suppressions (created_at DE
 
 ```typescript
 // src/lib/email/suppression.ts
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 
 export async function isSuppressed(
   email: string,
@@ -390,9 +390,9 @@ export async function addSuppression(
 ```typescript
 // src/routes/api/webhooks/email/+server.ts
 import type { RequestHandler } from './$types';
-import { verifyWebhookSignature } from '$lib/webhooks';
-import { addSuppression } from '$lib/email/suppression';
-import { recordEmailEvent } from '$lib/email/events';
+import { verifyWebhookSignature } from '#lib/webhooks.js';
+import { addSuppression } from '#lib/email/suppression.js';
+import { recordEmailEvent } from '#lib/email/events.js';
 import { POSTMARK_WEBHOOK_SECRET } from '$env/static/private';
 import { z } from 'zod';
 
@@ -463,9 +463,9 @@ export const POST: RequestHandler = async ({ request }) => {
 ```typescript
 // src/routes/unsubscribe/+server.ts
 import type { RequestHandler } from './$types';
-import { verifyUnsubToken } from '$lib/email/tokens';
-import { addSuppression } from '$lib/email/suppression';
-import { recordEmailEvent } from '$lib/email/events';
+import { verifyUnsubToken } from '#lib/email/tokens.js';
+import { addSuppression } from '#lib/email/suppression.js';
+import { recordEmailEvent } from '#lib/email/events.js';
 
 export const POST: RequestHandler = async ({ request, url }) => {
   const token = url.searchParams.get('token');
@@ -556,9 +556,9 @@ email.suppression.size       gauge (total rows in suppression)
 // src/routes/api/cron/email-health/+server.ts
 import { withCronRun } from '../_shared/runner';
 import { verifyCronRequest } from '../_shared/authn';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 import { subDays } from 'date-fns';
-import { now } from '$lib/clock';
+import { now } from '#lib/clock.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);

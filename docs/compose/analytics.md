@@ -281,7 +281,7 @@ SvelteKit's client-side routing can lose page-view events. Use the
 <!-- src/routes/+layout.svelte — if using manual mode -->
 <script lang="ts">
   import { afterNavigate } from '$app/navigation';
-  import { track } from '$lib/analytics/plausible';
+  import { track } from '#lib/analytics/plausible.js';
 
   afterNavigate(({ to }) => {
     if (!to) return;

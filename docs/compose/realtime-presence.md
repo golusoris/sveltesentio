@@ -161,7 +161,7 @@ peers.
 ## Reference — Yjs Awareness wiring
 
 ```ts
-// $lib/realtime/awareness.ts
+// src/lib/realtime/awareness.ts
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Awareness } from 'y-protocols/awareness';
@@ -232,11 +232,11 @@ posture preserves UX for the rest of the room.
 ## Reference — Svelte component using awareness
 
 ```svelte
-<!-- $lib/components/CollaborativeEditor.svelte -->
+<!-- src/lib/components/CollaborativeEditor.svelte -->
 <script lang="ts">
   import * as Y from 'yjs';
   import { onMount } from 'svelte';
-  import { createPresence, type PresenceState } from '$lib/realtime/awareness';
+  import { createPresence, type PresenceState } from '#lib/realtime/awareness.js';
   import RemoteCursor from './RemoteCursor.svelte';
 
   type Props = { docId: string; user: PresenceState['user'] };
@@ -343,7 +343,7 @@ every move.
 // src/routes/api/presence/[room]/+server.ts
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
-import { presenceRegistry } from '$lib/server/presence';
+import { presenceRegistry } from '#lib/server/presence.js';
 import { PresenceEvent } from '@sveltesentio/realtime-presence/schema';
 
 const Params = z.object({ room: z.string().min(1).max(200) });
@@ -398,7 +398,7 @@ export const GET = async ({ params, locals, request }) => {
 ```
 
 ```ts
-// $lib/server/presence.ts
+// src/lib/server/presence.ts
 import type { PresenceEvent } from '@sveltesentio/realtime-presence/schema';
 
 type Member = { userId: string; name: string; avatarUrl: string | null; sessionId: string };
@@ -494,7 +494,7 @@ becomes a per-room subscription on a shared Redis channel.
 ## Multi-instance fan-out via Redis
 
 ```ts
-// $lib/server/presence-redis.ts (sketch)
+// src/lib/server/presence-redis.ts (sketch)
 import { redis, redisSub } from './redis';
 
 await redisSub.subscribe('presence:*');

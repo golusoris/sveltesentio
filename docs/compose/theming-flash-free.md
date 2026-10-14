@@ -137,7 +137,7 @@ update so the choice follows the user across devices:
 ```svelte
 <script lang="ts">
   import { toggleMode, mode } from 'mode-watcher';
-  import { api } from '$lib/api';
+  import { api } from '#lib/api.js';
 
   async function toggle() {
     toggleMode();

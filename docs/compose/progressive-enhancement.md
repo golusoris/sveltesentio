@@ -125,7 +125,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { UpdateProfile } from './schema';
-import { updateUserProfile } from '$lib/server/users';
+import { updateUserProfile } from '#lib/server/users.js';
 
 export async function load({ locals }) {
   if (!locals.user) throw redirect(303, '/login?next=/account');

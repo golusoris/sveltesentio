@@ -78,7 +78,7 @@ One `<CommandPalette>` per app, at the root layout:
 <!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import { CommandPalette } from '@sveltesentio/ui/cmd';
-  import '$lib/commands'; // side-effect registrations (see below)
+  import '#lib/commands.js'; // side-effect registrations (see below)
 
   let { children } = $props();
 </script>
@@ -126,7 +126,7 @@ search), provide a function that returns commands:
 
 ```ts
 import { defineCommandProvider } from '@sveltesentio/ui/cmd';
-import { api } from '$lib/api';
+import { api } from '#lib/api.js';
 
 export const recentFlowsProvider = defineCommandProvider({
   id: 'flow.recent',
@@ -226,7 +226,7 @@ Component tests with Testing Library:
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { CommandPalette, registerCommands } from '@sveltesentio/ui/cmd';
-import { newFlow } from '$lib/routes/flows/commands';
+import { newFlow } from '#lib/routes/flows/commands.js';
 
 test('palette opens on ⌘K and runs command', async () => {
   const run = vi.fn();

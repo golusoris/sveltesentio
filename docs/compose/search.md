@@ -249,8 +249,8 @@ export async function deleteProduct(client: Typesense.Client, id: string): Promi
 // src/routes/search/+page.server.ts
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
-import { searchClient } from '$lib/search/client';
-import { SearchQueryParams } from '$lib/search/schemas';
+import { searchClient } from '#lib/search/client.js';
+import { SearchQueryParams } from '#lib/search/schemas.js';
 
 export async function load({ url, locals }) {
   const parsed = SearchQueryParams.safeParse(Object.fromEntries(url.searchParams));
@@ -340,7 +340,7 @@ export async function load({ url, locals }) {
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { createQuery } from '@tanstack/svelte-query';
-  import { SearchResults } from '$lib/search/SearchResults.svelte';
+  import { SearchResults } from '#lib/search/SearchResults.svelte';
 
   let { data } = $props();
 

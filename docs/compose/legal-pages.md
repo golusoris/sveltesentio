@@ -233,8 +233,8 @@ must be able to see that they are not reading the current wording.
 // src/routes/api/legal/accept/+server.ts
 import { json, error } from '@sveltejs/kit';
 import { Acceptance, LegalDoc, LegalVersion } from '@sveltesentio/auth/legal';
-import { manifest } from '$lib/legal/manifest';
-import { insertAcceptance } from '$lib/db/legal';
+import { manifest } from '#lib/legal/manifest.js';
+import { insertAcceptance } from '#lib/db/legal.js';
 import { writeAuditEvent } from '@sveltesentio/audit';
 import { z } from 'zod';
 
@@ -289,7 +289,7 @@ export async function POST({ request, locals, getClientAddress }) {
 ```svelte
 <!-- src/routes/signup/+page.svelte — excerpt -->
 <script lang="ts">
-  import { manifest } from '$lib/legal/manifest';
+  import { manifest } from '#lib/legal/manifest.js';
   const currentTerms = $derived(manifest.find((e) => e.doc === 'terms' && e.locale === 'en'));
   const currentPrivacy = $derived(manifest.find((e) => e.doc === 'privacy' && e.locale === 'en'));
   let acceptedTerms = $state(false);
@@ -329,8 +329,8 @@ never actually displayed.
 
 ```ts
 // src/hooks.server.ts — partial
-import { manifest } from '$lib/legal/manifest';
-import { getLatestAcceptance } from '$lib/db/legal';
+import { manifest } from '#lib/legal/manifest.js';
+import { getLatestAcceptance } from '#lib/db/legal.js';
 
 export async function handle({ event, resolve }) {
   if (!event.locals.user) return resolve(event);
@@ -496,7 +496,7 @@ export async function exportLegalAcceptances(userId: string) {
 ```ts
 // tests/legal/acceptance.test.ts
 import { test, expect } from 'vitest';
-import { manifest } from '$lib/legal/manifest';
+import { manifest } from '#lib/legal/manifest.js';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import matter from 'gray-matter';

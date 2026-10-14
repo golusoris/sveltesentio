@@ -224,7 +224,7 @@ Six optimistic-flow rules:
 ```ts
 // src/lib/sync/worker.ts
 import { getDB } from './db';
-import { apiFetch } from '$lib/api/client'; // openapi-fetch — see http-client.md
+import { apiFetch } from '#lib/api/client.js'; // openapi-fetch — see http-client.md
 
 let running = false;
 
@@ -338,8 +338,8 @@ Five conflict-strategy rules:
 ```svelte
 <!-- src/lib/sync/ConflictDialog.svelte -->
 <script lang="ts">
-  import { Dialog, DialogContent } from '$lib/ui/dialog';
-  import * as m from '$lib/paraglide/messages';
+  import { Dialog, DialogContent } from '#lib/ui/dialog/index.js';
+  import * as m from '#lib/paraglide/messages.js';
 
   type Props = {
     open: boolean;
@@ -427,8 +427,8 @@ Five manual-merge UI rules:
 ```svelte
 <!-- src/lib/sync/SyncBadge.svelte -->
 <script lang="ts">
-  import { syncSummary } from '$lib/sync/store.svelte';
-  import * as m from '$lib/paraglide/messages';
+  import { syncSummary } from '#lib/sync/store.svelte.js';
+  import * as m from '#lib/paraglide/messages.js';
 
   const summary = $derived(syncSummary.value);
 </script>

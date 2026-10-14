@@ -117,7 +117,7 @@ Three bootstrap rules:
 
 ```ts
 // src/routes/api/orders/+server.ts
-import { logger } from '$lib/observability/logs';
+import { logger } from '#lib/observability/logs.js';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { trace } from '@opentelemetry/api';
 
@@ -209,7 +209,7 @@ context.
 // src/lib/observability/errors.ts
 import { logger } from './logs';
 import { SeverityNumber } from '@opentelemetry/api-logs';
-import { ProblemError } from '$lib/errors/problem';
+import { ProblemError } from '#lib/errors/problem.js';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 export function logProblem(err: ProblemError, correlationId: string): void {
@@ -241,7 +241,7 @@ the same `correlation.id`.
 // src/routes/api/csp-report/+server.ts
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
-import { logger } from '$lib/observability/logs';
+import { logger } from '#lib/observability/logs.js';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 const Report = z.object({

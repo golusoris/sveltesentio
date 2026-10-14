@@ -91,7 +91,7 @@ pnpm add dompurify
 pnpm add -D @types/dompurify
 ```
 
-## Policy module — `$lib/security/trusted-types.ts`
+## Policy module — `src/lib/security/trusted-types.ts`
 
 ```ts
 // src/lib/security/trusted-types.ts
@@ -186,7 +186,7 @@ Three invariants in this module:
 <script lang="ts">
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
-  import { initTrustedTypes } from '$lib/security/trusted-types';
+  import { initTrustedTypes } from '#lib/security/trusted-types.js';
 
   if (browser) initTrustedTypes();
 
@@ -208,7 +208,7 @@ Replace raw `{@html userHtml}` with `{@html sanitizeHTML(userHtml)}`:
 <!-- src/lib/markdown/Markdown.svelte -->
 <script lang="ts">
   import { marked } from 'marked';
-  import { sanitizeHTML } from '$lib/security/trusted-types';
+  import { sanitizeHTML } from '#lib/security/trusted-types.js';
 
   let { source }: { source: string } = $props();
   const html = $derived(sanitizeHTML(marked.parse(source) as string));
@@ -227,7 +227,7 @@ call sites where TT is required.
 ```svelte
 <!-- src/lib/ai/Message.svelte -->
 <script lang="ts">
-  import { sanitizeHTML } from '$lib/security/trusted-types';
+  import { sanitizeHTML } from '#lib/security/trusted-types.js';
   import { marked } from 'marked';
 
   let { content }: { content: string } = $props();
@@ -248,7 +248,7 @@ User-uploaded SVG (logos, diagrams, decorative icons) goes through
 
 ```svelte
 <script lang="ts">
-  import { sanitizeSVG } from '$lib/security/trusted-types';
+  import { sanitizeSVG } from '#lib/security/trusted-types.js';
 
   let { source }: { source: string } = $props();
   const svg = $derived(sanitizeSVG(source));
@@ -349,7 +349,7 @@ Component test with jsdom + polyfill:
 import { test, beforeAll } from 'vitest';
 import { render } from '@testing-library/svelte';
 import DOMPurify from 'dompurify';
-import { sanitizeHTML, initTrustedTypes } from '$lib/security/trusted-types';
+import { sanitizeHTML, initTrustedTypes } from '#lib/security/trusted-types.js';
 
 beforeAll(() => {
   // jsdom has no trustedTypes; stub it for tests.
@@ -430,7 +430,7 @@ Profile before optimizing — most streams are token-per-second, not
   `no-restricted-syntax` for `{@html}` without `sanitizeHTML`.
 - **Creating policies in components.** Policies are global modules;
   component-scoped creation races with CSP directive evaluation.
-  Always in `$lib/security/trusted-types.ts`.
+  Always in `src/lib/security/trusted-types.ts`.
 - **Default policy that returns input unchanged.** Defeats the point
   of TT entirely; the default policy must sanitize (or throw).
 - **Enforcing TT in dev without HMR-aware skip.** Breaks dev-server

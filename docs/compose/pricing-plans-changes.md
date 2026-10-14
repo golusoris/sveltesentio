@@ -164,10 +164,10 @@ free-text parsing. `feedback` is optional.
 ```ts
 // src/routes/api/billing/seats/+server.ts
 import { json } from '@sveltejs/kit';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db.js';
 import { ChangePlanInput } from '@sveltesentio/billing';
-import { recordAudit } from '$lib/server/audit';
+import { recordAudit } from '#lib/server/audit.js';
 
 export async function POST({ request, locals }) {
   const parsed = ChangePlanInput.pick({
@@ -227,10 +227,10 @@ webhook to write it.
 ```ts
 // src/routes/api/billing/preview/+server.ts
 import { json } from '@sveltejs/kit';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db.js';
 import { PreviewInput, ChangePreview } from '@sveltesentio/billing';
-import { tierToPriceId } from '$lib/server/billing/catalog';
+import { tierToPriceId } from '#lib/server/billing/catalog.js';
 
 export async function POST({ request, locals }) {
   const parsed = PreviewInput.safeParse(await request.json());

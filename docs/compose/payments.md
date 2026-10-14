@@ -156,8 +156,8 @@ to deduplicate so a retry never charges twice.
 ```ts
 // src/routes/(app)/billing/checkout/+server.ts
 import { error, redirect } from '@sveltejs/kit';
-import { stripe } from '$lib/payments/stripe';
-import { getOrCreateStripeCustomer } from '$lib/payments/customer';
+import { stripe } from '#lib/payments/stripe.js';
+import { getOrCreateStripeCustomer } from '#lib/payments/customer.js';
 import { uuidv7 } from '@sveltesentio/core';
 
 export async function POST({ request, locals, url }) {
@@ -242,9 +242,9 @@ write happens in the webhook.
 ```ts
 // src/routes/api/webhooks/stripe/+server.ts
 import { error, json } from '@sveltejs/kit';
-import { stripe } from '$lib/payments/stripe';
+import { stripe } from '#lib/payments/stripe.js';
 import { STRIPE_WEBHOOK_SECRET } from '$env/static/private';
-import { reconcile } from '$lib/payments/reconcile';
+import { reconcile } from '#lib/payments/reconcile.js';
 
 export async function POST({ request }) {
   const sig = request.headers.get('stripe-signature');

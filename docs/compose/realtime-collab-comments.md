@@ -398,7 +398,7 @@ the user can see what they were about.
 ```svelte
 <!-- packages/ui/src/comments/MentionPicker.svelte — excerpt -->
 <script lang="ts">
-  import { searchUsers } from '$lib/api/search';
+  import { searchUsers } from '#lib/api/search.js';
   let { onPick }: { onPick: (m: Mention) => void } = $props();
 
   let query = $state('');

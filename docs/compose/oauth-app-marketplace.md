@@ -206,9 +206,9 @@ export const AppInstallation = z.object({
 import { json } from '@sveltejs/kit';
 import { v7 as uuidv7 } from 'uuid';
 import { AppManifest } from '@sveltesentio/marketplace';
-import { hydraAdmin } from '$lib/server/hydra';
-import { db } from '$lib/server/db';
-import { recordAudit } from '$lib/server/audit';
+import { hydraAdmin } from '#lib/server/hydra.js';
+import { db } from '#lib/server/db.js';
+import { recordAudit } from '#lib/server/audit.js';
 
 export async function POST({ request, locals }) {
   const parsed = AppManifest.safeParse(await request.json());
@@ -329,7 +329,7 @@ status to `approved` (then `listed` if `isPublic = true`) or
 ```ts
 // src/routes/marketplace/apps/[slug]/install/+page.server.ts
 import { redirect } from '@sveltejs/kit';
-import { requirePermission } from '$lib/server/auth';
+import { requirePermission } from '#lib/server/auth.js';
 
 export async function load({ params, locals, url }) {
   await requirePermission(locals.user, 'tenant.apps.install');
@@ -410,7 +410,7 @@ hook that maps the issued token → installation row:
 // src/routes/api/oauth/introspect/+server.ts
 // Called by our resource server (not by the app) to check whether a
 // presented token is still valid + grants the requested scope.
-import { hydraAdmin } from '$lib/server/hydra';
+import { hydraAdmin } from '#lib/server/hydra.js';
 
 export async function POST({ request }) {
   const body = await request.formData();
@@ -444,7 +444,7 @@ export async function POST({ request }) {
 
 ```ts
 // src/lib/server/marketplace/rate-limit.ts
-import { rateLimiter } from '$lib/server/rate-limiter';
+import { rateLimiter } from '#lib/server/rate-limiter.js';
 
 export async function enforceAppRateLimit(installationId: string) {
   const inst = await getInstallation(installationId);
@@ -475,7 +475,7 @@ RFC 9530, `Retry-After` per RFC 7231.
 
 ```ts
 // src/lib/server/marketplace/webhook-fanout.ts
-import { signHmac } from '$lib/server/webhooks';
+import { signHmac } from '#lib/server/webhooks.js';
 
 export async function emitMarketplaceEvent(eventType: string, payload: unknown, tenantId: string) {
   const installations = await db

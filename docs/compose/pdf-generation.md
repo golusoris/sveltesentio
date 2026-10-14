@@ -425,9 +425,9 @@ import { RenderRequest, RenderResult, InvoiceInput } from './types';
 import { renderInvoice } from './renderers/invoice';
 import { renderBrochure } from './renderers/brochure';
 import { uploadAndSign } from './storage';
-import { recordAudit } from '$lib/server/audit';
-import { rateLimiter } from '$lib/server/rate-limiter';
-import { sha256 } from '$lib/server/crypto';
+import { recordAudit } from '#lib/server/audit.js';
+import { rateLimiter } from '#lib/server/rate-limiter.js';
+import { sha256 } from '#lib/server/crypto.js';
 
 export const pdfQueue = new Queue('pdf-render');
 

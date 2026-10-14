@@ -163,11 +163,11 @@ Five shape rules:
 
 ```ts
 // packages/auth/src/deletion/request.ts
-import { db } from '$lib/server/db';
-import { queue } from '$lib/server/queue';
-import { sendEmail } from '$lib/server/email';
-import { audit } from '$lib/server/audit';
-import { hashToken, randomToken } from '$lib/server/crypto';
+import { db } from '#lib/server/db.js';
+import { queue } from '#lib/server/queue.js';
+import { sendEmail } from '#lib/server/email.js';
+import { audit } from '#lib/server/audit.js';
+import { hashToken, randomToken } from '#lib/server/crypto.js';
 import { clock } from '@sveltesentio/core/clock';
 import { DeletionReason } from './types';
 import { z } from 'zod';
@@ -250,11 +250,11 @@ Seven invariants:
 
 ```ts
 // src/routes/account/delete/confirm/+server.ts
-import { db } from '$lib/server/db';
-import { queue } from '$lib/server/queue';
-import { hashToken } from '$lib/server/crypto';
+import { db } from '#lib/server/db.js';
+import { queue } from '#lib/server/queue.js';
+import { hashToken } from '#lib/server/crypto.js';
 import { clock } from '@sveltesentio/core/clock';
-import { audit } from '$lib/server/audit';
+import { audit } from '#lib/server/audit.js';
 import { error } from '@sveltejs/kit';
 
 export async function GET({ url, cookies }) {
@@ -316,10 +316,10 @@ Six endpoint rules:
 
 ```ts
 // packages/auth/src/deletion/worker.ts
-import { makeWorker } from '$lib/server/queue';
-import { db } from '$lib/server/db';
-import { audit } from '$lib/server/audit';
-import { sendEmail } from '$lib/server/email';
+import { makeWorker } from '#lib/server/queue.js';
+import { db } from '#lib/server/db.js';
+import { audit } from '#lib/server/audit.js';
+import { sendEmail } from '#lib/server/email.js';
 import { buildExport } from './export';
 import { revokeSSO } from './sso';
 import { z } from 'zod';
@@ -499,8 +499,8 @@ Six export rules:
 
 ```ts
 // src/routes/account/export/download/+server.ts
-import { verifyToken } from '$lib/server/crypto';
-import { storage } from '$lib/server/storage';
+import { verifyToken } from '#lib/server/crypto.js';
+import { storage } from '#lib/server/storage.js';
 
 export async function GET({ url }) {
   const token = url.searchParams.get('t');

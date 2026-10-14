@@ -210,8 +210,8 @@ the renderer aborts if the scene blows them.
   import { Canvas, T } from '@threlte/core';
   import { OrbitControls, useGltf } from '@threlte/extras';
   import { onMount } from 'svelte';
-  import { probeGpu, type GpuCapability } from '$lib/gpu/probe';
-  import type { SceneConfig } from '$lib/gpu/scene';
+  import { probeGpu, type GpuCapability } from '#lib/gpu/probe.js';
+  import type { SceneConfig } from '#lib/gpu/scene.js';
 
   let { config }: { config: SceneConfig } = $props();
   let cap = $state<GpuCapability | null>(null);
@@ -412,7 +412,7 @@ Hook into the same QoE collector from
 [video-streaming.md](video-streaming.md):
 
 ```ts
-import { sendBeacon } from '$lib/qoe';
+import { sendBeacon } from '#lib/qoe.js';
 
 // inside the render loop:
 const sample = { kind: 'gpu_frame', frameTimeMs: dt, drawCalls, triangles };

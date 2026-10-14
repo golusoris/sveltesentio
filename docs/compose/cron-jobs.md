@@ -185,9 +185,9 @@ export function verifyCronRequest(request: Request): void {
 ```typescript
 // src/routes/api/cron/_shared/runner.ts
 import { context, trace, SpanStatusCode } from '@opentelemetry/api';
-import { db } from '$lib/db';
-import { now } from '$lib/clock';
-import { uuidv7 } from '$lib/observability';
+import { db } from '#lib/db.js';
+import { now } from '#lib/clock.js';
+import { uuidv7 } from '#lib/observability.js';
 import type { CronJobName } from './schemas';
 
 const tracer = trace.getTracer('sveltesentio.cron');
@@ -284,9 +284,9 @@ function hashJobName(name: string): number {
 import type { RequestHandler } from './$types';
 import { verifyCronRequest } from '../_shared/authn';
 import { withCronRun } from '../_shared/runner';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 import { subDays } from 'date-fns';
-import { now } from '$lib/clock';
+import { now } from '#lib/clock.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);
@@ -420,7 +420,7 @@ finished_at < now() - interval '90 days'` in the
 // src/hooks.server.ts (only on single-replica long-lived deploys)
 import { Cron } from 'croner';
 import { CRON_ENABLED } from '$env/static/private';
-import { dailyCleanup, quotaRecompute } from '$lib/cron/handlers';
+import { dailyCleanup, quotaRecompute } from '#lib/cron/handlers.js';
 
 if (CRON_ENABLED === 'true' && !globalThis.__cronStarted) {
   globalThis.__cronStarted = true;

@@ -216,7 +216,7 @@ Collision probability at 30^8 = 656 billion is negligible until
 ```ts
 // src/routes/r/[code]/+server.ts
 import { redirect } from '@sveltejs/kit';
-import { loadCodeByValue } from '$lib/server/referral';
+import { loadCodeByValue } from '#lib/server/referral.js';
 
 export async function GET({ params, cookies, url }) {
   const row = await loadCodeByValue(params.code.toUpperCase());

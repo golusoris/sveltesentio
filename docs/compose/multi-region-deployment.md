@@ -124,7 +124,7 @@ export const RESIDENCY_TO_REGIONS: Record<ResidencyPolicy, Region[]> = {
 // src/hooks.server.ts
 import { Region, type ResidencyPolicy } from '@sveltesentio/region/schema';
 import { redirect } from '@sveltejs/kit';
-import { tenantRepo } from '$lib/server/repos';
+import { tenantRepo } from '#lib/server/repos.js';
 
 const LOCAL_REGION = Region.parse(process.env.REGION); // injected per pod
 
@@ -244,7 +244,7 @@ recipe defers to [collab.md](collab.md) for that pattern.
 // scripts/failover.ts — run by oncall when a region degrades
 import { Region, RegionHealth } from '@sveltesentio/region/schema';
 import { route53Client, dbClient } from './aws';
-import { auditLog } from '$lib/server/audit';
+import { auditLog } from '#lib/server/audit.js';
 
 async function failover(failedRegion: Region, takeoverRegion: Region) {
   // Step 1: confirm failed region is actually down (not just slow).
@@ -293,7 +293,7 @@ flap-failures.
 // src/routes/healthz/region/+server.ts
 import { json } from '@sveltejs/kit';
 import { RegionHealth, Region } from '@sveltesentio/region/schema';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 export const GET = async () => {
   const region = Region.parse(process.env.REGION);

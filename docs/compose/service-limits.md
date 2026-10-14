@@ -191,8 +191,8 @@ CREATE INDEX usage_counters_period_idx ON usage_counters (period_key, resource);
 
 ```typescript
 // src/lib/quota/counters.ts
-import { db } from '$lib/db';
-import { now } from '$lib/clock';
+import { db } from '#lib/db.js';
+import { now } from '#lib/clock.js';
 import type { QuotaResource, QuotaWindow } from './schemas';
 
 export function periodKey(window: QuotaWindow, at: Date = now()): string {
@@ -359,7 +359,7 @@ import type { RequestHandler } from './$types';
 import { superValidate } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { CreateProjectSchema } from './schemas';
-import { enforceQuota } from '$lib/quota/enforce';
+import { enforceQuota } from '#lib/quota/enforce.js';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   const form = await superValidate(request, zod(CreateProjectSchema));
@@ -432,7 +432,7 @@ try {
 ```svelte
 <!-- src/lib/components/QuotaBanner.svelte -->
 <script lang="ts">
-  import type { QuotaUsage } from '$lib/quota/schemas';
+  import type { QuotaUsage } from '#lib/quota/schemas.js';
 
   let { usage }: { usage: QuotaUsage } = $props();
   const pct = $derived((usage.used / usage.limit) * 100);
@@ -514,7 +514,7 @@ quota.refund.count               counter, labels: resource, reason
 // src/routes/api/cron/quota-recompute/+server.ts
 import { withCronRun } from '../_shared/runner';
 import { verifyCronRequest } from '../_shared/authn';
-import { recomputeStorageUsage } from '$lib/quota/reconcile';
+import { recomputeStorageUsage } from '#lib/quota/reconcile.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);
@@ -552,7 +552,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 ```typescript
 // src/routes/billing/upgrade/+server.ts
-import { stripe } from '$lib/payments/stripe';
+import { stripe } from '#lib/payments/stripe.js';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   const session = await stripe.billingPortal.sessions.create({

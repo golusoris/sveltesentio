@@ -43,7 +43,7 @@ Entity picker inside a form                  → this recipe + Superforms field 
 
 ## Install
 
-`search-autocomplete` is recipe-only — it composes `$lib/server/search.ts`
+`search-autocomplete` is recipe-only — it composes `src/lib/server/search.ts`
 (Typesense client from `search.md`) with two native primitives:
 `<input>` + a custom `<ul role="listbox">` dropdown.
 
@@ -118,9 +118,9 @@ never reaches the render path without validation.
 ```ts
 // src/routes/api/search/suggest/+server.ts
 import { error, json } from '@sveltejs/kit';
-import { typesense } from '$lib/server/search';
+import { typesense } from '#lib/server/search.js';
 import { SearchQuery, SearchResponse, type Suggestion } from '@sveltesentio/search/schema';
-import { rateLimit } from '$lib/server/rate-limit';
+import { rateLimit } from '#lib/server/rate-limit.js';
 
 export const GET = async ({ url, locals, getClientAddress }) => {
   const parsed = SearchQuery.safeParse({
@@ -199,7 +199,7 @@ Notes:
 ## Reference — `Autocomplete.svelte` combobox component
 
 ```svelte
-<!-- $lib/components/Autocomplete.svelte -->
+<!-- src/lib/components/Autocomplete.svelte -->
 <script lang="ts">
   import { untrack } from 'svelte';
   import { tick } from 'svelte';
