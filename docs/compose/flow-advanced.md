@@ -72,7 +72,7 @@ Wire into your flow page via `$derived`:
 
 ```svelte
 <script lang="ts">
-  import { routeSmartEdge } from '$lib/flow/smart-handles';
+  import { routeSmartEdge } from '#lib/flow/smart-handles.js';
 
   const smartEdges = $derived(edges.map((e) => routeSmartEdge(e, nodes)));
 </script>
@@ -144,7 +144,7 @@ Integration:
 
 ```svelte
 <script lang="ts">
-  import { resolveDrop } from '$lib/flow/aabb-drop';
+  import { resolveDrop } from '#lib/flow/aabb-drop.js';
   import { useSvelteFlow } from '@xyflow/svelte';
 
   const { screenToFlowPosition } = useSvelteFlow();
@@ -228,7 +228,7 @@ Wire keyboard shortcuts via tinykeys (see
 ```svelte
 <script lang="ts">
   import tinykeys from 'tinykeys';
-  import { createHistory } from '$lib/flow/history';
+  import { createHistory } from '#lib/flow/history.js';
 
   const history = createHistory();
 

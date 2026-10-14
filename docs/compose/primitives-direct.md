@@ -85,8 +85,8 @@ Same `cn()` helper shadcn uses — order-preserving Tailwind merge.
 
 <script lang="ts">
   import type { HTMLButtonAttributes } from 'svelte/elements';
-  import { cn } from '$lib/utils';
-  import { track } from '$lib/telemetry'; // app-specific invariant
+  import { cn } from '#lib/utils.js';
+  import { track } from '#lib/telemetry.js'; // app-specific invariant
 
   let {
     variant = 'default',
@@ -127,7 +127,7 @@ doesn't embed it; the direct-wrap version does. That's the justification.
 <script lang="ts">
   import { Dialog as DialogPrimitive } from 'bits-ui';
   import { X } from 'lucide-svelte';
-  import { cn } from '$lib/utils';
+  import { cn } from '#lib/utils.js';
   import type { Snippet } from 'svelte';
 
   let {
@@ -266,11 +266,11 @@ Test the wrapper with Testing Library + axe-core:
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import Button from '$lib/ui/Button.svelte';
+import Button from '#lib/ui/Button.svelte';
 
 test('telemetry fires on click', async () => {
   const track = vi.fn();
-  vi.mock('$lib/telemetry', () => ({ track }));
+  vi.mock('#lib/telemetry.js', () => ({ track }));
 
   render(Button, { props: { event: 'save.click', children: () => 'Save' } });
   await userEvent.click(screen.getByRole('button', { name: /save/i }));
@@ -298,15 +298,15 @@ direct:
 
 1. Identify the cross-cutting invariant (telemetry, logging, data-*).
 2. Write the direct wrapper alongside shadcn's generated version.
-3. Swap imports: `$lib/components/ui/button` → `$lib/ui/Button`.
+3. Swap imports: `#lib/components/ui/button/index.js` → `#lib/ui/Button.svelte`.
 4. Delete shadcn's source for that family.
 5. Update `components.json`:
 
    ```json
    {
      "aliases": {
-       "components": "$lib/components",
-       "ui": "$lib/ui" // or omit entirely for direct-only
+       "components": "#lib/components",
+       "ui": "#lib/ui" // or omit entirely for direct-only
      }
    }
    ```

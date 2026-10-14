@@ -176,7 +176,7 @@ export const SCOPE_META: Record<
 // src/routes/oauth/login/+page.server.ts
 import { error, redirect } from '@sveltejs/kit';
 import { LoginChallenge } from '@sveltesentio/oauth/schema';
-import { hydraAdmin } from '$lib/server/hydra';
+import { hydraAdmin } from '#lib/server/hydra.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
@@ -211,9 +211,9 @@ import type { Actions } from './$types';
 import { superValidate, fail } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { LoginDecision } from '@sveltesentio/oauth/schema';
-import { verifyPassword } from '$lib/server/auth';
-import { rateLimit } from '$lib/server/rate-limit';
-import { auditLog } from '$lib/server/audit';
+import { verifyPassword } from '#lib/server/auth.js';
+import { rateLimit } from '#lib/server/rate-limit.js';
+import { auditLog } from '#lib/server/audit.js';
 
 const LoginForm = LoginDecision.omit({ subject: true, challenge: true }).extend({
   email: z.string().email().max(254),
@@ -266,8 +266,8 @@ import { error, redirect } from '@sveltejs/kit';
 import { superValidate, fail } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 import { ConsentDecision, ConsentChallenge, SCOPE_META, Scope } from '@sveltesentio/oauth/schema';
-import { hydraAdmin } from '$lib/server/hydra';
-import { auditLog } from '$lib/server/audit';
+import { hydraAdmin } from '#lib/server/hydra.js';
+import { auditLog } from '#lib/server/audit.js';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {

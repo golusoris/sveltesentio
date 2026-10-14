@@ -405,7 +405,7 @@ Unit: VAPID signing + 410 handling via `nock`:
 ```ts
 import { test, vi } from 'vitest';
 import nock from 'nock';
-import { sendPush } from '$lib/server/push';
+import { sendPush } from '#lib/server/push.js';
 
 test('sendPush returns "gone" on 410', async () => {
   nock('https://fcm.googleapis.com').post(/.*/).reply(410, 'Gone');

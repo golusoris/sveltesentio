@@ -113,7 +113,7 @@ Five config rules:
 import Tracker from '@openreplay/tracker';
 import trackerFetch from '@openreplay/tracker-fetch';
 import { ReplayConfig } from './config';
-import { onConsentChange, hasConsent } from '$lib/consent';
+import { onConsentChange, hasConsent } from '#lib/consent.js';
 
 let tracker: Tracker | null = null;
 
@@ -239,8 +239,8 @@ Five scrub-network rules:
 
 ```ts
 // wire into src/hooks.client.ts
-import { ConsentBanner, initConsent } from '$lib/consent';
-import { initReplay, readReplayConfig } from '$lib/session-replay';
+import { ConsentBanner, initConsent } from '#lib/consent.js';
+import { initReplay, readReplayConfig } from '#lib/session-replay.js';
 
 initConsent();
 const cfg = readReplayConfig();

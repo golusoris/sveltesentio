@@ -116,7 +116,7 @@ const tableData = $derived.by(() => {
 
 ```svelte
 <script lang="ts">
-  import RealtimeChart from '$lib/charts/RealtimeChart.svelte';
+  import RealtimeChart from '#lib/charts/RealtimeChart.svelte';
   import type { AlignedData } from 'uplot';
 
   const MAX = 5_000;
@@ -212,7 +212,7 @@ const chart1 = css.getPropertyValue('--color-chart-1');
 // options.series[1].stroke = `oklch(${chart1})`;
 ```
 
-Wrap as a helper in `$lib/charts/tokens.ts` so every uPlot chart picks
+Wrap as a helper in `src/lib/charts/tokens.ts` so every uPlot chart picks
 the same palette. Don't inline hex — breaks theming (see
 [theming.md](theming.md)).
 
@@ -263,9 +263,9 @@ on pages that don't need it. Dynamic import:
 
 ```svelte
 <script lang="ts">
-  let Chart = $state<typeof import('$lib/charts/RealtimeChart.svelte').default | null>(null);
+  let Chart = $state<typeof import('#lib/charts/RealtimeChart.svelte').default | null>(null);
   onMount(async () => {
-    ({ default: Chart } = await import('$lib/charts/RealtimeChart.svelte'));
+    ({ default: Chart } = await import('#lib/charts/RealtimeChart.svelte'));
   });
 </script>
 
@@ -277,7 +277,7 @@ on pages that don't need it. Dynamic import:
 ```ts
 import { render } from '@testing-library/svelte';
 import { axe } from 'jest-axe';
-import RealtimeChart from '$lib/charts/RealtimeChart.svelte';
+import RealtimeChart from '#lib/charts/RealtimeChart.svelte';
 
 test('RealtimeChart is axe-clean', async () => {
   const data: [number[], number[]] = [

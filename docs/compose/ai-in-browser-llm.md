@@ -142,7 +142,7 @@ reconstruction means re-download check + recompile.
 <script lang="ts">
   import { loadEngine, webLLMSupported } from '@sveltesentio/ai/llm-browser';
   import { sanitizeMarkdown } from '@sveltesentio/ui/markdown';
-  import { onAudit } from '$lib/ai/audit';
+  import { onAudit } from '#lib/ai/audit.js';
   import type { MLCEngine } from '@mlc-ai/web-llm';
 
   type Msg = { role: 'user' | 'assistant'; content: string };

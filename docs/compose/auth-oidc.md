@@ -87,7 +87,7 @@ Server proxy:
 // src/routes/auth/start/+server.ts
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { authEnv } from '$lib/env';
+import { authEnv } from '#lib/env.js';
 
 export const GET: RequestHandler = async ({ url }) => {
   const provider = url.searchParams.get('provider') ?? authEnv.OIDC_PROVIDER_ID;
@@ -114,7 +114,7 @@ SvelteKit needs to forward the Set-Cookie header on the first hop:
 // src/routes/auth/callback/+server.ts
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { authEnv } from '$lib/env';
+import { authEnv } from '#lib/env.js';
 
 export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
   // If Golusoris is same-origin, this route is usually unnecessary —
@@ -190,7 +190,7 @@ export const load = requireSession({ redirectTo: '/auth/start' });
 import createClient from 'openapi-fetch';
 import { problemMiddleware } from '@sveltesentio/core/http';
 import { refreshMiddleware } from '@sveltesentio/auth/oidc';
-import type { paths } from '$lib/api/schema';
+import type { paths } from '#lib/api/schema.js';
 
 export const api = createClient<paths>({
   baseUrl: authEnv.GOLUSORIS_URL,

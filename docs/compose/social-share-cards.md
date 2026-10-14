@@ -167,7 +167,7 @@ export type OgInputs = z.infer<typeof OgInputs>;
 ```svelte
 <!-- src/routes/blog/[slug]/+page.svelte -->
 <script lang="ts">
-  import { renderMetaTags } from '$lib/social/render';
+  import { renderMetaTags } from '#lib/social/render.js';
   let { data } = $props();
   const meta = $derived(data.meta); // typed as Meta
 </script>
@@ -249,9 +249,9 @@ The `escapeHtml` step is non-negotiable. A blog title containing
 ```ts
 // src/routes/api/og/[hash]/+server.ts
 import { ImageResponse } from '@vercel/og';
-import { OgInputs } from '$lib/social/types';
+import { OgInputs } from '#lib/social/types.js';
 import { error } from '@sveltejs/kit';
-import { renderOgTemplate } from '$lib/social/templates';
+import { renderOgTemplate } from '#lib/social/templates.js';
 
 export const config = { isr: { expiration: false } }; // immutable
 
@@ -414,8 +414,8 @@ old cache automatically.
 
 ```ts
 // src/routes/blog/[slug]/+page.server.ts
-import { Meta } from '$lib/social/types';
-import { ogImageUrl } from '$lib/social/og-url';
+import { Meta } from '#lib/social/types.js';
+import { ogImageUrl } from '#lib/social/og-url.js';
 
 export async function load({ params, url }) {
   const post = await getPost(params.slug);

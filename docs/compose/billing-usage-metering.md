@@ -135,7 +135,7 @@ embeds the timestamp — useful for partition pruning + forensic work.
 // packages/billing/src/record.ts
 import { uuidv7 } from 'uuidv7';
 import { UsageEvent, type Unit } from './schema';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 export async function recordUsage(input: {
   tenantId: string;
@@ -202,8 +202,8 @@ CREATE TABLE usage_events_2026_04_18 PARTITION OF usage_events
 // packages/billing/src/aggregator.ts
 import { uuidv7 } from 'uuidv7';
 import { Unit } from './schema';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/audit';
+import { db } from '#lib/server/db.js';
+import { auditLog } from '#lib/server/audit.js';
 
 // Run every 5 min by cron-jobs.md
 export async function aggregateUsage(now = new Date()) {
@@ -263,8 +263,8 @@ function floorTo5Min(d: Date): Date {
 ```ts
 // packages/billing/src/reporter.ts
 import Stripe from 'stripe';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/audit';
+import { db } from '#lib/server/db.js';
+import { auditLog } from '#lib/server/audit.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-12-18.acacia' });
 
@@ -340,7 +340,7 @@ for the same aggregate produces zero double-charges.
 // packages/billing/src/alerts.ts
 import { PLAN_ENTITLEMENTS } from '@sveltesentio/tenant';
 import { Unit } from './schema';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 import { sendNotification } from '@sveltesentio/notifications';
 
 // Run hourly

@@ -220,7 +220,7 @@ ghost on the canvas, `Enter` drops).
 ```ts
 // src/routes/flows/[id]/+page.svelte
 import { syncWithYjs } from '@sveltesentio/flow';
-import { connectFlow } from '$lib/collab'; // from collab.md
+import { connectFlow } from '#lib/collab.js'; // from collab.md
 
 const { doc, provider } = connectFlow(data.flowId);
 

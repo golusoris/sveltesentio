@@ -86,7 +86,7 @@ apply.
 import { sequence } from '@sveltejs/kit/hooks';
 import { withTheme } from '@sveltesentio/ui/theme';
 import { withTenant } from '@sveltesentio/shell/tenancy';
-import { resolveTenant } from '$lib/tenancy';
+import { resolveTenant } from '#lib/tenancy.js';
 
 export const handle = sequence(
   withTheme({ cookie: 'sv_theme', default: 'system' }),
@@ -203,7 +203,7 @@ semantically requires a tenant).
 Unit-test the resolver with a mocked `RequestEvent`:
 
 ```ts
-import { resolveTenant } from '$lib/tenancy';
+import { resolveTenant } from '#lib/tenancy.js';
 
 test('resolves by subdomain', async () => {
   const event = {

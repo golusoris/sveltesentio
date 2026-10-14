@@ -1,0 +1,94 @@
+name: Compose recipes
+
+# The recipes in docs/compose import the consuming app's own modules through
+# `#lib` (docs/compose/README.md, "Importing from `src/lib`"). Two jobs keep
+# that true:
+#   - Recipe imports reads every recipe and refuses the alias SvelteKit 3
+#     removed and any `#lib` specifier TypeScript cannot resolve
+#     (scripts/check-compose-imports.mjs);
+#   - Fixture builds and type-checks one app that uses every import form the
+#     README lists, on SvelteKit 2 and on SvelteKit 3
+#     (tools/compose-lib-fixture/run.mjs).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'docs/compose/**'
+      - 'tools/compose-lib-fixture/**'
+      - 'scripts/check-compose-imports.mjs'
+      - 'scripts/check-compose-imports.test.mjs'
+      - '.github/workflows/compose-recipes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  imports:
+    name: Recipe imports
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Stop on a draft pull request
+        if: github.event.pull_request.draft == true
+        shell: bash
+        env:
+          TITLE: Gate not run on a draft
+          MESSAGE: >-
+            The gate did not run because the pull request is a draft.
+            It runs when the pull request is marked ready for review.
+        run: |
+          echo "::error title=$TITLE::$MESSAGE"
+          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event.pull_request.draft != true
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event.pull_request.draft != true
+        with:
+          node-version: '24'
+      - name: Check the import forms of every recipe
+        if: github.event.pull_request.draft != true
+        run: node scripts/check-compose-imports.mjs
+
+  fixture:
+    name: Fixture (${{ matrix.kit }})
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        kit: [kit2, kit3]
+    steps:
+      - name: Stop on a draft pull request
+        if: github.event.pull_request.draft == true
+        shell: bash
+        env:
+          TITLE: Gate not run on a draft
+          MESSAGE: >-
+            The gate did not run because the pull request is a draft.
+            It runs when the pull request is marked ready for review.
+        run: |
+          echo "::error title=$TITLE::$MESSAGE"
+          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event.pull_request.draft != true
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event.pull_request.draft != true
+        with:
+          node-version: '24'
+      - name: Build and type-check every #lib import form
+        if: github.event.pull_request.draft != true
+        run: node tools/compose-lib-fixture/run.mjs "$KIT"
+        env:
+          KIT: ${{ matrix.kit }}

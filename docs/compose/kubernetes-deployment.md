@@ -245,8 +245,8 @@ export const GET = async () => {
 
 // src/routes/healthz/ready/+server.ts
 // Readiness: "can we serve traffic right now?" — flips with backpressure
-import { db } from '$lib/server/db';
-import { redis } from '$lib/server/redis';
+import { db } from '#lib/server/db.js';
+import { redis } from '#lib/server/redis.js';
 
 export const GET = async () => {
   try {

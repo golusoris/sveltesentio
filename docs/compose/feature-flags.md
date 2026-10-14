@@ -113,7 +113,7 @@ export const serverFlagClient = OpenFeature.getClient('server');
 ```ts
 // src/hooks.server.ts
 import { sequence } from '@sveltejs/kit/hooks';
-import { flagsReady, serverFlagClient } from '$lib/flags/server';
+import { flagsReady, serverFlagClient } from '#lib/flags/server.js';
 
 await flagsReady;
 
@@ -177,7 +177,7 @@ export const clientFlagClient = OpenFeature.getClient('web');
 ```ts
 // src/routes/+layout.ts
 import { browser } from '$app/environment';
-import { initClientFlags } from '$lib/flags/client';
+import { initClientFlags } from '#lib/flags/client.js';
 
 export async function load({ data }) {
   if (browser) {
@@ -244,7 +244,7 @@ Three use-site rules:
 ```ts
 // src/lib/flags/cookie-pin.ts
 import type { Cookies } from '@sveltejs/kit';
-import { uuidv7 } from '$lib/ids';
+import { uuidv7 } from '#lib/ids.js';
 
 const PIN_COOKIE = 'flag-bucket';
 

@@ -27,7 +27,7 @@ preset.
 <!-- src/routes/admin/users/+page.svelte -->
 <script lang="ts" generics="User">
   import { DataTable, type ColumnDef } from '@sveltesentio/ui/data';
-  import { Button } from '$lib/components/ui/button';
+  import { Button } from '#lib/components/ui/button/index.js';
 
   type User = { id: string; name: string; email: string; role: 'admin' | 'editor' | 'viewer' };
   let { data } = $props();
@@ -129,7 +129,7 @@ configures `@tanstack/svelte-virtual`'s `createVirtualizer`:
 <!-- inside ui/data/VirtualList.svelte (simplified) -->
 <script lang="ts">
   import { createVirtualizer } from '@tanstack/svelte-virtual';
-  import { cn } from '$lib/utils';
+  import { cn } from '#lib/utils.js';
 
   let scrollRef: HTMLDivElement;
   const virtualizer = $derived(
@@ -190,8 +190,8 @@ The revenge-style offset-based infinite pagination:
 ```svelte
 <script lang="ts">
   import { DataTable, useInfiniteData } from '@sveltesentio/ui/data';
-  import { api } from '$lib/api';
-  import type { Movie } from '$lib/types';
+  import { api } from '#lib/api.js';
+  import type { Movie } from '#lib/types.js';
 
   const columns = [
     { accessor: 'title', header: 'Title', sortable: true, searchable: true },

@@ -229,7 +229,7 @@ not per-player:
 
 ```svelte
 <script lang="ts">
-  import { track } from '$lib/telemetry';
+  import { track } from '#lib/telemetry.js';
 
   function onplay(e: Event) {
     track('media.play', { src: (e.target as any).src });

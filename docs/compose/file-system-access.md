@@ -77,7 +77,7 @@ Every entry point starts with the detect.
 ```svelte
 <!-- src/lib/fs/OpenButton.svelte -->
 <script lang="ts">
-  import { supportsFileSystemAccess } from '$lib/fs';
+  import { supportsFileSystemAccess } from '#lib/fs.js';
 
   let {
     accept,
@@ -144,7 +144,7 @@ Three invariants:
 
 ```svelte
 <script lang="ts">
-  import { supportsSavePicker } from '$lib/fs';
+  import { supportsSavePicker } from '#lib/fs.js';
 
   async function saveAs(content: string | Blob, suggestedName: string) {
     if (supportsSavePicker()) {

@@ -70,7 +70,7 @@ Consumption in a component:
 
 ```svelte
 <script lang="ts">
-  import { getProjects } from '$lib/state/projects.svelte';
+  import { getProjects } from '#lib/state/projects.svelte.js';
   const projects = $derived(await getProjects());
 </script>
 
@@ -130,7 +130,7 @@ Define a query factory:
 
 ```ts
 // lib/queries/projects.ts
-import { api } from '$lib/api/client';
+import { api } from '#lib/api/client.js';
 import { createQuery } from '@sveltesentio/query';
 
 export function projectsQuery() {
@@ -149,7 +149,7 @@ Consume:
 
 ```svelte
 <script lang="ts">
-  import { projectsQuery } from '$lib/queries/projects';
+  import { projectsQuery } from '#lib/queries/projects.js';
   const q = projectsQuery();
 </script>
 
@@ -172,7 +172,7 @@ doesn't refetch on load:
 ```ts
 // +page.server.ts
 import { QueryClient, dehydrate } from '@tanstack/svelte-query';
-import { api } from '$lib/api/client';
+import { api } from '#lib/api/client.js';
 
 export async function load() {
   const qc = new QueryClient();

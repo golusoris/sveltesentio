@@ -276,7 +276,7 @@ Use `<Markdown>` for runtime content.
 
 ```svelte
 <script lang="ts">
-  import GettingStarted from '$lib/docs/getting-started.md';
+  import GettingStarted from '#lib/docs/getting-started.md';
 </script>
 
 <GettingStarted />
@@ -296,7 +296,7 @@ review the source.
 ## Front-matter typing
 
 ```ts
-// $lib/docs/types.ts
+// src/lib/docs/types.ts
 import { z } from 'zod';
 
 export const DocFrontmatter = z.object({
@@ -311,8 +311,17 @@ Validate at the page route:
 
 ```ts
 // src/routes/docs/[slug]/+page.ts
+import { error } from '@sveltejs/kit';
+import { DocFrontmatter } from '#lib/docs/types.js';
+
+// Vite does not expand a template import through the #lib subpath import, so
+// the documents are listed with import.meta.glob.
+const docs = import.meta.glob('/src/lib/docs/*.md');
+
 export const load = async ({ params }) => {
-  const mod = await import(`$lib/docs/${params.slug}.md`);
+  const read = docs[`/src/lib/docs/${params.slug}.md`];
+  if (!read) error(404);
+  const mod = await read();
   const meta = DocFrontmatter.parse(mod.metadata);
   return { meta, default: mod.default };
 };

@@ -174,8 +174,8 @@ through `DeclareInput` → `safeParse` → `recordIncident()`.
 import { json } from '@sveltejs/kit';
 import { v7 as uuidv7 } from 'uuid';
 import { DeclareInput } from '@sveltesentio/incidents';
-import { recordIncident, paginCommander, postStatusPage } from '$lib/server/incidents';
-import { requirePermission } from '$lib/server/auth';
+import { recordIncident, paginCommander, postStatusPage } from '#lib/server/incidents.js';
+import { requirePermission } from '#lib/server/auth.js';
 
 export async function POST({ request, locals }) {
   await requirePermission(locals.user, 'incidents.declare');
@@ -278,7 +278,7 @@ export async function paginCommander(severity: string) {
 // src/lib/server/incidents/timeline.ts
 import { v7 as uuidv7 } from 'uuid';
 import { TimelineEntry } from '@sveltesentio/incidents';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 export async function appendTimeline(input: Omit<TimelineEntry, 'id' | 'at'>) {
   const entry = TimelineEntry.parse({

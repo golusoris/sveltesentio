@@ -135,7 +135,7 @@ accordingly. Very large models may exceed mobile RAM in WASM; gate by
 <!-- src/lib/ai/Classifier.svelte -->
 <script lang="ts">
   import { loadPipeline } from '@sveltesentio/ai/on-device';
-  import { onAudit } from '$lib/ai/audit';
+  import { onAudit } from '#lib/ai/audit.js';
 
   let { initialText = '' }: { initialText?: string } = $props();
   let text = $state(initialText);

@@ -221,7 +221,7 @@ Three sourcemap rules:
 ```ts
 // src/lib/errors/capture.ts
 import * as Sentry from '@sentry/sveltekit';
-import type { ProblemError } from '$lib/errors/problem';
+import type { ProblemError } from '#lib/errors/problem.js';
 
 export function captureProblem(err: ProblemError, correlationId: string): void {
   Sentry.captureException(err, {

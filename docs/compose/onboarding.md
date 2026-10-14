@@ -227,7 +227,7 @@ CREATE INDEX onboarding_events_step_action_idx ON onboarding_events (step, actio
 // src/routes/onboarding/+layout.server.ts
 import type { LayoutServerLoad } from './$types';
 import { redirect, error } from '@sveltejs/kit';
-import { resolveNextStep, isStepValid } from '$lib/onboarding/state-machine';
+import { resolveNextStep, isStepValid } from '#lib/onboarding/state-machine.js';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
   const user = locals.session?.user;
@@ -258,7 +258,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 // src/routes/onboarding/+page.server.ts — the index redirects to current step
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { resolveNextStep } from '$lib/onboarding/state-machine';
+import { resolveNextStep } from '#lib/onboarding/state-machine.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const next = resolveNextStep(
@@ -293,10 +293,10 @@ import { superValidate, fail } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { db } from '$lib/db';
-import { recordOnboardingEvent } from '$lib/onboarding/events';
-import { resolveNextStep } from '$lib/onboarding/state-machine';
-import { now } from '$lib/clock';
+import { db } from '#lib/db.js';
+import { recordOnboardingEvent } from '#lib/onboarding/events.js';
+import { resolveNextStep } from '#lib/onboarding/state-machine.js';
+import { now } from '#lib/clock.js';
 
 const ProfileSchema = z.object({
   displayName: z.string().min(1).max(100),
@@ -458,7 +458,7 @@ export const actions: Actions = {
 
 ```typescript
 // src/hooks.server.ts (excerpt)
-import { openfeature } from '$lib/flags';
+import { openfeature } from '#lib/flags.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
   if (event.locals.session?.user) {
@@ -499,10 +499,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ```typescript
 // src/lib/onboarding/events.ts
-import { track } from '$lib/analytics';
-import { db } from '$lib/db';
-import { uuidv7 } from '$lib/observability';
-import { now } from '$lib/clock';
+import { track } from '#lib/analytics.js';
+import { db } from '#lib/db.js';
+import { uuidv7 } from '#lib/observability.js';
+import { now } from '#lib/clock.js';
 
 interface OnboardingEventInput {
   userId: string;
@@ -546,9 +546,9 @@ export async function recordOnboardingEvent(input: OnboardingEventInput): Promis
 // src/routes/api/cron/onboarding-abandon/+server.ts
 import { withCronRun } from '../_shared/runner';
 import { verifyCronRequest } from '../_shared/authn';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 import { subHours } from 'date-fns';
-import { now } from '$lib/clock';
+import { now } from '#lib/clock.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);

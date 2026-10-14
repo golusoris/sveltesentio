@@ -318,7 +318,7 @@ NULL) NOT VALID` + `VALIDATE CONSTRAINT`.
 
 ```ts
 // packages/db/src/migrate/workers/backfill.ts
-import { makeWorker } from '$lib/server/queue';
+import { makeWorker } from '#lib/server/queue.js';
 
 export const backfillWorker = makeWorker(
   'migration.backfill',

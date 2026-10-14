@@ -200,7 +200,7 @@ src/routes/
 ```typescript
 // src/params/locale.ts
 import type { ParamMatcher } from '@sveltejs/kit';
-import { isLocale } from '$lib/i18n/locales';
+import { isLocale } from '#lib/i18n/locales.js';
 
 export const match: ParamMatcher = (param) => isLocale(param);
 ```
@@ -283,8 +283,8 @@ export function resolveLocale(input: ResolveInput): Locale {
 // src/routes/[[lang=locale]]/+layout.server.ts
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { resolveLocale } from '$lib/i18n/resolve';
-import { LOCALES, DEFAULT_LOCALE } from '$lib/i18n/locales';
+import { resolveLocale } from '#lib/i18n/resolve.js';
+import { LOCALES, DEFAULT_LOCALE } from '#lib/i18n/locales.js';
 import { PUBLIC_ORIGIN } from '$env/static/public';
 
 export const load: LayoutServerLoad = async ({ params, cookies, request, url }) => {
@@ -405,8 +405,8 @@ export const load: LayoutServerLoad = async ({ params, cookies, request, url }) 
 ```typescript
 // src/hooks.server.ts
 import type { Handle } from '@sveltejs/kit';
-import { isLocale } from '$lib/i18n/locales';
-import { countryToLocale } from '$lib/i18n/resolve';
+import { isLocale } from '#lib/i18n/locales.js';
+import { countryToLocale } from '#lib/i18n/resolve.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const hasLocalePrefix = /^\/[a-z]{2}(\/|$)/.test(event.url.pathname);
@@ -463,9 +463,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 <!-- src/lib/components/LocaleSwitcher.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
-  import { LOCALES } from '$lib/i18n/locales';
+  import { LOCALES } from '#lib/i18n/locales.js';
   import * as m from '$paraglide/messages';
-  import type { Locale } from '$lib/i18n/locales';
+  import type { Locale } from '#lib/i18n/locales.js';
 
   let { current }: { current: Locale } = $props();
 
@@ -498,7 +498,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 // src/routes/api/i18n/set-locale/+server.ts
 import type { RequestHandler } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { isLocale } from '$lib/i18n/locales';
+import { isLocale } from '#lib/i18n/locales.js';
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
   const form = await request.formData();
@@ -591,7 +591,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 ```typescript
 // src/routes/sitemap.xml/+server.ts
 import { PUBLIC_ORIGIN } from '$env/static/public';
-import { LOCALES, DEFAULT_LOCALE } from '$lib/i18n/locales';
+import { LOCALES, DEFAULT_LOCALE } from '#lib/i18n/locales.js';
 
 const ROUTES = ['/', '/about', '/products', '/pricing'];
 

@@ -348,7 +348,7 @@ snapshot from 2026-04-15") beats a blank page during an edge outage.
 ```ts
 // status-page-app/src/routes/subscribe/+server.ts
 import { randomBytes } from 'node:crypto';
-import { enqueueConfirmationEmail } from '$lib/server/email';
+import { enqueueConfirmationEmail } from '#lib/server/email.js';
 
 export async function POST({ request }) {
   const formData = await request.formData();

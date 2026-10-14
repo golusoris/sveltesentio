@@ -97,7 +97,7 @@ is a silent no-op.
 <!-- src/lib/charts/CandlestickChart.svelte -->
 <script lang="ts">
   import { Chart } from 'svelte-echarts';
-  import { init } from '$lib/charts/echarts';
+  import { init } from '#lib/charts/echarts.js';
   import type { EChartsOption } from 'echarts';
 
   type OHLC = { t: string; o: number; h: number; l: number; c: number };
@@ -210,7 +210,7 @@ ignored. Without the table, the chart fails WCAG 1.1.1.
 ```svelte
 <script lang="ts">
   import { Chart } from 'svelte-echarts';
-  import { init } from '$lib/charts/echarts';
+  import { init } from '#lib/charts/echarts.js';
   import type { EChartsOption } from 'echarts';
 
   type Props = { value: number; max: number; title: string; description: string };
@@ -301,12 +301,12 @@ gzipped. Full build with all types = ~1 MB. Always dynamic-import:
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  let Candlestick = $state<typeof import('$lib/charts/CandlestickChart.svelte').default | null>(
+  let Candlestick = $state<typeof import('#lib/charts/CandlestickChart.svelte').default | null>(
     null,
   );
 
   onMount(async () => {
-    ({ default: Candlestick } = await import('$lib/charts/CandlestickChart.svelte'));
+    ({ default: Candlestick } = await import('#lib/charts/CandlestickChart.svelte'));
   });
 
   let { data, title, description } = $props();
@@ -345,7 +345,7 @@ Watch the media query for live flips same as [charts-realtime.md](charts-realtim
 ```ts
 import { render } from '@testing-library/svelte';
 import { axe } from 'jest-axe';
-import CandlestickChart from '$lib/charts/CandlestickChart.svelte';
+import CandlestickChart from '#lib/charts/CandlestickChart.svelte';
 
 test('candlestick chart is axe-clean', async () => {
   const data = [{ t: '2026-01-01', o: 100, h: 110, l: 95, c: 105 }];

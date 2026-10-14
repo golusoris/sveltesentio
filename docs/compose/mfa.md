@@ -103,7 +103,7 @@ without a type code could also mean "session expired" — different UX.
 <!-- src/routes/app/+layout.svelte -->
 <script lang="ts">
   import { MfaChallenge } from '@sveltesentio/auth';
-  import { mfaState } from '$lib/mfaStore.svelte';
+  import { mfaState } from '#lib/mfaStore.svelte.js';
 </script>
 
 {@render children()}

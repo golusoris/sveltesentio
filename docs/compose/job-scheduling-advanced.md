@@ -60,7 +60,7 @@ extra infrastructure:
 
 ```ts
 // packages/jobs/src/distributed-cron.ts
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 // Stable 64-bit lock key per job name (hashed once at definition time).
 const LOCK_KEYS = {
@@ -96,7 +96,7 @@ export async function withDistributedLock<T>(
 ```ts
 // src/routes/cron/billing/+server.ts
 import { error } from '@sveltejs/kit';
-import { verifyCronSignature } from '$lib/server/cron';
+import { verifyCronSignature } from '#lib/server/cron.js';
 import { withDistributedLock } from '@sveltesentio/jobs/distributed-cron';
 import { runNightlyBilling } from '@sveltesentio/billing';
 
@@ -128,7 +128,7 @@ Process 100K user records, then aggregate the results. BullMQ's
 // packages/jobs/src/fanout-fanin.ts
 import { FlowProducer, Queue, Worker } from 'bullmq';
 import { uuidv7 } from 'uuidv7';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 const flow = new FlowProducer({ connection: redisConfig });
 
@@ -198,7 +198,7 @@ guarantee resumption across deploys:
 
 ```ts
 // packages/jobs/src/onboarding-followup.ts (Inngest example)
-import { inngest } from '$lib/server/inngest';
+import { inngest } from '#lib/server/inngest.js';
 
 export const onboardingFollowup = inngest.createFunction(
   { id: 'onboarding-followup', name: 'Onboarding 7-day follow-up' },

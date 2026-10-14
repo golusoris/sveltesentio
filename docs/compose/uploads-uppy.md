@@ -277,7 +277,7 @@ testing, mount the Dashboard + drive a fake `File`:
 
 ```ts
 import { render, screen } from '@testing-library/svelte';
-import UppyDashboard from '$lib/uploads/UppyDashboard.svelte';
+import UppyDashboard from '#lib/uploads/UppyDashboard.svelte';
 import { vi } from 'vitest';
 
 test('Dashboard rejects spoofed file via onBeforeFileAdded', async () => {

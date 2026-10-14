@@ -154,10 +154,10 @@ export type QoeEvent = z.infer<typeof QoeEvent>;
 import { error } from '@sveltejs/kit';
 import { uuidv7 } from 'uuidv7';
 import { z } from 'zod';
-import { videoRepo } from '$lib/server/repos';
-import { permissions } from '$lib/server/permissions';
-import { signCdnCookie } from '$lib/server/cdn';
-import { auditLog } from '$lib/server/audit';
+import { videoRepo } from '#lib/server/repos.js';
+import { permissions } from '#lib/server/permissions.js';
+import { signCdnCookie } from '#lib/server/cdn.js';
+import { auditLog } from '#lib/server/audit.js';
 
 const Params = z.object({ assetId: z.string().uuid() });
 
@@ -382,8 +382,8 @@ LL-HLS targeting <5s end-to-end latency). Live introduces:
 ```ts
 // src/routes/api/qoe/+server.ts
 import { QoeEvent } from '@sveltesentio/streaming/schema';
-import { qoeRepo } from '$lib/server/repos';
-import { rateLimit } from '$lib/server/rate-limit';
+import { qoeRepo } from '#lib/server/repos.js';
+import { rateLimit } from '#lib/server/rate-limit.js';
 
 export const POST = async ({ request, getClientAddress }) => {
   await rateLimit({

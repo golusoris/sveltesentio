@@ -172,8 +172,8 @@ Seven shape rules:
 import { superValidate, message } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { SignupInput } from '@sveltesentio/tenants/types';
-import { db } from '$lib/server/db';
-import { sendEmail } from '$lib/server/email';
+import { db } from '#lib/server/db.js';
+import { sendEmail } from '#lib/server/email.js';
 import { clock } from '@sveltesentio/core/clock';
 import { uuidv7 } from '@sveltesentio/core/ids';
 
@@ -318,14 +318,14 @@ Six activation rules:
 
 ```ts
 // packages/tenants/src/provision/worker.ts
-import { makeWorker } from '$lib/server/queue';
+import { makeWorker } from '#lib/server/queue.js';
 import { ProvisionJob } from '../types';
-import { stripe } from '$lib/server/stripe';
-import { storage } from '$lib/server/storage';
-import { search } from '$lib/server/search';
-import { db } from '$lib/server/db';
-import { sendEmail } from '$lib/server/email';
-import { audit } from '$lib/server/audit';
+import { stripe } from '#lib/server/stripe.js';
+import { storage } from '#lib/server/storage.js';
+import { search } from '#lib/server/search.js';
+import { db } from '#lib/server/db.js';
+import { sendEmail } from '#lib/server/email.js';
+import { audit } from '#lib/server/audit.js';
 import { applyPlanEntitlements } from './entitlements';
 import { seedTenant } from './seed';
 
