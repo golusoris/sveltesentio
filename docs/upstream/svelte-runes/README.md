@@ -6,7 +6,7 @@ last-verified: 2026-04-18
 
 # Svelte 5 runes — v5.55.4 snapshot
 
-Pinned: **^5.55.4** (root + every package `peerDependency`)
+Pinned: **^5.55.4** (snapshot version; the packages declare the peer `svelte: ">=5.56.4"`)
 Canonical: <https://svelte.dev/docs/svelte/what-are-runes>
 
 Runes are compiler-recognised symbols (no import). Use them in `.svelte` and `.svelte.ts`/`.svelte.js` files.
@@ -100,7 +100,7 @@ Available only in components compiled as custom elements. Use to dispatch `Custo
 
 ## `sveltesentio` usage
 
-- All packages declare `svelte: ">=5.0.0"` as a peer; runes are the **only** reactivity model in new code.
+- Every package that renders Svelte declares `svelte: ">=5.56.4"` as a peer; runes are the **only** reactivity model in new code.
 - Legacy stores (`writable`/`readable`) are forbidden for server state — use `@sveltesentio/query` (see [docs/upstream/tanstack-query/](../tanstack-query/)).
 - `$:` reactive statements are forbidden — use `$derived` / `$effect`. Enforced by [docs/principles.md](../../principles.md) §2.4.
 

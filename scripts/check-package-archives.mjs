@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Fails if an archive this workspace would publish lacks the licence text, the
-// repository field, the Node engine, the TypeScript peer or the copyright line.
+// repository field, the Node engine, the TypeScript peer, the floor of another
+// peer or the copyright line.
 //
-// The five reach an archive by different routes, and none of them is visible
+// The six reach an archive by different routes, and none of them is visible
 // in the tree alone:
 //   - the licence text is not in any package folder. `pnpm pack`, the packer
 //     behind the release workflow's `pnpm -r publish`, copies the root LICENSE
@@ -15,6 +16,9 @@
 //   - the TypeScript peer range is fixed by ADR-0020, and every published
 //     manifest declares it as a required peer: consumers typecheck the
 //     published source, so the range is the promise that it compiles;
+//   - a package that declares a svelte, @sveltejs/kit or vite peer declares the
+//     measured floor: the lowest version the packages typecheck and test
+//     against, and below which their own dependencies refuse to install;
 //   - the EUPL text names no licensor, so the copyright line in the package
 //     README is the only notice that travels with the archive.
 //
@@ -42,6 +46,18 @@ export const LICENSOR = 'lusoris';
 
 /** The published TypeScript peer range, as ADR-0020 states it. */
 export const TYPESCRIPT_PEER = '>=5.5 <7';
+
+/**
+ * The range of every other floored peer, for the packages that declare it.
+ * svelte: sveltekit-superforms 3 declares ^5.56.4, and layerchart 2.6.1 fails
+ * its tests on 5.56.3. @sveltejs/kit: 2.53.0 is the first release whose vite
+ * peer admits vite 8. vite: @sveltejs/vite-plugin-svelte 7 requires vite 8.
+ */
+export const PEER_RANGES = Object.freeze({
+	svelte: '>=5.56.4',
+	'@sveltejs/kit': '>=2.53.0',
+	vite: '>=8.0.0',
+});
 
 const BLOCK = 512;
 
@@ -136,6 +152,17 @@ function typescriptPeerGaps(manifest, expected) {
 	return gaps;
 }
 
+function peerRangeGaps(manifest, expected) {
+	const gaps = [];
+	for (const [name, range] of Object.entries(expected.peers)) {
+		const declared = manifest.peerDependencies?.[name];
+		if (declared !== undefined && declared !== range) {
+			gaps.push(`peerDependencies.${name} is ${JSON.stringify(declared)}, expected "${range}"`);
+		}
+	}
+	return gaps;
+}
+
 function noticeGaps(files, expected) {
 	const notice = `${expected.license} © ${LICENSOR}`;
 	const readme = files.get('package/README.md')?.toString('utf8') ?? '';
@@ -146,8 +173,8 @@ function noticeGaps(files, expected) {
 /**
  * What one archive lacks. `files` is the map `readArchive` returns; `expected`
  * holds the root `licence` bytes, the `license` identifier, the repository
- * `url`, the Node engine `node`, the TypeScript peer range `typescript` and the
- * `directories` map of package name to workspace folder.
+ * `url`, the Node engine `node`, the TypeScript peer range `typescript`, the
+ * `peers` map of peer name to range and the `directories` map of package name to workspace folder.
  *
  * Returns `{ name, published, gaps }`. A private package is not published and
  * has no gaps by definition.
@@ -166,6 +193,7 @@ export function archiveGaps(files, expected) {
 		...repositoryGaps(manifest, expected),
 		...enginesGaps(manifest, expected),
 		...typescriptPeerGaps(manifest, expected),
+		...peerRangeGaps(manifest, expected),
 		...noticeGaps(files, expected),
 	);
 	return { name: manifest.name, published: true, gaps };
@@ -197,6 +225,7 @@ export async function readExpected(dir) {
 		url: manifest.repository.url,
 		node: manifest.engines.node,
 		typescript: TYPESCRIPT_PEER,
+		peers: PEER_RANGES,
 		directories,
 	};
 }
@@ -256,7 +285,7 @@ export async function main(dir = root, pack = packWorkspace) {
 		return 1;
 	}
 	console.log(
-		`OK: ${published.length} published archives carry the licence text, the repository field, the Node engine, the TypeScript peer and the copyright line.`,
+		`OK: ${published.length} published archives carry the licence text, the repository field, the Node engine, the TypeScript peer, the peer floors and the copyright line.`,
 	);
 	return 0;
 }
