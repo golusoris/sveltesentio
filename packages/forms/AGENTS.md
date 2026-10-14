@@ -1,12 +1,12 @@
 # @sveltesentio/forms — AGENTS.md
 
-> Thin wrapper over `sveltekit-superforms@^2` + Zod v4 with RFC 9457 field-error mapping. Phase 5 per `.workingdir/PLAN.md`.
+> Thin wrapper over `sveltekit-superforms@^3` + Zod v4 with RFC 9457 field-error mapping. Phase 5 per `.workingdir/PLAN.md`.
 
 ## Scope
 
 Thin wrapper — justified:
 
-1. **Pins matrix.** Superforms v2 + Zod v4 adapter + optional Formsnap v2: downstream apps avoid 3-way version dance.
+1. **Pins matrix.** Superforms v3 + Zod v4 adapter + optional Formsnap v2: downstream apps avoid 3-way version dance.
 2. **Pre-wires Zod v4 adapter.** Callers pass raw schema; package picks correct adapter (`zod4` upstream, not legacy `zod` v3).
 3. **Bridges RFC 9457 into Superforms.** `problemToFieldErrors()` turns `ProblemError` from `@sveltesentio/core` into `Record<string, string[]>` field-error shape Superforms expects — framework value-add package built around (ADR-0019).
 4. **Re-exports runtime surface Superforms consumers use** (`superForm`, proxies, `message`, `setError`, `fail`): apps import 1 package instead of 2.
@@ -24,13 +24,13 @@ Plain-state pattern documented in [docs/compose/forms.md](../../docs/compose/for
 
 ## Sub-exports
 
-| Path                           | Purpose                                                                                                               |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `@sveltesentio/forms`          | Everything above                                                                                                      |
-| `@sveltesentio/forms/problem`  | `problemToFieldErrors` + `FieldErrors` type only (zero-dependency pull)                                               |
-| `@sveltesentio/forms/server`   | Server-safe `superValidate` + helpers; no client `superForm`/`$app/*`                                                 |
-| `@sveltesentio/forms/action`   | `formAction()` — wraps `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`               |
-| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, `FieldErrors`, `Description`, …); optional `formsnap@^2` peer |
+| Path                           | Purpose                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@sveltesentio/forms`          | Everything above                                                                                                                                                   |
+| `@sveltesentio/forms/problem`  | `problemToFieldErrors` + `FieldErrors` type only (zero-dependency pull)                                                                                            |
+| `@sveltesentio/forms/server`   | Server-safe `superValidate` + helpers; no client `superForm` (superforms 3 server entry imports `$app/server`, resolves only inside SvelteKit build or test alias) |
+| `@sveltesentio/forms/action`   | `formAction()` — wraps `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`                                                            |
+| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, `FieldErrors`, `Description`, …); optional `formsnap@^2` peer                                              |
 
 ### `formAction()`
 
@@ -68,7 +68,7 @@ Non-`ProblemError` throwables propagate unchanged (500 = right outcome for unexp
 - **Zod v4 only.** v3 schemas fail at adapter boundary (ADR-0001). Wrapper imports `zod4` from `sveltekit-superforms/adapters`, never legacy `zod` adapter.
 - **Server-side validation always runs.** Client-side validation = UX guard; every form action re-validates on server via `superValidate(request, schema)`.
 - **Errors surface as RFC 9457 `ProblemError`**, mapped to Superforms per-field errors via `problemToFieldErrors`. Never surface `{ code, message }` bags — core `ProblemError` = only error contract.
-- **Server import path.** `superValidate` pulls from `sveltekit-superforms/server`, not root entry -> works in Node test runners without Svelte compiler (root entry re-exports `SuperDebug.svelte`).
+- **Server import path.** `superValidate` pulls from `sveltekit-superforms/server`, not root entry -> works in Node test runners without Svelte compiler (root entry re-exports `SuperDebug.svelte`). Note: superforms 3 server entry imports `$app/server`, so resolves only inside SvelteKit build (or test alias).
 
 ## Accessibility
 

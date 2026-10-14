@@ -1,6 +1,6 @@
-// Stub for SvelteKit's `$app/forms` virtual module (see app-environment.ts).
+// Stub for SvelteKit's `$app/forms` virtual module (see vitest.config.ts).
 // Pulled in by superforms' client `superForm` via the `@sveltesentio/forms` barrel.
-import type { ActionResult } from '@sveltejs/kit';
+import type { ActionResult } from '$app/forms';
 
 export const applyAction = async (): Promise<void> => {};
 export const deserialize = <T>(result: string): ActionResult<Record<string, T>> =>

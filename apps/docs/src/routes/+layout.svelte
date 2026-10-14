@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import type { Snippet } from 'svelte';
-	import type { NavGroup } from '$lib/docs';
+	import type { NavGroup } from '#lib/docs.js';
 
 	interface LayoutData {
 		nav: NavGroup[];

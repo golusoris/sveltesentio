@@ -9,14 +9,6 @@ import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { judge, runThreshold } from './scorecard-threshold.mjs';
 
-const workflow = join(
-	fileURLToPath(new URL('.', import.meta.url)),
-	'..',
-	'.github',
-	'workflows',
-	'scorecard.yml',
-);
-
 const SHA = 'c6012c019fcde69fed2f64c05471db47d285879c';
 const OLD = '27bbf93000000000000000000000000000000000';
 const published = (score, commit = SHA) => ({ score, repo: { name: 'github.com/o/r', commit } });
@@ -113,24 +105,7 @@ describe('runThreshold', () => {
 	});
 });
 
-const STEP_NAME = '      - name: Open, update or close the scorecard issue\n';
-
-/** The `run: |` block of the issue step, with its indentation removed. */
-function issueStepScript(source) {
-	const start = source.indexOf(STEP_NAME);
-	assert.ok(start >= 0, 'issue step not found in scorecard.yml');
-	const lines = source.slice(start + STEP_NAME.length).split('\n');
-	const runAt = lines.findIndex((line) => line === '        run: |');
-	assert.ok(runAt >= 0, 'issue step has no `run: |` block');
-	const body = [];
-	for (const line of lines.slice(runAt + 1)) {
-		if (line !== '' && !line.startsWith(' '.repeat(10))) break;
-		body.push(line.slice(10));
-	}
-	return body.join('\n');
-}
-
-const script = issueStepScript(readFileSync(workflow, 'utf8'));
+const issueScript = join(fileURLToPath(new URL('.', import.meta.url)), 'workflow-issue.sh');
 const dirs = [];
 
 after(() => {
@@ -138,8 +113,9 @@ after(() => {
 });
 
 /**
- * Runs the issue step with a stub `gh` on PATH. `open` is the issue number
- * the stub's `issue list` prints, or '' for none. Returns the recorded calls.
+ * Runs scripts/workflow-issue.sh with a stub `gh` on PATH and scorecard env.
+ * `open` is the issue number the stub's `issue list` prints, or '' for none.
+ * Returns the recorded calls after label creation and issue list.
  */
 function runIssueStep(status, open) {
 	const dir = mkdtempSync(join(tmpdir(), 'scorecard-issue-'));
@@ -150,15 +126,23 @@ function runIssueStep(status, open) {
 		`#!/bin/bash\nprintf '%s\\n' "$*" >> "${log}"\nif [[ "$1 $2" == "issue list" ]]; then printf '%s' "${open}"; fi\n`,
 	);
 	chmodSync(join(dir, 'gh'), 0o755);
-	const result = spawnSync('bash', ['-e', '-c', script], {
+	const result = spawnSync('bash', [issueScript], {
 		encoding: 'utf8',
 		timeout: 10_000,
 		env: {
 			PATH: `${dir}:${process.env.PATH ?? ''}`,
 			GITHUB_REPOSITORY: 'o/r',
 			TITLE: 'OpenSSF Scorecard score below 7 on main',
+			LABEL: 'scorecard',
+			LABEL_COLOR: 'd93f0b',
+			LABEL_DESCRIPTION:
+				'The OpenSSF Scorecard score on main is below the threshold in scorecard.yml',
 			STATUS: status,
 			RUN: 'https://example.invalid/run/1',
+			FAIL_BODY:
+				'The threshold job in scorecard.yml failed in $RUN: the published score is below 7, or no published result matches the commit. The next passing run closes this issue.',
+			REPEAT_COMMENT: 'Still below the threshold, or no result for this commit: $RUN',
+			PASS_COMMENT: 'Score back at or above the threshold: $RUN',
 		},
 	});
 	assert.equal(result.status, 0, result.stderr);

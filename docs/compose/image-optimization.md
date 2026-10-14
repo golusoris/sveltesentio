@@ -374,7 +374,8 @@ Four lanes:
    breakpoint confirms the correct srcset candidate loads (see
    [playwright-visual.md](playwright-visual.md)).
 4. **Performance** — Lighthouse CI asserts LCP image <100 kB over the
-   wire, AVIF delivered when supported.
+   wire, AVIF delivered when supported (target, not gated yet:
+   [#324](https://github.com/golusoris/sveltesentio/issues/324)).
 
 ## Anti-patterns
 

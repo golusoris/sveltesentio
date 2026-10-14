@@ -54,6 +54,57 @@ describe('check-export-targets', () => {
 		assert.deepEqual(await findMissingTargets(packages), []);
 	});
 
+	it('fails when bin string points at a .ts file', async () => {
+		const packages = join(dir, 'bin-string-ts');
+		await writeTree(packages, {
+			'demo/package.json': JSON.stringify({
+				name: '@fixture/bin-string-ts',
+				bin: './src/cli.ts',
+			}),
+			'demo/src/cli.ts': '',
+		});
+		assert.deepEqual(await findMissingTargets(packages), [
+			'@fixture/bin-string-ts: bin target "./src/cli.ts" does not end in .js/.mjs/.cjs (Node will not strip types under node_modules)',
+		]);
+	});
+
+	it('fails when bin object points at a missing file', async () => {
+		const packages = join(dir, 'bin-object-missing');
+		await writeTree(packages, {
+			'demo/package.json': JSON.stringify({
+				name: '@fixture/bin-object-missing',
+				bin: { tool: './src/missing.js' },
+			}),
+		});
+		assert.deepEqual(await findMissingTargets(packages), [
+			'@fixture/bin-object-missing: bin target "./src/missing.js" does not exist',
+		]);
+	});
+
+	it('passes when bin points at an existing .js file', async () => {
+		const packages = join(dir, 'bin-js');
+		await writeTree(packages, {
+			'demo/package.json': JSON.stringify({
+				name: '@fixture/bin-js',
+				bin: './src/cli.js',
+			}),
+			'demo/src/cli.js': '',
+		});
+		assert.deepEqual(await findMissingTargets(packages), []);
+	});
+
+	it('passes when package has no bin', async () => {
+		const packages = join(dir, 'without-bin');
+		await writeTree(packages, {
+			'demo/package.json': JSON.stringify({
+				name: '@fixture/without-bin',
+				exports: { '.': './src/index.js' },
+			}),
+			'demo/src/index.js': '',
+		});
+		assert.deepEqual(await findMissingTargets(packages), []);
+	});
+
 	// Boundary: a package without an exports map, a bare specifier target and a
 	// folder without a manifest publish no file path to check.
 	it('skips what publishes no file path', async () => {

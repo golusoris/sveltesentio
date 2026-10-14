@@ -4,7 +4,8 @@ import { compileModule } from 'svelte/compiler';
 import { defineConfig, type Plugin } from 'vitest/config';
 
 // The default `superForm` seam pulls `sveltekit-superforms/client`, which
-// statically imports the SvelteKit `$app/*` virtual modules. Those only exist
+// statically imports the SvelteKit `$app/*` virtual modules, and Superforms 3's
+// server entry imports `$app/server` as a server-only guard. Those only exist
 // inside a Kit build, so under the Node runner each is aliased to a local stub.
 // `useForm`'s tests inject a fake `superForm`, so the stubs are never invoked —
 // they exist purely so the import graph resolves.
@@ -49,11 +50,10 @@ export default defineConfig({
 	plugins: [svelteRunes()],
 	resolve: {
 		alias: {
-			'$app/environment': appStub,
-			'$app/stores': appStub,
 			'$app/navigation': appStub,
 			'$app/forms': appStub,
 			'$app/state': appStub,
+			'$app/server': appStub,
 		},
 	},
 	test: {
