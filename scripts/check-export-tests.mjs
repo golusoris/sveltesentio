@@ -126,7 +126,7 @@ export async function findUntestedExports(packagesDir) {
 		);
 		for (const [name, entry] of names) {
 			checked += 1;
-			const escaped = name.replace(/[$]/g, '\\$');
+			const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			if (!new RegExp(`(?<![\\w$])${escaped}(?![\\w$])`).test(testText)) {
 				failures.push(`${pkg.name}: ${name} (exported from ${entry}) is named in no test file`);
 			}

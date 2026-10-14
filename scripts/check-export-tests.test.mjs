@@ -76,17 +76,18 @@ describe('check-export-tests', () => {
 				'export type Alias = string;',
 				"export type { Other } from './other.js';",
 				'export const value = 1;',
+				'export const $named = 2;',
 				'export default 3;',
 				'',
 			].join('\n'),
 			'demo/src/other.ts': 'export interface Other { b: number }\n',
 			'demo/src/uses-value.ts': 'value;\n',
-			'demo/test/index.test.ts': 'valueLike; $value; value_x;\n',
+			'demo/test/index.test.ts': 'valueLike; $value; value_x; $named;\n',
 			'plain/package.json': JSON.stringify({ name: '@fixture/plain' }),
 			'loose/notes.txt': '',
 		});
 		assert.deepEqual(await findUntestedExports(packages), {
-			checked: 1,
+			checked: 2,
 			failures: ['@fixture/demo: value (exported from src/index.ts) is named in no test file'],
 		});
 	});
