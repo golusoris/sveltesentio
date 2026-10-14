@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/golusoris/sveltesentio/compare/api-v0.4.1...api-v0.5.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** @sveltesentio/api no longer installs the sveltesentio-codegen command.
+
+### Bug Fixes
+
+* **api:** remove the sveltesentio-codegen bin ([#335](https://github.com/golusoris/sveltesentio/issues/335)) ([9ddb698](https://github.com/golusoris/sveltesentio/commit/9ddb69896596f141caaee8956aaf3b92cda2bb80))
+
 ## [0.4.1](https://github.com/golusoris/sveltesentio/compare/api-v0.4.0...api-v0.4.1) (2026-10-13)
 
 ### Bug Fixes

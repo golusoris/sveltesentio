@@ -13,7 +13,7 @@
 	"packages/collab": "0.5.1",
 	"packages/testing": "0.2.1",
 	"packages/mcp": "0.4.0",
-	"packages/api": "0.4.1",
+	"packages/api": "0.5.0",
 	"packages/uploads": "0.3.1",
 	"packages/shell": "0.3.1",
 	"packages/emulator": "0.3.0",
