@@ -72,7 +72,8 @@
 	"peerDependencies": {
 		"@xyflow/svelte": ">=1.0.0",
 		"elkjs": ">=0.11.0",
-		"svelte": ">=5.0.0"
+		"svelte": ">=5.0.0",
+		"typescript": ">=5.5 <7"
 	},
 	"peerDependenciesMeta": {
 		"@xyflow/svelte": {

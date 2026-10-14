@@ -44,6 +44,9 @@
 	],
 	"license": "EUPL-1.2",
 	"name": "@sveltesentio/ipc-sockmap",
+	"peerDependencies": {
+		"typescript": ">=5.5 <7"
+	},
 	"private": false,
 	"publishConfig": {
 		"access": "public"

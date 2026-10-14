@@ -65,7 +65,8 @@
 	"peerDependencies": {
 		"@inlang/paraglide-js": ">=2.0.0",
 		"@sveltejs/kit": ">=2.0.0",
-		"svelte": ">=5.0.0"
+		"svelte": ">=5.0.0",
+		"typescript": ">=5.5 <7"
 	},
 	"private": false,
 	"publishConfig": {

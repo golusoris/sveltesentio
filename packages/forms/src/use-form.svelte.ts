@@ -216,6 +216,9 @@ export function useForm<
 		get valid() {
 			return allErrors.current.length === 0;
 		},
-		...passthrough(sf),
+		// Explicit type arguments: inferring Out and In from a SuperForm walks
+		// FormPath<Out>, which TypeScript before 5.9 rejects as excessively deep
+		// (TS2589). The peer range starts at 5.5 (ADR-0020).
+		...passthrough<Out, In>(sf),
 	};
 }

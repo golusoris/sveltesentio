@@ -12,6 +12,7 @@ import {
 	readArchive,
 	readExpected,
 	scanArchives,
+	TYPESCRIPT_PEER,
 } from './check-package-archives.mjs';
 
 const URL_OF_SOURCE = 'git+https://github.com/example/workspace.git';
@@ -42,6 +43,7 @@ const manifest = (overrides = {}) => ({
 	license: 'EUPL-1.2',
 	repository: { directory: 'packages/alpha', type: 'git', url: URL_OF_SOURCE },
 	engines: { node: '>=24' },
+	peerDependencies: { typescript: '>=5.5 <7' },
 	...overrides,
 });
 
@@ -62,6 +64,7 @@ const expected = {
 	license: 'EUPL-1.2',
 	url: URL_OF_SOURCE,
 	node: '>=24',
+	typescript: '>=5.5 <7',
 	directories: new Map([['@example/alpha', 'packages/alpha']]),
 };
 
@@ -211,6 +214,29 @@ describe('check-package-archives', () => {
 			]);
 		});
 
+		it('reports a missing typescript peer', () => {
+			const gap = 'peerDependencies.typescript is undefined, expected ">=5.5 <7"';
+			assert.deepEqual(gapsOf({}, { peerDependencies: undefined }), [gap]);
+			assert.deepEqual(gapsOf({}, { peerDependencies: { svelte: '>=5.0.0' } }), [gap]);
+		});
+
+		it('reports a different typescript range, including the old upper bound', () => {
+			assert.deepEqual(gapsOf({}, { peerDependencies: { typescript: '>=5.5 <8' } }), [
+				'peerDependencies.typescript is ">=5.5 <8", expected ">=5.5 <7"',
+			]);
+			assert.deepEqual(gapsOf({}, { peerDependencies: { typescript: '>=5.5' } }), [
+				'peerDependencies.typescript is ">=5.5", expected ">=5.5 <7"',
+			]);
+		});
+
+		it('reports a typescript peer marked optional and accepts other optional peers', () => {
+			const meta = (name) => ({ peerDependenciesMeta: { [name]: { optional: true } } });
+			assert.deepEqual(gapsOf({}, meta('typescript')), [
+				'peerDependenciesMeta marks typescript optional',
+			]);
+			assert.deepEqual(gapsOf({}, meta('openapi-typescript')), []);
+		});
+
 		it('reports a readme without the copyright line, and no readme at all', () => {
 			const none = 'README.md has 0 lines starting "EUPL-1.2 © lusoris"';
 			assert.deepEqual(gapsOf({ 'package/README.md': '# alpha\n\nEUPL-1.2.\n' }), [none]);
@@ -251,6 +277,7 @@ describe('check-package-archives', () => {
 			assert.equal(read.url, URL_OF_SOURCE);
 			assert.equal(read.license, 'EUPL-1.2');
 			assert.equal(read.node, '>=24');
+			assert.equal(read.typescript, TYPESCRIPT_PEER);
 			assert.ok(read.licence.equals(LICENCE_TEXT));
 			assert.deepEqual([...read.directories], [['@example/alpha', 'packages/alpha']]);
 		});

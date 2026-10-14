@@ -46,7 +46,8 @@
 	"name": "@sveltesentio/api",
 	"peerDependencies": {
 		"openapi-fetch": ">=0.17.0",
-		"openapi-typescript": ">=7.0.0"
+		"openapi-typescript": ">=7.0.0",
+		"typescript": ">=5.5 <7"
 	},
 	"peerDependenciesMeta": {
 		"openapi-typescript": {
