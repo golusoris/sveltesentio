@@ -11,7 +11,7 @@ Decoupling target for `@sveltesentio/query` (#69/#70) — query takes plain asyn
 | `createClient<Paths>(options)`                             | openapi-fetch client; auto-applies `problemMiddleware` so problem+json throws `ProblemError`. `problem: false` opts out; `middlewares: []` adds more                                                         |
 | `ApiClient<Paths>`                                         | `ReturnType<typeof createClient<Paths>>`                                                                                                                                                                     |
 | re-exports                                                 | `ClientOptions`, `Middleware`, `PathsWithMethod` from openapi-fetch                                                                                                                                          |
-| `./codegen` → `generateTypes(deps, opts)`                  | wraps openapi-typescript (`openapiTS` + `astToString`, injected) → typed `paths` source with generated banner; `runCodegen`/`parseCodegenArgs` drive the `sveltesentio-codegen` bin                          |
+| `./codegen` → `generateTypes(deps, opts)`                  | wraps openapi-typescript (`openapiTS` + `astToString`, injected) → typed `paths` source with generated banner; `runCodegen`/`parseCodegenArgs` drive codegen scripts                                         |
 | `./auth-middleware` → `authMiddleware({ store, refresh })` | openapi-fetch Middleware preset: attaches bearer token (injectable `TokenStore`) and refreshes once on 401, retrying original request; refresh failures map to `ProblemError`. Add after `problemMiddleware` |
 
 ## Invariants
@@ -22,5 +22,7 @@ Decoupling target for `@sveltesentio/query` (#69/#70) — query takes plain asyn
 
 ## Notes
 
-- **codegen injectable.** `generateTypes`/`runCodegen` take `openapiTS` + `astToString` + `writeFile` deps as arguments. Logic unit-tested without real spec file or process. `src/codegen-bin.ts` shell (shebang + real `node:fs` + lazily-imported openapi-typescript) = only place optional peer dep touched; excluded from coverage.
+- **codegen paths.** Two working patterns:
+  1. CLI direct: `pnpm exec openapi-typescript <spec> -o <out.ts>`.
+  2. Script wrapper: call `runCodegen(deps, argv)` with injected `openapiTS`, `astToString`, `writeFile` (`CodegenCliDeps`). Unit-tested without real spec file or process.
 - **auth ordering.** `createClient` applies `problemMiddleware` first, then `middlewares`. Place `authMiddleware` in `middlewares` -> retried-but-still-401 response normalised to `ProblemError` by outer problem middleware. Retry guarded by per-request symbol -> still-401 retry never loops.

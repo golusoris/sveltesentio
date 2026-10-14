@@ -28,10 +28,29 @@ pnpm add -D openapi-typescript
 ## 1. Generate types from your OpenAPI spec
 
 `@sveltesentio/api` does not bundle a spec — point openapi-typescript at yours
-(any OpenAPI 3.x producer; e.g. a Go ogen-emitted `openapi.yaml`):
+(any OpenAPI 3.x producer; e.g. a Go ogen-emitted `openapi.yaml`).
+
+### Option A: Run the `openapi-typescript` CLI directly
 
 ```bash
-pnpm openapi-typescript ./api/openapi/openapi.yaml -o ./src/lib/api/types.ts
+pnpm exec openapi-typescript ./api/openapi/openapi.yaml -o ./src/lib/api/types.ts
+```
+
+### Option B: Call `runCodegen` from a project script
+
+```ts
+import { writeFile } from 'node:fs/promises';
+import openapiTS, { astToString } from 'openapi-typescript';
+import { runCodegen, type CodegenCliDeps } from '@sveltesentio/api/codegen';
+
+const deps: CodegenCliDeps = {
+  openapiTS: (source, options) => openapiTS(source, options),
+  astToString: (ast) => astToString(ast as Parameters<typeof astToString>[0]),
+  writeFile: (path, contents) => writeFile(path, contents, 'utf8'),
+  log: (msg) => console.error(msg),
+};
+
+await runCodegen(deps, process.argv.slice(2));
 ```
 
 ## 2. Create a client

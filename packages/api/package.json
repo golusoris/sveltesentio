@@ -1,7 +1,4 @@
 {
-	"bin": {
-		"sveltesentio-codegen": "./src/codegen-bin.ts"
-	},
 	"dependencies": {
 		"@sveltesentio/core": "workspace:*"
 	},
