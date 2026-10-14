@@ -4,6 +4,4 @@ build/
 .svelte-kit/
 .turbo/
 coverage/
-CHANGELOG.md
-**/CHANGELOG.md
 .workingdir/research/

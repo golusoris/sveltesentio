@@ -1,0 +1,38 @@
+name: CI (SvelteKit reusable, self-test)
+
+# Runs the reusable ci-sveltekit.yml against apps/sveltekit-fixture, so the
+# workflow downstream apps call has a caller in this repository and runs on
+# every change to it, to the fixture, or to the toolchain it installs.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ci-sveltekit.yml
+      - .github/workflows/ci-sveltekit-selftest.yml
+      - apps/sveltekit-fixture/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/ci-sveltekit.yml
+      - .github/workflows/ci-sveltekit-selftest.yml
+      - apps/sveltekit-fixture/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sveltekit:
+    name: Reusable SvelteKit CI
+    uses: ./.github/workflows/ci-sveltekit.yml
+    with:
+      working-directory: apps/sveltekit-fixture

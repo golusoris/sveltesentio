@@ -469,6 +469,8 @@ on every platform. Users should never need to install a platform-specific client
 | Samsung Internet  | 23+         | Android PWA install                        |
 | Edge              | 120+        | Chromium-based; parity with Chrome         |
 
+CI runs the Chromium, Firefox and WebKit builds that ship with the pinned Playwright version, on Linux (`ci.yml` jobs `Stories (axe)` and `End-to-end`). The minimum versions above, Safari on macOS and iOS, Samsung Internet and Edge are targets that CI does not test.
+
 **No IE, no legacy Edge, no Opera Mini.** Framework requires CSS oklch, CSS nesting,
 `@layer`, container queries, `has()` — all baseline in the above matrix.
 
@@ -522,15 +524,15 @@ Every app using the PWA preset must pass:
 - [ ] HTTPS (required by browsers)
 - [ ] `<meta name="theme-color">` set to `--color-primary` oklch value as hex fallback
 - [ ] `safe-area-inset-*` applied to all full-screen layouts
-- [ ] Lighthouse PWA score ≥ 90
+- [ ] Lighthouse PWA score ≥ 90 (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))
 
 ### Testing cross-platform
 
 - BrowserStack / Playwright device emulation for tablet/phone coverage
 - Real device testing on iOS Safari and Android Chrome before each release
-- `@playwright/test` runs against Chromium, Firefox, WebKit in CI (`ci.yml`)
-- `axe-core` accessibility checks on all three engines
-- Lighthouse CI thresholds in `ci.yml`: performance ≥ 80, accessibility ≥ 95, best-practices ≥ 90
+- `@playwright/test` runs the auth, media and shell end-to-end suites against Chromium, Firefox and WebKit in CI (`ci.yml` job `End-to-end`); the auth passkey spec runs in Chromium only, because it needs the CDP WebAuthn virtual authenticator
+- `axe-core` accessibility checks on all three engines: every Storybook story (`ci.yml` job `Stories (axe)`) and the shell layout sweep
+- Lighthouse CI thresholds: performance ≥ 80, accessibility ≥ 95, best-practices ≥ 90 (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))
 
 ---
 
