@@ -1,0 +1,50 @@
+name: Peer floors
+
+# The CI workflow installs the lockfile, which holds the newest release inside
+# every peer range. This workflow installs the lowest release instead
+# (scripts/pin-peer-floors.mjs), so a package that uses an API newer than the
+# floor it declares fails here before a consumer on that floor finds out.
+#
+# Weekly, because a dependency update can raise a floor without any change in
+# this repository. On pull requests that change a package manifest: the
+# release pull request bumps every one, and a changed peer range or dependency
+# is where a floor breaks.
+on:
+  schedule:
+    - cron: '45 5 * * 1'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/*/package.json'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/pin-peer-floors.mjs'
+      - '.github/workflows/peer-floors.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  floors:
+    name: Peer floors
+    runs-on: ubuntu-26.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Pin every peer to the lowest release of its range
+        run: node scripts/pin-peer-floors.mjs
+      # The overrides change the resolution, so the lockfile cannot be frozen.
+      - run: corepack enable && pnpm install --no-frozen-lockfile
+      - name: Check that the install holds the floors
+        run: node scripts/pin-peer-floors.mjs --verify
+      - name: Type-check and test every package at the floors
+        run: pnpm exec turbo run typecheck test --filter='./packages/*' --concurrency=2

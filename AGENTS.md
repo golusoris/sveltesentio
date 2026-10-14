@@ -278,7 +278,7 @@ Every PR must pass:
 - **`pnpm audit`**: clean (no `>=high` advisories).
 - **`codeql.yml`**: clean.
 
-Main + weekly schedule, not PRs: `scorecard.yml` job `Scorecard threshold` reads published OpenSSF Scorecard result for pushed commit (`scripts/scorecard-threshold.mjs`); score < 7 -> job fails + opens/updates one issue labelled `scorecard`; next passing run closes it.
+Main + weekly schedule, not PRs: `scorecard.yml` job `Scorecard threshold` reads published OpenSSF Scorecard result for pushed commit (`scripts/scorecard-threshold.mjs`); score < 7 -> job fails + opens/updates one issue labelled `scorecard`; next passing run closes it. `peer-floors.yml` job `Peer floors` (weekly + PRs changing a `packages/*/package.json`, release PR included): pins svelte, `@sveltejs/kit`, vite, typescript to lowest release of declared peer range (`scripts/pin-peer-floors.mjs`), then typecheck + test every package; lockfile CI = upper end of each range, this job = lower end.
 
 Release PRs additionally:
 
