@@ -9,7 +9,7 @@
 		"svelte-eslint-parser": "^1.8.1",
 		"typescript": "^6.0.3",
 		"uuid": "^14.0.2",
-		"vitest": "^4.1.11",
+		"vitest": "^5.0.0",
 		"zod": "^4.6.1"
 	},
 	"exports": {
@@ -102,5 +102,5 @@
 	},
 	"sideEffects": false,
 	"type": "module",
-	"version": "0.4.0"
+	"version": "0.4.1"
 }

@@ -150,13 +150,13 @@ Rules:
 
 ## §2.8 Testing
 
-| Layer             | Tool                             | Threshold                                   |
-| ----------------- | -------------------------------- | ------------------------------------------- |
-| Unit              | Vitest                           | 70% line coverage (85% auth/forms packages) |
-| Component         | @testing-library/svelte + Vitest | —                                           |
-| a11y              | axe-core + @axe-core/playwright  | 0 violations                                |
-| E2E               | Playwright                       | Critical user paths                         |
-| Visual regression | Playwright screenshots           | Per-component baseline                      |
+| Layer             | Tool                             | Threshold                                                                                                    |
+| ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Unit              | Vitest                           | 70% line coverage (85% auth/forms packages)                                                                  |
+| Component         | @testing-library/svelte + Vitest | —                                                                                                            |
+| a11y              | axe-core + @axe-core/playwright  | 0 violations                                                                                                 |
+| E2E               | Playwright                       | Critical user paths                                                                                          |
+| Visual regression | Playwright screenshots           | Per-component baseline (target, not gated yet: [#325](https://github.com/golusoris/sveltesentio/issues/325)) |
 
 Rules:
 
@@ -169,13 +169,13 @@ Rules:
 
 ## §2.9 Performance budgets
 
-| Metric                   | Budget                      | Tool                             |
-| ------------------------ | --------------------------- | -------------------------------- |
-| LCP                      | < 2.5s                      | Playwright + web-vitals          |
-| INP                      | < 200ms                     | Playwright + web-vitals          |
-| CLS                      | < 0.1                       | Playwright + web-vitals          |
-| Bundle size (initial JS) | < 150kb gzipped             | rollup-plugin-visualizer         |
-| Images                   | WebP/AVIF only, lazy-loaded | eslint-plugin-svelte custom rule |
+| Metric                   | Budget                      | Tool                                                                                                                   |
+| ------------------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| LCP                      | < 2.5s                      | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
+| INP                      | < 200ms                     | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
+| CLS                      | < 0.1                       | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
+| Bundle size (initial JS) | < 150kb gzipped             | rollup-plugin-visualizer (target, not gated yet: [#326](https://github.com/golusoris/sveltesentio/issues/326))         |
+| Images                   | WebP/AVIF only, lazy-loaded | eslint-plugin-svelte custom rule (target, not gated yet: [#327](https://github.com/golusoris/sveltesentio/issues/327)) |
 
 All `<img>` must have `loading="lazy"` and `decoding="async"` unless above the fold.
 Font subsetting required for any custom font loaded.
