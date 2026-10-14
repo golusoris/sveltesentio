@@ -67,6 +67,7 @@
 	"name": "@sveltesentio/collab",
 	"peerDependencies": {
 		"svelte": ">=5.0.0",
+		"typescript": ">=5.5 <7",
 		"y-protocols": ">=1.0.5",
 		"y-websocket": ">=2.0.0",
 		"yjs": ">=13.6.0"

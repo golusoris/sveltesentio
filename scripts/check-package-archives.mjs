@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Fails if an archive this workspace would publish lacks the licence text, the
-// repository field, the Node engine or the copyright line.
+// repository field, the Node engine, the TypeScript peer or the copyright line.
 //
-// The four reach an archive by different routes, and none of them is visible
+// The five reach an archive by different routes, and none of them is visible
 // in the tree alone:
 //   - the licence text is not in any package folder. `pnpm pack`, the packer
 //     behind the release workflow's `pnpm -r publish`, copies the root LICENSE
@@ -12,6 +12,9 @@
 //     differs from it (compared case-sensitively);
 //   - engines.node is declared once in the root package.json, and every
 //     published manifest repeats it (ADR-0021);
+//   - the TypeScript peer range is fixed by ADR-0020, and every published
+//     manifest declares it as a required peer: consumers typecheck the
+//     published source, so the range is the promise that it compiles;
 //   - the EUPL text names no licensor, so the copyright line in the package
 //     README is the only notice that travels with the archive.
 //
@@ -36,6 +39,9 @@ const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
 /** The licensor, as REUSE.toml names the copyright holder of the tree. */
 export const LICENSOR = 'lusoris';
+
+/** The published TypeScript peer range, as ADR-0020 states it. */
+export const TYPESCRIPT_PEER = '>=5.5 <7';
 
 const BLOCK = 512;
 
@@ -116,6 +122,20 @@ function enginesGaps(manifest, expected) {
 	return [];
 }
 
+function typescriptPeerGaps(manifest, expected) {
+	const range = manifest.peerDependencies?.typescript;
+	const gaps = [];
+	if (range !== expected.typescript) {
+		gaps.push(
+			`peerDependencies.typescript is ${JSON.stringify(range)}, expected "${expected.typescript}"`,
+		);
+	}
+	if (manifest.peerDependenciesMeta?.typescript?.optional === true) {
+		gaps.push('peerDependenciesMeta marks typescript optional');
+	}
+	return gaps;
+}
+
 function noticeGaps(files, expected) {
 	const notice = `${expected.license} © ${LICENSOR}`;
 	const readme = files.get('package/README.md')?.toString('utf8') ?? '';
@@ -126,8 +146,8 @@ function noticeGaps(files, expected) {
 /**
  * What one archive lacks. `files` is the map `readArchive` returns; `expected`
  * holds the root `licence` bytes, the `license` identifier, the repository
- * `url`, the Node engine `node` and the `directories` map of package name to
- * workspace folder.
+ * `url`, the Node engine `node`, the TypeScript peer range `typescript` and the
+ * `directories` map of package name to workspace folder.
  *
  * Returns `{ name, published, gaps }`. A private package is not published and
  * has no gaps by definition.
@@ -145,6 +165,7 @@ export function archiveGaps(files, expected) {
 	gaps.push(
 		...repositoryGaps(manifest, expected),
 		...enginesGaps(manifest, expected),
+		...typescriptPeerGaps(manifest, expected),
 		...noticeGaps(files, expected),
 	);
 	return { name: manifest.name, published: true, gaps };
@@ -175,6 +196,7 @@ export async function readExpected(dir) {
 		license: manifest.license,
 		url: manifest.repository.url,
 		node: manifest.engines.node,
+		typescript: TYPESCRIPT_PEER,
 		directories,
 	};
 }
@@ -234,7 +256,7 @@ export async function main(dir = root, pack = packWorkspace) {
 		return 1;
 	}
 	console.log(
-		`OK: ${published.length} published archives carry the licence text, the repository field, the Node engine and the copyright line.`,
+		`OK: ${published.length} published archives carry the licence text, the repository field, the Node engine, the TypeScript peer and the copyright line.`,
 	);
 	return 0;
 }

@@ -43,6 +43,7 @@
 	},
 	"name": "@sveltesentio/mcp",
 	"peerDependencies": {
+		"typescript": ">=5.5 <7",
 		"zod": ">=4.0.0"
 	},
 	"private": false,

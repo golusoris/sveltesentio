@@ -88,6 +88,7 @@
 	"peerDependencies": {
 		"layerchart": ">=2.0.0-next.43",
 		"svelte": ">=5.0.0",
+		"typescript": ">=5.5 <7",
 		"uplot": ">=1.6.0"
 	},
 	"peerDependenciesMeta": {
