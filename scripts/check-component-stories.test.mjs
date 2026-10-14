@@ -94,6 +94,8 @@ describe('check-component-stories', () => {
 			assert.ok(!hasStoryCovers('// story-covers: Button —   ', 'Button'));
 			assert.ok(!hasStoryCovers('// story-covers: Button -   ', 'Button'));
 			assert.ok(!hasStoryCovers('<!-- story-covers: Button — -->', 'Button'));
+			assert.ok(!hasStoryCovers('<!-- story-covers: Button — --!>', 'Button'));
+			assert.ok(!hasStoryCovers('<!-- story-covers: Button — -->', 'Button'));
 		});
 
 		it('boundary: substring of another listed name does not match', () => {

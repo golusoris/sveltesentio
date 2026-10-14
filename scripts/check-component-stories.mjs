@@ -205,7 +205,8 @@ export function hasStoryCovers(source, componentName) {
 		if (!sepMatch) continue;
 
 		const rawReason = afterMarker.slice(sepMatch.index + sepMatch[0].length);
-		const reason = rawReason.replace(/(?:-->|\*\/)\s*$/, '').trim();
+		// HTML also ends a comment at `--!>`.
+		const reason = rawReason.replace(/(?:--!?>|\*\/)\s*$/, '').trim();
 		if (!reason) continue;
 
 		const componentsPart = afterMarker.slice(0, sepMatch.index);
