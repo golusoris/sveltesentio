@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/golusoris/sveltesentio/compare/api-v0.5.0...api-v0.6.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
+* every @sveltesentio/* package declares engines.node >=24. Package managers that enforce engines refuse installs on Node 22.
+
+### Bug Fixes
+
+* declare the Node 24 floor in every published package ([#348](https://github.com/golusoris/sveltesentio/issues/348)) ([6b02d54](https://github.com/golusoris/sveltesentio/commit/6b02d54cc07cf8d190084a154f611a9b17ec99d1))
+* declare the TypeScript peer range in every published package ([#350](https://github.com/golusoris/sveltesentio/issues/350)) ([a416a1c](https://github.com/golusoris/sveltesentio/commit/a416a1c68671f0304799d7f4c32a014bbfa901e6))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/api-v0.4.1...api-v0.5.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
