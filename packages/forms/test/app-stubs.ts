@@ -5,25 +5,9 @@
 // satisfy the static `$app/*` imports in `sveltekit-superforms/client` and the
 // bare `import '$app/server';` guard in `sveltekit-superforms/server`. The vitest
 // config aliases every `$app/*` specifier to this module.
-import { readable } from 'svelte/store';
-
-// $app/environment
-export const browser = false;
-export const dev = false;
-export const building = false;
-export const version = 'test';
-
-// $app/stores
-export const page = readable({ url: new URL('http://localhost/'), form: undefined });
-export const navigating = readable(null);
-export const updated = readable(false);
-export function getStores(): {
-	page: typeof page;
-	navigating: typeof navigating;
-	updated: typeof updated;
-} {
-	return { page, navigating, updated };
-}
+// $app/state
+export const page = { url: new URL('http://localhost/'), form: undefined };
+export const navigating = { from: null, to: null, type: null };
 
 // $app/navigation
 export function goto(): Promise<void> {

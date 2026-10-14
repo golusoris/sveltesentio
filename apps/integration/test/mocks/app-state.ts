@@ -1,4 +1,4 @@
-// Stub for SvelteKit's `$app/state` virtual module (see app-environment.ts).
+// Stub for SvelteKit's `$app/state` virtual module (see vitest.config.ts).
 export const page = {
 	url: new URL('https://integration.test/'),
 	params: {},

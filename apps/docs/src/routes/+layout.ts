@@ -1,4 +1,4 @@
-import { navGroups } from '$lib/docs';
+import { navGroups } from '#lib/docs.js';
 
 // Static docs site: prerender everything, no client router needed at runtime
 // beyond hydration.

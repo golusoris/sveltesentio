@@ -20,7 +20,7 @@ import type {
 	CsrfVerifier,
 	HandleCsrfOptions,
 } from '@sveltesentio/auth';
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 
 /** Inputs the login route supplies beyond the generated PKCE/state secrets. */
 export interface LoginRedirectInit extends Pick<

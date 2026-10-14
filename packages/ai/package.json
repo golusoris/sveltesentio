@@ -5,7 +5,7 @@
 	"description": "Server-proxy-only LLM client, on-device transformers seam, and EU AI Act audit hook for SvelteKit",
 	"devDependencies": {
 		"@storybook/addon-svelte-csf": "5.1.5",
-		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/core": "workspace:*",
 		"@sveltesentio/testing": "workspace:*",
