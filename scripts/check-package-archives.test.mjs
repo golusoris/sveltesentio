@@ -66,7 +66,7 @@ const expected = {
 	url: URL_OF_SOURCE,
 	node: '>=24',
 	typescript: '>=5.5 <7',
-	peers: { svelte: '>=5.56.4', '@sveltejs/kit': '>=2.53.0', vite: '>=8.0.0' },
+	peers: { svelte: '>=5.56.4', '@sveltejs/kit': '>=2.70.2', vite: '>=8.0.16' },
 	directories: new Map([['@example/alpha', 'packages/alpha']]),
 };
 
@@ -245,17 +245,17 @@ describe('check-package-archives', () => {
 			assert.deepEqual(gapsOf({}, { peerDependencies: { typescript: '>=5.5 <7' } }), []);
 		});
 
-		it('reports the old svelte and kit floors and a vite floor one release lower', () => {
+		it('reports the old svelte, kit and vite floors and a vite floor one patch lower', () => {
 			const peerDependencies = {
 				typescript: '>=5.5 <7',
 				svelte: '>=5.0.0',
-				'@sveltejs/kit': '>=2.0.0',
-				vite: '>=7.3.1',
+				'@sveltejs/kit': '>=2.53.0',
+				vite: '>=8.0.15',
 			};
 			assert.deepEqual(gapsOf({}, { peerDependencies }), [
 				'peerDependencies.svelte is ">=5.0.0", expected ">=5.56.4"',
-				'peerDependencies.@sveltejs/kit is ">=2.0.0", expected ">=2.53.0"',
-				'peerDependencies.vite is ">=7.3.1", expected ">=8.0.0"',
+				'peerDependencies.@sveltejs/kit is ">=2.53.0", expected ">=2.70.2"',
+				'peerDependencies.vite is ">=8.0.15", expected ">=8.0.16"',
 			]);
 		});
 

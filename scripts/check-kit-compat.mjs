@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Type-checks every package that declares a `@sveltejs/kit` peer against each
-// SvelteKit major the peer range `>=2.53.0` admits.
+// SvelteKit major the peer range `>=2.70.2` admits.
 //
 // The packages ship their TypeScript source as their types, so a consumer's
 // compiler reads it with the consumer's SvelteKit. `skipLibCheck` does not skip
