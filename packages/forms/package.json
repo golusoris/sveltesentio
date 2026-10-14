@@ -1,7 +1,7 @@
 {
 	"description": "Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping",
 	"devDependencies": {
-		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/kit": "^3.0.0",
 		"@sveltesentio/core": "workspace:*",
 		"svelte": "^5.57.0",
 		"sveltekit-superforms": "^3.0.0",
