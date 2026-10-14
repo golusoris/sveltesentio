@@ -51,7 +51,7 @@ Reason: `.svelte` re-exports in `query`/`forms` barrels resolve under vitest.
 2. **`@sveltesentio/forms` barrel drags entire SvelteKit client runtime into consumer.**
    Barrel has `export { ... } from 'sveltekit-superforms'` (client entry).
    Statically imports `SuperDebug.svelte` + client `superForm`.
-   Pulls in `$app/environment`, `$app/stores`, `$app/navigation`, `$app/forms`.
+   Pulls in `$app/state`, `$app/navigation`, `$app/forms`; superforms 3 server entry adds guard `import '$app/server';`.
    Non-Kit context (vitest, node script, server-only consumer needing only `superValidate`) must stub all 4 virtual modules.
    **Recommended fix:** expose server-safe subpath (e.g. `@sveltesentio/forms/server`) re-exporting only `superValidate` + types without client surface.
 

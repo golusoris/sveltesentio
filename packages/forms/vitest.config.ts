@@ -50,8 +50,6 @@ export default defineConfig({
 	plugins: [svelteRunes()],
 	resolve: {
 		alias: {
-			'$app/environment': appStub,
-			'$app/stores': appStub,
 			'$app/navigation': appStub,
 			'$app/forms': appStub,
 			'$app/state': appStub,

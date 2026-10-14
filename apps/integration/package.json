@@ -14,7 +14,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@tanstack/svelte-query": "^6.1.48",
 		"openapi-fetch": "^0.17.0",
-		"svelte": "^5.57.0",
+		"svelte": "^5.57.1",
 		"sveltekit-superforms": "^3.0.0",
 		"typescript": "^6.0.3",
 		"vitest": "^5.0.0",
