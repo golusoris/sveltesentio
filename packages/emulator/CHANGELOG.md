@@ -2,9 +2,9 @@
 
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/emulator-v0.2.0...emulator-v0.3.0) (2026-10-13)
 
-### ⚠ BREAKING CHANGES
+### Notes
 
-- @sveltesentio/mcp no longer declares the `sveltesentio-mcp` bin. The command never ran from an install, because its target file did not exist and was not published.
+- No API change in @sveltesentio/emulator. The breaking-change note that release tooling copied here from #315 applies to @sveltesentio/mcp only. In this package, the `./Emulator.svelte` export lists its `types` condition first; it resolves to the same files as before.
 
 ### Bug Fixes
 

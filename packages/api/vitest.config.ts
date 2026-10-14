@@ -8,9 +8,8 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html'],
 			include: ['src/**/*.ts'],
-			// index.ts is a barrel; codegen-bin.ts is a thin process shell (shebang +
-			// real fs/openapi-typescript wiring) whose logic lives in codegen.ts.
-			exclude: ['src/index.ts', 'src/codegen-bin.ts'],
+			// index.ts is a barrel export whose members are tested via their own modules.
+			exclude: ['src/index.ts'],
 			thresholds: {
 				statements: 70,
 				branches: 70,

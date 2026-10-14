@@ -56,7 +56,7 @@ export async function generateTypes(
 }
 
 // `OpenAPI3` documents pass straight through; path strings and URLs likewise.
-// Centralised so the bin and the library agree on what a "source" is.
+// Centralised so callers and the library agree on what a "source" is.
 function normalizeSource(source: string | URL | OpenAPI3): string | URL | OpenAPI3 {
 	return source;
 }
@@ -66,9 +66,9 @@ function ensureTrailingNewline(text: string): string {
 }
 
 export interface CodegenCliDeps extends CodegenDeps {
-	/** Persist generated source. Injected so the bin is unit-testable. */
+	/** Persist generated source. Injected so callers are unit-testable. */
 	writeFile: (path: string, contents: string) => Promise<void>;
-	/** Sink for human-readable progress (defaults to `console.error` in the bin). */
+	/** Sink for human-readable progress (optional logger). */
 	log?: (message: string) => void;
 }
 
@@ -107,14 +107,14 @@ export function parseCodegenArgs(argv: readonly string[]): {
 	const source = positionals[0];
 	const outFile = outFlag ?? positionals[1];
 	if (source === undefined || outFile === undefined) {
-		throw new Error('Usage: sveltesentio-codegen <openapi-spec> <out.ts> [--out <out.ts>]');
+		throw new Error('Usage: <openapi-spec> <out.ts> [--out <out.ts>]');
 	}
 	return { source, outFile };
 }
 
 /**
- * Bin entrypoint: parse argv, generate the typed module, write it. Returns a
- * summary for testability; the thin `bin/` wrapper supplies real fs + openapi-typescript.
+ * CLI/script helper: parse argv, generate the typed module, write it. Returns a
+ * summary for testability; caller supplies fs + openapi-typescript deps.
  */
 export async function runCodegen(
 	deps: CodegenCliDeps,
