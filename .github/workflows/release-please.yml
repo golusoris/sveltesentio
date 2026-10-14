@@ -51,12 +51,17 @@ jobs:
         with:
           node-version: '24'
 
+      # Step `env` is evaluated even when `if` is false, so it carries the raw
+      # output: fromJSON of an empty `pr` (the release PR "remained the same")
+      # fails the template and turns main red. `with` is evaluated only when
+      # the step runs, which keeps the checkout `ref` above safe.
       - name: Format the release change logs
         if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
         working-directory: release-pr
         env:
-          BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
+          BRANCH=$(jq -er '.headBranchName' <<<"$PR_JSON")
           corepack enable
           pnpm install --frozen-lockfile
           pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'
