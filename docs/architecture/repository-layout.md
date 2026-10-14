@@ -55,7 +55,7 @@ sveltesentio/
 │   ├── CODEOWNERS                  # @lusoris global
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
-│   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · release-please · refresh-upstream-docs
+│   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · peer-floors · release-please · refresh-upstream-docs
 │                                   # scorecard · codeql · auto-assign — see "CI gates" for what each enforces
 │
 ├── .devcontainer/
