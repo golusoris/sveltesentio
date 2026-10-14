@@ -70,6 +70,9 @@
 		"vite-plugin"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/core",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.0.0",

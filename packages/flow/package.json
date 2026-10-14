@@ -65,6 +65,9 @@
 		"xyflow"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/flow",
 	"peerDependencies": {
 		"@xyflow/svelte": ">=1.0.0",

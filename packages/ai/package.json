@@ -65,6 +65,9 @@
 		"rfc9457"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/ai",
 	"peerDependencies": {
 		"@anthropic-ai/sdk": ">=0.40.0",

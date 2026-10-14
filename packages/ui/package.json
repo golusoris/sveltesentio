@@ -141,6 +141,9 @@
 		"design-tokens"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/ui",
 	"peerDependencies": {
 		"@iconify/svelte": ">=5.0.0",

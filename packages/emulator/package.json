@@ -49,6 +49,9 @@
 		"csp"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/emulator",
 	"peerDependencies": {
 		"esm-env": ">=1.0.0",

@@ -40,6 +40,9 @@
 		"rest"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/api",
 	"peerDependencies": {
 		"openapi-fetch": ">=0.17.0",

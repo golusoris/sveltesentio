@@ -81,6 +81,9 @@
 		"data-visualization"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/charts",
 	"peerDependencies": {
 		"layerchart": ">=2.0.0-next.43",

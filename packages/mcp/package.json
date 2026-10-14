@@ -38,6 +38,9 @@
 		"ai-tools"
 	],
 	"license": "EUPL-1.2",
+	"engines": {
+		"node": ">=24"
+	},
 	"name": "@sveltesentio/mcp",
 	"peerDependencies": {
 		"zod": ">=4.0.0"
