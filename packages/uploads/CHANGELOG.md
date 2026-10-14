@@ -2,10 +2,9 @@
 
 ## [0.3.1](https://github.com/golusoris/sveltesentio/compare/uploads-v0.3.0...uploads-v0.3.1) (2026-10-13)
 
-
 ### Bug Fixes
 
-* **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
+- **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
 
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/uploads-v0.2.0...uploads-v0.3.0) (2026-10-12)
 

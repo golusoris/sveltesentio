@@ -2,15 +2,14 @@
 
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/mcp-v0.3.0...mcp-v0.4.0) (2026-10-13)
 
-
 ### ⚠ BREAKING CHANGES
 
-* @sveltesentio/mcp no longer declares the `sveltesentio-mcp` bin. The command never ran from an install, because its target file did not exist and was not published.
+- @sveltesentio/mcp no longer declares the `sveltesentio-mcp` bin. The command never ran from an install, because its target file did not exist and was not published.
 
 ### Bug Fixes
 
-* **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
-* remove the mcp bin that pointed at no file and run publint --strict in CI ([#315](https://github.com/golusoris/sveltesentio/issues/315)) ([09e57f5](https://github.com/golusoris/sveltesentio/commit/09e57f5eaea2fa56f60304fe4ac13827f964c47f))
+- **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
+- remove the mcp bin that pointed at no file and run publint --strict in CI ([#315](https://github.com/golusoris/sveltesentio/issues/315)) ([09e57f5](https://github.com/golusoris/sveltesentio/commit/09e57f5eaea2fa56f60304fe4ac13827f964c47f))
 
 ## [0.3.0](https://github.com/golusoris/sveltesentio/compare/mcp-v0.2.0...mcp-v0.3.0) (2026-10-12)
 
