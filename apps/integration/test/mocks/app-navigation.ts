@@ -1,4 +1,4 @@
-// Stub for SvelteKit's `$app/navigation` virtual module (see app-environment.ts).
+// Stub for SvelteKit's `$app/navigation` virtual module (see vitest.config.ts).
 // The `@sveltesentio/forms` barrel re-exports superforms' client `superForm`,
 // which imports these at module load even when only the server `superValidate`
 // is used. No-op implementations suffice for the server-side validation tests.

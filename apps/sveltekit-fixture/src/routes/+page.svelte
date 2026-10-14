@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { greeting } from '$lib/greeting';
+	import { greeting } from '#lib/greeting.js';
 </script>
 
 <svelte:head>

@@ -1,7 +1,9 @@
 // Holds the release workflow to its change log formatting contract:
 // release-please generates raw change logs with `*` bullets and double blank
 // lines that violate prettier and markdownlint rules. A formatting step runs
-// on the release PR branch before merge, pushing formatted change logs.
+// on the release PR branch before merge and commits the formatted change logs
+// through the GitHub API, which signs the commit: main requires signed commits,
+// and an unsigned commit on the release branch blocks its squash merge (#336).
 // This test validates the workflow structure and verifies prettier + markdownlint
 // formatting behavior in both directions on real upstream output.
 import assert from 'node:assert/strict';
@@ -64,11 +66,13 @@ export function formatFindings(source) {
 	if (hasPrettierCheck || !hasPrettierWrite) {
 		findings.push('prettier invoked with --check instead of --write');
 	}
-	const hasForcePush = formatStep.some((line) =>
-		/\bgit push\b.*(\s(--force|-f|--force-with-lease)\b)/.test(line),
-	);
-	if (hasForcePush) {
-		findings.push('push with --force');
+	if (formatStep.some((line) => /\bgit\s+(commit|push)\b/.test(line))) {
+		findings.push('local git commit or push (unsigned)');
+	}
+	const hasApiCommit = formatStep.some((line) => /\bcreateCommitOnBranch\b/.test(line));
+	const hasHeadGuard = formatStep.some((line) => /\bexpectedHeadOid\b/.test(line));
+	if (!hasApiCommit || !hasHeadGuard) {
+		findings.push('commit without createCommitOnBranch and expectedHeadOid');
 	}
 	return findings;
 }
@@ -117,7 +121,14 @@ const formatStepFixture = (extra = {}) => {
 		"if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}";
 	const prettierCmd =
 		extra.prettierCmd ?? "pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'";
-	const pushCmd = extra.pushCmd ?? 'git push origin "HEAD:refs/heads/$BRANCH"';
+	const commitLines = extra.commitLines ?? [
+		'  base=$(git rev-parse HEAD)',
+		`  git diff --name-only -z | while IFS= read -r -d '' path; do`,
+		`    jq -n --arg path "$path" --rawfile text "$path" '{path: $path, contents: ($text | @base64)}'`,
+		`  done | jq -s --arg base "$base" '{query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",`,
+		`    variables: {input: {expectedHeadOid: $base, fileChanges: {additions: .}}}}' >"$RUNNER_TEMP/format-commit.json"`,
+		'  if ! gh api graphql --input "$RUNNER_TEMP/format-commit.json"; then',
+	];
 	const envEntry = extra.envEntry ?? '  PR_JSON: ${{ steps.release.outputs.pr }}';
 	return (
 		`${STEP_START}name: Format the release change logs\n` +
@@ -134,11 +145,7 @@ const formatStepFixture = (extra = {}) => {
 			'  if git diff --quiet; then',
 			'    exit 0',
 			'  fi',
-			'  git config user.name "github-actions[bot]"',
-			'  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"',
-			'  git commit -am "chore: format the generated change logs"',
-			'  base=$(git rev-parse HEAD~1)',
-			`  if ! ${pushCmd}; then`,
+			...commitLines,
 			'    if [ "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" != "$base" ]; then',
 			'      echo "::notice::A newer run formats the moved branch"',
 			'      exit 0',
@@ -254,18 +261,30 @@ describe('release-please.yml changelog format step', () => {
 		);
 	});
 
-	it('detects push with --force', () => {
-		assert.deepEqual(
-			formatFindings(
-				job(
-					releaseStep,
-					formatStepFixture({
-						pushCmd: 'git push --force origin "HEAD:refs/heads/$BRANCH"',
-					}),
-				),
-			),
-			['push with --force'],
-		);
+	it('accepts the API commit with its head guard', () => {
+		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture())), []);
+	});
+
+	it('detects a local git commit and push', () => {
+		const commitLines = [
+			'  git commit -am "chore: format the generated change logs"',
+			'  base=$(git rev-parse HEAD~1)',
+			'  if ! git push origin "HEAD:refs/heads/$BRANCH"; then',
+		];
+		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture({ commitLines }))), [
+			'local git commit or push (unsigned)',
+			'commit without createCommitOnBranch and expectedHeadOid',
+		]);
+	});
+
+	it('boundary: the API commit without expectedHeadOid is refused', () => {
+		const commitLines = [
+			`  jq -n '{query: "mutation { createCommitOnBranch(input: $input) { commit { oid } } }"}' >"$RUNNER_TEMP/c.json"`,
+			'  if ! gh api graphql --input "$RUNNER_TEMP/c.json"; then',
+		];
+		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture({ commitLines }))), [
+			'commit without createCommitOnBranch and expectedHeadOid',
+		]);
 	});
 });
 

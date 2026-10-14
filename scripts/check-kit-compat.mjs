@@ -25,11 +25,11 @@ const KIT = '@sveltejs/kit';
 const KIT_TYPES = join('types', 'index.d.ts');
 const KIT_TYPES_SUFFIX = `/${KIT}/${KIT_TYPES}`;
 
-// SvelteKit 2 is the workspace's own devDependency; SvelteKit 3 is installed
-// beside it at the repository root under the alias `sveltekit-3`.
+// SvelteKit 3 is the workspace's own devDependency; SvelteKit 2 is installed
+// beside it at the repository root under the alias `sveltekit-2`.
 export const KIT_INSTALLS = [
-	{ major: 2, dir: join(root, 'packages', 'core', 'node_modules', '@sveltejs', 'kit') },
-	{ major: 3, dir: join(root, 'node_modules', 'sveltekit-3') },
+	{ major: 2, dir: join(root, 'node_modules', 'sveltekit-2') },
+	{ major: 3, dir: join(root, 'packages', 'core', 'node_modules', '@sveltejs', 'kit') },
 ];
 
 /**
