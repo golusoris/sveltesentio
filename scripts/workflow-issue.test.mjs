@@ -138,6 +138,11 @@ describe('refresh-upstream-docs.yml report job', () => {
 		);
 		assert.match(
 			reportSection,
+			/if:[^\n]*github\.ref == 'refs\/heads\/main'/,
+			'report job must run on main only',
+		);
+		assert.match(
+			reportSection,
 			/run:\s*bash\s+scripts\/workflow-issue\.sh/,
 			'report job must run scripts/workflow-issue.sh',
 		);

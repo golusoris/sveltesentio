@@ -84,7 +84,8 @@ jobs:
   report:
     name: Report workflow status
     needs: drift-check
-    if: always() && (needs.drift-check.result == 'success' || needs.drift-check.result == 'failure')
+    # A manual run on another branch says nothing about main.
+    if: always() && github.ref == 'refs/heads/main' && (needs.drift-check.result == 'success' || needs.drift-check.result == 'failure')
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
