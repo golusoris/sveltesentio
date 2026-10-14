@@ -47,7 +47,7 @@
 		"svelte": "^5.57.0",
 		"svelte-check": "^4.7.6",
 		"svelte-eslint-parser": "^1.8.1",
-		"sveltekit-2": "npm:@sveltejs/kit@2.70.3",
+		"sveltekit-2": "npm:@sveltejs/kit@3.0.1",
 		"turbo": "^2.10.12",
 		"typescript": "^6.0.3"
 	},
