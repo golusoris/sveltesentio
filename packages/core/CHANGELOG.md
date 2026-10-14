@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.1](https://github.com/golusoris/sveltesentio/compare/core-v0.4.0...core-v0.4.1) (2026-10-13)
+
+### Bug Fixes
+
+- **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/core-v0.3.0...core-v0.4.0) (2026-10-12)
 
 ### ⚠ BREAKING CHANGES
