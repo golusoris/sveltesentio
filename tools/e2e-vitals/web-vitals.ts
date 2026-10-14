@@ -13,7 +13,10 @@
 // working fails the suite instead of passing with nothing measured. Which
 // metrics an engine can measure follows from its supported performance entry
 // types, read in the page (Chromium all five, Firefox all but CLS, measured
-// 2026-10-14).
+// 2026-10-14). TTFB also needs a navigation entry whose responseStart lies
+// between 0 and now, the rule web-vitals applies before it reports TTFB
+// (getNavigationEntry); Firefox gave responseStart 0 on 1 of 150 loads of the
+// shell harness (2026-10-14).
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import type { Page } from '@playwright/test';
@@ -63,11 +66,19 @@ export async function installWebVitals(page: Page): Promise<void> {
 	await page.addInitScript(`${umd}\n${register}`);
 }
 
-/** The load metrics the page's engine can measure. */
+/** The load metrics the page's engine can measure on this load. */
 export async function measurableLoadMetrics(page: Page): Promise<WebVitalName[]> {
-	const supported = await page.evaluate(() => [...PerformanceObserver.supportedEntryTypes]);
-	return (Object.keys(ENTRY_TYPES) as Array<keyof typeof ENTRY_TYPES>).filter((name) =>
-		supported.includes(ENTRY_TYPES[name]),
+	const { supported, navigationTimed } = await page.evaluate(() => {
+		const nav = performance.getEntriesByType('navigation')[0] as
+			PerformanceNavigationTiming | undefined;
+		return {
+			supported: [...PerformanceObserver.supportedEntryTypes],
+			navigationTimed:
+				nav !== undefined && nav.responseStart > 0 && nav.responseStart < performance.now(),
+		};
+	});
+	return (Object.keys(ENTRY_TYPES) as Array<keyof typeof ENTRY_TYPES>).filter(
+		(name) => supported.includes(ENTRY_TYPES[name]) && (name !== 'TTFB' || navigationTimed),
 	);
 }
 
@@ -78,15 +89,24 @@ export async function measurableLoadMetrics(page: Page): Promise<WebVitalName[]>
  */
 export async function settleWebVitals(page: Page): Promise<void> {
 	const required = await measurableLoadMetrics(page);
-	await page.waitForFunction(
-		(names) => {
-			const values = (globalThis as { __sveltesentioWebVitals?: Record<string, number> })
-				.__sveltesentioWebVitals;
-			return values !== undefined && names.every((name) => name in values);
-		},
-		required,
-		{ timeout: SETTLE_TIMEOUT_MS },
-	);
+	await page
+		.waitForFunction(
+			(names) => {
+				const values = (globalThis as { __sveltesentioWebVitals?: Record<string, number> })
+					.__sveltesentioWebVitals;
+				return values !== undefined && names.every((name) => name in values);
+			},
+			required,
+			{ timeout: SETTLE_TIMEOUT_MS },
+		)
+		.catch(async (cause: unknown) => {
+			const reported = await readWebVitals(page);
+			const missing = required.filter((name) => reported[name] === undefined);
+			throw new Error(
+				`web-vitals reported no ${missing.join(', ')} within ${SETTLE_TIMEOUT_MS} ms`,
+				{ cause },
+			);
+		});
 }
 
 /** The values web-vitals has reported in the page so far. */
