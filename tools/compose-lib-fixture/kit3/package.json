@@ -1,0 +1,26 @@
+{
+	"name": "compose-lib-fixture-kit3",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Builds the #lib import forms of docs/compose on SvelteKit 3.",
+	"license": "EUPL-1.2",
+	"type": "module",
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
+	},
+	"scripts": {
+		"build": "vite build",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-static": "4.0.0",
+		"@sveltejs/kit": "3.0.1",
+		"@sveltejs/vite-plugin-svelte": "7.3.1",
+		"@types/node": "24.19.2",
+		"svelte": "5.57.2",
+		"svelte-check": "4.7.6",
+		"typescript": "6.0.3",
+		"vite": "8.3.4"
+	}
+}
