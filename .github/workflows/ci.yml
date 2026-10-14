@@ -85,6 +85,7 @@ jobs:
             pnpm lint
           fi
       - run: pnpm check:exports
+      - run: pnpm check:component-stories
       # publint --strict on every published package: export condition order, files the
       # manifest names but the tarball lacks (a dangling `bin`), packaging warnings. Called
       # by name, as eslint and prettier below, so the declared-linters audit sees it; the

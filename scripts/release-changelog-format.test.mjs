@@ -73,6 +73,34 @@ export function formatFindings(source) {
 	return findings;
 }
 
+const ENV_KEY = `${STEP_BODY}env:`;
+const ENV_ENTRY = `${STEP_BODY}  `;
+
+/**
+ * Every step `env` entry that parses a step output with fromJSON. Step `env`
+ * is evaluated even when the step's `if` is false, so an empty output fails
+ * the template and the whole run (release-please runs 38500794227,
+ * 38503822180).
+ */
+export function envFindings(source) {
+	const findings = [];
+	for (const lines of steps(source)) {
+		let inEnv = false;
+		for (const line of lines) {
+			if (line.trimEnd() === ENV_KEY) {
+				inEnv = true;
+			} else if (inEnv && line.startsWith(ENV_ENTRY)) {
+				if (/\bfromJSON\(\s*steps\./.test(line)) {
+					findings.push(`fromJSON of a step output in step env (${line.trim()})`);
+				}
+			} else {
+				inEnv = false;
+			}
+		}
+	}
+	return findings;
+}
+
 const step = (...lines) => lines.map((line) => `${STEP_BODY}${line}`).join('\n');
 const job = (...parts) => `jobs:\n  release:\n    steps:\n${parts.join('')}`;
 
@@ -90,14 +118,16 @@ const formatStepFixture = (extra = {}) => {
 	const prettierCmd =
 		extra.prettierCmd ?? "pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'";
 	const pushCmd = extra.pushCmd ?? 'git push origin "HEAD:refs/heads/$BRANCH"';
+	const envEntry = extra.envEntry ?? '  PR_JSON: ${{ steps.release.outputs.pr }}';
 	return (
 		`${STEP_START}name: Format the release change logs\n` +
 		`${step(
 			gate,
 			'working-directory: release-pr',
 			'env:',
-			'  BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}',
+			envEntry,
 			'run: |',
+			`  BRANCH=$(jq -er '.headBranchName' <<<"$PR_JSON")`,
 			'  corepack enable',
 			'  pnpm install --frozen-lockfile',
 			`  ${prettierCmd}`,
@@ -170,6 +200,25 @@ function loadMarkdownlint() {
 describe('release-please.yml changelog format step', () => {
 	it('holds for the workflow in this repository', () => {
 		assert.deepEqual(formatFindings(readFileSync(workflow, 'utf8')), []);
+		assert.deepEqual(envFindings(readFileSync(workflow, 'utf8')), []);
+	});
+
+	it('accepts the raw step output in step env', () => {
+		assert.deepEqual(envFindings(job(releaseStep, formatStepFixture())), []);
+	});
+
+	it('detects fromJSON of a step output in step env', () => {
+		const envEntry = '  BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}';
+		assert.deepEqual(envFindings(job(releaseStep, formatStepFixture({ envEntry }))), [
+			`fromJSON of a step output in step env (${envEntry.trim()})`,
+		]);
+	});
+
+	it('boundary: fromJSON of a step output in with is evaluated only when the step runs', () => {
+		const checkout =
+			`${STEP_START}uses: actions/checkout@0123 # v0\n` +
+			`${step('with:', '  ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}')}\n`;
+		assert.deepEqual(envFindings(job(releaseStep, checkout)), []);
 	});
 
 	it('detects step missing', () => {
