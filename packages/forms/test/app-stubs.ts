@@ -2,8 +2,9 @@
 // `superForm` client (imported as the default seam by `useForm`) resolves under
 // the plain Node test runner. `useForm`'s tests always inject a fake `superForm`,
 // so these are never actually exercised — they only need to be importable to
-// satisfy the static `$app/*` imports in `sveltekit-superforms/client`. The
-// vitest config aliases every `$app/*` specifier to this module.
+// satisfy the static `$app/*` imports in `sveltekit-superforms/client` and the
+// bare `import '$app/server';` guard in `sveltekit-superforms/server`. The vitest
+// config aliases every `$app/*` specifier to this module.
 import { readable } from 'svelte/store';
 
 // $app/environment

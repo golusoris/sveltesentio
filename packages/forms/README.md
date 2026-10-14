@@ -1,6 +1,6 @@
 # @sveltesentio/forms
 
-> Superforms v2 + Zod v4 thin wrapper with RFC 9457 field-error mapping
+> Superforms v3 + Zod v4 thin wrapper with RFC 9457 field-error mapping
 
 Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable SvelteKit framework.
 
@@ -12,14 +12,14 @@ pnpm add @sveltesentio/forms
 
 ## Exports
 
-| Path                           | Purpose                                                                                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@sveltesentio/forms`          | `superValidate` (Zod v4 pre-wired), `problemToFieldErrors`, `superForm`, proxies, and the Superforms runtime re-exports                             |
-| `@sveltesentio/forms/server`   | Server-safe subset — `superValidate` + helpers without client `superForm`/`$app/*`                                                                  |
-| `@sveltesentio/forms/problem`  | `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull)                                                                                  |
-| `@sveltesentio/forms/action`   | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`                                           |
-| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, …); optional `formsnap@^2` peer                                                             |
-| `@sveltesentio/forms/use-form` | `useForm()` — runes-native sugar over `superForm`. Pulls `superForm` from Superforms' `/client` subpath, so it stays loadable in a Node test runner |
+| Path                           | Purpose                                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sveltesentio/forms`          | `superValidate` (Zod v4 pre-wired), `problemToFieldErrors`, `superForm`, proxies, and the Superforms runtime re-exports                                                                        |
+| `@sveltesentio/forms/server`   | Server-safe subset — `superValidate` + helpers without client `superForm` (superforms 3 server entry imports `$app/server`, so it resolves only inside a SvelteKit build or an alias in tests) |
+| `@sveltesentio/forms/problem`  | `problemToFieldErrors` + `FieldErrors` type (zero-dependency pull)                                                                                                                             |
+| `@sveltesentio/forms/action`   | `formAction()` — wraps a `+page.server.ts` handler with `superValidate` + `ProblemError → fail({ form })`                                                                                      |
+| `@sveltesentio/forms/formsnap` | Formsnap component barrel (`Field`, `Control`, `Label`, …); optional `formsnap@^2` peer                                                                                                        |
+| `@sveltesentio/forms/use-form` | `useForm()` — runes-native sugar over `superForm`. Pulls `superForm` from Superforms' `/client` subpath, so it stays loadable in a Node test runner                                            |
 
 ### `formAction`
 
