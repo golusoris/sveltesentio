@@ -7,11 +7,13 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   drift-check:
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -78,3 +80,31 @@ jobs:
           else
             gh issue create --title "$title" --body "$body" --label documentation
           fi
+
+  report:
+    name: Report workflow status
+    needs: drift-check
+    # A manual run on another branch says nothing about main.
+    if: always() && github.ref == 'refs/heads/main' && (needs.drift-check.result == 'success' || needs.drift-check.result == 'failure')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open, update or close the workflow issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: refresh-upstream-docs failed on main
+          LABEL: workflow-failure
+          LABEL_COLOR: d93f0b
+          LABEL_DESCRIPTION: A scheduled workflow failed on main
+          STATUS: ${{ needs.drift-check.result }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAIL_BODY: 'The refresh-upstream-docs workflow failed in $RUN. The next passing run closes this issue.'
+          REPEAT_COMMENT: 'The refresh-upstream-docs workflow failed again in $RUN.'
+          PASS_COMMENT: 'The refresh-upstream-docs workflow succeeded in $RUN.'
+        run: bash scripts/workflow-issue.sh
