@@ -168,11 +168,11 @@ import { uuidv7 } from 'uuidv7';
 import { z } from 'zod';
 import { superValidate, fail } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
-import { db } from '$lib/server/db';
-import { reauth } from '$lib/server/auth';
-import { rateLimit } from '$lib/server/rate-limit';
-import { auditLog } from '$lib/server/audit';
-import { exportQueue } from '$lib/server/queues';
+import { db } from '#lib/server/db.js';
+import { reauth } from '#lib/server/auth.js';
+import { rateLimit } from '#lib/server/rate-limit.js';
+import { auditLog } from '#lib/server/audit.js';
+import { exportQueue } from '#lib/server/queues.js';
 
 const RequestForm = z.object({
   format: z.enum(['json', 'csv', 'json_and_csv']).default('json_and_csv'),
@@ -232,7 +232,7 @@ attacker exfiltrate everything. Same posture as
 ```ts
 // packages/portability/src/datamap.ts
 import type { DataCategory } from './schema';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 // Every table that holds user PII registers here. New tables added
 // to the schema MUST add an entry — enforced by the data-migrations.md
@@ -322,10 +322,10 @@ import archiver from 'archiver';
 import { createWriteStream } from 'node:fs';
 import { DATA_MAP } from './datamap';
 import { ExportManifest } from './schema';
-import { db } from '$lib/server/db';
-import { s3 } from '$lib/server/s3';
+import { db } from '#lib/server/db.js';
+import { s3 } from '#lib/server/s3.js';
 import { sendNotification } from '@sveltesentio/notifications';
-import { auditLog } from '$lib/server/audit';
+import { auditLog } from '#lib/server/audit.js';
 
 new Worker(
   'exports',
@@ -522,8 +522,8 @@ Tune per worker memory budget.
 ```ts
 // src/routes/api/exports/[id]/+server.ts
 import { error, redirect } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/audit';
+import { db } from '#lib/server/db.js';
+import { auditLog } from '#lib/server/audit.js';
 
 export const GET = async ({ params, locals }) => {
   if (!locals.user) throw error(401);

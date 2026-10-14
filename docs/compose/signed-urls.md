@@ -166,8 +166,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { SignRequest, SignedUrl } from './types';
-import { recordAudit } from '$lib/server/audit';
-import { sha256 } from '$lib/server/crypto';
+import { recordAudit } from '#lib/server/audit.js';
+import { sha256 } from '#lib/server/crypto.js';
 
 const clients = new Map<string, S3Client>();
 
@@ -289,8 +289,8 @@ export async function signGcsUrl(req: SignRequest) {
 // src/routes/api/storage/sign/+server.ts
 import { json, error } from '@sveltejs/kit';
 import { SignRequest, signUrl } from '@sveltesentio/storage';
-import { requirePermission } from '$lib/server/auth';
-import { rateLimiter } from '$lib/server/rate-limiter';
+import { requirePermission } from '#lib/server/auth.js';
+import { rateLimiter } from '#lib/server/rate-limiter.js';
 
 export async function POST({ request, locals, getClientAddress }) {
   const parsed = SignRequest.safeParse({ ...(await request.json()), requestedBy: locals.user?.id });

@@ -191,7 +191,7 @@ import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { TriageVerdict, PolicyRule, type ContentSurface } from './schema';
 import { recordAiAuditEvent } from '@sveltesentio/ai/audit';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 
 const TriageSchema = z.object({
   rules: z.array(
@@ -285,9 +285,9 @@ diff-able when policy shifts.
 ```ts
 // src/routes/admin/moderation/+page.server.ts
 import { ReviewDecision } from '@sveltesentio/moderation/schema';
-import { permissions } from '$lib/server/permissions';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/audit';
+import { permissions } from '#lib/server/permissions.js';
+import { db } from '#lib/server/db.js';
+import { auditLog } from '#lib/server/audit.js';
 import { applyAction } from '@sveltesentio/moderation/act';
 import type { PageServerLoad, Actions } from './$types';
 import { superValidate, fail } from 'sveltekit-superforms';
@@ -362,9 +362,9 @@ expires if reviewer walks away.
 ```ts
 // packages/moderation/src/act.ts
 import type { ReviewDecision } from './schema';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 import { sendNotification } from '@sveltesentio/notifications';
-import { auditLog } from '$lib/server/audit';
+import { auditLog } from '#lib/server/audit.js';
 
 export async function applyAction(d: ReviewDecision) {
   const content = await db.queryOne<{ id: string; user_id: string }>(
@@ -439,10 +439,10 @@ reasons** to the user with a clear appeals path.
 ```ts
 // src/routes/appeals/[id]/+page.server.ts (resolver UI)
 import { Appeal } from '@sveltesentio/moderation/schema';
-import { db } from '$lib/server/db';
-import { permissions } from '$lib/server/permissions';
+import { db } from '#lib/server/db.js';
+import { permissions } from '#lib/server/permissions.js';
 import { sendNotification } from '@sveltesentio/notifications';
-import { auditLog } from '$lib/server/audit';
+import { auditLog } from '#lib/server/audit.js';
 
 export const actions = {
   resolve: async ({ request, locals, params }) => {

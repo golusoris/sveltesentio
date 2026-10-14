@@ -26,6 +26,10 @@ Thumbs.db
 # praetor gate receipt (regenerated per run, Ed25519-signed)
 .standards-receipt.json
 
+# compose-lib fixture: run.mjs copies tools/compose-lib-fixture/src into each kit directory
+/tools/compose-lib-fixture/kit2/src/
+/tools/compose-lib-fixture/kit3/src/
+
 # BEGIN praetor private artifacts (praetorctl adopt)
 /.workingdir/
 /.workingdir2/

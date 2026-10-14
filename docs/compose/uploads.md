@@ -155,7 +155,7 @@ async function stripExif(file: File, mime: string): Promise<Blob> {
 
 `removeJpegAppMarkers` walks APP0..APPn JPEG segments and drops
 EXIF (APP1) and XMP (APP1 `http://ns.adobe.com/xap/1.0/`). ~40 LOC;
-keep in `$lib/uploads/jpeg-strip.ts`. Pros: lossless bytes. Cons:
+keep in `src/lib/uploads/jpeg-strip.ts`. Pros: lossless bytes. Cons:
 JPEG-only and touches file format; (a) is safer default.
 
 Default to (a); opt into (b) when byte preservation matters (e.g.
@@ -202,7 +202,7 @@ tus expects `PATCH` with `Content-Type: application/offset+octet-stream`
 
 ```svelte
 <script lang="ts">
-  import { uploadFile, UploadRejection } from '$lib/uploads/pipeline';
+  import { uploadFile, UploadRejection } from '#lib/uploads/pipeline.js';
   import { toast } from '@sveltesentio/ui/toast';
 
   let progress = $state(0);
@@ -304,7 +304,7 @@ Never drag-drop-only. File-picker fallback is mandatory for WCAG
 ## Testing
 
 ```ts
-import { uploadFile, UploadRejection } from '$lib/uploads/pipeline';
+import { uploadFile, UploadRejection } from '#lib/uploads/pipeline.js';
 
 // Unit: validation
 test('rejects spoofed type', async () => {

@@ -67,9 +67,9 @@ import { error, json, type RequestHandler } from '@sveltejs/kit';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { env } from '$env/dynamic/private';
-import { dedupOrThrow } from '$lib/webhooks/dedup';
-import { enqueue } from '$lib/queue';
-import { logger } from '$lib/observability/logs';
+import { dedupOrThrow } from '#lib/webhooks/dedup.js';
+import { enqueue } from '#lib/queue.js';
+import { logger } from '#lib/observability/logs.js';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 const REPLAY_WINDOW_SECONDS = 5 * 60;
@@ -167,8 +167,8 @@ Three rules from the table:
 import { error, json, type RequestHandler } from '@sveltejs/kit';
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
-import { dedupOrThrow } from '$lib/webhooks/dedup';
-import { enqueue } from '$lib/queue';
+import { dedupOrThrow } from '#lib/webhooks/dedup.js';
+import { enqueue } from '#lib/queue.js';
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
@@ -208,7 +208,7 @@ check + payload parse in one call. Three Stripe specifics:
 ```ts
 // src/lib/webhooks/dedup.ts
 import { error } from '@sveltejs/kit';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 
 const DEDUP_TTL_DAYS = 7;
 

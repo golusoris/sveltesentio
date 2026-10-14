@@ -76,7 +76,7 @@ provider so local state loads first, then server diffs reconcile on top.
 ```svelte
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { connectFlow, type CollabHandle } from '$lib/collab/flow';
+  import { connectFlow, type CollabHandle } from '#lib/collab/flow.js';
 
   let { data } = $props();
   let handle = $state<CollabHandle | null>(null);

@@ -80,7 +80,7 @@ The proxy is read-only for rendering; mutations route through the Y type.
 <script lang="ts">
   import { createYjsStore } from '@sveltesentio/collab';
   import { onMount, onDestroy } from 'svelte';
-  import { connectFlow } from '$lib/collab';
+  import { connectFlow } from '#lib/collab.js';
 
   let { data } = $props();
   let doc: Y.Doc;

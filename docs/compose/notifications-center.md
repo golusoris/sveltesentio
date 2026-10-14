@@ -196,8 +196,8 @@ Seven preference rules:
 
 ```ts
 // packages/notifications/src/fanout.ts
-import { makeWorker } from '$lib/server/queue';
-import { db } from '$lib/server/db';
+import { makeWorker } from '#lib/server/queue.js';
+import { db } from '#lib/server/db.js';
 import { clock } from '@sveltesentio/core/clock';
 import { NotificationEvent, UserPreferences } from './types';
 import { z } from 'zod';
@@ -293,8 +293,8 @@ Four batching rules:
 
 ```ts
 // src/routes/api/notifications/stream/+server.ts
-import { produce } from '$lib/server/sse';
-import { db } from '$lib/server/db';
+import { produce } from '#lib/server/sse.js';
+import { db } from '#lib/server/db.js';
 
 export async function GET({ locals }) {
   const user = requireUser(locals);
@@ -412,7 +412,7 @@ Six rune rules:
 
 ```ts
 // packages/notifications/src/render.ts
-import * as m from '$lib/paraglide/messages';
+import * as m from '#lib/paraglide/messages.js';
 
 export function renderNotification(row: InAppRow): { title: string; href: string } {
   switch (row.type) {

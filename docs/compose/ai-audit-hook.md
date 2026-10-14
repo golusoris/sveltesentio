@@ -234,7 +234,7 @@ classification.
 ### PostgreSQL (low-volume / shared stack)
 
 ```ts
-import { sql } from '$lib/db';
+import { sql } from '#lib/db.js';
 
 export const pgSink: OnAudit = async (event) => {
   await sql`

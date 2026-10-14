@@ -72,8 +72,8 @@ suffice.
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { z } from 'zod';
-import { rpId, rpName, originAllowlist } from '$lib/auth/webauthn/config';
-import { requireSession } from '$lib/auth/session';
+import { rpId, rpName, originAllowlist } from '#lib/auth/webauthn/config.js';
+import { requireSession } from '#lib/auth/session.js';
 
 const Body = z.object({
   flow: z.enum(['standard', 'admin', 'workforce']),
@@ -122,9 +122,9 @@ Three invariants:
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { z } from 'zod';
-import { rpId, originAllowlist } from '$lib/auth/webauthn/config';
-import { mdsLookup } from '$lib/auth/webauthn/mds';
-import { requireSession } from '$lib/auth/session';
+import { rpId, originAllowlist } from '#lib/auth/webauthn/config.js';
+import { mdsLookup } from '#lib/auth/webauthn/mds.js';
+import { requireSession } from '#lib/auth/session.js';
 
 const RegistrationResponse = z.object({
   id: z.string(),
@@ -356,9 +356,9 @@ Two session rules:
 
 ```ts
 import { describe, it, expect, vi } from 'vitest';
-import { mdsLookup } from '$lib/auth/webauthn/mds';
+import { mdsLookup } from '#lib/auth/webauthn/mds.js';
 
-vi.mock('$lib/auth/webauthn/mds', () => ({
+vi.mock('#lib/auth/webauthn/mds.js', () => ({
   mdsLookup: vi.fn(),
 }));
 

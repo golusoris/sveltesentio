@@ -235,7 +235,7 @@ import type { RequestHandler } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { WorkOS } from '@workos-inc/node';
 import { WORKOS_API_KEY } from '$env/static/private';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 
 const workos = new WorkOS(WORKOS_API_KEY);
 
@@ -276,10 +276,10 @@ import type { RequestHandler } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { WorkOS } from '@workos-inc/node';
 import { WORKOS_API_KEY } from '$env/static/private';
-import { verifyState } from '$lib/auth/state';
-import { jitProvisionUser } from '$lib/auth/saml/provision';
-import { createSession } from '$lib/auth/session';
-import { recordAudit } from '$lib/audit';
+import { verifyState } from '#lib/auth/state.js';
+import { jitProvisionUser } from '#lib/auth/saml/provision.js';
+import { createSession } from '#lib/auth/session.js';
+import { recordAudit } from '#lib/audit.js';
 
 const workos = new WorkOS(WORKOS_API_KEY);
 
@@ -345,9 +345,9 @@ lax`.
 
 ```typescript
 // src/lib/auth/saml/provision.ts
-import { db } from '$lib/db';
-import { uuidv7 } from '$lib/observability';
-import { now } from '$lib/clock';
+import { db } from '#lib/db.js';
+import { uuidv7 } from '#lib/observability.js';
+import { now } from '#lib/clock.js';
 
 interface JITInput {
   tenantId: string;
@@ -443,7 +443,7 @@ function resolveRole(
 ```typescript
 // src/lib/auth/scim/authn.ts
 import { error } from '@sveltejs/kit';
-import { db } from '$lib/db';
+import { db } from '#lib/db.js';
 import { createHash } from 'node:crypto';
 
 export async function verifyScimToken(request: Request, tenantId: string): Promise<void> {
@@ -482,8 +482,8 @@ export async function verifyScimToken(request: Request, tenantId: string): Promi
 ```typescript
 // src/routes/api/auth/scim/v2/Users/+server.ts
 import type { RequestHandler } from './$types';
-import { verifyScimToken } from '$lib/auth/scim/authn';
-import { scimCreate, scimList } from '$lib/auth/scim/handlers';
+import { verifyScimToken } from '#lib/auth/scim/authn.js';
+import { scimCreate, scimList } from '#lib/auth/scim/handlers.js';
 
 export const GET: RequestHandler = async ({ request, locals, url }) => {
   await verifyScimToken(request, locals.tenantId);
@@ -531,7 +531,7 @@ eq "..."`. Okta/Azure use these for dedup before CREATE.
 // src/routes/api/auth/saml/[tenant]/logout/+server.ts
 import type { RequestHandler } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { destroySession } from '$lib/auth/session';
+import { destroySession } from '#lib/auth/session.js';
 
 export const POST: RequestHandler = async ({ cookies }) => {
   await destroySession(cookies);
@@ -557,9 +557,9 @@ export const GET = POST;
 // src/routes/api/cron/saml-cert-expiry/+server.ts
 import { withCronRun } from '../_shared/runner';
 import { verifyCronRequest } from '../_shared/authn';
-import { db } from '$lib/db';
-import { daysUntil } from '$lib/time';
-import { sendEmail } from '$lib/email/send';
+import { db } from '#lib/db.js';
+import { daysUntil } from '#lib/time.js';
+import { sendEmail } from '#lib/email/send.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);

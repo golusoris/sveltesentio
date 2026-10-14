@@ -72,10 +72,10 @@ import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { v7 as uuid } from 'uuid';
 import type { RequestHandler } from './$types';
-import { auditPrompt, auditStep, auditError } from '$lib/server/ai/audit';
-import { tracer } from '$lib/server/telemetry';
-import { requireSession } from '$lib/server/auth';
-import { rateLimit } from '$lib/server/rate-limit';
+import { auditPrompt, auditStep, auditError } from '#lib/server/ai/audit.js';
+import { tracer } from '#lib/server/telemetry.js';
+import { requireSession } from '#lib/server/auth.js';
+import { rateLimit } from '#lib/server/rate-limit.js';
 
 const RequestBody = z.object({
   prompt: z.string().min(1).max(4000),
@@ -193,7 +193,7 @@ Six invariants new vs. [ai-vercel-sdk.md](ai-vercel-sdk.md):
 // src/lib/server/ai/tools.ts
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { Session } from '$lib/server/auth';
+import type { Session } from '#lib/server/auth.js';
 
 export function agentTools(session: Session, correlationId: string) {
   return {

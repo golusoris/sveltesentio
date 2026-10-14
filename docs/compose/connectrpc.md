@@ -132,7 +132,7 @@ Usage:
 // src/lib/rpc/clients.ts
 import { createClient } from '@sveltesentio/realtime/rpc';
 import { transport } from './transport';
-import { FeedService } from '$lib/gen/api/v1/feed_service_connect';
+import { FeedService } from '#lib/gen/api/v1/feed_service_connect.js';
 
 export const feed = createClient(FeedService, { transport });
 ```
@@ -144,7 +144,7 @@ Use `connect-query` over hand-rolling `useQuery`:
 ```svelte
 <script lang="ts">
   import { createQuery } from '@connectrpc/connect-query';
-  import { listItems } from '$lib/gen/api/v1/feed_service-FeedService_connectquery';
+  import { listItems } from '#lib/gen/api/v1/feed_service-FeedService_connectquery.js';
 
   const query = createQuery(listItems, { cursor: '' }, { transport });
 </script>
@@ -230,7 +230,7 @@ Component:
 ```svelte
 <script lang="ts">
   import { useConnectStream } from '@sveltesentio/realtime/rpc';
-  import { feed } from '$lib/rpc/clients';
+  import { feed } from '#lib/rpc/clients.js';
 
   const stream = useConnectStream((input) => feed.tail(input), { since: 0n });
 </script>
@@ -350,7 +350,7 @@ Mock the transport, not `fetch`:
 
 ```ts
 import { createRouterTransport } from '@connectrpc/connect';
-import { FeedService } from '$lib/gen/...';
+import { FeedService } from '#lib/gen/...';
 
 test('feed.list returns items', async () => {
   const transport = createRouterTransport(({ service }) => {

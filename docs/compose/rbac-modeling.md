@@ -370,7 +370,7 @@ Three client rules:
 
 ```svelte
 <script lang="ts">
-  import { usePermissions } from '$lib/rbac/client';
+  import { usePermissions } from '#lib/rbac/client.js';
   const perms = usePermissions();
   const canPublish = $derived(perms.has('content.publish'));
 </script>

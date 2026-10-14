@@ -85,7 +85,7 @@ Six route rules:
 
 ```ts
 // src/routes/admin/+layout.server.ts
-import { requireRole } from '$lib/auth/rbac';
+import { requireRole } from '#lib/auth/rbac.js';
 
 export async function load(event) {
   const user = requireRole(event, ['admin:read', 'admin:write', 'admin:super']);

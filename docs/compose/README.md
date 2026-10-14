@@ -249,6 +249,48 @@ Table of recipes in each bucket:
 pure-compose whenever possible. A wrapper proposal must cite a
 cross-cutting invariant that truly justifies the maintenance cost.
 
+## Importing from `src/lib`
+
+The recipes import an app's own modules through `#lib`, a
+[Node subpath import](https://nodejs.org/api/packages.html#subpath-imports)
+that the app declares in its `package.json`:
+
+```json
+{
+  "imports": {
+    "#lib": "./src/lib/index.js",
+    "#lib/*": "./src/lib/*"
+  }
+}
+```
+
+SvelteKit 3 removed the built-in alias for `src/lib`; a build that still
+imports through it stops with `module_removed_lib`. Vite and TypeScript resolve
+`#lib` themselves, so the same import works on SvelteKit 2 from 2.70.2, the
+lowest release the packages accept, and on SvelteKit 3. TypeScript applies
+no extension or index lookup to the wildcard, which decides the form of a
+specifier:
+
+| Module in `src/lib`        | Specifier                            |
+| :------------------------- | :----------------------------------- |
+| `api/client.ts`            | `#lib/api/client.js`                 |
+| `components/ui/button/`    | `#lib/components/ui/button/index.js` |
+| `state/projects.svelte.ts` | `#lib/state/projects.svelte.js`      |
+| `Widget.svelte`            | `#lib/Widget.svelte`                 |
+| `index.ts`                 | `#lib`                               |
+
+Vite does not expand a template import such as
+``import(`#lib/docs/${slug}.md`)``; list such modules with
+`import.meta.glob` instead, as [markdown.md](markdown.md) does. A module
+under `src/lib/server/` stays server-only when it is imported through
+`#lib`.
+
+`tools/compose-lib-fixture/run.mjs` builds
+and type-checks one app that uses every form above, on SvelteKit 2 and on
+SvelteKit 3, and `scripts/check-compose-imports.mjs` refuses any other form
+in a recipe. The `Compose recipes` workflow runs both on every pull request
+that changes a recipe.
+
 ## Recipe authoring conventions
 
 When writing a new recipe:
@@ -276,6 +318,8 @@ When writing a new recipe:
 10. **Markdown-linter clean**: no `|` inside backticks in table cells
     (use `/`), no literal `<element>` text (use `element` or alternate
     delimiter), plain quotes not escaped.
+11. **App modules through `#lib`**: never the alias SvelteKit 3 removed; the specifier forms
+    are listed under "Importing from `src/lib`" above.
 
 ## History
 

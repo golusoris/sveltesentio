@@ -198,7 +198,7 @@ import { superValidate, message } from 'sveltekit-superforms/server';
 import { zod } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
 import { generateApiKey } from '@sveltesentio/auth/api-keys';
-import { insertApiKey } from '$lib/server/db/api-keys';
+import { insertApiKey } from '#lib/server/db/api-keys.js';
 import { writeAuditEvent } from '@sveltesentio/audit';
 
 const CreateKey = z.object({
@@ -278,7 +278,7 @@ export const actions = {
 // packages/auth/src/api-keys/handle.ts
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { db } from '@sveltesentio/db';
-import { apiKey } from '$lib/server/db/schema';
+import { apiKey } from '#lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 export async function handleApiKey({ event, resolve }) {
@@ -427,7 +427,7 @@ tombstone so audit can distinguish rotations from panic-revokes.
 // src/routes/api/internal/secret-scanner-webhook/+server.ts
 // GitHub's secret-scanning partner webhook hits this endpoint when a
 // token matching our registered prefix is found in a public repo.
-import { verifyGithubSignature } from '$lib/server/github/secret-scanning';
+import { verifyGithubSignature } from '#lib/server/github/secret-scanning.js';
 
 export async function POST({ request }) {
   const body = await request.text();

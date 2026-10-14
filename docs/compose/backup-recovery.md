@@ -214,7 +214,7 @@ Key rotation             → CMK rotates yearly; old versions retained for 7 yea
 // src/routes/api/cron/dr-drill/+server.ts
 import { withCronRun } from '../_shared/runner';
 import { verifyCronRequest } from '../_shared/authn';
-import { runDrill } from '$lib/backup/drill';
+import { runDrill } from '#lib/backup/drill.js';
 
 export const POST: RequestHandler = async ({ request }) => {
   verifyCronRequest(request);

@@ -390,7 +390,7 @@ await emit(
 Per-user rate limit is mandatory (provider bills you):
 
 ```ts
-import { ratelimit } from '$lib/ratelimit'; // your impl
+import { ratelimit } from '#lib/ratelimit.js'; // your impl
 
 const rl = await ratelimit.check(`ai:${session.user.id}`, { window: '1m', limit: 10 });
 if (!rl.ok) {

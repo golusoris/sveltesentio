@@ -87,7 +87,7 @@ URL-based strategies need `reroute()` to map `/de/x` → internal
 
 ```ts
 // src/hooks.ts
-import { deLocalizeUrl } from '$lib/paraglide/runtime';
+import { deLocalizeUrl } from '#lib/paraglide/runtime.js';
 
 export const reroute = ({ url }) => deLocalizeUrl(url).pathname;
 ```
@@ -101,7 +101,7 @@ generation.
 
 ```ts
 // src/hooks.server.ts
-import { paraglideMiddleware } from '$lib/paraglide/server';
+import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { sequence } from '@sveltejs/kit/hooks';
 
 const i18nHandle = ({ event, resolve }) =>
@@ -235,7 +235,7 @@ ICU parser ships to the client — the branching is pre-compiled.
 
 ```svelte
 <script lang="ts">
-  import { localizeUrl, locales } from '$lib/paraglide/runtime';
+  import { localizeUrl, locales } from '#lib/paraglide/runtime.js';
   import { page } from '$app/stores';
 
   function switchTo(locale: string) {
@@ -287,8 +287,8 @@ geolocation as a fallback — locale ≠ country and the UX is hostile.
 
 ```ts
 // vitest
-import { m } from '$lib/paraglide/messages';
-import { setLocale } from '$lib/paraglide/runtime';
+import { m } from '#lib/paraglide/messages.js';
+import { setLocale } from '#lib/paraglide/runtime.js';
 
 test('German greeting', () => {
   setLocale('de');

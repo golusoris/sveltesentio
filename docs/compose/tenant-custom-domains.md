@@ -285,7 +285,7 @@ export async function verifyDomain(
 
 ```ts
 // src/hooks.server.ts — excerpt
-import { getTenantForHostname } from '$lib/server/domains';
+import { getTenantForHostname } from '#lib/server/domains.js';
 
 export async function handle({ event, resolve }) {
   const host = event.url.host;

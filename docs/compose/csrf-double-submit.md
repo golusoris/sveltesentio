@@ -156,7 +156,7 @@ export function verifyCsrfToken(token: string, sessionId: string): boolean {
 
 ```ts
 // src/hooks.server.ts — after session is established
-import { issueCsrfToken } from '$lib/server/csrf';
+import { issueCsrfToken } from '#lib/server/csrf.js';
 
 function setCsrfCookie(event: RequestEvent, sessionId: string) {
   const { token } = issueCsrfToken(sessionId);
@@ -185,7 +185,7 @@ Cookie attributes:
 
 ```ts
 // src/hooks.server.ts
-import { verifyCsrfToken } from '$lib/server/csrf';
+import { verifyCsrfToken } from '#lib/server/csrf.js';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SAFE_CONTENT_TYPES = new Set([

@@ -50,11 +50,11 @@ The `init` generates `components.json` + installs peer deps
     "cssVariables": true
   },
   "aliases": {
-    "components": "$lib/components",
-    "utils": "$lib/utils",
-    "ui": "$lib/components/ui",
-    "hooks": "$lib/hooks",
-    "lib": "$lib"
+    "components": "#lib/components",
+    "utils": "#lib/utils",
+    "ui": "#lib/components/ui",
+    "hooks": "#lib/hooks",
+    "lib": "#lib"
   },
   "typescript": true,
   "registry": "https://shadcn-svelte.com/registry"
@@ -76,7 +76,7 @@ Committed to the repo — consumer owns it.
 
 ```svelte
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
+  import { Button } from '#lib/components/ui/button/index.js';
 </script>
 
 <Button variant="default">Save</Button>
@@ -111,9 +111,9 @@ src/lib/components/ui/
 Each subdirectory is a single component family. Import via the barrel:
 
 ```ts
-import * as Dialog from '$lib/components/ui/dialog';
+import * as Dialog from '#lib/components/ui/dialog/index.js';
 // or
-import { Button } from '$lib/components/ui/button';
+import { Button } from '#lib/components/ui/button/index.js';
 ```
 
 ## Token bindings
@@ -243,7 +243,7 @@ like any other component:
 ```ts
 import { render } from '@testing-library/svelte';
 import { axe } from 'jest-axe';
-import { Dialog } from '$lib/components/ui/dialog';
+import { Dialog } from '#lib/components/ui/dialog/index.js';
 
 test('dialog is axe-clean', async () => {
   const { container } = render(Dialog, { props: { open: true } });

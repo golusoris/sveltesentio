@@ -73,7 +73,7 @@ export default {
 
 ```svelte
 <script>
-  import heroImg from '$lib/assets/hero.jpg?enhanced';
+  import heroImg from '#lib/assets/hero.jpg?enhanced';
 </script>
 
 <enhanced:img
@@ -111,7 +111,7 @@ immutable`** — see [caching.md](caching.md).
 import sharp from 'sharp';
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
-import { fetchOriginalFromStorage } from '$lib/storage';
+import { fetchOriginalFromStorage } from '#lib/storage.js';
 
 const ParamsSchema = z.object({
   w: z.coerce.number().int().min(16).max(3840).optional(),

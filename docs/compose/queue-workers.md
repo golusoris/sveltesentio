@@ -230,7 +230,7 @@ import { Worker, type Job } from 'bullmq';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { redisConnection } from './connection';
 import { JobName, JobPayloads } from './types';
-import { audit } from '$lib/audit';
+import { audit } from '#lib/audit.js';
 
 const tracer = trace.getTracer('queue');
 
@@ -335,7 +335,7 @@ Five rules:
 // src/lib/queue/dlq.ts
 import { Worker, QueueEvents } from 'bullmq';
 import { redisConnection } from './connection';
-import { notifyOpsChannel } from '$lib/ops';
+import { notifyOpsChannel } from '#lib/ops.js';
 
 export function attachDLQ(queueName: string) {
   const events = new QueueEvents(queueName, { connection: redisConnection });
@@ -412,7 +412,7 @@ Five shutdown rules:
 
 ```ts
 // src/lib/workflows/welcome.ts
-import { inngest } from '$lib/inngest/client';
+import { inngest } from '#lib/inngest/client.js';
 
 export const welcome = inngest.createFunction(
   { id: 'user.welcome', retries: 3 },

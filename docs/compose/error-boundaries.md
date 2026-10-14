@@ -247,7 +247,7 @@ export const handleError: HandleClientError = ({ error: err, status }) => {
 <!-- src/routes/+error.svelte — root boundary (always required) -->
 <script lang="ts">
   import { page } from '$app/state';
-  import * as m from '$lib/paraglide/messages';
+  import * as m from '#lib/paraglide/messages.js';
   import { onMount } from 'svelte';
 
   let heading: HTMLHeadingElement | undefined;

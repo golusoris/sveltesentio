@@ -210,7 +210,7 @@ export const CATEGORIES = [
 
 ```ts
 // src/hooks.server.ts
-import { resolveConsent } from '$lib/consent/ssr';
+import { resolveConsent } from '#lib/consent/ssr.js';
 
 export async function handle({ event, resolve }) {
   event.locals.consent = resolveConsent(event.cookies.get('__Host-consent'));
@@ -319,7 +319,7 @@ export function resolveRegion(request: Request): {
     // Only load Klaro JS if banner is needed.
     if (data.consent.t === 0) {
       const klaro = await import('klaro');
-      const { buildConfig } = await import('$lib/consent/klaro-config');
+      const { buildConfig } = await import('#lib/consent/klaro-config.js');
       klaro.setup(buildConfig(data.region));
       klaro.show();
     }

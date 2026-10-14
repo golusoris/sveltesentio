@@ -37,8 +37,8 @@ shadcn generator already targets the correct name.
 
 ```svelte
 <script lang="ts">
-  import * as Carousel from '$lib/components/ui/carousel';
-  import type { CarouselAPI } from '$lib/components/ui/carousel';
+  import * as Carousel from '#lib/components/ui/carousel/index.js';
+  import type { CarouselAPI } from '#lib/components/ui/carousel/index.js';
 
   let api = $state<CarouselAPI>();
   let current = $state(0);

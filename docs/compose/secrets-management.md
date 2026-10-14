@@ -195,7 +195,7 @@ export const env = EnvSchema.parse({
    `$env` is the single channel; direct `process.env` reads bypass
    Vite's tree-shaking and risk leaking to the client.
 7. **Single validated `env` export** — all code imports
-   `{ env }` from `$lib/config/env`; nothing re-imports raw
+   `{ env }` from `#lib/config/env.js`; nothing re-imports raw
    `$env/static/private`.
 8. **Validation runs at module top-level.** Throws at boot;
    deploys fail visibly rather than 50% of requests crashing.
@@ -272,8 +272,8 @@ Production         Infisical env=prod  (MFA-gated access)
 
 ```typescript
 // src/hooks.server.ts (excerpt)
-import { env } from '$lib/config/env';
-import { validateSecretsHealth } from '$lib/config/health';
+import { env } from '#lib/config/env.js';
+import { validateSecretsHealth } from '#lib/config/health.js';
 
 validateSecretsHealth(env);
 ```

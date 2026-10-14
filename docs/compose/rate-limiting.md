@@ -119,7 +119,7 @@ return { allowed, math.floor(tokens), retry_after_ms }
 
 ```ts
 // src/lib/rate-limit/redis-bucket.ts
-import { redis } from '$lib/redis';
+import { redis } from '#lib/redis.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -249,7 +249,7 @@ import { error } from '@sveltejs/kit';
 import { consume } from './redis-bucket';
 import { rateLimitKey } from './identity';
 import { policies, type PolicyName } from './policies';
-import { logger } from '$lib/observability/logs';
+import { logger } from '#lib/observability/logs.js';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 
 export const rateLimitHook: Handle = async ({ event, resolve }) => {

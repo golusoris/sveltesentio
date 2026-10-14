@@ -238,10 +238,10 @@ Six dispatcher rules:
 
 ```ts
 // packages/webhooks/src/worker.ts
-import { makeWorker } from '$lib/server/queue';
+import { makeWorker } from '#lib/server/queue.js';
 import { z } from 'zod';
 import { sign } from './sign';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db.js';
 import { fetch } from 'undici';
 import { clock } from '@sveltesentio/core/clock';
 
