@@ -71,6 +71,7 @@ verify-all:
 	@pnpm run ci
 	@pnpm check:cycles
 	@pnpm check:component-stories
+	@pnpm check:export-tests
 	@pnpm check:publint
 	@pnpm check:svelte
 	@pnpm check:kit-compat
