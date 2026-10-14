@@ -584,7 +584,7 @@ importers:
   packages/core:
     dependencies:
       vite:
-        specifier: '>=8.0.0'
+        specifier: '>=8.0.16'
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)
     devDependencies:
       '@sveltejs/kit':
@@ -854,7 +854,7 @@ importers:
   packages/query:
     dependencies:
       '@sveltejs/kit':
-        specifier: '>=2.53.0'
+        specifier: '>=2.70.2'
         version: 3.0.1(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)))(svelte@5.57.2(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
       '@sveltesentio/core':
         specifier: workspace:*
@@ -909,7 +909,7 @@ importers:
   packages/shell:
     dependencies:
       '@sveltejs/kit':
-        specifier: '>=2.53.0'
+        specifier: '>=2.70.2'
         version: 3.0.1(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)))(svelte@5.57.2(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
       '@vite-pwa/sveltekit':
         specifier: '>=1.1.0'

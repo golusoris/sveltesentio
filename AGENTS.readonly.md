@@ -245,8 +245,8 @@ Current peer-range targets (consumers must satisfy these):
 | Package                  | Version target | Notes                                                           |
 | ------------------------ | -------------- | --------------------------------------------------------------- |
 | `svelte`                 | >=5.56.4       | runes-first; floor = superforms 3 peer + layerchart, measured   |
-| `@sveltejs/kit`          | >=2.53.0       | first kit 2 with vite 8 peer; kit 3 via `pnpm check:kit-compat` |
-| `vite`                   | >=8.0.0        | core peer; vite-plugin-svelte 7 + kit >=2.53.0 need vite 8      |
+| `@sveltejs/kit`          | >=2.70.2       | lowest kit 2, 0 advisories; kit 3 via `pnpm check:kit-compat`   |
+| `vite`                   | >=8.0.16       | core peer; lowest vite 8 with 0 advisories                      |
 | `typescript`             | ^6.0.3         | ADR-0020; published peerDep `>=5.5 <7`                          |
 | `zod`                    | ^4             | v3 unsupported                                                  |
 | `tailwindcss`            | ^4             | v3 unsupported; preset compatible only with v4                  |
