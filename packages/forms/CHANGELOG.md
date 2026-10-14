@@ -2,20 +2,19 @@
 
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/forms-v0.4.1...forms-v0.5.0) (2026-10-14)
 
-
 ### ⚠ BREAKING CHANGES
 
-* every @sveltesentio/* package that declares a kit peer requires @sveltejs/kit 2.70.2 or later, and @sveltesentio/core requires vite 8.0.16 or later. Package managers that enforce peers refuse or warn on installs below these versions.
-* every @sveltesentio/* package that declares a svelte peer requires svelte 5.56.4 or later, and every package that declares a kit peer requires @sveltejs/kit 2.53.0 or later. Package managers that enforce peers refuse or warn on installs below these versions.
-* every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
-* every @sveltesentio/* package declares engines.node >=24. Package managers that enforce engines refuse installs on Node 22.
+- every @sveltesentio/* package that declares a kit peer requires @sveltejs/kit 2.70.2 or later, and @sveltesentio/core requires vite 8.0.16 or later. Package managers that enforce peers refuse or warn on installs below these versions.
+- every @sveltesentio/* package that declares a svelte peer requires svelte 5.56.4 or later, and every package that declares a kit peer requires @sveltejs/kit 2.53.0 or later. Package managers that enforce peers refuse or warn on installs below these versions.
+- every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
+- every @sveltesentio/* package declares engines.node >=24. Package managers that enforce engines refuse installs on Node 22.
 
 ### Bug Fixes
 
-* declare the measured svelte and SvelteKit peer floors ([#351](https://github.com/golusoris/sveltesentio/issues/351)) ([608a52b](https://github.com/golusoris/sveltesentio/commit/608a52bddd73388eed279f723ddf4bf77b3bb476))
-* declare the Node 24 floor in every published package ([#348](https://github.com/golusoris/sveltesentio/issues/348)) ([6b02d54](https://github.com/golusoris/sveltesentio/commit/6b02d54cc07cf8d190084a154f611a9b17ec99d1))
-* declare the TypeScript peer range in every published package ([#350](https://github.com/golusoris/sveltesentio/issues/350)) ([a416a1c](https://github.com/golusoris/sveltesentio/commit/a416a1c68671f0304799d7f4c32a014bbfa901e6))
-* raise the SvelteKit and vite peer floors past their advisories ([#353](https://github.com/golusoris/sveltesentio/issues/353)) ([fe2bbec](https://github.com/golusoris/sveltesentio/commit/fe2bbecda51f686df16a2f26ebcd4429c16a1310))
+- declare the measured svelte and SvelteKit peer floors ([#351](https://github.com/golusoris/sveltesentio/issues/351)) ([608a52b](https://github.com/golusoris/sveltesentio/commit/608a52bddd73388eed279f723ddf4bf77b3bb476))
+- declare the Node 24 floor in every published package ([#348](https://github.com/golusoris/sveltesentio/issues/348)) ([6b02d54](https://github.com/golusoris/sveltesentio/commit/6b02d54cc07cf8d190084a154f611a9b17ec99d1))
+- declare the TypeScript peer range in every published package ([#350](https://github.com/golusoris/sveltesentio/issues/350)) ([a416a1c](https://github.com/golusoris/sveltesentio/commit/a416a1c68671f0304799d7f4c32a014bbfa901e6))
+- raise the SvelteKit and vite peer floors past their advisories ([#353](https://github.com/golusoris/sveltesentio/issues/353)) ([fe2bbec](https://github.com/golusoris/sveltesentio/commit/fe2bbecda51f686df16a2f26ebcd4429c16a1310))
 
 ## [0.4.1](https://github.com/golusoris/sveltesentio/compare/forms-v0.4.0...forms-v0.4.1) (2026-10-13)
 
