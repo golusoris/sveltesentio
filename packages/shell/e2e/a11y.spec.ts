@@ -2,6 +2,11 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { axeConfig, filterPlaywrightViolations } from '@sveltesentio/testing/playwright-axe';
 import type { AxeViolation } from '@sveltesentio/testing/a11y';
+import {
+	installWebVitals,
+	settleWebVitals,
+	webVitalsOverBudget,
+} from '../../../tools/e2e-vitals/web-vitals.ts';
 
 // axe-core WCAG 2.2 AA sweep of the rendered shell layout, gated to the same
 // serious/critical impact set as the in-process component lane (ADR-0031). Tags
@@ -23,8 +28,15 @@ async function sweep(page: Page): Promise<readonly AxeViolation[]> {
 }
 
 test.beforeEach(async ({ page }) => {
+	await installWebVitals(page);
 	await page.goto('/');
 	await expect(page.locator('#shell-root')).toBeVisible();
+	await settleWebVitals(page);
+});
+
+// Core Web Vitals of the harness page within the docs/principles.md §2.9 budgets.
+test.afterEach(async ({ page }) => {
+	expect(await webVitalsOverBudget(page)).toEqual([]);
 });
 
 test('shell layout has no serious/critical WCAG 2.2 AA violations', async ({ page }) => {

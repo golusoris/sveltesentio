@@ -524,7 +524,7 @@ Every app using the PWA preset must pass:
 - [ ] HTTPS (required by browsers)
 - [ ] `<meta name="theme-color">` set to `--color-primary` oklch value as hex fallback
 - [ ] `safe-area-inset-*` applied to all full-screen layouts
-- [ ] Lighthouse PWA score ≥ 90 (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))
+- [ ] Installability: Lighthouse 13 has no PWA category any more, so no score gates this list; it is checked by review (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))
 
 ### Testing cross-platform
 
@@ -532,7 +532,7 @@ Every app using the PWA preset must pass:
 - Real device testing on iOS Safari and Android Chrome before each release
 - `@playwright/test` runs the auth, media and shell end-to-end suites against Chromium, Firefox and WebKit in CI (`ci.yml` job `End-to-end`); the auth passkey spec runs in Chromium only, because it needs the CDP WebAuthn virtual authenticator
 - `axe-core` accessibility checks on all three engines: every Storybook story (`ci.yml` job `Stories (axe)`) and the shell layout sweep
-- Lighthouse CI thresholds: performance ≥ 80, accessibility ≥ 95, best-practices ≥ 90 (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))
+- Lighthouse thresholds: performance ≥ 80, accessibility ≥ 95, best-practices ≥ 90, asserted on the production build of the media harness (`packages/media/e2e/lighthouse.spec.ts`, Playwright project `lighthouse` in the `End-to-end` job)
 
 ---
 

@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import {
+	installWebVitals,
+	settleWebVitals,
+	webVitalsOverBudget,
+} from '../../../../tools/e2e-vitals/web-vitals.ts';
 
 /**
  * MFA challenge flow against the real `MfaChallenge` Svelte 5 component mounted
@@ -8,7 +13,14 @@ import { expect, test } from '@playwright/test';
  */
 test.describe('MfaChallenge', () => {
 	test.beforeEach(async ({ page }) => {
+		await installWebVitals(page);
 		await page.goto('/');
+		await settleWebVitals(page);
+	});
+
+	// Core Web Vitals of the harness page within the docs/principles.md §2.9 budgets.
+	test.afterEach(async ({ page }) => {
+		expect(await webVitalsOverBudget(page)).toEqual([]);
 	});
 
 	test('submit + verify happy path', async ({ page }) => {

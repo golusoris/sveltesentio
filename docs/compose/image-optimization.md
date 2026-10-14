@@ -373,9 +373,11 @@ Four lanes:
 3. **Visual regression** — Playwright + Lost-Pixel snapshot per
    breakpoint confirms the correct srcset candidate loads (see
    [playwright-visual.md](playwright-visual.md)).
-4. **Performance** — Lighthouse CI asserts LCP image <100 kB over the
-   wire, AVIF delivered when supported (target, not gated yet:
-   [#324](https://github.com/golusoris/sveltesentio/issues/324)).
+4. **Performance** — Lighthouse asserts that no image is over 100 kB
+   over the wire. The repository runs this check on its media harness
+   (`packages/media/e2e/lighthouse.spec.ts`); an app copies it for its own
+   pages. AVIF delivery when supported is a target, not gated yet:
+   [#324](https://github.com/golusoris/sveltesentio/issues/324).
 
 ## Anti-patterns
 
