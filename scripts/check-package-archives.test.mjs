@@ -9,6 +9,7 @@ import {
 	archiveGaps,
 	LICENSOR,
 	main,
+	PEER_RANGES,
 	readArchive,
 	readExpected,
 	scanArchives,
@@ -65,6 +66,7 @@ const expected = {
 	url: URL_OF_SOURCE,
 	node: '>=24',
 	typescript: '>=5.5 <7',
+	peers: { svelte: '>=5.56.4', '@sveltejs/kit': '>=2.53.0', vite: '>=8.0.0' },
 	directories: new Map([['@example/alpha', 'packages/alpha']]),
 };
 
@@ -217,7 +219,7 @@ describe('check-package-archives', () => {
 		it('reports a missing typescript peer', () => {
 			const gap = 'peerDependencies.typescript is undefined, expected ">=5.5 <7"';
 			assert.deepEqual(gapsOf({}, { peerDependencies: undefined }), [gap]);
-			assert.deepEqual(gapsOf({}, { peerDependencies: { svelte: '>=5.0.0' } }), [gap]);
+			assert.deepEqual(gapsOf({}, { peerDependencies: { svelte: '>=5.56.4' } }), [gap]);
 		});
 
 		it('reports a different typescript range, including the old upper bound', () => {
@@ -235,6 +237,37 @@ describe('check-package-archives', () => {
 				'peerDependenciesMeta marks typescript optional',
 			]);
 			assert.deepEqual(gapsOf({}, meta('openapi-typescript')), []);
+		});
+
+		it('accepts each floored peer at its floor and a package that declares none', () => {
+			const peers = { typescript: '>=5.5 <7', ...expected.peers };
+			assert.deepEqual(gapsOf({}, { peerDependencies: peers }), []);
+			assert.deepEqual(gapsOf({}, { peerDependencies: { typescript: '>=5.5 <7' } }), []);
+		});
+
+		it('reports the old svelte and kit floors and a vite floor one release lower', () => {
+			const peerDependencies = {
+				typescript: '>=5.5 <7',
+				svelte: '>=5.0.0',
+				'@sveltejs/kit': '>=2.0.0',
+				vite: '>=7.3.1',
+			};
+			assert.deepEqual(gapsOf({}, { peerDependencies }), [
+				'peerDependencies.svelte is ">=5.0.0", expected ">=5.56.4"',
+				'peerDependencies.@sveltejs/kit is ">=2.0.0", expected ">=2.53.0"',
+				'peerDependencies.vite is ">=7.3.1", expected ">=8.0.0"',
+			]);
+		});
+
+		it('reports a floor one patch below and a caret form of the same floor', () => {
+			const gapOf = (svelte) =>
+				gapsOf({}, { peerDependencies: { typescript: '>=5.5 <7', svelte } });
+			assert.deepEqual(gapOf('>=5.56.3'), [
+				'peerDependencies.svelte is ">=5.56.3", expected ">=5.56.4"',
+			]);
+			assert.deepEqual(gapOf('^5.56.4'), [
+				'peerDependencies.svelte is "^5.56.4", expected ">=5.56.4"',
+			]);
 		});
 
 		it('reports a readme without the copyright line, and no readme at all', () => {
@@ -278,6 +311,7 @@ describe('check-package-archives', () => {
 			assert.equal(read.license, 'EUPL-1.2');
 			assert.equal(read.node, '>=24');
 			assert.equal(read.typescript, TYPESCRIPT_PEER);
+			assert.equal(read.peers, PEER_RANGES);
 			assert.ok(read.licence.equals(LICENCE_TEXT));
 			assert.deepEqual([...read.directories], [['@example/alpha', 'packages/alpha']]);
 		});

@@ -101,9 +101,9 @@
 	"name": "@sveltesentio/auth",
 	"peerDependencies": {
 		"@simplewebauthn/browser": ">=13.0.0",
-		"@sveltejs/kit": ">=2.0.0",
+		"@sveltejs/kit": ">=2.53.0",
 		"@sveltesentio/core": "workspace:*",
-		"svelte": ">=5.0.0",
+		"svelte": ">=5.56.4",
 		"typescript": ">=5.5 <7",
 		"zod": ">=4.0.0"
 	},

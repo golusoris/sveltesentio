@@ -80,7 +80,7 @@
 	"peerDependencies": {
 		"embla-carousel-svelte": ">=8.6.0",
 		"hls.js": ">=1.6.0",
-		"svelte": ">=5.0.0",
+		"svelte": ">=5.56.4",
 		"typescript": ">=5.5 <7",
 		"vidstack": ">=1.12.13 <2"
 	},

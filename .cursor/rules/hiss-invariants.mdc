@@ -255,17 +255,17 @@ Version-pinned snapshots live in `docs/upstream/` (maintained by `refresh-upstre
 
 Current peer-range targets (consumers must satisfy these):
 
-| Package                  | Version target | Notes                                          |
-| ------------------------ | -------------- | ---------------------------------------------- |
-| `svelte`                 | ^5.55.4        | runes-first; no Svelte 4 compat                |
-| `@sveltejs/kit`          | ^2.x           | exact minimum TBD in D5                        |
-| `vite`                   | ^5 or ^6       | TBD — depends on rolldown timing               |
-| `typescript`             | ^6.0.3         | ADR-0020; published peerDep `>=5.5 <7`         |
-| `zod`                    | ^4             | v3 unsupported                                 |
-| `tailwindcss`            | ^4             | v3 unsupported; preset compatible only with v4 |
-| `@tanstack/svelte-query` | ^6             | ADR-0008                                       |
-| `node`                   | >=24           | ADR-0021; LTS; closes D5                       |
-| `pnpm`                   | >=10           | workspace features required                    |
+| Package                  | Version target | Notes                                                           |
+| ------------------------ | -------------- | --------------------------------------------------------------- |
+| `svelte`                 | >=5.56.4       | runes-first; floor = superforms 3 peer + layerchart, measured   |
+| `@sveltejs/kit`          | >=2.53.0       | first kit 2 with vite 8 peer; kit 3 via `pnpm check:kit-compat` |
+| `vite`                   | >=8.0.0        | core peer; vite-plugin-svelte 7 + kit >=2.53.0 need vite 8      |
+| `typescript`             | ^6.0.3         | ADR-0020; published peerDep `>=5.5 <7`                          |
+| `zod`                    | ^4             | v3 unsupported                                                  |
+| `tailwindcss`            | ^4             | v3 unsupported; preset compatible only with v4                  |
+| `@tanstack/svelte-query` | ^6             | ADR-0008                                                        |
+| `node`                   | >=24           | ADR-0021; LTS; closes D5                                        |
+| `pnpm`                   | >=10           | workspace features required                                     |
 
 ## CI gates
 

@@ -75,10 +75,10 @@
 	},
 	"name": "@sveltesentio/core",
 	"peerDependencies": {
-		"@sveltejs/kit": ">=2.0.0",
+		"@sveltejs/kit": ">=2.53.0",
 		"esm-env": ">=1.0.0",
 		"openapi-fetch": ">=0.17.0",
-		"svelte": ">=5.0.0",
+		"svelte": ">=5.56.4",
 		"typescript": ">=5.5 <7",
 		"uuid": ">=13.0.0",
 		"vite": ">=8.0.0",
