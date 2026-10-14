@@ -51,7 +51,6 @@ async function checkExports(pkgName, pkgDir, exportsField) {
 
 async function checkBin(pkgName, pkgDir, binField) {
 	const failures = [];
-	if (!binField) return failures;
 	for (const target of collectBinTargets(binField)) {
 		if (!hasJsExtension(target)) {
 			failures.push(
