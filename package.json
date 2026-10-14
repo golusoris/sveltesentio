@@ -18,6 +18,8 @@
 		"test:stories": "pnpm --filter @sveltesentio/storybook run test:stories",
 		"ci": "turbo lint typecheck test build",
 		"check:exports": "node scripts/check-export-targets.mjs",
+		"check:component-stories": "node scripts/check-component-stories.mjs",
+		"check:export-tests": "node scripts/check-export-tests.mjs",
 		"check:publint": "status=0; for dir in packages/*/; do node_modules/.bin/publint --strict \"$dir\" || status=1; done; exit $status",
 		"check:svelte": "status=0; for dir in packages/*/; do if find \"$dir\" -name node_modules -prune -o -name '*.svelte' -print | grep -q .; then node_modules/.bin/svelte-check --workspace \"$dir\" --tsconfig ./tsconfig.test.json --fail-on-warnings || status=1; fi; done; exit $status",
 		"format": "prettier --write .",
@@ -34,7 +36,7 @@
 		"@sveltesentio/core": "workspace:*",
 		"@typescript-eslint/eslint-plugin": "^8.70.0",
 		"@typescript-eslint/parser": "^8.70.0",
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.0",
 		"eslint": "^10.10.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.23.0",
@@ -46,7 +48,7 @@
 		"svelte": "^5.57.0",
 		"svelte-check": "^4.7.6",
 		"svelte-eslint-parser": "^1.8.1",
-		"sveltekit-3": "npm:@sveltejs/kit@3.0.1",
+		"sveltekit-2": "npm:@sveltejs/kit@2.70.3",
 		"turbo": "^2.10.12",
 		"typescript": "^6.0.3"
 	},
@@ -63,5 +65,5 @@
 		"node": ">=24",
 		"pnpm": ">=10"
 	},
-	"packageManager": "pnpm@11.27.0"
+	"packageManager": "pnpm@12.11.2"
 }

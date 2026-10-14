@@ -1,4 +1,4 @@
-import { allPackages, publicPackageCount } from '$lib/packages';
+import { allPackages, publicPackageCount } from '#lib/packages.js';
 
 export function load() {
 	return {

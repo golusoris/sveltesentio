@@ -268,10 +268,14 @@ rules:
         mechanism: >-
           All 19 packages declare vitest coverage thresholds; auth and forms
           carry 85%. `turbo test` runs them and CI gates on the result.
+          `pnpm check:export-tests` (scripts/check-export-tests.mjs, CI lint job
+          and `make verify-all`) fails when an exported value is named in no
+          test file of its package.
         rationale: >-
-          Coverage is enforced and measurable. It is partial because a threshold
-          proves lines were executed, not that the negative and boundary
-          dimensions exist -- nothing checks that a public export has all three.
+          Coverage is enforced and measurable, and no exported value ships
+          without a test that names it. It is partial because neither check
+          proves that the negative and boundary dimensions exist -- nothing
+          checks that a public export has all three; review holds that.
 
   - id: HISS-16
     title: Context Integrity

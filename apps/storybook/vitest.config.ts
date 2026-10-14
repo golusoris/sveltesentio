@@ -6,8 +6,9 @@ import { defineConfig } from 'vitest/config';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Runs every story as a test in a real browser. With `a11y.test: 'error'` in
-// `.storybook/preview.ts`, an axe violation in a story fails its test.
+// Runs every story as a test in Chromium, Firefox and WebKit. With
+// `a11y.test: 'error'` in `.storybook/preview.ts`, an axe violation in a story
+// fails its test in each engine.
 export default defineConfig({
 	test: {
 		projects: [
@@ -20,7 +21,7 @@ export default defineConfig({
 						enabled: true,
 						headless: true,
 						provider: playwright({}),
-						instances: [{ browser: 'chromium' }],
+						instances: [{ browser: 'chromium' }, { browser: 'firefox' }, { browser: 'webkit' }],
 					},
 				},
 			},

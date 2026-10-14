@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { PackageEntry } from '$lib/packages';
+	import type { PackageEntry } from '#lib/packages.js';
 
 	interface PageData {
 		packages: PackageEntry[];

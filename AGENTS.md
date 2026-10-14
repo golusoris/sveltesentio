@@ -135,11 +135,12 @@ Harness above = rule text. Rows below = TypeScript adaptation + repository enfor
 | HISS-07   | No non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457).                             | `@typescript-eslint` |
 | HISS-08   | No `eval` / `new Function`; no unsanitised `innerHTML`, DOMPurify at every boundary.                                                                 | ESLint / CodeQL      |
 | HISS-10   | Zero-warning tolerance across `tsc`, ESLint, Prettier. No `any`.                                                                                     | Exit code 1          |
-| HISS-15   | Positive, negative, boundary tests mandatory for every public export.                                                                                | CI coverage gate     |
+| HISS-15   | Positive, negative, boundary tests mandatory for every public export. Gate: each exported value named in a test of its package; three cases = review. | `pnpm check:export-tests` |
 | HISS-17   | Turn start reads `.workingdir/STATE.md` + `OPEN.md`; turn end runs `praetorctl state sync .`.                                                        | `make state-audit`   |
 | HISS-18   | `scripts/ci-affected.mjs` skips unaffected packages; `CI Gate` still reports.                                                                        | Review (runner time) |
 | HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
 | HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
+| HISS-21   | Linux only today: `ci.yml` + `ci-sveltekit.yml` run on `ubuntu-26.04`. macOS + Windows legs open: [#328](https://github.com/golusoris/sveltesentio/issues/328). | not enforced |
 
 Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
 
@@ -192,7 +193,7 @@ Full annotated tree: [docs/architecture/repository-layout.md](docs/architecture/
 | Path               | Holds                                                                                                                                                                                                                    |
 | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/<name>/` | `@sveltesentio/*` publishable module, 19 published. `src/index.ts` = entire public API (named exports only); `src/internal/` = off-limits to consumers; `AGENTS.md` = per-package conventions, read before touching area |
-| `apps/`            | `storybook` (Storybook 10 showcase, axe via addon-a11y), `docs` (docs site, mdsvex), `integration` (integration-test app consuming every published package)                                                              |
+| `apps/`            | `storybook` (Storybook 10 showcase, axe via addon-a11y), `docs` (docs site, mdsvex), `integration` (integration-test app consuming every published package), `sveltekit-fixture` (minimal SvelteKit app; caller target of reusable `ci-sveltekit.yml` self-test)                                                              |
 | `examples/`        | 19 per-package canonical usage snippets + README                                                                                                                                                                         |
 | `docs/`            | `principles.md` (§2), `ux-principles.md` (§3), `adr/`, `architecture/`, `migrations/`, `compliance/`, `compose/`, `upstream/`                                                                                            |
 | `.claude/`         | `settings.json` hooks; skills `/wire-module`, `/scaffold-route`, `/add-shadcn`, `/add-storybook`                                                                                                                         |

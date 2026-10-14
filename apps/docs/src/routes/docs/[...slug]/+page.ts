@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { allSlugs, docBySlug } from '$lib/docs';
+import { allSlugs, docBySlug } from '#lib/docs.js';
 import type { EntryGenerator, PageLoad } from './$types';
 
 export const entries: EntryGenerator = () => allSlugs().map((slug) => ({ slug }));

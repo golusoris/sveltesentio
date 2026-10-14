@@ -135,11 +135,13 @@ describe('parseCodegenArgs', () => {
 	});
 
 	it('throws when source is missing', () => {
-		expect(() => parseCodegenArgs([])).toThrow(/Usage/);
+		expect(() => parseCodegenArgs([])).toThrow('Usage: <openapi-spec> <out.ts> [--out <out.ts>]');
 	});
 
 	it('throws when out file is missing', () => {
-		expect(() => parseCodegenArgs(['spec.yaml'])).toThrow(/Usage/);
+		expect(() => parseCodegenArgs(['spec.yaml'])).toThrow(
+			'Usage: <openapi-spec> <out.ts> [--out <out.ts>]',
+		);
 	});
 
 	it('throws on a dangling --out flag', () => {
