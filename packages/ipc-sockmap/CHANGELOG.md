@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/ipc-sockmap-v0.3.1...ipc-sockmap-v0.4.0) (2026-10-14)
+
+### ⚠ BREAKING CHANGES
+
+- every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
+
+### Bug Fixes
+
+- declare the TypeScript peer range in every published package ([#350](https://github.com/golusoris/sveltesentio/issues/350)) ([a416a1c](https://github.com/golusoris/sveltesentio/commit/a416a1c68671f0304799d7f4c32a014bbfa901e6))
+
 ## [0.3.1](https://github.com/golusoris/sveltesentio/compare/ipc-sockmap-v0.3.0...ipc-sockmap-v0.3.1) (2026-10-13)
 
 ### Bug Fixes
