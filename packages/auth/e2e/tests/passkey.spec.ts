@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import {
+	installWebVitals,
+	settleWebVitals,
+	webVitalsOverBudget,
+} from '../../../../tools/e2e-vitals/web-vitals.ts';
 
 /**
  * Passkey enrolment against the real `registerPasskey` wrapper, which calls
@@ -7,6 +12,15 @@ import { expect, test } from '@playwright/test';
  * physical key so the ceremony resolves headlessly (auth/AGENTS.md).
  */
 test.describe('passkey enrolment (WebAuthn virtual authenticator)', () => {
+	test.beforeEach(async ({ page }) => {
+		await installWebVitals(page);
+	});
+
+	// Core Web Vitals of the harness page within the docs/principles.md §2.9 budgets.
+	test.afterEach(async ({ page }) => {
+		expect(await webVitalsOverBudget(page)).toEqual([]);
+	});
+
 	test('registers a credential via the virtual authenticator', async ({ page }) => {
 		// Attach a virtual authenticator over CDP BEFORE the ceremony starts.
 		const client = await page.context().newCDPSession(page);
@@ -24,6 +38,7 @@ test.describe('passkey enrolment (WebAuthn virtual authenticator)', () => {
 		expect(authenticatorId).toBeTruthy();
 
 		await page.goto('/');
+		await settleWebVitals(page);
 
 		const passkey = page.getByTestId('passkey');
 		const status = page.getByTestId('passkey-status');
@@ -65,6 +80,7 @@ test.describe('passkey enrolment (WebAuthn virtual authenticator)', () => {
 		});
 
 		await page.goto('/?rp=not-a-suffix.example');
+		await settleWebVitals(page);
 
 		const status = page.getByTestId('passkey-status');
 		await page.getByTestId('passkey').getByRole('button', { name: 'Register passkey' }).click();

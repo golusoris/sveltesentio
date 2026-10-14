@@ -1,4 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import {
+	installWebVitals,
+	settleWebVitals,
+	webVitalsOverBudget,
+} from '../../../tools/e2e-vitals/web-vitals.ts';
 
 // Keyboard-shortcut playback, driving the SHIPPED `@sveltesentio/media` headless
 // helpers (`actionForKey` + `playbackReducer` + `clampVolume` + `formatMediaTime`)
@@ -14,10 +19,17 @@ async function press(page: Page, key: string): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+	await installWebVitals(page);
 	await page.goto('/');
 	// Harness seeds load→ready, so the player starts paused (not idle).
 	await expect(page.locator(ROOT)).toHaveAttribute('data-status', 'paused');
+	await settleWebVitals(page);
 	await page.locator('#player').focus();
+});
+
+// Core Web Vitals of the harness page within the docs/principles.md §2.9 budgets.
+test.afterEach(async ({ page }) => {
+	expect(await webVitalsOverBudget(page)).toEqual([]);
 });
 
 test.describe('play / pause toggle', () => {

@@ -169,13 +169,17 @@ Rules:
 
 ## §2.9 Performance budgets
 
-| Metric                   | Budget                      | Tool                                                                                                                   |
-| ------------------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| LCP                      | < 2.5s                      | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
-| INP                      | < 200ms                     | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
-| CLS                      | < 0.1                       | Playwright + web-vitals (target, not gated yet: [#324](https://github.com/golusoris/sveltesentio/issues/324))          |
-| Bundle size (initial JS) | < 150kb gzipped             | rollup-plugin-visualizer (target, not gated yet: [#326](https://github.com/golusoris/sveltesentio/issues/326))         |
-| Images                   | WebP/AVIF only, lazy-loaded | eslint-plugin-svelte custom rule (target, not gated yet: [#327](https://github.com/golusoris/sveltesentio/issues/327)) |
+| Metric                   | Budget                      | Tool                                                                                                                                                                                                           |
+| ------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TTFB                     | < 800ms                     | Playwright + web-vitals in the auth, media and shell end-to-end suites (`tools/e2e-vitals/web-vitals.ts`)                                                                                                      |
+| FCP                      | < 1.8s                      | Playwright + web-vitals in the auth, media and shell end-to-end suites (`tools/e2e-vitals/web-vitals.ts`)                                                                                                      |
+| LCP                      | < 2.5s                      | Playwright + web-vitals in the auth, media and shell end-to-end suites (`tools/e2e-vitals/web-vitals.ts`); Lighthouse over the production build of the media harness (`packages/media/e2e/lighthouse.spec.ts`) |
+| INP                      | < 200ms                     | Playwright + web-vitals in the auth, media and shell end-to-end suites (`tools/e2e-vitals/web-vitals.ts`)                                                                                                      |
+| CLS                      | < 0.1                       | Playwright + web-vitals in the auth, media and shell end-to-end suites (`tools/e2e-vitals/web-vitals.ts`)                                                                                                      |
+| Bundle size (initial JS) | < 150kb gzipped             | rollup-plugin-visualizer (target, not gated yet: [#326](https://github.com/golusoris/sveltesentio/issues/326))                                                                                                 |
+| Images                   | WebP/AVIF only, lazy-loaded | eslint-plugin-svelte custom rule (target, not gated yet: [#327](https://github.com/golusoris/sveltesentio/issues/327))                                                                                         |
+
+Every end-to-end test fails when a metric its engine can measure reports no value or a value over the budget. Which metrics an engine measures follows from the performance entry types it supports (`PerformanceObserver.supportedEntryTypes`): Chromium all five, Firefox all but CLS. INP needs an interaction, so it is checked only in tests that interact. TTFB and FCP use the "good" thresholds web-vitals ships.
 
 All `<img>` must have `loading="lazy"` and `decoding="async"` unless above the fold.
 Font subsetting required for any custom font loaded.

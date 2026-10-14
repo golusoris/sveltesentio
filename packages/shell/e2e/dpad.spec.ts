@@ -1,4 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import {
+	installWebVitals,
+	settleWebVitals,
+	webVitalsOverBudget,
+} from '../../../tools/e2e-vitals/web-vitals.ts';
 
 // Arrow-key + gamepad roving-focus navigation through the sample focusable grid,
 // driving the SHIPPED `dpadNavigation` action in a real chromium browser.
@@ -15,9 +20,16 @@ async function focusedCell(page: Page): Promise<string | null> {
 }
 
 test.beforeEach(async ({ page }) => {
+	await installWebVitals(page);
 	await page.goto('/');
 	// The harness seeds focus on the top-left cell.
 	await expect.poll(() => focusedCell(page)).toBe('0-0');
+	await settleWebVitals(page);
+});
+
+// Core Web Vitals of the harness page within the docs/principles.md §2.9 budgets.
+test.afterEach(async ({ page }) => {
+	expect(await webVitalsOverBudget(page)).toEqual([]);
 });
 
 test.describe('arrow-key roving focus', () => {
@@ -139,6 +151,7 @@ test.describe('gamepad D-pad roving focus', () => {
 		await installFakeGamepad(page);
 		await page.goto('/');
 		await expect.poll(() => focusedCell(page)).toBe('0-0');
+		await settleWebVitals(page);
 		// Focus the grid so subsequent visual focus moves land on grid cells.
 		await page.locator('[data-cell="0-0"]').focus();
 	});
