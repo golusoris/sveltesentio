@@ -285,7 +285,7 @@ Vite does not expand a template import such as
 under `src/lib/server/` stays server-only when it is imported through
 `#lib`.
 
-[`tools/compose-lib-fixture`](../../tools/compose-lib-fixture/run.mjs) builds
+`tools/compose-lib-fixture/run.mjs` builds
 and type-checks one app that uses every form above, on SvelteKit 2 and on
 SvelteKit 3, and `scripts/check-compose-imports.mjs` refuses any other form
 in a recipe. The `Compose recipes` workflow runs both on every pull request
