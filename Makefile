@@ -70,6 +70,7 @@ add-package:
 verify-all:
 	@pnpm run ci
 	@pnpm check:cycles
+	@pnpm check:component-stories
 	@pnpm check:publint
 	@pnpm check:svelte
 	@pnpm check:kit-compat

@@ -5,6 +5,8 @@
 	import FlowCanvas from '../FlowCanvas.svelte';
 	import { exampleNodeTypes } from '../nodes.js';
 
+	// story-covers: ProcessNode, DecisionNode, DataNode — rendered through FlowCanvas nodeTypes={exampleNodeTypes} (types process/decision/data in the nodes list)
+
 	// <ProcessNode>/<DecisionNode>/<DataNode> wrap <NodeBody> with `@xyflow/svelte`
 	// <Handle>s, which throw outside the SvelteFlow node context ("Handle must be
 	// used within a Custom Node component"). They therefore cannot render bare —
