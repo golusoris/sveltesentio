@@ -17,7 +17,7 @@
 		"axe-core": "^4.13.0",
 		"jsdom": "^30.0.0",
 		"svelte": "^5.57.0",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^5.0.0"
 	},
 	"exports": {
@@ -155,7 +155,7 @@
 		"svelte-sonner": ">=1.0.0 <2",
 		"tailwindcss": ">=4.0.0",
 		"tinykeys": ">=3.0.0",
-		"typescript": ">=5.5 <7"
+		"typescript": ">=5.5 <8"
 	},
 	"peerDependenciesMeta": {
 		"@iconify/svelte": {

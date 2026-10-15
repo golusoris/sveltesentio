@@ -7,7 +7,7 @@
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltesentio/core": "workspace:*",
 		"svelte": "^5.57.0",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^5.0.0"
 	},
 	"exports": {
@@ -71,7 +71,7 @@
 		"@sveltejs/kit": ">=2.70.2",
 		"@sveltesentio/core": "workspace:*",
 		"svelte": ">=5.56.4",
-		"typescript": ">=5.5 <7"
+		"typescript": ">=5.5 <8"
 	},
 	"peerDependenciesMeta": {
 		"@bufbuild/protobuf": {

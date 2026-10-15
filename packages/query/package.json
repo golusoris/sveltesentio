@@ -7,7 +7,7 @@
 		"@bufbuild/protobuf": "^2.14.1",
 		"@connectrpc/connect": "^2.2.0",
 		"@tanstack/svelte-query": "^6.1.48",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^5.0.0"
 	},
 	"exports": {
@@ -61,7 +61,7 @@
 		"@sveltejs/kit": ">=2.70.2",
 		"@tanstack/svelte-query": ">=6.0.0",
 		"svelte": ">=5.56.4",
-		"typescript": ">=5.5 <7"
+		"typescript": ">=5.5 <8"
 	},
 	"peerDependenciesMeta": {
 		"@bufbuild/protobuf": {

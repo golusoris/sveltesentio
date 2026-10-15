@@ -2,7 +2,7 @@
 	"description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers + awareness/presence helpers",
 	"devDependencies": {
 		"svelte": "^5.57.0",
-		"typescript": "^6.0.3",
+		"typescript": "^7.0.0",
 		"vitest": "^5.0.0"
 	},
 	"exports": {
@@ -67,7 +67,7 @@
 	"name": "@sveltesentio/collab",
 	"peerDependencies": {
 		"svelte": ">=5.56.4",
-		"typescript": ">=5.5 <7",
+		"typescript": ">=5.5 <8",
 		"y-protocols": ">=1.0.5",
 		"y-websocket": ">=2.0.0",
 		"yjs": ">=13.6.0"
