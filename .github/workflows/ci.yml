@@ -11,7 +11,7 @@ permissions:
 
 # The engine commit every hook, Makefile target and hosted job runs (.config/lefthook/engine.sh reads it).
 env:
-  PRAETOR_REF: 3bbde07342bdece12c46f74b0ee2c1f51129478f
+  PRAETOR_REF: 7057d9957b3a7b98d60899aad55bbee406e0e96c
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

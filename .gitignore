@@ -17,9 +17,6 @@ test-results/
 .DS_Store
 Thumbs.db
 
-# Local planning / scratch (not lost-proof — keep durable docs under docs/)
-.workingdir/
-
 # agent worktrees (transient)
 .claude/worktrees/
 
@@ -31,8 +28,8 @@ Thumbs.db
 /tools/compose-lib-fixture/kit3/src/
 
 # BEGIN praetor private artifacts (praetorctl adopt)
-/.workingdir/
-/.workingdir2/
+.workingdir/
+.workingdir2/
 /.standards/worktrees/
 /.agents/mcp_config.json
 /.standards/cache/
