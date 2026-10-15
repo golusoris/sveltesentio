@@ -35,6 +35,11 @@
 			"description": "cookie 1.x bundles its own types, which take precedence over @types/cookie and drop CookieParseOptions -- the name SvelteKit's own types use; 2.x additionally removes parse/serialize. The pnpm-workspace override keeps the floor at >=0.7.0 for CVE-2024-47764."
 		},
 		{
+			"matchPackageNames": ["typescript"],
+			"allowedVersions": "<7",
+			"description": "TypeScript 7 drops the JavaScript compiler API that test/reexports.test.ts and SvelteKit load_tsconfig use, and typescript-eslint does not support it (#228). Revisit trigger: a typescript-eslint release whose peer range admits typescript 7."
+		},
+		{
 			"matchDepNames": ["sveltekit-2"],
 			"allowedVersions": "<3",
 			"description": "sveltekit-2 is the alias scripts/check-kit-compat.mjs type-checks the kit peer packages against; it must stay on SvelteKit 2 while the peer range admits 2. The workspace's own @sveltejs/kit takes the majors."
