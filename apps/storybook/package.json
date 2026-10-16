@@ -1,10 +1,10 @@
 {
 	"description": "Private Storybook workspace — runs @sveltesentio/* component stories under Storybook 10 + @storybook/svelte-vite (Svelte 5). Verification/showcase artifact, not a deployable app or published package.",
 	"devDependencies": {
-		"@storybook/addon-a11y": "10.6.1",
+		"@storybook/addon-a11y": "10.6.2",
 		"@storybook/addon-svelte-csf": "5.1.5",
-		"@storybook/addon-vitest": "10.6.1",
-		"@storybook/svelte-vite": "10.6.1",
+		"@storybook/addon-vitest": "10.6.2",
+		"@storybook/svelte-vite": "10.6.2",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/testing": "workspace:*",
 		"@sveltesentio/ui": "workspace:*",
@@ -12,7 +12,7 @@
 		"@vitest/browser": "^5.0.0",
 		"@vitest/browser-playwright": "^5.0.0",
 		"playwright": "^1.63.0",
-		"storybook": "10.6.1",
+		"storybook": "10.6.2",
 		"svelte": "^5.57.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.2.2",
