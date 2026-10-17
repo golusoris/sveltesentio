@@ -31,6 +31,24 @@ pnpm add @sveltesentio/realtime
 
 See the [monorepo README](../../README.md) and [`docs/`](../../docs/) for design principles and usage.
 
+## SSE usage
+
+### Named events
+
+The `events` option registers listeners for named SSE event types in addition to `message`:
+
+```ts
+new SseClient({
+  url: '/live',
+  events: ['search_dispatched'],
+  onMessage: (event) => {
+    // event.type === 'search_dispatched'
+  },
+});
+```
+
+Unnamed frames keep type `'message'`.
+
 ## License
 
 EUPL-1.2 © lusoris. Releases up to and including 0.4.0 are MIT.
