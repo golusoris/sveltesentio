@@ -2,10 +2,9 @@
 
 ## [0.6.1](https://github.com/golusoris/sveltesentio/compare/media-v0.6.0...media-v0.6.1) (2026-10-17)
 
-
 ### Bug Fixes
 
-* **media:** run e2e Web Vitals against the production build ([#373](https://github.com/golusoris/sveltesentio/issues/373)) ([fc4c378](https://github.com/golusoris/sveltesentio/commit/fc4c378c4ac6afa8219ed61ad891e4e047ebc229))
+- **media:** run e2e Web Vitals against the production build ([#373](https://github.com/golusoris/sveltesentio/issues/373)) ([fc4c378](https://github.com/golusoris/sveltesentio/commit/fc4c378c4ac6afa8219ed61ad891e4e047ebc229))
 
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/media-v0.5.1...media-v0.6.0) (2026-10-14)
 
