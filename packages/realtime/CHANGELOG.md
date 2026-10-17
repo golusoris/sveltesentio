@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.6.0...realtime-v0.7.0) (2026-10-17)
+
+### Features
+
+- **realtime:** deliver named server-sent events ([#378](https://github.com/golusoris/sveltesentio/issues/378)) ([a50bc22](https://github.com/golusoris/sveltesentio/commit/a50bc221e489795e8746cb484052d3f5a2ba9c12)), closes [#377](https://github.com/golusoris/sveltesentio/issues/377)
+
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.5.1...realtime-v0.6.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
