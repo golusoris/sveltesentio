@@ -29,6 +29,10 @@ class FakeEventSource implements EventSourceLike {
 		this.closed = true;
 	}
 
+	listenerCount(type: string): number {
+		return this.listeners.get(type)?.size ?? 0;
+	}
+
 	emit(type: string, payload?: unknown): void {
 		for (const handler of this.listeners.get(type) ?? []) handler(payload);
 	}
@@ -125,5 +129,147 @@ describe('SseClient', () => {
 
 	it('throws when no factory + no global EventSource present', () => {
 		expect(() => new SseClient({ url: '/s' })).toThrow(/eventSourceFactory/);
+	});
+
+	it('ignores named events when events option is omitted', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		FakeEventSource.instances[0]!.emit('search_dispatched', {
+			type: 'search_dispatched',
+			data: 'x',
+		});
+		expect(onMessage).not.toHaveBeenCalled();
+	});
+
+	it('delivers named events and preserves fallback message type for unnamed frames', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['search_dispatched'],
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		FakeEventSource.instances[0]!.emit('search_dispatched', {
+			type: 'search_dispatched',
+			data: 'x',
+		});
+		expect(onMessage).toHaveBeenCalledTimes(1);
+		expect(onMessage).toHaveBeenLastCalledWith({
+			type: 'search_dispatched',
+			data: 'x',
+		});
+
+		FakeEventSource.instances[0]!.emit('message', {
+			data: 'y',
+		});
+		expect(onMessage).toHaveBeenCalledTimes(2);
+		expect(onMessage).toHaveBeenLastCalledWith({
+			type: 'message',
+			data: 'y',
+		});
+	});
+
+	it('falls back to registered event name when payload has no type', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['search_dispatched'],
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		FakeEventSource.instances[0]!.emit('search_dispatched', {
+			data: 'x',
+		});
+		expect(onMessage).toHaveBeenCalledWith({
+			type: 'search_dispatched',
+			data: 'x',
+		});
+	});
+
+	it('delivers named events once when duplicate names are passed in options.events', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['search_dispatched', 'search_dispatched'],
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		FakeEventSource.instances[0]!.emit('search_dispatched', {
+			type: 'search_dispatched',
+			data: 'x',
+		});
+		expect(onMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not double-deliver message events when message is listed in events', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['message'],
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		FakeEventSource.instances[0]!.emit('message', {
+			type: 'message',
+			data: 'hello',
+		});
+		expect(onMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it('removes named listeners on close() so subsequent emits do not invoke onMessage', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['search_dispatched'],
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		client.close();
+		FakeEventSource.instances[0]!.emit('search_dispatched', {
+			type: 'search_dispatched',
+			data: 'x',
+		});
+		expect(onMessage).not.toHaveBeenCalled();
+	});
+
+	it('preserves named listener on the new source and removes it from the old source after error+reconnect', () => {
+		const onMessage = vi.fn();
+		const client = new SseClient({
+			url: '/stream',
+			events: ['search_dispatched'],
+			backoff: { minMs: 500, maxMs: 10_000, jitter: 0, random: () => 0.5 },
+			eventSourceFactory: (url, init) => new FakeEventSource(url, init),
+			onMessage,
+		});
+		client.start();
+		const first = FakeEventSource.instances[0]!;
+		expect(first.listenerCount('search_dispatched')).toBe(1);
+
+		first.emit('error', new Error('reconnect'));
+		expect(first.listenerCount('search_dispatched')).toBe(0);
+
+		vi.advanceTimersByTime(1000);
+		expect(FakeEventSource.instances.length).toBe(2);
+		const second = FakeEventSource.instances[1]!;
+		expect(second.listenerCount('search_dispatched')).toBe(1);
+
+		first.emit('search_dispatched', { data: 'stale' });
+		expect(onMessage).not.toHaveBeenCalled();
+
+		second.emit('search_dispatched', { data: 'fresh' });
+		expect(onMessage).toHaveBeenCalledWith({
+			type: 'search_dispatched',
+			data: 'fresh',
+		});
 	});
 });

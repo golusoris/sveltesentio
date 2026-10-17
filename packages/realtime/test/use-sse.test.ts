@@ -288,4 +288,28 @@ describe('useSSE', () => {
 		expect(rune.messages).toEqual([]);
 		expect(rune.lastMessage?.data).toBe('dropped');
 	});
+
+	it('passes events option through to deliver named SSE events', async () => {
+		const { useSSE } = await import('../src/use-sse.svelte.js');
+		const rune = useSSE({
+			url: '/s',
+			events: ['search_dispatched'],
+			eventSourceFactory: factory,
+		});
+		latest().emit('open');
+
+		latest().emit('search_dispatched', {
+			type: 'search_dispatched',
+			data: 'query-1',
+		});
+		latest().emit('message', {
+			data: 'unnamed',
+		});
+
+		expect(rune.messages).toEqual([
+			{ type: 'search_dispatched', data: 'query-1' },
+			{ type: 'message', data: 'unnamed' },
+		]);
+		expect(rune.lastMessage).toEqual({ type: 'message', data: 'unnamed' });
+	});
 });

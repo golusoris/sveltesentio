@@ -7,8 +7,8 @@ export interface SseEventLike {
 }
 
 export type EventSourceLike = {
-	addEventListener(type: 'message' | 'error' | 'open', handler: (event: unknown) => void): void;
-	removeEventListener(type: 'message' | 'error' | 'open', handler: (event: unknown) => void): void;
+	addEventListener(type: string, handler: (event: unknown) => void): void;
+	removeEventListener(type: string, handler: (event: unknown) => void): void;
 	close(): void;
 };
 
@@ -26,6 +26,8 @@ export interface SseClientOptions {
 	eventSourceFactory?: EventSourceFactory;
 	setTimeoutImpl?: typeof setTimeout;
 	clearTimeoutImpl?: typeof clearTimeout;
+	/** Named SSE event types to listen for besides `message`; delivered through onMessage with `type` = event name. */
+	events?: readonly string[];
 	onOpen?: () => void;
 	onMessage?: (event: SseEventLike) => void;
 	onError?: (error: unknown, attempt: number) => void;
@@ -41,6 +43,7 @@ export class SseClient {
 	private readonly setTimer: typeof setTimeout;
 	private readonly clearTimer: typeof clearTimeout;
 	private readonly factory: EventSourceFactory;
+	private namedHandlers: Array<[string, (event: unknown) => void]> = [];
 
 	constructor(options: SseClientOptions) {
 		this.options = options;
@@ -81,6 +84,21 @@ export class SseClient {
 		source.addEventListener('open', this.handleOpen);
 		source.addEventListener('message', this.handleMessage);
 		source.addEventListener('error', this.handleError);
+		this.registerNamedListeners(source);
+	}
+
+	private registerNamedListeners(source: EventSourceLike): void {
+		if (!this.options.events) return;
+		const seen = new Set<string>(['message', 'open', 'error', '']);
+		for (const name of this.options.events) {
+			if (seen.has(name)) continue;
+			seen.add(name);
+			const handler = (event: unknown): void => {
+				this.deliver(event, name);
+			};
+			this.namedHandlers.push([name, handler]);
+			source.addEventListener(name, handler);
+		}
 	}
 
 	private handleOpen = (): void => {
@@ -90,14 +108,18 @@ export class SseClient {
 	};
 
 	private handleMessage = (event: unknown): void => {
+		this.deliver(event, 'message');
+	};
+
+	private deliver(event: unknown, fallbackType: string): void {
 		const evt = event as Partial<SseEventLike>;
 		const payload: SseEventLike = {
-			type: typeof evt.type === 'string' ? evt.type : 'message',
+			type: typeof evt.type === 'string' ? evt.type : fallbackType,
 			data: typeof evt.data === 'string' ? evt.data : '',
 			...(typeof evt.lastEventId === 'string' ? { lastEventId: evt.lastEventId } : {}),
 		};
 		this.options.onMessage?.(payload);
-	};
+	}
 
 	private handleError = (error: unknown): void => {
 		this.options.onError?.(error, this.attempt);
@@ -127,6 +149,10 @@ export class SseClient {
 		this.source.removeEventListener('open', this.handleOpen);
 		this.source.removeEventListener('message', this.handleMessage);
 		this.source.removeEventListener('error', this.handleError);
+		for (const [name, handler] of this.namedHandlers) {
+			this.source.removeEventListener(name, handler);
+		}
+		this.namedHandlers = [];
 		this.source.close();
 		this.source = undefined;
 	}
