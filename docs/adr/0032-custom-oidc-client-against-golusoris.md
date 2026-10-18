@@ -1,6 +1,6 @@
 # ADR-0032: Custom thin OIDC client against Golusoris `auth/oidc/*`; no third-party auth framework
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0057](0057-oidc-id-token-validation-oauth4webapi.md)
 - **Date**: 2026-04-17
 - **Deciders**: @lusoris (user), research agent
 - **D-row**: D60 in `.workingdir/research/decisions-needed.md`

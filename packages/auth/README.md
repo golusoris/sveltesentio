@@ -70,6 +70,10 @@ const tokens = await exchangeAuthorizationCode({
   redirectUri: 'https://app.example/callback',
   code,
   codeVerifier: req.codeVerifier,
+  // an id_token in the response is verified against these; missing values reject it
+  issuer: 'https://app.example/auth/oidc',
+  jwksUri: 'https://app.example/auth/oidc/jwks',
+  nonce: req.nonce,
   fetch: event.fetch,
 });
 ```
