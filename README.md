@@ -77,7 +77,7 @@ See [`docs/principles.md`](docs/principles.md) and [`docs/ux-principles.md`](doc
 ## Development
 
 ```bash
-make setup   # pnpm install + husky init
+make setup   # pnpm install + lefthook install
 make dev     # turbo dev (all packages watch)
 make ci      # lint + typecheck + test + build
 ```

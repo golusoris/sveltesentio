@@ -7,7 +7,7 @@
 setup:
 	corepack enable
 	pnpm install
-	pnpm husky init || true
+	lefthook install
 	@echo "Setup complete. Run 'make dev' to start development."
 
 # Start all packages in dev/watch mode
