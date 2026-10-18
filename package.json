@@ -25,6 +25,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"check:cycles": "node scripts/check-import-cycles.mjs",
+		"check:declared-imports": "node scripts/check-declared-imports.mjs",
 		"check:kit-compat": "node scripts/check-kit-compat.mjs",
 		"lint:scripts": "eslint scripts/",
 		"test:scripts": "ls scripts/*.test.mjs > /dev/null && node --test \"scripts/*.test.mjs\""

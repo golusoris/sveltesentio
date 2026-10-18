@@ -70,6 +70,7 @@ add-package:
 verify-all:
 	@pnpm run ci
 	@pnpm check:cycles
+	@pnpm check:declared-imports
 	@pnpm check:component-stories
 	@pnpm check:export-tests
 	@pnpm check:publint

@@ -171,7 +171,7 @@ const CRUISE_OPTIONS = Object.freeze({
 });
 
 /** Runs dependency-cruiser over `sourceFiles` and rejects after `timeoutMs`. */
-async function cruiseWithTimeout(sourceFiles, timeoutMs) {
+export async function cruiseWithTimeout(sourceFiles, timeoutMs, options = CRUISE_OPTIONS) {
 	let timer;
 	const timeoutPromise = new Promise((_, reject) => {
 		timer = setTimeout(() => {
@@ -182,7 +182,7 @@ async function cruiseWithTimeout(sourceFiles, timeoutMs) {
 
 	let result;
 	try {
-		result = await Promise.race([cruise(sourceFiles, CRUISE_OPTIONS), timeoutPromise]);
+		result = await Promise.race([cruise(sourceFiles, options), timeoutPromise]);
 	} finally {
 		clearTimeout(timer);
 	}
