@@ -43,27 +43,26 @@ rules:
           is the shape replayed here. Import cycles have a second decider the
           scanner does not see:
           scripts/check-import-cycles.mjs, run as `pnpm check:cycles` in the CI
-          Lint job and in verify-all. It builds two graphs from static
-          import/export specifiers and from dynamic `import()` calls with a
-          literal specifier -- modules within packages/*/src, and packages via
-          @sveltesentio/* specifiers -- and fails on the first cycle in either,
-          printing the path. Self-recursion is also reported by the
+          Lint job and in verify-all. It uses dependency-cruiser to detect
+          module cycles across .ts, .svelte.ts and .svelte files within
+          packages/*/src, and keeps a depth-first search for cross-package
+          cycles via @sveltesentio/* specifiers, failing on the first cycle in
+          either and printing the path. Self-recursion is also reported by the
           `@sveltesentio/no-recursion` ESLint rule, which resolves a self-call
-          through scope analysis rather than by name. An ESLint rule for cycles
-          would have meant a new dependency, which hard rule 2 puts behind a
-          D-row; a script needs none.
+          through scope analysis rather than by name.
         rationale: >-
           Partial is the state of the replay, not of the repository: every
           shape in the corpus is refused by a gate, but only self-recursion by
-          the decider this entry can name. The three cycle fixtures sit under
-          gap/ for that reason alone (cordanaLLM/praetor#1241).
+          the decider this entry can name. The cycle fixtures sit under gap/
+          for that reason alone (cordanaLLM/praetor#1241).
 
-          Three cycle shapes are reported, each verified by planting it and
-          watching the checker exit 1 with the path before removing it: a
-          two-module static cycle inside core, a core-to-ui-to-core package
-          cycle, and a cycle closed by `await import('./peer.js')`. The dynamic
-          shape was measured both ways -- the previous checker reported "OK: no
-          import cycles" on it.
+          Four cycle shapes are verified: a two-module static cycle inside
+          core, a core-to-ui-to-core package cycle, a cycle closed by
+          `await import('./peer.js')`, and a .svelte component cycle.
+          dependency-cruiser decides module-level cycles across TypeScript and
+          Svelte components, ignoring type-only imports (`import type`). Cross-package
+          @sveltesentio/* cycles are decided by the package graph DFS because
+          dependency-cruiser does not follow workspace package boundaries.
 
           Self-recursion is reported too, by `@sveltesentio/no-recursion`, which
           was measured free before being enabled -- zero self-calls across all
