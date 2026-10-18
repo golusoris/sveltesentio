@@ -3,6 +3,7 @@
 	"devDependencies": {
 		"@sveltejs/kit": "^3.0.0",
 		"@types/node": "^24.13.4",
+		"eslint": "^10.10.0",
 		"esm-env": "^1.2.2",
 		"openapi-fetch": "^0.17.0",
 		"svelte": "^5.57.0",
@@ -76,6 +77,7 @@
 	"name": "@sveltesentio/core",
 	"peerDependencies": {
 		"@sveltejs/kit": ">=2.70.2",
+		"eslint": ">=9.10.0",
 		"esm-env": ">=1.0.0",
 		"openapi-fetch": ">=0.17.0",
 		"svelte": ">=5.56.4",
@@ -85,6 +87,9 @@
 		"zod": ">=4.0.0"
 	},
 	"peerDependenciesMeta": {
+		"eslint": {
+			"optional": true
+		},
 		"openapi-fetch": {
 			"optional": true
 		}
