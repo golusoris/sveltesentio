@@ -56,6 +56,33 @@ function blob(bytes = 100): Blob {
 	return new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
 }
 
+/** A tus `DetailedError` shape: an Error carrying the server's `originalResponse`. */
+function tusError(status: number, contentType: string, body: unknown): Error {
+	const text = typeof body === 'string' ? body : JSON.stringify(body);
+	return Object.assign(new Error('tus: unexpected response'), {
+		originalResponse: {
+			getStatus: (): number => status,
+			getHeader: (name: string): string | undefined =>
+				name.toLowerCase() === 'content-type' ? contentType : undefined,
+			getBody: (): string => text,
+		},
+	});
+}
+
+/** Starts an upload, fails it with error, and returns the ProblemError onError received. */
+function failWith(error: Error): ProblemError {
+	const onError = vi.fn();
+	const up = createResumableUpload(blob(), {
+		endpoint: '/tus',
+		onError,
+		UploadConstructor: fresh(),
+	});
+	up.start();
+	FakeUpload.last?.emitError(error);
+	expect(up.state).toBe('error');
+	return onError.mock.calls[0]?.[0] as ProblemError;
+}
+
 describe('createResumableUpload — construction', () => {
 	it('throws a ProblemError when neither endpoint nor uploadUrl is given', () => {
 		expect(() => createResumableUpload(blob(), {} as never)).toThrow(ProblemError);
@@ -302,5 +329,41 @@ describe('createResumableUpload — error mapping', () => {
 		FakeUpload.last?.emitError(original);
 		const problem = onError.mock.calls[0]?.[0] as ProblemError;
 		expect(problem).toBe(original);
+	});
+	it('uses the RFC 9457 body of a 422 problem+json tus response', () => {
+		const problem = failWith(
+			tusError(422, 'application/problem+json; charset=utf-8', {
+				type: 'urn:upload:too-large',
+				title: 'Upload too large',
+				status: 422,
+				detail: 'The file exceeds 10 MB.',
+				limit: 10,
+			}),
+		);
+		expect(problem.type).toBe('urn:upload:too-large');
+		expect(problem.status).toBe(422);
+		expect(problem.detail).toBe('The file exceeds 10 MB.');
+		expect(problem.extensions).toEqual({ limit: 10 });
+		expect(problem.cause).toBeInstanceOf(Error);
+	});
+
+	it('keeps the HTTP status of a 422 tus response without a problem body', () => {
+		const problem = failWith(tusError(422, 'text/plain', 'unprocessable'));
+		expect(problem.type).toBe('https://sveltesentio.dev/problems/upload-failed');
+		expect(problem.status).toBe(422);
+		expect(problem.detail).toBe('tus: unexpected response');
+	});
+
+	it('falls back to the status when a problem+json body is malformed', () => {
+		const problem = failWith(tusError(422, 'application/problem+json', '{not json'));
+		expect(problem.type).toBe('https://sveltesentio.dev/problems/upload-failed');
+		expect(problem.status).toBe(422);
+	});
+
+	it('ignores an originalResponse without the tus response methods', () => {
+		const error = Object.assign(new Error('odd'), { originalResponse: { status: 422 } });
+		const problem = failWith(error);
+		expect(problem.status).toBeUndefined();
+		expect(problem.detail).toBe('odd');
 	});
 });
