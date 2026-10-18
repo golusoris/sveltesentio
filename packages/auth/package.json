@@ -1,7 +1,7 @@
 {
 	"description": "OIDC PKCE flow + code exchange + handleCsrf hook + passkey wrappers + CSRF HMAC double-submit + session cookie options + permissions (Web Crypto; server-only orchestration)",
 	"devDependencies": {
-		"@playwright/test": "1.64.0",
+		"@playwright/test": "1.64.1",
 		"@storybook/addon-svelte-csf": "5.1.5",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
