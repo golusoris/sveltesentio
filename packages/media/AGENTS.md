@@ -25,7 +25,7 @@ Engine logic factored **out** of any UI shell -> downstream already on raw `hls.
 - **State machine.** `playbackReducer` pure reducer; invalid transitions no-ops (never throws). Quality selection orthogonal to play/pause lifecycle.
 - **OS chrome hook.** `buildMediaSessionMetadata` returns plain `MediaMetadataInit`-compatible object; caller owns `navigator.mediaSession` DOM boundary.
 
-**EmulatorJS does NOT live here.** Ships as standalone `@sveltesentio/game` package — ~40 MB cores bloat every media consumer (D113 locked, Phase 2 backlog).
+**EmulatorJS does NOT live here.** Ships as standalone `@sveltesentio/emulator` package — ~40 MB cores bloat every media consumer (D113 locked).
 
 ## Critical pin — `vidstack`
 
