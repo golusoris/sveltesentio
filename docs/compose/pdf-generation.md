@@ -420,6 +420,7 @@ Tier 2 invariants:
 ```ts
 // packages/pdf/src/queue.ts
 import { Queue, Worker } from 'bullmq';
+import { PDFDocument } from 'pdf-lib';
 import { v7 as uuidv7 } from 'uuid';
 import { RenderRequest, RenderResult, InvoiceInput } from './types';
 import { renderInvoice } from './renderers/invoice';
@@ -482,7 +483,7 @@ new Worker(
       id: uuidv7(),
       sha256: hash,
       bytes: bytes.byteLength,
-      pages: 1, // TODO: pdf-lib page count for Tier 1
+      pages: (await PDFDocument.load(bytes)).getPageCount(),
       s3Key,
       signedUrl: upload.signedUrl,
       expiresAt: upload.expiresAt,

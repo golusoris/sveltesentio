@@ -9,9 +9,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// apps/storybook builds to storybook-static/. There is no deployed URL yet
-	// (V0.1.0 release-DoD pending), so we link the in-repo build path and flag
-	// the deployment as a TODO.
+	// apps/storybook builds to storybook-static/; no workflow deploys it, so link the in-repo build path.
 	const storybookPath = '../storybook/storybook-static/index.html';
 </script>
 
@@ -41,10 +39,6 @@
 		(Storybook 10 + Svelte 5). Build it with
 		<code>pnpm --filter @sveltesentio/storybook build</code> and open
 		<code>apps/storybook/storybook-static/index.html</code>.
-	</p>
-	<p class="todo">
-		TODO: replace the in-repo path with the deployed Storybook URL once the V0.1.0 release pipeline
-		publishes it.
 	</p>
 </section>
 
@@ -157,11 +151,6 @@
 
 	.callout h2 {
 		margin-top: 0;
-	}
-
-	.todo {
-		color: var(--muted);
-		font-size: 0.9rem;
 	}
 
 	.section-note {

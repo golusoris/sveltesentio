@@ -65,7 +65,7 @@ packages/<name>/
 
 ```typescript
 // @sveltesentio/<name> — Phase N
-// TODO: implement
+// Public exports land here as the package grows.
 export {};
 ```
 
