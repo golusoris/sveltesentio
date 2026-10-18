@@ -55,6 +55,10 @@ jobs:
         if: github.event.pull_request.draft != true
         with:
           node-version: '24'
+      # The pin script imports semver, so the lockfile install comes first.
+      - name: Install the locked dependencies
+        if: github.event.pull_request.draft != true
+        run: corepack enable && pnpm install --frozen-lockfile
       - name: Pin every peer to the lowest release of its range
         if: github.event.pull_request.draft != true
         run: node scripts/pin-peer-floors.mjs

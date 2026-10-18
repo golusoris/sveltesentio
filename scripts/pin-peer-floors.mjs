@@ -22,6 +22,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
+import semver from 'semver';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -30,12 +31,11 @@ export const FLOORED_PEERS = Object.freeze(['svelte', '@sveltejs/kit', 'vite', '
 
 const WORKSPACE_FILE = 'pnpm-workspace.yaml';
 const OVERRIDES_LINE = 'overrides:';
-const RELEASE = /^(\d+)\.(\d+)\.(\d+)$/;
 
 // Upper bounds (HISS-02). The workspace holds about 25 packages and the
 // registry lists a few hundred releases per peer.
 const PACKAGE_LIMIT = 200;
-const RELEASE_LIMIT = 5_000;
+export const RELEASE_LIMIT = 5_000;
 const VIEW_DEADLINE_MS = 60_000;
 
 /**
@@ -62,16 +62,6 @@ export function collectRanges(manifests, peers = FLOORED_PEERS) {
 	return { ranges, conflicts };
 }
 
-function compareReleases(a, b) {
-	const x = RELEASE.exec(a);
-	const y = RELEASE.exec(b);
-	for (let part = 1; part <= 3; part++) {
-		const diff = Number(x[part]) - Number(y[part]);
-		if (diff !== 0) return diff;
-	}
-	return 0;
-}
-
 /**
  * The lowest release in the list the registry returned for a range. Anything
  * that is not a plain `major.minor.patch` is refused, not skipped: a
@@ -81,9 +71,14 @@ export function lowestRelease(versions) {
 	const list = typeof versions === 'string' ? [versions] : versions;
 	if (!Array.isArray(list) || list.length === 0) throw new Error('the range matches no release');
 	if (list.length > RELEASE_LIMIT) throw new Error(`more than ${RELEASE_LIMIT} releases`);
-	const odd = list.filter((version) => typeof version !== 'string' || !RELEASE.test(version));
+	const odd = list.filter(
+		(version) =>
+			typeof version !== 'string' ||
+			semver.valid(version) !== version ||
+			semver.prerelease(version) !== null,
+	);
 	if (odd.length > 0) throw new Error(`not a plain release: ${odd.join(', ')}`);
-	return [...list].sort(compareReleases)[0];
+	return semver.sort([...list])[0];
 }
 
 /**
