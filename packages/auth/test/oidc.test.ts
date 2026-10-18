@@ -207,6 +207,39 @@ describe('exchangeAuthorizationCode', () => {
 		expect((error as ProblemError).type).toBe('urn:sveltesentio:auth:token_exchange_failed');
 	});
 
+	it('refuses a plain-http token endpoint without sending the request', async () => {
+		const fetchMock = vi.fn<FetchLike>(async () => jsonResponse({ access_token: 'at' }));
+		const error = await exchangeAuthorizationCode({
+			...base,
+			tokenEndpoint: 'http://idp.example/token',
+			fetch: fetchMock,
+		}).catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(ProblemError);
+		expect(error).toMatchObject({
+			type: 'urn:sveltesentio:auth:token_exchange_failed',
+			title: 'Token exchange request refused',
+		});
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('sends client_secret for a confidential client and an overridden grant_type', async () => {
+		const fetchMock = vi.fn<FetchLike>(async (_input, init) => {
+			const body = new URLSearchParams(String(init?.body));
+			expect(body.get('client_id')).toBe('app');
+			expect(body.get('client_secret')).toBe('s3cret');
+			expect(body.get('grant_type')).toBe('urn:example:custom');
+			expect(body.get('code')).toBe('auth-code');
+			return jsonResponse({ access_token: 'at', token_type: 'Bearer' });
+		});
+		await exchangeAuthorizationCode({
+			...base,
+			clientSecret: 's3cret',
+			grantType: 'urn:example:custom',
+			fetch: fetchMock,
+		});
+		expect(fetchMock).toHaveBeenCalledOnce();
+	});
+
 	it('throws a ProblemError when access_token is missing', async () => {
 		const fetchMock = vi.fn<FetchLike>(async () => jsonResponse({ token_type: 'Bearer' }));
 		const error = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch((e) => e);
