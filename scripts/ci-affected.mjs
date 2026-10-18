@@ -238,35 +238,25 @@ export function analyzeChanges(changedFiles, readers) {
  * @returns {string[]}
  */
 export function getGitDiffFiles(baseRef = 'origin/main', headRef = 'HEAD') {
+	const range = `${baseRef}...${headRef}`;
 	try {
 		// An argument vector, never a shell string: the refs come from the command line
 		// and the environment, and `--end-of-options` keeps a ref that starts with a
 		// dash from being read as a git option.
-		const output = execFileSync(
-			'git',
-			['diff', '--name-only', '--end-of-options', `${baseRef}...${headRef}`],
-			{
-				encoding: 'utf8',
-				stdio: ['pipe', 'pipe', 'ignore'],
-			},
-		);
+		const output = execFileSync('git', ['diff', '--name-only', '--end-of-options', range], {
+			encoding: 'utf8',
+			stdio: ['pipe', 'pipe', 'pipe'],
+		});
 		return output
 			.split('\n')
 			.map((l) => l.trim())
 			.filter(Boolean);
-	} catch {
-		try {
-			const fallback = execFileSync('git', ['diff', '--name-only', 'HEAD~1...HEAD'], {
-				encoding: 'utf8',
-				stdio: ['pipe', 'pipe', 'ignore'],
-			});
-			return fallback
-				.split('\n')
-				.map((l) => l.trim())
-				.filter(Boolean);
-		} catch {
-			return [];
-		}
+	} catch (error) {
+		// A diff against another range would select the wrong packages, so a bad ref stops the job.
+		const stderr = String(error?.stderr ?? '').trim();
+		throw new Error(`ci-affected: git diff ${range} failed${stderr ? `: ${stderr}` : ''}`, {
+			cause: error,
+		});
 	}
 }
 

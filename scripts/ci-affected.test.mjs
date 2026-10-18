@@ -336,11 +336,17 @@ describe('ci-affected: getGitDiffFiles', () => {
 		assert.deepEqual(files, []);
 	});
 
+	it('fails on a ref git cannot resolve instead of diffing another range', () => {
+		assert.throws(
+			() => getGitDiffFiles('refs/heads/no-such-branch', 'HEAD'),
+			/ci-affected: git diff refs\/heads\/no-such-branch\.\.\.HEAD failed/,
+		);
+	});
+
 	it('never hands a ref to a shell', () => {
 		const dir = mkdtempSync(join(tmpdir(), 'ci-affected-'));
 		try {
-			const files = getGitDiffFiles(`HEAD; touch ${join(dir, 'ran')} #`, 'HEAD');
-			assert.ok(Array.isArray(files));
+			assert.throws(() => getGitDiffFiles(`HEAD; touch ${join(dir, 'ran')} #`, 'HEAD'));
 			assert.deepEqual(readdirSync(dir), [], 'the ref was executed as a shell command');
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
@@ -350,8 +356,7 @@ describe('ci-affected: getGitDiffFiles', () => {
 	it('does not read a ref that starts with a dash as a git option', () => {
 		const dir = mkdtempSync(join(tmpdir(), 'ci-affected-'));
 		try {
-			const files = getGitDiffFiles(`--output=${join(dir, 'written')}`, 'HEAD');
-			assert.ok(Array.isArray(files));
+			assert.throws(() => getGitDiffFiles(`--output=${join(dir, 'written')}`, 'HEAD'));
 			assert.deepEqual(readdirSync(dir), [], 'the ref was read as a git option');
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
