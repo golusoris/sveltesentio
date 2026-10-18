@@ -3,12 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import {
-	analyzeChanges,
-	SHARED_SURFACE_PATTERNS,
-	DOCS_ONLY_PATTERNS,
-	PACKAGE_DIRECTORY_MAP,
-} from '../../../scripts/ci-affected.mjs';
+import { analyzeChanges, PACKAGE_DIRECTORY_MAP } from '../../../scripts/ci-affected.mjs';
 
 describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 	it('returns no code changes when file list is empty', () => {

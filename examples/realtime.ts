@@ -3,4 +3,5 @@ import { SseClient, computeBackoff, createConnectStream } from '@sveltesentio/re
 
 const sse = new SseClient('/api/events');
 sse.subscribe((msg) => console.warn('event', msg));
-const delay = computeBackoff(attempt); // capped exponential + full jitter
+export const delay = computeBackoff(attempt); // capped exponential + full jitter
+export const stream = createConnectStream({ call: (signal) => client.watch({}, { signal }) });

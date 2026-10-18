@@ -225,5 +225,5 @@ export function injectEmulatorScript(
 }
 
 function isInjectableScript(node: unknown): node is InjectableScript {
-	return typeof node === 'object' && node !== null && 'src' in node;
+	return node !== null && typeof node === 'object' && 'src' in node;
 }
