@@ -51,35 +51,47 @@ describe('collectRanges', () => {
 
 describe('lowestRelease', () => {
 	it('picks the lowest release by number, not by text', () => {
-		assert.equal(lowestRelease(['5.10.0', '5.9.3', '5.56.4']), '5.9.3');
-		assert.equal(lowestRelease(['6.0.3', '5.5.2', '5.5.10']), '5.5.2');
+		assert.equal(lowestRelease(['5.10.0', '5.9.3', '5.56.4'], '>=5.0.0'), '5.9.3');
+		assert.equal(lowestRelease(['6.0.3', '5.5.2', '5.5.10'], '>=5.5 <7'), '5.5.2');
+	});
+
+	it('resolves the ADR-0020 TypeScript range to its lowest valid release', () => {
+		const registry = ['7.0.0', '5.6.2', '5.5.4', '5.5.2', '5.4.5'];
+		assert.equal(lowestRelease(registry, '>=5.5 <7'), '5.5.2');
+	});
+
+	it('refuses a list in which no release satisfies the range', () => {
+		assert.throws(
+			() => lowestRelease(['5.4.5', '7.0.0'], '>=5.5 <7'),
+			/no release satisfies ">=5.5 <7"/,
+		);
 	});
 
 	it('refuses an empty list, a prerelease and a tag', () => {
-		assert.throws(() => lowestRelease([]), /matches no release/);
+		assert.throws(() => lowestRelease([], '*'), /matches no release/);
 		assert.throws(
-			() => lowestRelease(['5.57.0', '5.57.0-next.1']),
+			() => lowestRelease(['5.57.0', '5.57.0-next.1'], '>=5.0.0'),
 			/not a plain release: 5.57.0-next.1/,
 		);
-		assert.throws(() => lowestRelease(['latest']), /not a plain release: latest/);
+		assert.throws(() => lowestRelease(['latest'], '*'), /not a plain release: latest/);
 	});
 
 	it('refuses non-strings in the release list', () => {
-		assert.throws(() => lowestRelease(['5.0.0', 123]), /not a plain release: 123/);
-		assert.throws(() => lowestRelease(['5.0.0', false]), /not a plain release: false/);
-		assert.throws(() => lowestRelease(['5.0.0', null]), /not a plain release/);
+		assert.throws(() => lowestRelease(['5.0.0', 123], '*'), /not a plain release: 123/);
+		assert.throws(() => lowestRelease(['5.0.0', false], '*'), /not a plain release: false/);
+		assert.throws(() => lowestRelease(['5.0.0', null], '*'), /not a plain release/);
 	});
 
 	it('accepts the single string npm prints when one release matches', () => {
-		assert.equal(lowestRelease('8.0.0'), '8.0.0');
+		assert.equal(lowestRelease('8.0.0', '>=8'), '8.0.0');
 	});
 
 	it('accepts up to RELEASE_LIMIT releases and refuses one more', () => {
 		const atLimit = Array.from({ length: RELEASE_LIMIT }, () => '1.0.0');
-		assert.equal(lowestRelease(atLimit), '1.0.0');
+		assert.equal(lowestRelease(atLimit, '1.x'), '1.0.0');
 		const overLimit = Array.from({ length: RELEASE_LIMIT + 1 }, () => '1.0.0');
 		assert.throws(
-			() => lowestRelease(overLimit),
+			() => lowestRelease(overLimit, '1.x'),
 			new RegExp(`more than ${RELEASE_LIMIT} releases`),
 		);
 	});
@@ -147,7 +159,7 @@ describe('installedGaps', () => {
 describe('main', () => {
 	let dir;
 	const view = async (peer) =>
-		({ svelte: ['5.56.5', '5.56.4'], typescript: ['5.5.2', '6.0.3'] })[peer];
+		({ svelte: ['5.56.5', '5.56.4'], typescript: ['5.4.5', '5.5.2', '6.0.3'] })[peer];
 
 	async function pkg(name, manifest) {
 		await mkdir(join(dir, 'packages', name), { recursive: true });
