@@ -1,58 +1,21 @@
 #!/usr/bin/env node
-// Fails if the import graph inside packages/*/src contains a cycle.
-//
-// HISS-01 requires the call graph to be a DAG, and nothing in this repository
-// measured that: praetor's scanner does not read .ts, and no ESLint cycle rule
-// is configured — eslint-plugin-import would be a new dependency, which hard
-// rule 2 puts behind a D-row. A script needs none, and follows the precedent
-// already set by check-export-targets.mjs.
-//
-// Scope is deliberately two graphs, because they fail differently:
-//   - within a package, a cycle is a design smell that still bundles;
-//   - across packages, a cycle breaks the opt-in module story outright, since a
-//     consumer installing one package would transitively require the other.
-//
-// Resolution is deliberately syntactic. It reads static `import`/`export ... from`
-// specifiers plus dynamic `import()` with a literal specifier, and resolves the
-// relative ones against the filesystem; it does not run the TypeScript resolver.
-//
-// A dynamic import forms a real cycle: `await import('./peer.js')` is an edge a
-// bundler follows, and the fact that it resolves at runtime rather than parse
-// time does not make the graph acyclic. It is read here for that reason.
-//
-// Two things stay out of reach, and are recorded in .config/hiss/coverage.yaml
-// rather than implied to be covered:
-//   - a computed specifier — `import(name)` — cannot be followed syntactically;
-//   - path aliases would need the TypeScript resolver. No package under
-//     packages/*/ declares `compilerOptions.paths`, and no package source
-//     imports through an alias, so this is currently vacuous rather than a
-//     silent hole.
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+// Enforces HISS-01 acyclic module and package graphs across packages/*/src.
+// Uses dependency-cruiser for AST-accurate module cycle detection across .ts,
+// .svelte.ts and .svelte files, and keeps a DFS check for cross-package cycles.
+import { cruise } from 'dependency-cruiser';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, relative, resolve } from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const packagesDir = join(root, 'packages');
 
-/** Static import/export specifiers. Ignores type-only imports, which erase. */
-const SPECIFIER = /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^;'"]*?from\s*['"]([^'"]+)['"]/g;
-/** Bare side-effect imports: `import './register.js'`. */
-const BARE = /(?:^|\n)\s*import\s*['"](\.[^'"]+)['"]/g;
-/**
- * Dynamic imports with a literal specifier: `await import('./peer.js')`.
- *
- * `\s` matches newlines, so a call broken across lines to satisfy the line-length
- * limit is still read. `import.meta.glob(...)` does not match, because the
- * parenthesis there follows a property access rather than `import`.
- */
-const DYNAMIC = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-
 const SOURCE_EXT = ['.ts', '.svelte.ts', '.svelte'];
 
-// Upper bound on directory entries one `walk` visits (HISS-02). The source trees
-// of all packages hold a few hundred entries; the bound stops a mis-pointed root,
-// and running into it is an error, not a truncated result.
+// Upper bound on directory entries one `walk` visits (HISS-02).
 const WALK_LIMIT = 100_000;
+const CRUISE_TIMEOUT_MS = 60_000;
 
 export async function walk(dir, out = []) {
 	const stack = [{ isDir: true, path: dir }];
@@ -93,37 +56,21 @@ export async function walk(dir, out = []) {
 	return out;
 }
 
-/** Resolves a relative specifier to a real file, trying the extensions TS rewrites. */
-export async function resolveRelative(fromFile, spec) {
-	const base = resolve(dirname(fromFile), spec);
-	const candidates = [
-		base,
-		base.replace(/\.js$/, '.ts'),
-		base.replace(/\.js$/, '.svelte.ts'),
-		`${base}.ts`,
-		join(base, 'index.ts'),
-	];
-	for (let i = 0; i < candidates.length; i += 1) {
-		const candidate = candidates[i];
-		try {
-			if ((await stat(candidate)).isFile()) return candidate;
-		} catch (error) {
-			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-				/* try the next shape */
-				continue;
-			}
-			throw error;
-		}
-	}
-	return undefined;
-}
+/** Static import/export specifiers. Ignores type-only imports, which erase. */
+const PKG_SPECIFIER = /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^;'"\n]*?from\s*['"]([^'"]+)['"]/g;
+/** Bare side-effect imports: `import './register.js'`. */
+const PKG_BARE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
+/** Dynamic imports with a literal specifier: `await import('./peer.js')`. */
+const PKG_DYNAMIC = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
-export function specifiersOf(source) {
+export function packageSpecifiersOf(source) {
 	const found = new Set();
-	for (const re of [SPECIFIER, BARE, DYNAMIC]) {
+	for (const re of [PKG_SPECIFIER, PKG_BARE, PKG_DYNAMIC]) {
 		re.lastIndex = 0;
 		let match;
-		while ((match = re.exec(source)) !== null) found.add(match[1]);
+		while ((match = re.exec(source)) !== null) {
+			if (match[1].startsWith('@sveltesentio/')) found.add(match[1]);
+		}
 	}
 	return [...found];
 }
@@ -133,14 +80,14 @@ const GREY = 1;
 const BLACK = 2;
 
 /**
- * One depth-first search from `root` with an explicit frame stack (HISS-01).
+ * Depth-first search from `rootNode` with an explicit frame stack (HISS-01).
  * `limit` bounds the loop (HISS-02): a search looks at each edge once and leaves
  * each node once, so `findCycle` passes nodes + edges + 1.
  */
-function dfsFromRoot(root, graph, colour, path, limit) {
-	colour.set(root, GREY);
-	path.push(root);
-	const frames = [{ node: root, neighbours: [...(graph.get(root) ?? [])], edgeIndex: 0 }];
+function dfsFromRoot(rootNode, graph, colour, path, limit) {
+	colour.set(rootNode, GREY);
+	path.push(rootNode);
+	const frames = [{ node: rootNode, neighbours: [...(graph.get(rootNode) ?? [])], edgeIndex: 0 }];
 
 	for (let step = 0; step < limit; step += 1) {
 		const frame = frames.at(-1);
@@ -177,55 +124,126 @@ export function findCycle(graph) {
 	const limit = graph.size + edges + 1;
 	const path = [];
 
-	for (const root of graph.keys()) {
-		if (colour.get(root) !== WHITE) continue;
-		const cycle = dfsFromRoot(root, graph, colour, path, limit);
+	for (const r of graph.keys()) {
+		if (colour.get(r) !== WHITE) continue;
+		const cycle = dfsFromRoot(r, graph, colour, path, limit);
 		if (cycle) return cycle;
 	}
 	return undefined;
 }
 
-/** Builds the file and package dependency graphs. */
-export async function buildGraphs(pkgDir = packagesDir) {
+/** Walks every package's src and builds the @sveltesentio/* package graph. */
+async function collectSources(pkgDir, packages) {
+	const sourceFiles = [];
+	const packageGraph = new Map(packages.map((p) => [`@sveltesentio/${p}`, new Set()]));
+
+	for (const pkg of packages) {
+		const self = `@sveltesentio/${pkg}`;
+		const files = await walk(join(pkgDir, pkg, 'src'));
+		for (const file of files) {
+			sourceFiles.push(file);
+			const source = await readFile(file, 'utf8');
+			for (const spec of packageSpecifiersOf(source)) {
+				const dep = spec.split('/').slice(0, 2).join('/');
+				if (dep !== self && packageGraph.has(dep)) {
+					packageGraph.get(self)?.add(dep);
+				}
+			}
+		}
+	}
+	return { sourceFiles, packageGraph };
+}
+
+const CRUISE_OPTIONS = Object.freeze({
+	validate: true,
+	ruleSet: {
+		forbidden: [
+			{
+				name: 'no-circular',
+				severity: 'error',
+				from: {},
+				to: { circular: true, pathNot: '^node_modules' },
+			},
+		],
+	},
+	doNotFollow: { path: 'node_modules' },
+	outputType: 'json',
+});
+
+/** Runs dependency-cruiser over `sourceFiles` and rejects after `timeoutMs`. */
+async function cruiseWithTimeout(sourceFiles, timeoutMs) {
+	let timer;
+	const timeoutPromise = new Promise((_, reject) => {
+		timer = setTimeout(() => {
+			reject(new Error(`dependency-cruiser timed out after ${timeoutMs}ms`));
+		}, timeoutMs);
+		timer.unref?.();
+	});
+
+	let result;
+	try {
+		result = await Promise.race([cruise(sourceFiles, CRUISE_OPTIONS), timeoutPromise]);
+	} finally {
+		clearTimeout(timer);
+	}
+	return typeof result.output === 'string' ? JSON.parse(result.output) : result.output;
+}
+
+export async function checkImportCycles(
+	pkgDir = packagesDir,
+	{ timeoutMs = CRUISE_TIMEOUT_MS } = {},
+) {
 	const packages = (await readdir(pkgDir, { withFileTypes: true }))
 		.filter((e) => e.isDirectory())
 		.map((e) => e.name);
 
-	const fileGraph = new Map();
-	const packageGraph = new Map(packages.map((p) => [`@sveltesentio/${p}`, new Set()]));
-
-	for (const pkg of packages) {
-		for (const file of await walk(join(pkgDir, pkg, 'src'))) {
-			const source = await readFile(file, 'utf8');
-			const edges = new Set();
-			for (const spec of specifiersOf(source)) {
-				if (spec.startsWith('.')) {
-					const target = await resolveRelative(file, spec);
-					if (target) edges.add(target);
-				} else if (spec.startsWith('@sveltesentio/')) {
-					const dep = spec.split('/').slice(0, 2).join('/');
-					const self = `@sveltesentio/${pkg}`;
-					if (dep !== self) packageGraph.get(self)?.add(dep);
-				}
-			}
-			fileGraph.set(file, edges);
-		}
+	const { sourceFiles, packageGraph } = await collectSources(pkgDir, packages);
+	if (sourceFiles.length === 0) {
+		throw new Error('Zero source files found to analyse (failing closed).');
 	}
 
-	return { packages, fileGraph, packageGraph };
+	const data = await cruiseWithTimeout(sourceFiles, timeoutMs);
+	const cruisedModules = new Set(data.modules.map((m) => resolve(m.source)));
+	const analysedCount = sourceFiles.filter((f) => cruisedModules.has(resolve(f))).length;
+
+	if (analysedCount === 0 || analysedCount < sourceFiles.length) {
+		throw new Error(
+			`dependency-cruiser analysed ${analysedCount} modules, fewer than ${sourceFiles.length} source files found (failing closed).`,
+		);
+	}
+
+	const violations = data.summary.violations ?? [];
+	const moduleCycles = violations
+		.filter((v) => v.rule?.name === 'no-circular' || v.type === 'cycle')
+		.map((v) => [v.from, ...v.cycle.map((c) => c.name)].map((f) => resolve(f)));
+
+	return {
+		packages,
+		sourceFiles,
+		analysedCount,
+		moduleCycles,
+		packageGraph,
+		packageCycle: findCycle(packageGraph),
+	};
 }
 
 export async function main() {
-	const { packages, fileGraph, packageGraph } = await buildGraphs(packagesDir);
+	let res;
+	try {
+		res = await checkImportCycles(packagesDir);
+	} catch (err) {
+		console.error(`HISS-01: ${err.message}\n`);
+		process.exit(1);
+	}
 
+	const { packages, analysedCount, moduleCycles, packageCycle } = res;
 	const problems = [];
-	const fileCycle = findCycle(fileGraph);
-	if (fileCycle) {
+
+	for (const cycle of moduleCycles) {
 		problems.push(
-			'Module import cycle:\n  ' + fileCycle.map((f) => relative(root, f)).join('\n    -> '),
+			'Module import cycle:\n  ' + cycle.map((f) => relative(root, f)).join('\n    -> '),
 		);
 	}
-	const packageCycle = findCycle(packageGraph);
 	if (packageCycle) {
 		problems.push('Package import cycle:\n  ' + packageCycle.join('\n    -> '));
 	}
@@ -235,8 +253,9 @@ export async function main() {
 		for (const problem of problems) console.error(problem + '\n');
 		process.exit(1);
 	}
+
 	console.log(
-		`OK: no import cycles across ${fileGraph.size} modules in ${packages.length} packages.`,
+		`OK: no import cycles across ${analysedCount} modules in ${packages.length} packages.`,
 	);
 }
 

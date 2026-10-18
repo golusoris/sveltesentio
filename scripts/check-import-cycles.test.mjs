@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { buildGraphs, findCycle, resolveRelative, walk } from './check-import-cycles.mjs';
+import { checkImportCycles, findCycle, packageSpecifiersOf, walk } from './check-import-cycles.mjs';
 
 describe('check-import-cycles', () => {
 	let tempRoot;
@@ -84,77 +84,6 @@ describe('check-import-cycles', () => {
 		});
 	});
 
-	describe('resolveRelative', () => {
-		it('resolves exact file path and rewrites .js to .ts or .svelte.ts', async () => {
-			const dir = join(tempRoot, 'resolve');
-			await mkdir(dir, { recursive: true });
-			const fromFile = join(dir, 'source.ts');
-			await writeFile(fromFile, '');
-
-			const exactSvelte = join(dir, 'Comp.svelte');
-			await writeFile(exactSvelte, '');
-			const r1 = await resolveRelative(fromFile, './Comp.svelte');
-			assert.equal(r1, exactSvelte);
-
-			const tsTarget = join(dir, 'helper.ts');
-			await writeFile(tsTarget, '');
-			const r2 = await resolveRelative(fromFile, './helper.js');
-			assert.equal(r2, tsTarget);
-
-			const svelteTsTarget = join(dir, 'state.svelte.ts');
-			await writeFile(svelteTsTarget, '');
-			const r3 = await resolveRelative(fromFile, './state.js');
-			assert.equal(r3, svelteTsTarget);
-		});
-
-		it('resolves extensionless path and directory import with index.ts', async () => {
-			const dir = join(tempRoot, 'resolve-more');
-			await mkdir(join(dir, 'sub'), { recursive: true });
-			const fromFile = join(dir, 'entry.ts');
-			await writeFile(fromFile, '');
-
-			const utilTarget = join(dir, 'util.ts');
-			await writeFile(utilTarget, '');
-			const r1 = await resolveRelative(fromFile, './util');
-			assert.equal(r1, utilTarget);
-
-			const indexTarget = join(dir, 'sub', 'index.ts');
-			await writeFile(indexTarget, '');
-			const r2 = await resolveRelative(fromFile, './sub');
-			assert.equal(r2, indexTarget);
-		});
-
-		it('returns undefined for unresolvable relative import', async () => {
-			const dir = join(tempRoot, 'resolve-missing');
-			await mkdir(dir, { recursive: true });
-			const fromFile = join(dir, 'a.ts');
-			await writeFile(fromFile, '');
-			const res = await resolveRelative(fromFile, './does-not-exist');
-			assert.equal(res, undefined);
-		});
-
-		it('propagates unexpected filesystem errors (non-ENOENT)', async () => {
-			const dir = join(tempRoot, 'resolve-eacces');
-			await mkdir(dir, { recursive: true });
-			const restricted = join(dir, 'restricted');
-			await mkdir(restricted, { recursive: true });
-			const fromFile = join(dir, 'source.ts');
-			await writeFile(fromFile, '');
-			await chmod(restricted, 0o000);
-
-			try {
-				await assert.rejects(
-					async () => {
-						await resolveRelative(fromFile, './restricted/target.js');
-					},
-					(err) => err && (err.code === 'EACCES' || err.code === 'EPERM'),
-				);
-			} finally {
-				await chmod(restricted, 0o755);
-			}
-		});
-	});
-
 	describe('findCycle', () => {
 		it('returns undefined when there are no cycles', () => {
 			const graph = new Map([
@@ -201,7 +130,7 @@ describe('check-import-cycles', () => {
 			assert.equal(findCycle(graph), undefined);
 		});
 
-		it('reads Set-valued graphs, the shape buildGraphs produces', () => {
+		it('reads Set-valued graphs, the shape checkImportCycles builds', () => {
 			const cyclic = new Map([
 				['a', new Set(['b'])],
 				['b', new Set(['a'])],
@@ -210,7 +139,6 @@ describe('check-import-cycles', () => {
 		});
 
 		it('stays inside its step bound on a dense acyclic Set-valued graph', () => {
-			// 300 nodes, every node points at all later ones: 44850 edges against 300 nodes.
 			const dense = new Map();
 			for (let i = 0; i < 300; i += 1) {
 				const targets = new Set();
@@ -229,7 +157,25 @@ describe('check-import-cycles', () => {
 		});
 	});
 
-	describe('buildGraphs', () => {
+	describe('packageSpecifiersOf', () => {
+		it('extracts static, bare and dynamic @sveltesentio imports, ignoring type imports', () => {
+			const src = `
+				import { a } from '@sveltesentio/a';
+				import '@sveltesentio/b';
+				export const dyn = () => import('@sveltesentio/c');
+				import type { D } from '@sveltesentio/d';
+				import { local } from './local.js';
+			`;
+			const specs = packageSpecifiersOf(src);
+			assert.ok(specs.includes('@sveltesentio/a'));
+			assert.ok(specs.includes('@sveltesentio/b'));
+			assert.ok(specs.includes('@sveltesentio/c'));
+			assert.ok(!specs.includes('@sveltesentio/d'));
+			assert.ok(!specs.includes('./local.js'));
+		});
+	});
+
+	describe('checkImportCycles', () => {
 		const write = async (base, files) => {
 			for (const [name, source] of Object.entries(files)) {
 				const file = join(base, name);
@@ -238,50 +184,110 @@ describe('check-import-cycles', () => {
 			}
 		};
 
-		it('reports no cycle for an acyclic tree', async () => {
+		it('reports no cycle for a clean tree', async () => {
 			const base = join(tempRoot, 'graphs-clean');
 			await write(base, {
 				'a/src/index.ts': "export { x } from './x.js';\nimport { b } from '@sveltesentio/b';\n",
 				'a/src/x.ts': 'export const x = 1;\n',
 				'b/src/index.ts': 'export const b = 2;\n',
 			});
-			const { packages, fileGraph, packageGraph } = await buildGraphs(base);
-			assert.deepEqual(packages.sort(), ['a', 'b']);
-			assert.equal(fileGraph.size, 3);
-			assert.equal(findCycle(fileGraph), undefined);
-			assert.equal(findCycle(packageGraph), undefined);
+			const res = await checkImportCycles(base);
+			assert.deepEqual(res.packages.sort(), ['a', 'b']);
+			assert.equal(res.analysedCount, 3);
+			assert.equal(res.moduleCycles.length, 0);
+			assert.equal(res.packageCycle, undefined);
 		});
 
-		it('finds a planted module cycle, including one closed by a dynamic import', async () => {
-			const base = join(tempRoot, 'graphs-module-cycle');
+		it('shape 1: finds a two-module static cycle', async () => {
+			const base = join(tempRoot, 'shape-1-static');
 			await write(base, {
-				'a/src/index.ts': "import { x } from './x.js';\n",
-				'a/src/x.ts': "export const x = () => import('./index.js');\n",
+				'core/src/a.ts': "import './b.js';\nexport const a = 1;\n",
+				'core/src/b.ts': "import './a.js';\nexport const b = 2;\n",
 			});
-			const { fileGraph } = await buildGraphs(base);
-			// Directory order decides which module the search enters first.
-			const cycle = findCycle(fileGraph);
-			assert.equal(cycle?.length, 3);
-			assert.equal(cycle?.[0], cycle?.[2]);
+			const res = await checkImportCycles(base);
+			assert.equal(res.moduleCycles.length, 1);
+			const cycle = res.moduleCycles[0];
+			assert.equal(cycle.length, 3);
+			assert.equal(cycle[0], cycle[2]);
 			assert.deepEqual([...new Set(cycle)].sort(), [
-				join(base, 'a/src/index.ts'),
-				join(base, 'a/src/x.ts'),
+				resolve(join(base, 'core/src/a.ts')),
+				resolve(join(base, 'core/src/b.ts')),
 			]);
 		});
 
-		it('finds a planted package cycle and ignores a type-only edge', async () => {
-			const base = join(tempRoot, 'graphs-package-cycle');
+		it('shape 2: finds a dynamic import cycle', async () => {
+			const base = join(tempRoot, 'shape-2-dynamic');
 			await write(base, {
-				'a/src/index.ts': "import { b } from '@sveltesentio/b/sub';\n",
-				'b/src/index.ts': "import { a } from '@sveltesentio/a';\n",
-				'c/src/index.ts': "import { d } from '@sveltesentio/d';\n",
-				'd/src/index.ts': "import type { C } from '@sveltesentio/c';\n",
+				'core/src/a.ts': "import './b.js';\nexport const a = 1;\n",
+				'core/src/b.ts': "export const f = async () => import('./a.js');\n",
 			});
-			const { packageGraph } = await buildGraphs(base);
-			const cycle = findCycle(packageGraph);
-			assert.equal(cycle?.length, 3);
-			assert.deepEqual([...new Set(cycle)].sort(), ['@sveltesentio/a', '@sveltesentio/b']);
-			assert.deepEqual([...packageGraph.get('@sveltesentio/d')], []);
+			const res = await checkImportCycles(base);
+			assert.equal(res.moduleCycles.length, 1);
+			const cycle = res.moduleCycles[0];
+			assert.equal(cycle.length, 3);
+			assert.equal(cycle[0], cycle[2]);
+			assert.deepEqual([...new Set(cycle)].sort(), [
+				resolve(join(base, 'core/src/a.ts')),
+				resolve(join(base, 'core/src/b.ts')),
+			]);
+		});
+
+		it('shape 3: finds a core -> ui -> core package cycle', async () => {
+			const base = join(tempRoot, 'shape-3-pkg-cycle');
+			await write(base, {
+				'core/src/index.ts': "import { ui } from '@sveltesentio/ui';\nexport const c = 1;\n",
+				'ui/src/index.ts': "import { c } from '@sveltesentio/core';\nexport const ui = 2;\n",
+			});
+			const res = await checkImportCycles(base);
+			assert.equal(res.moduleCycles.length, 0);
+			assert.deepEqual(res.packageCycle, [
+				'@sveltesentio/core',
+				'@sveltesentio/ui',
+				'@sveltesentio/core',
+			]);
+		});
+
+		it('shape 4: finds a .svelte component cycle (A.svelte -> B.svelte -> A.svelte)', async () => {
+			const base = join(tempRoot, 'shape-4-svelte-cycle');
+			await write(base, {
+				'ui/src/A.svelte':
+					'<script lang="ts">\nimport B from "./B.svelte";\n</script>\n<div>A</div>\n',
+				'ui/src/B.svelte':
+					'<script lang="ts">\nimport A from "./A.svelte";\n</script>\n<div>B</div>\n',
+			});
+			const res = await checkImportCycles(base);
+			assert.equal(res.moduleCycles.length, 1);
+			const cycle = res.moduleCycles[0];
+			assert.equal(cycle.length, 3);
+			assert.equal(cycle[0], cycle[2]);
+			assert.deepEqual([...new Set(cycle)].sort(), [
+				resolve(join(base, 'ui/src/A.svelte')),
+				resolve(join(base, 'ui/src/B.svelte')),
+			]);
+		});
+
+		it('type-only import is not a cycle', async () => {
+			const base = join(tempRoot, 'type-only-no-cycle');
+			await write(base, {
+				'core/src/a.ts': "import type { B } from './b.js';\nexport type A = string;\n",
+				'core/src/b.ts': "import type { A } from './a.js';\nexport type B = number;\n",
+				'ui/src/index.ts': "import type { A } from '@sveltesentio/core';\nexport type UI = A;\n",
+			});
+			const res = await checkImportCycles(base);
+			assert.equal(res.moduleCycles.length, 0);
+			assert.equal(res.packageCycle, undefined);
+			assert.deepEqual([...res.packageGraph.get('@sveltesentio/ui')], []);
+		});
+
+		it('empty / zero-module tree fails closed', async () => {
+			const emptyBase = join(tempRoot, 'empty-tree');
+			await mkdir(emptyBase, { recursive: true });
+			await assert.rejects(
+				async () => {
+					await checkImportCycles(emptyBase);
+				},
+				(err) => err && /failing closed/i.test(err.message),
+			);
 		});
 	});
 });
