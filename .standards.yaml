@@ -24,11 +24,11 @@ overrides:
 exceptions:
   - rule: HISS-11
     path: .github/workflows/release-please.yml
-    reason: the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)
+    reason: "Category A, interval stated by the expiry (entered 2026-10-13, re-reviewed 2026-10-19, #280 still open): the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)"
     expires: "2027-01-09"
   - rule: declared-linters
     tool: semgrep
-    reason: no workflow runs semgrep; CodeQL (codeql.yml, javascript-typescript, a required check) is the static analysis owner for this code; the semgrep registry rule packs cannot be pinned to a version, so a semgrep job would not be reproducible until a pinned rule source is chosen
+    reason: "Category A, interval stated by the expiry (entered 2026-10-13, re-reviewed 2026-10-19): no workflow runs semgrep; CodeQL (codeql.yml, javascript-typescript, a required check) is the static analysis owner for this code; the semgrep registry rule packs cannot be pinned to a version, so a semgrep job would not be reproducible until a pinned rule source is chosen"
     expires: "2027-01-11"
 register:
   sources:
