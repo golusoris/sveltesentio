@@ -3,7 +3,7 @@ import { setClock, getClock, systemClock, createHydrationClock } from '@sveltese
 
 // Production: wall clock. Tests: inject a fixed clock so snapshots are stable.
 setClock(systemClock);
-const now = getClock().now(); // -> epoch ms from the active clock
+export const now = getClock().now(); // -> epoch ms from the active clock
 
 // SSR→CSR without a hydration flash: freeze server time, resume on the client.
 export const clock = createHydrationClock();

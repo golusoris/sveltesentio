@@ -4,4 +4,4 @@ import { buildAdjacency, topologicalSort, findCycles, CycleError } from '@svelte
 const adj = buildAdjacency(edges);
 const cycles = findCycles(adj);
 if (cycles.length) throw new CycleError(cycles);
-const order = topologicalSort(adj); // safe execution order
+export const order = topologicalSort(adj); // safe execution order

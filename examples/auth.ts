@@ -2,7 +2,9 @@
 import { generateState, generateNonce } from '@sveltesentio/auth';
 import { issueCsrfToken, verifyCsrfToken } from '@sveltesentio/auth/csrf';
 
-const state = generateState();
-const nonce = generateNonce();
-// On form render: const token = await issueCsrfToken(secret, sessionId);
-// On submit:      await verifyCsrfToken(secret, sessionId, submitted); // throws on mismatch
+export const state = generateState();
+export const nonce = generateNonce();
+// On form render:
+export const { token } = await issueCsrfToken(sessionId, secret);
+// On submit: false on a forged, expired or foreign token.
+export const valid = await verifyCsrfToken(submitted, sessionId, secret);

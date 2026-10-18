@@ -6,6 +6,11 @@ import {
 	formatDate,
 } from '@sveltesentio/i18n';
 
-const dir = getTextDirection('ar'); // 'rtl'
-const price = formatCurrency(19.99, { locale: 'de-DE', currency: 'EUR' }); // "19,99 €"
-const when = formatDate(Date.now(), { locale: 'ja-JP' });
+export const dir = getTextDirection('ar'); // 'rtl'
+export const price = formatCurrency(19.99, { locale: 'de-DE', currency: 'EUR' }); // "19,99 €"
+export const when = formatDate(Date.now(), { locale: 'ja-JP' });
+
+// vite.config.ts: compile the message catalogue.
+export const plugins = [
+	paraglideVitePlugin({ project: './project.inlang', outdir: './src/lib/paraglide' }),
+];

@@ -4,5 +4,6 @@ import * as Y from 'yjs';
 
 const doc = new Y.Doc();
 const items = doc.getArray('items');
-const stop = observeYjsArray(items, (next) => console.warn('items', next));
+export const stop = observeYjsArray(items, (next) => console.warn('items', next));
 appendToYjsArray(items, { id: 1 });
+export const current = snapshotYjsArray(items); // plain array copy
