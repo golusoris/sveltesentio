@@ -28,3 +28,10 @@ export interface TusUpload {
  * inject a fake in tests to drive lifecycle/progress without a server.
  */
 export type TusUploadConstructor = new (file: Blob, options: TusUploadOptions) => TusUpload;
+
+/** The `originalResponse` that a tus `DetailedError` carries when the server answered. */
+export interface TusHttpResponse {
+	getStatus(): number;
+	getHeader(header: string): string | undefined;
+	getBody(): string;
+}
