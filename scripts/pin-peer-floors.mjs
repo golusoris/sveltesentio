@@ -63,11 +63,12 @@ export function collectRanges(manifests, peers = FLOORED_PEERS) {
 }
 
 /**
- * The lowest release in the list the registry returned for a range. Anything
- * that is not a plain `major.minor.patch` is refused, not skipped: a
- * prerelease or a tag here means the range matched something it should not.
+ * The lowest release in the list the registry returned that satisfies the
+ * range, by semver's own minSatisfying. Anything that is not a plain
+ * `major.minor.patch` is refused, not skipped: a prerelease or a tag here
+ * means the range matched something it should not.
  */
-export function lowestRelease(versions) {
+export function lowestRelease(versions, range) {
 	const list = typeof versions === 'string' ? [versions] : versions;
 	if (!Array.isArray(list) || list.length === 0) throw new Error('the range matches no release');
 	if (list.length > RELEASE_LIMIT) throw new Error(`more than ${RELEASE_LIMIT} releases`);
@@ -78,7 +79,9 @@ export function lowestRelease(versions) {
 			semver.prerelease(version) !== null,
 	);
 	if (odd.length > 0) throw new Error(`not a plain release: ${odd.join(', ')}`);
-	return semver.sort([...list])[0];
+	const lowest = semver.minSatisfying(list, range);
+	if (lowest === null) throw new Error(`no release satisfies "${range}"`);
+	return lowest;
 }
 
 /**
@@ -147,7 +150,7 @@ async function readFloors(dir, view) {
 	if (conflicts.length > 0) throw new Error(`peer ranges disagree:\n  ${conflicts.join('\n  ')}`);
 	const floors = new Map();
 	for (const [peer, { range }] of ranges) {
-		const floor = lowestRelease(await view(peer, range));
+		const floor = lowestRelease(await view(peer, range), range);
 		console.log(`${peer} "${range}" -> ${floor}`);
 		floors.set(peer, floor);
 	}
