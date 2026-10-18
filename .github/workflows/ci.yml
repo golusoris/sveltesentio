@@ -99,6 +99,7 @@ jobs:
           done
           exit "$status"
       - run: pnpm check:cycles
+      - run: pnpm check:declared-imports
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/

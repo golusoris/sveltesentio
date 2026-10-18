@@ -132,7 +132,7 @@ Harness above = rule text. Rows below = TypeScript adaptation + repository enfor
 | HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
 | HISS-21   | Linux only today: `ci.yml` + `ci-sveltekit.yml` run on `ubuntu-26.04`. macOS + Windows legs open: [#328](https://github.com/golusoris/sveltesentio/issues/328). | not enforced |
 
-Gate steps inside verification gate, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
+Gate steps inside verification gate, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm check:declared-imports` (imports and @sveltesentio/* ranges declared per package); `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
 
 ## Hard rules
 
