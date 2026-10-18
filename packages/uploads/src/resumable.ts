@@ -1,5 +1,5 @@
-import { ProblemError } from '@sveltesentio/core';
-import type { TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
+import { ProblemError, parseProblem, problemFromDocument } from '@sveltesentio/core';
+import type { TusHttpResponse, TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
 import { createTusLauncher, type TusLauncher } from './tus-launcher.js';
 
 // Resumable upload wrapper over `tus-js-client` (peer dep, ADR-0041). The tus
@@ -10,7 +10,12 @@ import { createTusLauncher, type TusLauncher } from './tus-launcher.js';
 const RESUMABLE_PROBLEM_TYPE = 'https://sveltesentio.dev/problems/upload-failed';
 
 /** Minimal structural view of the tus `Upload` options this wrapper drives. */
-export type { TusUpload, TusUploadConstructor, TusUploadOptions } from './resumable-types.js';
+export type {
+	TusHttpResponse,
+	TusUpload,
+	TusUploadConstructor,
+	TusUploadOptions,
+} from './resumable-types.js';
 
 /** Lifecycle phase of a {@link ResumableUpload}. */
 export type ResumableState = 'idle' | 'uploading' | 'paused' | 'success' | 'error' | 'aborted';
@@ -45,7 +50,10 @@ export interface ResumableUploadOptions {
 	onProgress?: (progress: ResumableProgress) => void;
 	/** Success callback, invoked once the upload completes. */
 	onSuccess?: (upload: ResumableUpload) => void;
-	/** Error callback. Receives a {@link ProblemError} wrapping the tus error. */
+	/**
+	 * Error callback. Receives a {@link ProblemError} wrapping the tus error: the server's
+	 * RFC 9457 body when it sent `application/problem+json`, else its HTTP status when it answered.
+	 */
 	onError?: (error: ProblemError) => void;
 	/**
 	 * Injected tus `Upload` constructor. Defaults to `tus-js-client`'s `Upload`
@@ -92,12 +100,39 @@ function toProgress(bytesSent: number, bytesTotal: number): ResumableProgress {
 
 function toProblem(error: Error): ProblemError {
 	if (error instanceof ProblemError) return error;
+	const response = tusResponseOf(error);
+	const doc = response ? problemDocumentOf(response) : undefined;
+	if (doc) return problemFromDocument(doc, error);
 	return new ProblemError({
 		type: RESUMABLE_PROBLEM_TYPE,
 		title: 'Resumable upload failed',
+		status: response?.getStatus(),
 		detail: error.message,
 		cause: error,
 	});
+}
+
+/** The server response a tus `DetailedError` carries, read structurally so tus stays a lazy peer. */
+function tusResponseOf(error: Error): TusHttpResponse | undefined {
+	const response = (error as { originalResponse?: unknown }).originalResponse;
+	if (typeof response !== 'object' || response === null) return undefined;
+	const candidate = response as Partial<TusHttpResponse>;
+	const shaped =
+		typeof candidate.getStatus === 'function' &&
+		typeof candidate.getHeader === 'function' &&
+		typeof candidate.getBody === 'function';
+	return shaped ? (candidate as TusHttpResponse) : undefined;
+}
+
+/** An RFC 9457 body from the tus server, when it sent `application/problem+json`. */
+function problemDocumentOf(response: TusHttpResponse): ReturnType<typeof parseProblem> {
+	const contentType = response.getHeader('content-type') ?? '';
+	if (!contentType.toLowerCase().includes('application/problem+json')) return undefined;
+	try {
+		return parseProblem(JSON.parse(response.getBody()));
+	} catch {
+		return undefined;
+	}
 }
 
 /**
