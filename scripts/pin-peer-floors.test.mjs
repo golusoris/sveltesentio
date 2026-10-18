@@ -9,6 +9,7 @@ import {
 	installedGaps,
 	lowestRelease,
 	main,
+	RELEASE_LIMIT,
 	withOverrides,
 } from './pin-peer-floors.mjs';
 
@@ -60,11 +61,27 @@ describe('lowestRelease', () => {
 			() => lowestRelease(['5.57.0', '5.57.0-next.1']),
 			/not a plain release: 5.57.0-next.1/,
 		);
-		assert.throws(() => lowestRelease(['latest']), /not a plain release/);
+		assert.throws(() => lowestRelease(['latest']), /not a plain release: latest/);
+	});
+
+	it('refuses non-strings in the release list', () => {
+		assert.throws(() => lowestRelease(['5.0.0', 123]), /not a plain release: 123/);
+		assert.throws(() => lowestRelease(['5.0.0', false]), /not a plain release: false/);
+		assert.throws(() => lowestRelease(['5.0.0', null]), /not a plain release/);
 	});
 
 	it('accepts the single string npm prints when one release matches', () => {
 		assert.equal(lowestRelease('8.0.0'), '8.0.0');
+	});
+
+	it('accepts up to RELEASE_LIMIT releases and refuses one more', () => {
+		const atLimit = Array.from({ length: RELEASE_LIMIT }, () => '1.0.0');
+		assert.equal(lowestRelease(atLimit), '1.0.0');
+		const overLimit = Array.from({ length: RELEASE_LIMIT + 1 }, () => '1.0.0');
+		assert.throws(
+			() => lowestRelease(overLimit),
+			new RegExp(`more than ${RELEASE_LIMIT} releases`),
+		);
 	});
 });
 
