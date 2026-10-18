@@ -5,6 +5,7 @@
 		"@types/node": "^24.13.4",
 		"eslint": "^10.10.0",
 		"esm-env": "^1.2.2",
+		"fast-check": "^4.10.2",
 		"openapi-fetch": "^0.17.0",
 		"svelte": "^5.57.0",
 		"svelte-eslint-parser": "^1.8.1",
