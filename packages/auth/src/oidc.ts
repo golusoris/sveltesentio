@@ -132,32 +132,7 @@ const TOKEN_EXCHANGE_FAILED = 'urn:sveltesentio:auth:token_exchange_failed';
  */
 export async function exchangeAuthorizationCode(init: TokenExchangeInit): Promise<TokenResponse> {
 	const doFetch = init.fetch ?? globalThis.fetch;
-	const body = new URLSearchParams();
-	body.set('grant_type', init.grantType ?? 'authorization_code');
-	body.set('client_id', init.clientId);
-	body.set('redirect_uri', init.redirectUri);
-	body.set('code', init.code);
-	body.set('code_verifier', init.codeVerifier);
-	if (init.clientSecret !== undefined) body.set('client_secret', init.clientSecret);
-
-	let response: Response;
-	try {
-		response = await doFetch(init.tokenEndpoint, {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/x-www-form-urlencoded',
-				accept: 'application/json',
-			},
-			body: body.toString(),
-		});
-	} catch (cause) {
-		throw new ProblemError({
-			type: TOKEN_EXCHANGE_FAILED,
-			title: 'Token exchange request failed',
-			detail: 'The token endpoint could not be reached.',
-			cause,
-		});
-	}
+	const response = await sendTokenRequest(init, doFetch);
 
 	if (!response.ok) {
 		throw await problemFromTokenResponse(response);
@@ -186,6 +161,68 @@ export async function exchangeAuthorizationCode(init: TokenExchangeInit): Promis
 	}
 	if (parsed.id_token !== undefined) await validateIdToken(init, parsed, doFetch);
 	return parsed;
+}
+
+/**
+ * Sends the token request with oauth4webapi, which refuses a plain-http endpoint.
+ * The code goes through `validateAuthResponse` only to brand it: the caller already
+ * checked `state` against the login-nonce cookie. oauth4webapi fixes `grant_type`, so
+ * an overridden {@link TokenExchangeInit.grantType} is set on the outgoing body.
+ */
+async function sendTokenRequest(init: TokenExchangeInit, doFetch: FetchLike): Promise<Response> {
+	const grantType = init.grantType ?? 'authorization_code';
+	const customFetch = (
+		url: string,
+		options: oauth.CustomFetchOptions<'POST', URLSearchParams>,
+	): Promise<Response> => {
+		options.body.set('grant_type', grantType);
+		return doFetch(url, {
+			method: options.method,
+			headers: options.headers,
+			body: options.body,
+			redirect: options.redirect,
+			...(options.signal ? { signal: options.signal } : {}),
+		});
+	};
+	try {
+		const as: oauth.AuthorizationServer = {
+			issuer: init.issuer ?? new URL(init.tokenEndpoint).origin,
+			token_endpoint: init.tokenEndpoint,
+		};
+		const client: oauth.Client = { client_id: init.clientId };
+		const auth =
+			init.clientSecret === undefined ? oauth.None() : oauth.ClientSecretPost(init.clientSecret);
+		const callback = oauth.validateAuthResponse(
+			as,
+			client,
+			new URLSearchParams({ code: init.code }),
+			oauth.skipStateCheck,
+		);
+		return await oauth.authorizationCodeGrantRequest(
+			as,
+			client,
+			auth,
+			callback,
+			init.redirectUri,
+			init.codeVerifier,
+			{ [oauth.customFetch]: customFetch },
+		);
+	} catch (cause) {
+		throw tokenRequestFailed(cause);
+	}
+}
+
+/** Maps a token request that produced no response; oauth4webapi refusals keep their reason. */
+function tokenRequestFailed(cause: unknown): ProblemError {
+	const refused = cause instanceof oauth.OperationProcessingError;
+	return new ProblemError({
+		type: TOKEN_EXCHANGE_FAILED,
+		title: refused ? 'Token exchange request refused' : 'Token exchange request failed',
+		detail: refused
+			? `The token request was not sent: ${cause.message}`
+			: 'The token endpoint could not be reached.',
+		cause,
+	});
 }
 
 /** Verifies the ID token with oauth4webapi on a copy of the already-parsed body. */
