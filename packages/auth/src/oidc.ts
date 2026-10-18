@@ -1,4 +1,5 @@
 import { ProblemError, isProblemResponse, problemFromResponse } from '@sveltesentio/core';
+import * as oauth from 'oauth4webapi';
 import { generateNonce, generateState } from './random.js';
 import { generatePkceChallenge } from './pkce.js';
 import type { PkceChallenge } from './pkce.js';
@@ -98,6 +99,14 @@ export interface TokenExchangeInit {
 	clientSecret?: string;
 	/** Injected fetch; defaults to the global. Pass `event.fetch` in SvelteKit server load. */
 	fetch?: FetchLike;
+	/** Expected ID token `iss`. Required when the response carries an `id_token`. */
+	issuer?: string;
+	/** JWKS URL that verifies the ID token signature. Required when the response carries an `id_token`. */
+	jwksUri?: string;
+	/** Nonce sent in the authorization request. Required for an `authorization_code` grant that returns an `id_token`. */
+	nonce?: string;
+	/** Accepted ID token `alg` values. Defaults to `RS256`. */
+	idTokenSigningAlgs?: readonly string[];
 }
 
 /** Parsed RFC 6749 §5.1 token response. Unknown fields are preserved on the object. */
@@ -117,6 +126,9 @@ const TOKEN_EXCHANGE_FAILED = 'urn:sveltesentio:auth:token_exchange_failed';
  * Performs the RFC 7636 PKCE authorization-code → token exchange.
  * Throws a {@link ProblemError} (from `@sveltesentio/core`) on any non-2xx response,
  * preferring the server's RFC 9457 `application/problem+json` body when present.
+ * An `id_token` in the response is verified (signature, `iss`, `aud`, `exp`, `nonce`)
+ * against {@link TokenExchangeInit.issuer}, {@link TokenExchangeInit.jwksUri} and
+ * {@link TokenExchangeInit.nonce}; it is rejected when they are missing.
  */
 export async function exchangeAuthorizationCode(init: TokenExchangeInit): Promise<TokenResponse> {
 	const doFetch = init.fetch ?? globalThis.fetch;
@@ -172,7 +184,65 @@ export async function exchangeAuthorizationCode(init: TokenExchangeInit): Promis
 			detail: 'The token response is missing a string `access_token`.',
 		});
 	}
+	if (parsed.id_token !== undefined) await validateIdToken(init, parsed, doFetch);
 	return parsed;
+}
+
+/** Verifies the ID token with oauth4webapi on a copy of the already-parsed body. */
+async function validateIdToken(
+	init: TokenExchangeInit,
+	tokens: TokenResponse,
+	doFetch: FetchLike,
+): Promise<void> {
+	const grantType = init.grantType ?? 'authorization_code';
+	const expectedNonce = grantType === 'authorization_code' ? init.nonce : oauth.expectNoNonce;
+	if (!init.issuer || !init.jwksUri || !expectedNonce) {
+		throw invalidIdToken(
+			'Pass `issuer`, `jwksUri` and `nonce` to validate the returned `id_token`.',
+		);
+	}
+	const as: oauth.AuthorizationServer = {
+		issuer: init.issuer,
+		token_endpoint: init.tokenEndpoint,
+		jwks_uri: init.jwksUri,
+		id_token_signing_alg_values_supported: init.idTokenSigningAlgs
+			? [...init.idTokenSigningAlgs]
+			: ['RS256'],
+	};
+	const client: oauth.Client = { client_id: init.clientId };
+	const copy = new Response(JSON.stringify(tokens), {
+		status: 200,
+		headers: { 'content-type': 'application/json' },
+	});
+	const customFetch = (url: string, options: oauth.CustomFetchOptions<'GET'>): Promise<Response> =>
+		doFetch(url, {
+			method: options.method,
+			headers: options.headers,
+			redirect: options.redirect,
+			...(options.signal ? { signal: options.signal } : {}),
+		});
+	try {
+		if (expectedNonce === oauth.expectNoNonce) {
+			await oauth.processRefreshTokenResponse(as, client, copy);
+		} else {
+			await oauth.processAuthorizationCodeResponse(as, client, copy, {
+				expectedNonce,
+				requireIdToken: true,
+			});
+		}
+		await oauth.validateApplicationLevelSignature(as, copy, { [oauth.customFetch]: customFetch });
+	} catch (cause) {
+		throw invalidIdToken('The `id_token` failed signature or claim validation.', cause);
+	}
+}
+
+function invalidIdToken(detail: string, cause?: unknown): ProblemError {
+	return new ProblemError({
+		type: TOKEN_EXCHANGE_FAILED,
+		title: 'Invalid ID token',
+		detail,
+		cause,
+	});
 }
 
 /**

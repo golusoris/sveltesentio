@@ -4,7 +4,7 @@
 
 ## Scope
 
-Mirrors Golusoris auth endpoints 1:1. **Do not** wrap openid-client, oidc-client-ts, Auth.js: duplicate Golusoris server-side ceremony, introduce dual-source-of-truth bugs.
+No third-party auth framework (openid-client, oidc-client-ts, Auth.js). ID token validation = `oauth4webapi` exact pin; never hand-rolled JOSE ([ADR-0057](../../docs/adr/0057-oidc-id-token-validation-oauth4webapi.md)).
 
 ### Landed (v0.0.1) — Web Crypto, cross-runtime (Node + Workers)
 
@@ -26,7 +26,7 @@ Mirrors Golusoris auth endpoints 1:1. **Do not** wrap openid-client, oidc-client
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `buildAuthorizationUrl(init)`                                                             | Assembles OAuth/OIDC authorize URL with PKCE query params; `extraParams` = first-party-IdP adapter point (e.g. `provider`)                              | [ADR-0032](../../docs/adr/0032-custom-oidc-client-against-golusoris.md) |
 | `createAuthorizationRequest(init)` → `{ url, state, nonce, codeVerifier, codeChallenge }` | Generates fresh PKCE pair + state + nonce + redirect URL in 1 call                                                                                      | ADR-0032                                                                |
-| `exchangeAuthorizationCode(init)` → `TokenResponse`                                       | POSTs PKCE token exchange with injectable `fetch`; throws `ProblemError` (RFC 9457 body when present) on non-2xx                                        | ADR-0032                                                                |
+| `exchangeAuthorizationCode(init)` → `TokenResponse`                                       | POSTs PKCE token exchange (injectable `fetch`); `ProblemError` on non-2xx; `id_token` checked by `oauth4webapi` (sig/iss/aud/exp/nonce), fails closed   | ADR-0057                                                                |
 | `handleCsrf({ getContext, ... })` → `Handle`                                              | SvelteKit hook enforcing double-submit token on unsafe methods; verifier + context + reject responder all injectable                                    | [ADR-0034](../../docs/adr/0034-httponly-cookie-sessions.md)             |
 | `evaluateCsrf(event, deps)` → `CsrfRejectionReason \| undefined`                          | Pure CSRF decision underlying `handleCsrf`; testable without SvelteKit runtime                                                                          | ADR-0034                                                                |
 | `handleAuthError(error, codes?)` → typed `AuthErrorState`                                 | Narrows `ProblemError` to `mfa-required` / `mfa-invalid` / `mfa-rate-limited` by `type` URN — never substring match; custom first-party codes supported | [ADR-0036](../../docs/adr/0036-mfa-ui-structured-errors.md)             |
