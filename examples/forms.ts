@@ -6,5 +6,8 @@ const schema = z.object({ email: z.string().email(), age: z.number().min(18) });
 
 // +page.server.ts
 export const load = async () => ({ form: await superValidate(schema) });
-// In a server action, map an upstream Problem onto the form:
-// return fail(400, { form: problemToFieldErrors(form, problem) });
+// In a server action, map an upstream Problem onto field errors:
+export const errors = problemToFieldErrors(problem);
+
+// +page.svelte
+export const form = superForm(data.form);

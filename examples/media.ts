@@ -6,7 +6,6 @@ import {
 	pickRendition,
 } from '@sveltesentio/media';
 
-let state = initialPlaybackState;
-state = playbackReducer(state, { type: 'play' });
-const src = pickRendition(renditions, { maxWidth: window.innerWidth });
+export const state = playbackReducer(initialPlaybackState, { type: 'play' });
+export const src = pickRendition(renditions, { maxWidth: window.innerWidth });
 navigator.mediaSession.metadata = buildMediaSessionMetadata({ title: 'Ep. 1', artwork });
