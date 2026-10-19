@@ -37,3 +37,5 @@ jobs:
     uses: ./.github/workflows/ci-sveltekit.yml
     with:
       working-directory: apps/sveltekit-fixture
+      # Every platform leg, so a change that breaks an adopter on macOS or Windows fails here first.
+      runners: '["ubuntu-26.04", "macos-26", "windows-2025"]'

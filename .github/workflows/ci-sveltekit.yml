@@ -18,6 +18,11 @@ on:
       run-e2e:
         type: boolean
         default: false
+      # JSON list of runner labels for lint, type check and test (HISS-21). One label keeps the
+      # job and artifact names unchanged; more than one appends the label to each.
+      runners:
+        type: string
+        default: '["ubuntu-26.04"]'
 
 permissions:
   contents: read
@@ -26,6 +31,7 @@ jobs:
   pr-title:
     name: PR title (Conventional Commits)
     if: github.event_name == 'pull_request'
+    # Linux only (HISS-21, #328): checks the pull request title, not the code.
     runs-on: ubuntu-26.04
     steps:
       - name: Stop on a draft pull request
@@ -51,10 +57,16 @@ jobs:
           echo "OK: $PR_TITLE"
 
   lint:
-    name: Lint
-    runs-on: ubuntu-26.04
+    name: ${{ strategy.job-total > 1 && format('Lint ({0})', matrix.runner) || 'Lint' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runners) }}
     defaults:
       run:
+        # The coverage check quotes for bash; Windows runners default to PowerShell.
+        shell: bash
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Stop on a draft pull request
@@ -84,10 +96,16 @@ jobs:
       - run: pnpm lint
 
   typecheck:
-    name: Type check
-    runs-on: ubuntu-26.04
+    name: ${{ strategy.job-total > 1 && format('Type check ({0})', matrix.runner) || 'Type check' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runners) }}
     defaults:
       run:
+        # The coverage check quotes for bash; Windows runners default to PowerShell.
+        shell: bash
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Stop on a draft pull request
@@ -117,10 +135,16 @@ jobs:
       - run: pnpm typecheck
 
   test:
-    name: Test (coverage ${{ inputs.coverage-threshold }}%)
-    runs-on: ubuntu-26.04
+    name: ${{ strategy.job-total > 1 && format('Test (coverage {0}%, {1})', inputs.coverage-threshold, matrix.runner) || format('Test (coverage {0}%)', inputs.coverage-threshold) }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runners) }}
     defaults:
       run:
+        # The coverage check quotes for bash; Windows runners default to PowerShell.
+        shell: bash
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Stop on a draft pull request
@@ -183,12 +207,13 @@ jobs:
       - name: Upload coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: coverage
+          name: ${{ strategy.job-total > 1 && format('coverage-{0}', matrix.runner) || 'coverage' }}
           path: ${{ inputs.working-directory }}/coverage/
           retention-days: 7
 
   build:
     name: Build
+    # Linux only (HISS-21, #328): The build output does not depend on the runner OS; lint, type check and test carry the platform legs.
     runs-on: ubuntu-26.04
     defaults:
       run:
@@ -222,6 +247,7 @@ jobs:
 
   audit:
     name: Security audit
+    # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
     defaults:
       run:
@@ -256,6 +282,7 @@ jobs:
   e2e:
     name: E2E (Playwright)
     if: inputs.run-e2e
+    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
     defaults:
       run:
