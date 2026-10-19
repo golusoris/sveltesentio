@@ -39,7 +39,12 @@ export const EVENT_SCOPED = Object.freeze({
 	'docs-drift': 'pull_request',
 });
 
-export const MUST_SUCCEED = Object.freeze([CHANGE_DETECTOR, 'secret-scan', 'dependency-scan']);
+export const MUST_SUCCEED = Object.freeze([
+	CHANGE_DETECTOR,
+	'secret-scan',
+	'dependency-scan',
+	'semgrep',
+]);
 
 /** Every need the gate knows, in the order the lists above name them. */
 export const KNOWN_NEEDS = Object.freeze([

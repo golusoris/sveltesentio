@@ -240,6 +240,8 @@ const config: Linter.Config[] = [
 			// catalog's claims depend on being reportable — linting the corpus would
 			// fail the build on the evidence it exists to preserve.
 			'.config/hiss/testdata/**',
+			// The semgrep rule fixtures are deliberate violations for the same reason.
+			'.config/semgrep/testdata/**',
 			// Illustrative copy-paste snippets — intentionally reference undeclared
 			// identifiers (paths, edges, secret…) the consumer supplies; not compiled.
 			'examples/**',
