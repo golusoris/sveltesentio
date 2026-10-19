@@ -2,10 +2,9 @@
 
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/uploads-v0.4.0...uploads-v0.5.0) (2026-10-19)
 
-
 ### Features
 
-* **uploads:** map tus server responses to RFC 9457 ProblemError ([#389](https://github.com/golusoris/sveltesentio/issues/389)) ([049af0c](https://github.com/golusoris/sveltesentio/commit/049af0c1d25035acb6e70d3b6ebb35be51469194))
+- **uploads:** map tus server responses to RFC 9457 ProblemError ([#389](https://github.com/golusoris/sveltesentio/issues/389)) ([049af0c](https://github.com/golusoris/sveltesentio/commit/049af0c1d25035acb6e70d3b6ebb35be51469194))
 
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/uploads-v0.3.1...uploads-v0.4.0) (2026-10-14)
 

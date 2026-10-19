@@ -2,20 +2,18 @@
 
 ## [0.9.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.8.0...auth-v0.9.0) (2026-10-19)
 
-
 ### ⚠ BREAKING CHANGES
 
-* **auth:** a plain-http tokenEndpoint is refused without a request, and a redirect from the token endpoint is no longer followed (oauth4webapi sends with redirect: manual), so it surfaces as a ProblemError.
-* **auth:** a token response that carries an id_token is rejected unless issuer and jwksUri are passed, plus nonce for the authorization_code grant. Pass them from the authorization request and the provider metadata.
+- **auth:** a plain-http tokenEndpoint is refused without a request, and a redirect from the token endpoint is no longer followed (oauth4webapi sends with redirect: manual), so it surfaces as a ProblemError.
+- **auth:** a token response that carries an id_token is rejected unless issuer and jwksUri are passed, plus nonce for the authorization_code grant. Pass them from the authorization request and the provider metadata.
 
 ### Features
 
-* **auth:** validate the OIDC id_token with oauth4webapi ([#384](https://github.com/golusoris/sveltesentio/issues/384)) ([86b991a](https://github.com/golusoris/sveltesentio/commit/86b991aed6a5cff6840f80687bd470ed444ba93c))
-
+- **auth:** validate the OIDC id_token with oauth4webapi ([#384](https://github.com/golusoris/sveltesentio/issues/384)) ([86b991a](https://github.com/golusoris/sveltesentio/commit/86b991aed6a5cff6840f80687bd470ed444ba93c))
 
 ### Code Refactoring
 
-* **auth:** send the token request with oauth4webapi ([#391](https://github.com/golusoris/sveltesentio/issues/391)) ([dcd4c7c](https://github.com/golusoris/sveltesentio/commit/dcd4c7c0bab9141e046a27bcdc225ca2a122f45b))
+- **auth:** send the token request with oauth4webapi ([#391](https://github.com/golusoris/sveltesentio/issues/391)) ([dcd4c7c](https://github.com/golusoris/sveltesentio/commit/dcd4c7c0bab9141e046a27bcdc225ca2a122f45b))
 
 ## [0.8.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.7.1...auth-v0.8.0) (2026-10-14)
 
