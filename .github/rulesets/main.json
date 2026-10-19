@@ -62,6 +62,15 @@
             "context": "CodeQL analysis"
           },
           {
+            "context": "Platform Neutrality (Linux)"
+          },
+          {
+            "context": "Platform Neutrality (macOS)"
+          },
+          {
+            "context": "Platform Neutrality (Windows)"
+          },
+          {
             "context": "Documentation Governance"
           },
           {
