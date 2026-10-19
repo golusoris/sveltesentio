@@ -21,6 +21,7 @@ jobs:
   pr-title:
     name: PR title (Conventional Commits)
     if: github.event_name == 'pull_request'
+    # Linux only (HISS-21, #328): checks the pull request title, not the code.
     runs-on: ubuntu-26.04
     steps:
       - name: Check PR title
@@ -38,6 +39,7 @@ jobs:
 
   detect-changes:
     name: Detect Changes
+    # Linux only (HISS-21, #328): computes the turbo filter from git history, which is the same on every platform.
     runs-on: ubuntu-26.04
     outputs:
       all_affected: ${{ steps.changes.outputs.all_affected }}
@@ -62,6 +64,7 @@ jobs:
     name: Lint
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): portability.yml runs lint on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -110,6 +113,7 @@ jobs:
     name: Type check
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): portability.yml runs the type check on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -156,6 +160,7 @@ jobs:
     name: Test (coverage)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): portability.yml runs the unit tests on Linux, macOS and Windows; this job adds coverage.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -190,6 +195,7 @@ jobs:
     name: Build
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): the build output does not depend on the runner OS.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -217,6 +223,7 @@ jobs:
     name: Stories (axe)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -241,6 +248,7 @@ jobs:
     name: End-to-end
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -281,6 +289,7 @@ jobs:
     name: Security audit
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -301,6 +310,7 @@ jobs:
   # cosign-signed upstream, gitleaks publishes checksums only.
   secret-scan:
     name: Secret scan (gitleaks)
+    # Linux only (HISS-21, #328): gitleaks scans git history, which is the same on every platform.
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
@@ -324,6 +334,7 @@ jobs:
 
   dependency-scan:
     name: Dependency and configuration scan (trivy)
+    # Linux only (HISS-21, #328): trivy scans the lockfile and configuration, which are the same on every platform.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -348,6 +359,7 @@ jobs:
   # repository, never a registry pack, so a scan depends on the commit alone.
   semgrep:
     name: Custom SAST (semgrep)
+    # Linux only (HISS-21, #328): semgrep scans source text, which is the same on every platform.
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
@@ -365,6 +377,7 @@ jobs:
   docs-drift:
     name: Docs drift
     if: github.event_name == 'pull_request'
+    # Linux only (HISS-21, #328): compares the exports maps of two revisions, which are the same on every platform.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -402,6 +415,7 @@ jobs:
         semgrep,
         docs-drift,
       ]
+    # Linux only (HISS-21, #328): aggregates the results of the other jobs.
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
