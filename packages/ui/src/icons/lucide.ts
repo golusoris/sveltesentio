@@ -3,12 +3,13 @@
  * is never statically imported here — that would force every consumer to
  * install it. Two wiring paths:
  *
- * - `createLucideLoader(icons)` — synchronous; pass the `@lucide/svelte/icons`
- *   barrel (PascalCase named exports). Best for tree-shaking when you import the
- *   barrel yourself.
- * - `lucideDynamicLoader` — zero-config; resolves each name via
- *   `import('@lucide/svelte/icons/<kebab-name>')` on demand. Returns a Promise
- *   the `Icon.svelte` consumer awaits.
+ * - `createLucideLoader(icons)` — synchronous; pass a record of per-icon imports
+ *   (e.g. `{ ArrowLeft }`). Recommended for production builds so icons are
+ *   bundled statically.
+ * - `lucideDynamicLoader` — (deprecated) resolves each name via
+ *   `import('@lucide/svelte/icons/<kebab-name>')` on demand. Works only where the
+ *   runtime resolves bare specifiers (Node, SSR, Vite dev), not in production
+ *   browser bundles.
  */
 
 import type { IconLoader, IconComponent } from './registry.js';
@@ -53,10 +54,12 @@ export function createLucideLoader(icons: LucideIconModule): IconLoader {
 }
 
 /**
- * Zero-config Lucide loader: dynamically imports the per-icon module on demand.
- * The peer is referenced only inside the async body, so bundlers resolve it
- * lazily and `tsc` does not require it to be installed at build time of this
- * package.
+ * Dynamically imports the per-icon module on demand.
+ *
+ * @deprecated Works only where the runtime resolves bare specifiers (Node, SSR,
+ * Vite dev), not in a production browser bundle. Use
+ * `createLucideLoader({ ArrowLeft, ... })` over per-icon imports
+ * (`import ArrowLeft from '@lucide/svelte/icons/arrow-left'`).
  */
 export const lucideDynamicLoader: IconLoader = (
 	name: string,

@@ -11,6 +11,8 @@ import {
 	registerIconLoader,
 	setDefaultIconLoader,
 	resolveIcon,
+	reportIconError,
+	__clearReportedFailures,
 	__setRegistry,
 	type IconLoader,
 } from '../src/icons/registry.js';
@@ -191,5 +193,28 @@ describe('name casing helpers', () => {
 		const elapsed = performance.now() - started;
 		expect(slug).toBe('a'.repeat(200_000));
 		expect(elapsed).toBeLessThan(1_000);
+	});
+});
+
+describe('reportIconError', () => {
+	it('logs error once per icon name and deduplicates subsequent calls', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		reportIconError('test-icon', new Error('fail'));
+		reportIconError('test-icon', new Error('fail again'));
+		expect(errorSpy).toHaveBeenCalledTimes(1);
+		expect(errorSpy).toHaveBeenCalledWith(
+			expect.stringMatching(/test-icon.*loader failure.*static loader/i),
+			expect.any(Error),
+		);
+		errorSpy.mockRestore();
+	});
+
+	it('__clearReportedFailures allows reporting again', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		reportIconError('repeat-icon', new Error('fail 1'));
+		__clearReportedFailures();
+		reportIconError('repeat-icon', new Error('fail 2'));
+		expect(errorSpy).toHaveBeenCalledTimes(2);
+		errorSpy.mockRestore();
 	});
 });
