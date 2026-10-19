@@ -296,6 +296,14 @@ describe('pure in-memory parity checks', () => {
 			expect(Array.from(placeholders(null))).toEqual([]);
 		});
 
+		it('matches placeholders in linear time on an unterminated run of whitespace', () => {
+			const unterminated = `{0:${' '.repeat(100_000)}`;
+			const started = performance.now();
+			expect(Array.from(placeholders(unterminated))).toEqual([]);
+			expect(performance.now() - started).toBeLessThan(1_000);
+			expect(Array.from(placeholders('{ name }{n:fmt }{x'))).toEqual(['name', 'n']);
+		});
+
 		it('refuses a catalog or value past the node cap MAX_NODES', () => {
 			expect(MAX_NODES).toBe(100_000);
 			const huge = Object.fromEntries(
