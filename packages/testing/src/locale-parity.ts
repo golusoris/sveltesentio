@@ -4,9 +4,10 @@
 // Ported from lusoris/SnatchArr web/src/lib/i18n-parity.ts
 
 /** Matches {name} placeholders, including formatters like {count: number}. */
-// The colon and whitespace branches are disjoint, so a failed match never
-// backtracks over the same characters twice (no polynomial ReDoS).
-const PLACEHOLDER_PATTERN = /\{\s*([a-zA-Z0-9_]+)(?::[^}]*|\s*)\}/g;
+// The colon and whitespace branches are disjoint, and a format part stops
+// at the next brace, so no character is scanned by more than one attempt
+// (no polynomial ReDoS on an unterminated or repeated `{name:`).
+const PLACEHOLDER_PATTERN = /\{\s*([a-zA-Z0-9_]+)(?::[^{}]*|\s*)\}/g;
 
 /** Upper bound on the nodes one catalog walk visits (HISS-02). */
 export const MAX_NODES = 100_000;

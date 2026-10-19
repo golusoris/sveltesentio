@@ -296,10 +296,11 @@ describe('pure in-memory parity checks', () => {
 			expect(Array.from(placeholders(null))).toEqual([]);
 		});
 
-		it('matches placeholders in linear time on an unterminated run of whitespace', () => {
+		it('matches placeholders in linear time on unterminated or repeated format parts', () => {
 			const unterminated = `{0:${' '.repeat(100_000)}`;
 			const started = performance.now();
 			expect(Array.from(placeholders(unterminated))).toEqual([]);
+			expect(Array.from(placeholders('{{0:'.repeat(50_000)))).toEqual([]);
 			expect(performance.now() - started).toBeLessThan(1_000);
 			expect(Array.from(placeholders('{ name }{n:fmt }{x'))).toEqual(['name', 'n']);
 		});
