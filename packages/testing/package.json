@@ -22,6 +22,10 @@
 			"import": "./src/fixtures.ts",
 			"types": "./src/fixtures.ts"
 		},
+		"./locale-parity": {
+			"import": "./src/locale-parity.ts",
+			"types": "./src/locale-parity.ts"
+		},
 		"./playwright-axe": {
 			"import": "./src/playwright-axe.ts",
 			"types": "./src/playwright-axe.ts"
@@ -36,7 +40,8 @@
 		"testing",
 		"vitest",
 		"a11y",
-		"clock"
+		"clock",
+		"i18n"
 	],
 	"license": "EUPL-1.2",
 	"engines": {

@@ -8,6 +8,7 @@
 - `@sveltesentio/testing/a11y` — vitest-axe preset surface (WCAG 2.2 AA tags, impact filtering, `assertNoViolations`). See [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md).
 - `@sveltesentio/testing/playwright-axe` — `@axe-core/playwright` fixture preset. See [ADR-0031](../../docs/adr/0031-a11y-testing-lane.md).
 - `@sveltesentio/testing/fixtures` — RFC 9457 `ProblemError` builders (`validationProblem`, `authProblem`, `notFoundProblem`, ...) for Superforms + API error round-trips.
+- `@sveltesentio/testing/locale-parity` — in-memory message catalog parity checkers and assertions (`compareLocales`, `assertLocaleParity`, `keySet`, `findEmptyValues`, `placeholders`).
 
 ## Status
 
@@ -15,6 +16,7 @@
 - `a11y` — shipped.
 - `playwright-axe` — shipped.
 - `fixtures` — shipped.
+- `locale-parity` — shipped.
 - TanStack Query SSR hydration assertions — pending.
 
 ## License

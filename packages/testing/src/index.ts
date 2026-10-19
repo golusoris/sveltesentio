@@ -45,3 +45,19 @@ export {
 	serverErrorProblem,
 	problemResponse,
 } from './fixtures.js';
+
+export type {
+	PlaceholderMismatch,
+	ParityResult,
+	AssertLocaleParityOptions,
+} from './locale-parity.js';
+export {
+	MAX_NODES,
+	keySet,
+	missing,
+	placeholders,
+	findEmptyValues,
+	getValue,
+	compareLocales,
+	assertLocaleParity,
+} from './locale-parity.js';
