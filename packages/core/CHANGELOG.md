@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/golusoris/sveltesentio/compare/core-v0.5.0...core-v0.6.0) (2026-10-19)
+
+
+### Features
+
+* **scripts:** check that each package declares its imports ([#390](https://github.com/golusoris/sveltesentio/issues/390)) ([f3a607f](https://github.com/golusoris/sveltesentio/commit/f3a607f3eec555e70388efcfd1f90690c19dc9b0))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/core-v0.4.1...core-v0.5.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES

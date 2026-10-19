@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/golusoris/sveltesentio/compare/emulator-v0.4.0...emulator-v0.4.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* clear the CodeQL unused-binding and null-check alerts ([#393](https://github.com/golusoris/sveltesentio/issues/393)) ([d251aa9](https://github.com/golusoris/sveltesentio/commit/d251aa9b7305472712682063cc4462a4b29e308b))
+
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/emulator-v0.3.0...emulator-v0.4.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
