@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { analyzeChanges, PACKAGE_DIRECTORY_MAP } from '../../../scripts/ci-affected.mjs';
 
 describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
@@ -213,7 +214,7 @@ describe('scripts/ci-affected.mjs runs its CLI only as the entry point', () => {
 		const entry = join(dir, 'importer.mjs');
 		writeFileSync(
 			entry,
-			`import ${'{'} analyzeChanges ${'}'} from ${JSON.stringify(scriptPath)};\n`,
+			`import ${'{'} analyzeChanges ${'}'} from ${JSON.stringify(pathToFileURL(scriptPath).href)};\n`,
 		);
 		return entry;
 	}

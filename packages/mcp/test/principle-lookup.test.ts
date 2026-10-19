@@ -44,6 +44,12 @@ describe('parseSections', () => {
 	it('returns an empty list when there are no matching headings', () => {
 		expect(parseSections('# just a title\nno sections here')).toEqual([]);
 	});
+
+	it('parses CRLF line endings like LF', () => {
+		const lf = '## §1.1 First\nbody one\n## §1.2 Second\nbody two';
+		expect(parseSections(lf.replaceAll('\n', '\r\n'))).toEqual(parseSections(lf));
+		expect(parseSections(lf)).toHaveLength(2);
+	});
 });
 
 describe('principle_lookup against the real docs/principles.md', () => {

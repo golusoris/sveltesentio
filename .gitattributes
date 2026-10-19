@@ -1,3 +1,6 @@
+# LF in every checkout: readers of tracked text (docs, workflows, fixtures) expect LF on Windows too (HISS-21).
+* text=auto eol=lf
+
 # BEGIN praetor managed attributes (praetorctl adopt)
 # praetorctl audit hashes these files; keep their checkout bytes the same on every platform.
 .devcontainer/Dockerfile.praetor text eol=lf
