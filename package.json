@@ -28,7 +28,7 @@
 		"check:declared-imports": "node scripts/check-declared-imports.mjs",
 		"check:kit-compat": "node scripts/check-kit-compat.mjs",
 		"lint:scripts": "eslint scripts/",
-		"test:scripts": "ls scripts/*.test.mjs > /dev/null && node --test \"scripts/*.test.mjs\""
+		"test:scripts": "node scripts/node-test.mjs \"scripts/*.test.mjs\""
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.2",
