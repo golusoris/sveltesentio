@@ -1,9 +1,7 @@
-// Seventy statements in one function, packed several to a line. Cyclomatic
-// complexity is 1, so the `complexity` rule is silent, and both length checks
-// count lines, not statements: `max-lines-per-function` (60, blank lines and
-// comments skipped) and the engine scan (raw line span) accept it. Measured by
-// planting it under packages/core/src: ESLint exits 0. No rule bounds the
-// number of statements in a function.
+// Sixty-seven statements in one function, packed several to a line, against a
+// cap of 40. Cyclomatic complexity is 1 and both length checks count lines, so
+// only `max-statements` bounds it. ESLint reports:
+//   error  Function 'accumulate' has too many statements (67). Maximum allowed is 40
 export function accumulate(): number {
 	let total = 0;
 	total += 1; total += 2; total += 3; total += 4; total += 5;
