@@ -122,10 +122,31 @@ export function resolveIcon(name: string): IconResolution | undefined {
 	return current.resolve(name);
 }
 
+/** Cache of icon names whose loader failures have already been logged to console.error. */
+const reportedFailures = new Set<string>();
+
+/**
+ * Report a loader failure once per icon name.
+ */
+export function reportIconError(name: string, error: unknown): void {
+	if (reportedFailures.has(name)) return;
+	reportedFailures.add(name);
+	console.error(
+		`[ui/icons] Failed to load icon "${name}": loader failure. Remedy: use a static loader (e.g. createLucideLoader with per-icon imports).`,
+		error,
+	);
+}
+
+/** Clear the set of reported loader failures. Test seam. */
+export function __clearReportedFailures(): void {
+	reportedFailures.clear();
+}
+
 /** Replace the global registry. Test seam; not part of the app-facing API. */
 export function __setRegistry(registry: IconRegistry): void {
 	current = registry;
 	currentFallback = undefined;
+	reportedFailures.clear();
 }
 
 /** Read the global registry. Test seam. */

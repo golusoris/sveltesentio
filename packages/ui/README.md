@@ -78,6 +78,22 @@ const results = checkPaletteContrast(presetSnatchArr);
 const passes = results.every((r) => r.pass);
 ```
 
+### Icons
+
+Recommended wiring uses static per-icon imports with `createLucideLoader` passed to `setDefaultIconLoader` in the app's root layout (`+layout.svelte`):
+
+```svelte
+<script lang="ts">
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import House from '@lucide/svelte/icons/house';
+  import { createLucideLoader, setDefaultIconLoader } from '@sveltesentio/ui/icons';
+
+  setDefaultIconLoader(createLucideLoader({ ArrowLeft, House }));
+</script>
+```
+
+`lucideDynamicLoader` is deprecated: dynamic `import(/* @vite-ignore */ ...)` with bare specifiers works only in runtimes that resolve bare specifiers (Node, SSR, Vite dev), failing in production browser bundles where bare specifier resolution is unsupported.
+
 ## Installation
 
 ```bash

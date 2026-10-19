@@ -11,7 +11,7 @@ by assistive tech. Pass `label` to make it MEANINGFUL — it then becomes
 -->
 <script lang="ts">
 	import type { Component } from 'svelte';
-	import { resolveIcon } from './registry.js';
+	import { resolveIcon, reportIconError } from './registry.js';
 
 	interface Props {
 		/** Icon name, e.g. `arrow-left` (kebab) or `ArrowLeft` (Pascal). */
@@ -39,9 +39,15 @@ by assistive tech. Pass `label` to make it MEANINGFUL — it then becomes
 		const value = raw;
 		if (value && typeof (value as PromiseLike<unknown>).then === 'function') {
 			let active = true;
-			void (value as PromiseLike<Component>).then((component) => {
-				if (active) resolved = component;
-			});
+			void (value as PromiseLike<Component>).then(
+				(component) => {
+					if (active) resolved = component;
+				},
+				(error: unknown) => {
+					if (active) resolved = undefined;
+					reportIconError(name, error);
+				},
+			);
 			return () => {
 				active = false;
 			};
