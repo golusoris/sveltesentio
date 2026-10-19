@@ -2,10 +2,9 @@
 
 ## [0.8.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.7.0...ui-v0.8.0) (2026-10-19)
 
-
 ### Features
 
-* **ui:** add the presetSnatchArr colour palette with a contrast check ([#412](https://github.com/golusoris/sveltesentio/issues/412)) ([f265396](https://github.com/golusoris/sveltesentio/commit/f265396f298c4b48f51455b2e4dc33e23254e8fc))
+- **ui:** add the presetSnatchArr colour palette with a contrast check ([#412](https://github.com/golusoris/sveltesentio/issues/412)) ([f265396](https://github.com/golusoris/sveltesentio/commit/f265396f298c4b48f51455b2e4dc33e23254e8fc))
 
 ## [0.7.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.6.1...ui-v0.7.0) (2026-10-14)
 
