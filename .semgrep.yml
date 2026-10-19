@@ -1,0 +1,100 @@
+# Semgrep ruleset, pinned with the repository: no registry pack, so a scan is
+# reproducible from the commit alone. ESLint decides these shapes inside
+# packages/*/src; this ruleset covers the whole tracked tree (scripts, apps,
+# tools, tests). Replayed by scripts/semgrep-scan.sh --test against
+# .config/semgrep/testdata/.
+rules:
+  - id: no-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: '`eval` runs a string as code (HISS-08). Parse the input instead.'
+    pattern: eval(...)
+
+  - id: no-function-constructor
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: 'The Function constructor compiles a string as code (HISS-08).'
+    pattern-either:
+      - pattern: new Function(...)
+      - pattern: Function(...)
+
+  - id: no-string-timer
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: 'A string passed to a timer is evaluated like `eval` (HISS-08). Pass a function.'
+    pattern-either:
+      - pattern: setTimeout("...", ...)
+      - pattern: setInterval("...", ...)
+      - pattern: setTimeout(`...`, ...)
+      - pattern: setInterval(`...`, ...)
+
+  - id: no-shell-child-process
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      This call runs its command through a shell, so a value in it can inject
+      commands (HISS-08). Use execFile or spawn with an argument array and no
+      shell option.
+    patterns:
+      - pattern-either:
+          # Named import: the bare call is the child_process function.
+          - patterns:
+              - pattern-inside: |
+                  import { ..., $FN, ... } from '$MOD';
+                  ...
+              - pattern-either:
+                  - pattern: exec($CMD, ...)
+                  - pattern: execSync($CMD, ...)
+                  - pattern: 'spawn(..., {..., shell: $S, ...})'
+                  - pattern: 'spawnSync(..., {..., shell: $S, ...})'
+                  - pattern: 'execFile(..., {..., shell: $S, ...})'
+                  - pattern: 'execFileSync(..., {..., shell: $S, ...})'
+          # Namespace, default or require binding: the call goes through it.
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      import * as $CP from '$MOD';
+                      ...
+                  - pattern-inside: |
+                      import $CP from '$MOD';
+                      ...
+                  - pattern-inside: |
+                      $CP = require('$MOD');
+                      ...
+              - pattern-either:
+                  - pattern: $CP.exec($CMD, ...)
+                  - pattern: $CP.execSync($CMD, ...)
+                  - pattern: '$CP.spawn(..., {..., shell: $S, ...})'
+                  - pattern: '$CP.spawnSync(..., {..., shell: $S, ...})'
+                  - pattern: '$CP.execFile(..., {..., shell: $S, ...})'
+                  - pattern: '$CP.execFileSync(..., {..., shell: $S, ...})'
+      - metavariable-regex:
+          metavariable: $MOD
+          regex: ^(node:)?child_process$
+      - pattern-not: '$F(..., {..., shell: false, ...})'
+      - pattern-not: '$C.$F(..., {..., shell: false, ...})'
+
+  - id: no-unsanitised-html-sink
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Markup assigned to an HTML sink is parsed as HTML (HISS-08). Pass it
+      through sanitizeHtml first, or set textContent.
+    paths:
+      exclude:
+        - '*.test.ts'
+        - '*.test.js'
+        - '*.test.mjs'
+        - '**/test/**'
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $V
+          - pattern: $EL.outerHTML = $V
+          - pattern: $EL.insertAdjacentHTML($POS, $V)
+          - pattern: document.write(...)
+          - pattern: document.writeln(...)
+      - pattern-not: $EL.innerHTML = "..."
+      - pattern-not: $EL.outerHTML = "..."
+      - pattern-not: $EL.innerHTML = sanitizeHtml(...)
+      - pattern-not: $EL.outerHTML = sanitizeHtml(...)
+      - pattern-not: $EL.insertAdjacentHTML($POS, sanitizeHtml(...))

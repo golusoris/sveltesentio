@@ -29,7 +29,8 @@ const HEADING = /^##\s+§(\d+\.\d+)\s(.*)$/;
 
 /** Split principles.md into its `## §N.M Title` sections, in document order. */
 export function parseSections(markdown: string): Section[] {
-	const lines = markdown.split('\n');
+	// A Windows checkout can carry CRLF, and `.` in HEADING does not match the `\r`.
+	const lines = markdown.split(/\r?\n/);
 	const sections: Section[] = [];
 	let current: Section | undefined;
 

@@ -3,6 +3,7 @@ import sentio from '@sveltesentio/core/eslint';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
+import sonarjs from 'eslint-plugin-sonarjs';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
 import type { Linter } from 'eslint';
@@ -83,7 +84,7 @@ const config: Linter.Config[] = [
 		// Flat config resolves a rule's plugin from the same object the rule is in,
 		// so this block declares @typescript-eslint even though the block above
 		// already does.
-		plugins: { '@typescript-eslint': ts },
+		plugins: { '@typescript-eslint': ts, sonarjs },
 		rules: {
 			complexity: ['error', 10],
 
@@ -92,6 +93,14 @@ const config: Linter.Config[] = [
 			// down (BUG-007). Blank lines and comments are skipped so documenting a
 			// function cannot push it over its own cap.
 			'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
+
+			// HISS-04 statements. The harness row caps a function at 40 statements;
+			// packed lines pass both length checks, so only a statement count bounds them.
+			'max-statements': ['error', 40],
+
+			// HISS-04 cognitive complexity at the harness cap of 12. Only this rule of
+			// the plugin is on; it is a devDependency and no package ships it.
+			'sonarjs/cognitive-complexity': ['error', 12],
 
 			// HISS-07 checked errors. `!` discards the undefined case that
 			// `noUncheckedIndexedAccess` exists to surface, which is the unchecked
@@ -240,6 +249,8 @@ const config: Linter.Config[] = [
 			// catalog's claims depend on being reportable — linting the corpus would
 			// fail the build on the evidence it exists to preserve.
 			'.config/hiss/testdata/**',
+			// The semgrep rule fixtures are deliberate violations for the same reason.
+			'.config/semgrep/testdata/**',
 			// Illustrative copy-paste snippets — intentionally reference undeclared
 			// identifiers (paths, edges, secret…) the consumer supplies; not compiled.
 			'examples/**',

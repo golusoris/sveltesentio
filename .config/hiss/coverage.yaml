@@ -108,11 +108,16 @@ rules:
         state: enforced
         runner: eslint
         mechanism: >-
-          eslint.config.ts sets `complexity: ['error', 10]` and
-          `max-lines-per-function` at 60 (blank lines and comments skipped) over
-          packages/*/src/**/*.ts. Confirmed on with `eslint --print-config`, and
-          the length cap verified to bite by planting a 66-line function and
-          watching it report.
+          eslint.config.ts sets `complexity: ['error', 10]`,
+          `max-lines-per-function` at 60 (blank lines and comments skipped) and
+          `max-statements: ['error', 40]` over packages/*/src/**/*.ts. Confirmed
+          on with `eslint --print-config`; the length cap verified to bite by
+          planting a 66-line function, and the statement cap by planting
+          positive/statements-over-forty.ts (67 statements) under
+          packages/core/src. `sonarjs/cognitive-complexity: ['error', 12]`
+          (eslint-plugin-sonarjs, devDependency only) bounds cognitive
+          complexity at the harness cap; positive/cognitive-over-twelve.ts
+          (cognitive 15) planted the same way exits 1.
         rationale: >-
           Cyclomatic complexity is enforced and the tree is clean at 10: thirteen
           functions were over it and all thirteen were refactored, not exempted.
@@ -140,6 +145,13 @@ rules:
           scripts/. All seven were split, each behind tests written first, and
           `praetorctl baseline --verify --all-violations` reports 0. useSSE and
           useLLMChat sit at exactly 60.
+
+          The statement cap went on at 40 with no finding to fix: at 20 the
+          tree reports one function (ensureAnnouncerRegion, 22 statements), at
+          40 none.
+
+          The cognitive cap went on at 12 with no finding to fix: linting every
+          package's src/ with the rule on reports none.
       - language: svelte
         state: partial
         runner: eslint
