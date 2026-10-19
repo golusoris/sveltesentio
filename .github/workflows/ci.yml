@@ -344,6 +344,24 @@ jobs:
       - name: Scan lockfiles and configuration
         run: '"$RUNNER_TEMP/trivy" fs --scanners vuln,misconfig --severity HIGH,CRITICAL --exit-code 1 --no-progress --skip-version-check .'
 
+  # Declared by the web-package profile. The ruleset is .semgrep.yml in this
+  # repository, never a registry pack, so a scan depends on the commit alone.
+  semgrep:
+    name: Custom SAST (semgrep)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Replay the rule fixtures
+        run: bash scripts/semgrep-scan.sh --test
+      - name: Scan every tracked JavaScript and TypeScript file
+        run: bash scripts/semgrep-scan.sh
+
   docs-drift:
     name: Docs drift
     if: github.event_name == 'pull_request'
@@ -381,6 +399,7 @@ jobs:
         audit,
         secret-scan,
         dependency-scan,
+        semgrep,
         docs-drift,
       ]
     runs-on: ubuntu-26.04
