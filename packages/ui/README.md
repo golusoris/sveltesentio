@@ -63,6 +63,21 @@ const p = toastPreset('10foot'); // top-center, 40rem, scaled padding
 // <Toaster position={p.position} toastOptions={{ style: p.style }} />
 ```
 
+### Colour palettes and contrast checking
+
+`@sveltesentio/ui/presets` provides colour-palette presets alongside interface-type sizing presets. `presetSnatchArr` is the first colour-palette preset (SnatchArr Palette A: deep purple-indigo theme with WCAG 2.2 AA compliance across all 20 required text and non-text pairs).
+
+```ts
+import { presetSnatchArr, paletteCss, checkPaletteContrast } from '@sveltesentio/ui/presets';
+
+// Emit flash-free :root (light) and .dark CSS custom properties
+const css = paletteCss(presetSnatchArr);
+
+// Verify contrast compliance across light and dark modes
+const results = checkPaletteContrast(presetSnatchArr);
+const passes = results.every((r) => r.pass);
+```
+
 ## Installation
 
 ```bash
