@@ -93,6 +93,10 @@ const config: Linter.Config[] = [
 			// function cannot push it over its own cap.
 			'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
 
+			// HISS-04 statements. The harness row caps a function at 40 statements;
+			// packed lines pass both length checks, so only a statement count bounds them.
+			'max-statements': ['error', 40],
+
 			// HISS-07 checked errors. `!` discards the undefined case that
 			// `noUncheckedIndexedAccess` exists to surface, which is the unchecked
 			// error this invariant names. Also free at the time of enabling.
