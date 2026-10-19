@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.1](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.0...ui-v0.8.1) (2026-10-19)
+
+### Bug Fixes
+
+- **ui:** report a failed icon loader and deprecate the dynamic loader ([#415](https://github.com/golusoris/sveltesentio/issues/415)) ([99a38c3](https://github.com/golusoris/sveltesentio/commit/99a38c3bb076984b0fc66fbc550c7e0c2271cdd2))
+
 ## [0.8.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.7.0...ui-v0.8.0) (2026-10-19)
 
 ### Features
