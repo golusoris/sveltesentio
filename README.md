@@ -30,6 +30,8 @@ private scratch-link policy.
 <!-- praetor:readme-governance:end -->
 <!-- prettier-ignore-end -->
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15664/badge)](https://www.bestpractices.dev/projects/15664)
+
 > Composable SvelteKit framework — opt-in modules, Svelte 5 runes, production-grade.
 
 The direct frontend counterpart to [golusoris](https://github.com/golusoris/golusoris).
