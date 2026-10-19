@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0](https://github.com/golusoris/sveltesentio/compare/testing-v0.3.1...testing-v0.4.0) (2026-10-19)
+
+### Features
+
+- **testing:** add locale catalog parity checks ([9971f60](https://github.com/golusoris/sveltesentio/commit/9971f608a40972d0ff754e8da55a05c0d3faee25))
+
 ## [0.3.1](https://github.com/golusoris/sveltesentio/compare/testing-v0.3.0...testing-v0.3.1) (2026-10-19)
 
 ### Bug Fixes
