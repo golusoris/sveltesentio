@@ -88,16 +88,17 @@ verify-all:
 # blocker recorded mid-session cannot be forgotten by the end of it. The gate's
 # declared-verification stage runs in a worktree without .workingdir; only there
 # is the step skipped, by name, until the engine fix lands.
-# Exception (HISS-17, Makefile, category B, expires 2026-10-18): engine gap
-# cordanaLLM/praetor#1206 plus engine order engine-declared-verify-state-audit-20261015.
-STATE_AUDIT_SKIP_EXPIRES := 20261018
+# Exception (HISS-17, Makefile, category B, renewed once 2026-10-19, expires 2026-10-22):
+# engine gap cordanaLLM/praetor#1377, fixed by engine train #1427; the skip goes with the
+# engine pin bump that takes that train.
+STATE_AUDIT_SKIP_EXPIRES := 20261022
 STATE_AUDIT_TODAY ?= $(shell date -u +%Y%m%d)
 state-audit:
 	@if [ "$$PRAETOR_GATE_DECLARED_VERIFY" = 1 ] && [ ! -d .workingdir ]; then \
 		if [ "$(STATE_AUDIT_TODAY)" -gt "$(STATE_AUDIT_SKIP_EXPIRES)" ]; then \
-			echo 'state-audit: the HISS-17 gate-worktree skip expired on 2026-10-18; bump the engine pin or renew the exception' >&2; exit 1; \
+			echo 'state-audit: the HISS-17 gate-worktree skip expired on 2026-10-22; bump the engine pin or renew the exception' >&2; exit 1; \
 		fi; \
-		echo 'state-audit: SKIPPED in the gate stage worktree, which holds no .workingdir (exception HISS-17 Makefile, category B, expires 2026-10-18; cordanaLLM/praetor#1206, engine order engine-declared-verify-state-audit-20261015)'; \
+		echo 'state-audit: SKIPPED in the gate stage worktree, which holds no .workingdir (exception HISS-17 Makefile, category B, expires 2026-10-22; cordanaLLM/praetor#1377, fixed by #1427, pending the engine pin bump)'; \
 	else $(PRAETORCTL) state audit .; fi
 
 # HISS-20: every enforcement claim in .config/hiss/coverage.yaml is replayed
