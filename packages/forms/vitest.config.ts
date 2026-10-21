@@ -67,9 +67,8 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html'],
 			include: ['src/**/*.ts'],
-			// `formsnap.ts` is a `.svelte`-component re-export barrel (no runner here)
-			// and `runes-ambient.d.ts` is ambient types — neither is instrumentable.
-			exclude: ['src/formsnap.ts', 'src/runes-ambient.d.ts'],
+			// `formsnap.ts` is a `.svelte`-component re-export barrel (no runner here) — not instrumentable.
+			exclude: ['src/formsnap.ts'],
 			// AGENTS.md and docs/principles.md promise 85% for forms, as for auth;
 			// these match auth's thresholds (gap audit A2-8).
 			thresholds: {

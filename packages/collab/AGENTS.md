@@ -17,8 +17,7 @@
 | `./awareness`      | `setLocalPresence` / `patchLocalPresence` / `snapshotPresence` / `snapshotOthers` / `observePresence` / `diffPresence` — pure helpers over structural `AwarenessLike` (no hard `y-protocols` import) |
 | `./presence-store` | `createPresenceStore<S>(awareness, opts?)` — `$state`-backed rune wrapper exposing reactive `others` / `count` / `local` + `setLocal` / `patchLocal`                                                 |
 
-Ships with ambient rune declarations (`src/runes-ambient.d.ts`).
-Plain `tsc --noEmit` typechecks `.svelte.ts` files inside package; keep file while package `typecheck` script = plain tsc (`pnpm check:svelte` covers `.svelte` files only).
+Rune types come from svelte's shipped `types/index.d.ts`.
 
 `y-protocols` = **optional** peer (`peerDependenciesMeta.y-protocols.optional`).
 Awareness helpers type against structural `AwarenessLike` (`clientID` / `getStates` / `getLocalState` / `setLocalState` / `on` / `off`).

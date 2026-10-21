@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import { appendBounded } from './bounded-history.js';
 import { createBufferedEmitter } from './buffered-emitter.js';
 

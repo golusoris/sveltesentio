@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import type * as Y from 'yjs';
 import {
 	snapshotYjsText,
