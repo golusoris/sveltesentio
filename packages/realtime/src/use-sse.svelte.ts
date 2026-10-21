@@ -1,4 +1,4 @@
-import { createMessageBuffer } from './message-buffer.svelte.js';
+import { createStreamStatus } from './stream-status.svelte.js';
 import {
 	SseClient,
 	type SseClientOptions,
@@ -51,30 +51,26 @@ export interface UseSse {
 export function useSSE(options: UseSseOptions): UseSse {
 	const { autoConnect = true, bufferMs = 0, historyLimit = 100, ...clientOptions } = options;
 
-	let state = $state<SseClientState>('idle');
-	let error = $state<unknown>(undefined);
-	let attempt = $state(0);
-	const buffer = createMessageBuffer<SseEventLike>(historyLimit, bufferMs);
+	const status = createStreamStatus<SseClientState, SseEventLike>('idle', historyLimit, bufferMs);
 
 	const client = new SseClient({
 		...clientOptions,
 		onStateChange: (next) => {
-			state = next;
+			status.onStateChange(next);
 		},
 		onOpen: () => {
-			error = undefined;
+			status.resetError();
 		},
 		onMessage: (event) => {
-			buffer.push(event);
+			status.push(event);
 		},
 		onError: (err, nextAttempt) => {
-			error = err;
-			attempt = nextAttempt;
+			status.onError(err, nextAttempt);
 		},
 	});
 
 	const teardown = (): void => {
-		buffer.stop();
+		status.stop();
 		client.close();
 	};
 
@@ -83,28 +79,13 @@ export function useSSE(options: UseSseOptions): UseSse {
 		return teardown;
 	});
 
-	return {
-		get state() {
-			return state;
-		},
-		get lastMessage() {
-			return buffer.lastMessage;
-		},
-		get messages() {
-			return buffer.messages;
-		},
-		get error() {
-			return error;
-		},
-		get attempt() {
-			return attempt;
-		},
+	return status.attach({
 		get connected() {
-			return state === 'open';
+			return status.state === 'open';
 		},
 		connect() {
 			client.start();
 		},
 		close: teardown,
-	};
+	});
 }
