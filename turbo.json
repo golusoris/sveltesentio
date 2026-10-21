@@ -5,7 +5,8 @@
 		"eslint.config.ts",
 		"prettier.config.js",
 		"tsconfig.base.json",
-		"pnpm-workspace.yaml"
+		"pnpm-workspace.yaml",
+		"vitest.shared.ts"
 	],
 	"tasks": {
 		"build": {
