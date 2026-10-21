@@ -1,28 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Clock } from '../src/clock';
+import { ctx, freshClock, svelteContextMock } from './clock-fixtures';
 
 // setClock / useClock touch Svelte's context API, which throws outside a
 // component. Mock the three context primitives with a simple Map-backed store
 // so the context-resolution branches can be exercised in a plain node test.
-const ctx = new Map<unknown, unknown>();
-vi.mock('svelte', () => ({
-	setContext: (key: unknown, value: unknown) => {
-		ctx.set(key, value);
-		return value;
-	},
-	getContext: (key: unknown) => ctx.get(key),
-	hasContext: (key: unknown) => ctx.has(key),
-}));
+vi.mock('svelte', () => svelteContextMock());
 
 const { setClock, useClock, getClock, systemClock } = await import('../src/clock');
-
-function freshClock(now: Date): Clock {
-	const ms = now.getTime();
-	return {
-		now: () => new Date(ms),
-		monotonic: () => 0,
-	};
-}
 
 afterEach(() => {
 	ctx.clear();
