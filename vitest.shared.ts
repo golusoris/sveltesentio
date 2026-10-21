@@ -130,6 +130,28 @@ export function v8Coverage(opts: V8CoverageOptions) {
 	};
 }
 
+export interface NodeVitestOptions {
+	/** Per-test timeout for the suite; keeps Vitest's default when omitted. */
+	testTimeout?: number;
+	coverage: V8CoverageOptions;
+}
+
+/**
+ * Shared Vitest configuration for pure Node packages with no Svelte components.
+ * Configures the fast Node environment and aggregates v8 coverage against the
+ * package's explicit thresholds.
+ */
+export function nodeVitestConfig(opts: NodeVitestOptions): ViteUserConfig {
+	return {
+		test: {
+			include: ['test/**/*.test.ts'],
+			environment: 'node',
+			...(opts.testTimeout === undefined ? {} : { testTimeout: opts.testTimeout }),
+			coverage: v8Coverage(opts.coverage),
+		},
+	};
+}
+
 export interface SvelteVitestOptions {
 	/**
 	 * The `@sveltejs/vite-plugin-svelte` and `@testing-library/svelte/vite` factories,
