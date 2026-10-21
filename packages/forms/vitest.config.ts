@@ -31,7 +31,7 @@ export default defineConfig({
 		// for forms, as for auth (gap audit A2-8). `formsnap.ts` is a `.svelte`
 		// re-export barrel with no runner here, so it is not instrumentable.
 		coverage: v8Coverage({
-			exclude: ['src/formsnap.ts', 'src/runes-ambient.d.ts'],
+			exclude: ['src/formsnap.ts'],
 		}),
 	},
 });

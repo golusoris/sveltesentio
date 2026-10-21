@@ -59,4 +59,8 @@ jobs:
       - run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      # Turbo starts up to 10 package test tasks at once and each Vitest run
+      # takes cores - 1 workers, which oversubscribes the 3-core, 7 GB macOS
+      # runner: tests that take about 50 ms alone took 1 to 7 s there and
+      # crossed the 5 s timeout. Two packages at a time keeps every leg bounded.
+      - run: pnpm test --concurrency=2

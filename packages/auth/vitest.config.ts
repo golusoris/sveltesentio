@@ -6,5 +6,5 @@ export default svelteVitestConfig({
 	svelte,
 	svelteTesting,
 	unit: { runes: true },
-	coverage: { exclude: ['src/runes-ambient.d.ts'] },
+	coverage: { exclude: [] },
 });

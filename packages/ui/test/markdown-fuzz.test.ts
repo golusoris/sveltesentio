@@ -47,9 +47,15 @@ const URI_ATTRS = new Set(['href', 'src', 'xlink:href']);
 const allowedTags = new Set(ALLOWED_TAGS);
 const allowedAttrs = new Set(ALLOWED_ATTR);
 
+// One jsdom window for every property run: building a window per run cost
+// about 4 ms each (300 + 100 runs), which put the first property near the 5 s
+// test timeout on the 3-core macOS runner (3.9 to 5.5 s measured on main).
+const { document } = new JSDOM().window;
+
 /** Lists every tag, attribute or URI in `html` the allowlist does not admit. */
 function violations(html: string): string[] {
-	const body = new JSDOM(`<body>${html}</body>`).window.document.body;
+	const body = document.createElement('body');
+	body.innerHTML = html;
 	const found: string[] = [];
 	for (const el of body.querySelectorAll('*')) {
 		const tag = el.tagName.toLowerCase();
@@ -63,6 +69,20 @@ function violations(html: string): string[] {
 	}
 	return found;
 }
+
+describe('violations', () => {
+	it('flags a disallowed tag, attribute and URI', () => {
+		expect(violations('<script>x</script><a onclick="x" href="javascript:x">a</a>')).toEqual([
+			'tag script',
+			'attr a[onclick]',
+			'uri a[href]=javascript:x',
+		]);
+	});
+
+	it('reports nothing for allowlisted markup', () => {
+		expect(violations('<p><a href="https://example.com">x</a></p>')).toEqual([]);
+	});
+});
 
 describe('renderMarkdown — property fuzzing', () => {
 	it('emits only allowlisted tags, attributes and URIs', () => {

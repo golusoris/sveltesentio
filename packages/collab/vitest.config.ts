@@ -8,7 +8,7 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html'],
 			include: ['src/**/*.ts'],
-			exclude: ['src/index.ts', 'src/runes-ambient.d.ts'],
+			exclude: ['src/index.ts'],
 			thresholds: {
 				statements: 85,
 				branches: 80,

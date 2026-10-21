@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import {
 	type AwarenessLike,
 	type PresenceEntry,

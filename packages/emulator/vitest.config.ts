@@ -6,5 +6,5 @@ export default svelteVitestConfig({
 	svelte,
 	svelteTesting,
 	component: { name: 'component' },
-	coverage: { exclude: ['src/**/*.svelte.ts', 'src/runes-ambient.d.ts'] },
+	coverage: { exclude: ['src/**/*.svelte.ts'] },
 });
