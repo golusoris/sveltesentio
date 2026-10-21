@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 /**
  * Runes-native `DataTable<T>` store (ADR-0011). Thin reactive wrapper over the
  * pure {@link computeRows} model: holds source rows + view state in `$state`,

@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import type * as Y from 'yjs';
 import { snapshotYjsMap, observeYjsMap, setYjsMap, deleteYjsMap, clearYjsMap } from './yjs-map.js';
 

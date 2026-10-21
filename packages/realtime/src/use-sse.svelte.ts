@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import { createStreamStatus } from './stream-status.svelte.js';
 import {
 	SseClient,

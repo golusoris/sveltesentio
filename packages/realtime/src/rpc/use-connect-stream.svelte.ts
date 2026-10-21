@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import type { Client } from '@connectrpc/connect';
 import type { DescService } from '@bufbuild/protobuf';
 import {
