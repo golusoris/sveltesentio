@@ -1,69 +1,24 @@
 <!--
 @component
 LineChart — semantic line chart over LayerChart's simplified `LineChart`,
-wrapped in <ChartFigure> for the WCAG a11y envelope (ADR-0013). Typed
-`data` + `series`; the semantic oklch palette colors each series; motion
-collapses under `prefers-reduced-motion`. The SR data table is generated from
-the same `series` + `x`/`y` accessors that drive the visual.
+wrapped in <ChartFigure> for the WCAG a11y envelope (ADR-0013). Draws one line per series;
+`orientation` picks which axis carries the values.
 -->
 <script lang="ts" generics="TDatum">
 	import { LineChart as LcLineChart } from 'layerchart';
-	import ChartFigure from './ChartFigure.svelte';
-	import { resolveSeriesColors, toFigureSeries, type CartesianSeries } from './chart-series.js';
-	import type { ChartAccessors, BuildTableOptions } from './a11y-table.js';
-	import { dashboardPreset, prefersReducedMotion } from './preset.js';
+	import ChartFigure from './internal/CartesianChartFigure.svelte';
+	import type { CartesianChartBaseProps } from './chart-series.js';
 
-	interface Props<T> {
-		/** Accessible name for the figure — required (no anonymous charts). */
-		title: string;
-		/** Optional one-sentence summary, exposed via `aria-describedby`. */
-		description?: string | undefined;
-		/** One or more series; each gets a palette color unless it sets `color`. */
-		series: readonly CartesianSeries<T>[];
-		/** x / y accessors, shared across series (visual + SR table). */
-		accessors: ChartAccessors<T>;
+	interface Props<T> extends CartesianChartBaseProps<T> {
 		/** Swap which axis is the value axis. @default 'horizontal' */
 		orientation?: 'horizontal' | 'vertical' | undefined;
-		/** SR-table formatting / labelling options. */
-		tableOptions?: BuildTableOptions<T> | undefined;
-		/** Whether to render the visually-hidden SR data table. @default true */
-		showDataTable?: boolean | undefined;
-		/** Stable id prefix for aria wiring; auto-derived from the title if omitted. */
-		idBase?: string | undefined;
 	}
 
-	const {
-		title,
-		description,
-		series,
-		accessors,
-		orientation = 'horizontal',
-		tableOptions,
-		showDataTable,
-		idBase,
-	}: Props<TDatum> = $props();
-
-	const lcSeries = $derived(resolveSeriesColors(series));
-	const figureSeries = $derived(toFigureSeries(series));
-	const preset = $derived(dashboardPreset({ reducedMotion: prefersReducedMotion() }));
+	const { orientation = 'horizontal', ...figureProps }: Props<TDatum> = $props();
 </script>
 
-<ChartFigure
-	{title}
-	{description}
-	series={figureSeries}
-	{accessors}
-	{tableOptions}
-	{showDataTable}
-	{idBase}
->
-	{#snippet chart()}
-		<LcLineChart
-			x={accessors.x}
-			y={accessors.y}
-			series={lcSeries}
-			{orientation}
-			padding={preset.padding}
-		/>
+<ChartFigure {...figureProps}>
+	{#snippet chart({ lcSeries, padding, accessors })}
+		<LcLineChart x={accessors.x} y={accessors.y} series={lcSeries} {orientation} {padding} />
 	{/snippet}
 </ChartFigure>

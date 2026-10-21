@@ -1,43 +1,12 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import LineChart from './LineChart.svelte';
-	import type { CartesianSeries } from './chart-series.js';
-	import type { ChartAccessors } from './a11y-table.js';
-
-	// A typed weekday point: `t` is the x category, `v` the y value.
-	interface DayPoint {
-		t: string;
-		v: number | null;
-	}
-
-	const accessors: ChartAccessors<DayPoint> = { x: (d) => d.t, y: (d) => d.v };
-
-	const series: CartesianSeries<DayPoint>[] = [
-		{
-			key: 'sessions',
-			label: 'Sessions',
-			data: [
-				{ t: 'Mon', v: 1200 },
-				{ t: 'Tue', v: 1800 },
-				{ t: 'Wed', v: 1600 },
-				{ t: 'Thu', v: 2400 },
-				{ t: 'Fri', v: 2100 },
-			],
-		},
-		{
-			key: 'errors',
-			label: 'Errors',
-			data: [
-				{ t: 'Mon', v: 24 },
-				{ t: 'Tue', v: 12 },
-				{ t: 'Wed', v: 30 },
-				{ t: 'Thu', v: 8 },
-				{ t: 'Fri', v: 15 },
-			],
-		},
-	];
-
-	const single: CartesianSeries<DayPoint>[] = series.slice(0, 1);
+	import {
+		dayAccessors as accessors,
+		sampleWeekdaySeries as series,
+		singleWeekdaySeries as single,
+		type DayPoint,
+	} from './stories-data.js';
 
 	const { Story } = defineMeta<unknown, typeof LineChart<DayPoint>>({
 		title: 'charts/LineChart',
