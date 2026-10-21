@@ -15,6 +15,7 @@ sveltesentio/
 ├── eslint.config.js                # flat ESLint (TS + Svelte + a11y + prettier + custom rules)
 ├── prettier.config.js              # Prettier + prettier-plugin-svelte
 ├── commitlint.config.js            # Conventional Commits 1.0 enforcement
+├── vitest.shared.ts                # shared Vitest projects, runes plugin, v8 coverage for packages
 ├── release-please-config.json      # release-please per-package versioning
 ├── .release-please-manifest.json   # per-package published version manifest
 ├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)

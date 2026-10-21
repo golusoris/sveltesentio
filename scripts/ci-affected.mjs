@@ -15,6 +15,7 @@ export const SHARED_SURFACE_PATTERNS = [
 	/^eslint\.config\.(ts|js|mjs|cjs)$/,
 	/^prettier\.config\.(js|mjs|cjs)$/,
 	/^commitlint\.config\.(js|mjs|cjs)$/,
+	/^vitest\.shared\.ts$/,
 	/^Makefile$/,
 	/^\.github\//,
 	/^scripts\//,

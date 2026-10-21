@@ -115,6 +115,7 @@ describe('ci-affected: analyzeChanges', () => {
 			'eslint.config.js',
 			'prettier.config.js',
 			'commitlint.config.js',
+			'vitest.shared.ts',
 			'Makefile',
 			'.github/workflows/ci.yml',
 			'scripts/ci-affected.mjs',
