@@ -1,3 +1,4 @@
+/// <reference types="svelte" />
 import { createMessageBuffer } from './message-buffer.svelte.js';
 
 /**

@@ -8,8 +8,7 @@
  *
  * Declared narrowly — only the two entry points the tests call, so this cannot
  * drift into a fictional description of the whole module. Delete it when the
- * package's `typecheck` script moves from plain tsc to svelte-check, the same
- * condition `runes-ambient.d.ts` carries.
+ * package's `typecheck` script moves from plain tsc to svelte-check.
  */
 declare module 'svelte/internal/client' {
 	/** Runs `fn` inside a fresh effect root; the return value tears that root down. */

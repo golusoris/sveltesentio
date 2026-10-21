@@ -213,6 +213,16 @@ function resolveSystem(params: LLMChatParams): string | undefined {
 	return sys?.content;
 }
 
+function toAnthropicRequest(params: LLMChatParams, fallbackMax: number): AnthropicMessageBody {
+	const system = resolveSystem(params);
+	return {
+		model: params.model,
+		max_tokens: params.maxTokens ?? fallbackMax,
+		...(system !== undefined ? { system } : {}),
+		messages: toAnthropicMessages(params.messages),
+	};
+}
+
 /**
  * Adapt an already-constructed `@anthropic-ai/sdk` client to {@link LLMClient}.
  * The SDK instance is injected — this function never imports the SDK, so the
@@ -226,12 +236,7 @@ export function anthropicAdapter(
 
 	return {
 		async complete(params: LLMChatParams): Promise<LLMCompletion> {
-			const response = await sdk.messages.create({
-				model: params.model,
-				max_tokens: params.maxTokens ?? fallbackMax,
-				...(resolveSystem(params) !== undefined ? { system: resolveSystem(params) } : {}),
-				messages: toAnthropicMessages(params.messages),
-			});
+			const response = await sdk.messages.create(toAnthropicRequest(params, fallbackMax));
 			const text = response.content
 				.filter((b) => b.type === 'text')
 				.map((b) => b.text ?? '')
@@ -240,12 +245,7 @@ export function anthropicAdapter(
 		},
 
 		async *stream(params: LLMChatParams): AsyncIterable<LLMChunk> {
-			const events = sdk.messages.stream({
-				model: params.model,
-				max_tokens: params.maxTokens ?? fallbackMax,
-				...(resolveSystem(params) !== undefined ? { system: resolveSystem(params) } : {}),
-				messages: toAnthropicMessages(params.messages),
-			});
+			const events = sdk.messages.stream(toAnthropicRequest(params, fallbackMax));
 			for await (const event of events) {
 				if (
 					event.type === 'content_block_delta' &&
