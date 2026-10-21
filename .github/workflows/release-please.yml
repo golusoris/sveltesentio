@@ -26,19 +26,28 @@ jobs:
       id-token: write # OIDC for npm provenance + Sigstore attestation
       attestations: write # actions/attest-build-provenance
     steps:
+      # A release pull request opened with the workflow token starts no checks; the App token does.
+      - name: Mint the release token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       # Skipped on a manual run, which then has no `releases_created` output
       # and reaches the publish steps through its event name alone.
       - id: release
         if: ${{ github.event_name == 'push' }}
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
       # Format release change logs: release-please generates `*` bullets and
       # double blank lines (gap C14-13) which fail prettier and markdownlint.
       # The commit goes through the GraphQL createCommitOnBranch mutation, which
-      # GitHub signs for the workflow token: main requires signed commits, and an
+      # GitHub signs for the App token: main requires signed commits, and an
       # unsigned commit on the release branch blocks its squash merge (#336).
       # expectedHeadOid refuses the commit if the branch moved concurrently;
       # the moved branch is left to the newer run.
@@ -63,7 +72,7 @@ jobs:
         working-directory: release-pr
         env:
           PR_JSON: ${{ steps.release.outputs.pr }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           BRANCH=$(jq -er '.headBranchName' <<<"$PR_JSON")
           corepack enable
