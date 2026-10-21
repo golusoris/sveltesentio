@@ -1,4 +1,4 @@
-import { createMessageBuffer } from './message-buffer.svelte.js';
+import { createStreamStatus } from './stream-status.svelte.js';
 import {
 	createConnectStream,
 	type ConnectStreamOptions,
@@ -55,60 +55,41 @@ export function useConnectStream<TMessage>(
 ): UseConnectStream<TMessage> {
 	const { autoStart = true, bufferMs = 0, historyLimit = 100, ...streamOptions } = options;
 
-	let state = $state<ConnectStreamState>('idle');
-	let error = $state<unknown>(undefined);
-	let attempt = $state(0);
-	const buffer = createMessageBuffer<TMessage>(historyLimit, bufferMs);
+	const status = createStreamStatus<ConnectStreamState, TMessage>('idle', historyLimit, bufferMs);
 
 	const stream = createConnectStream<TMessage>({
 		...streamOptions,
 		onStateChange: (next) => {
-			state = next;
+			status.onStateChange(next);
 		},
 		onMessage: (message) => {
-			error = undefined;
-			attempt = 0;
-			buffer.push(message);
+			status.resetError();
+			status.resetAttempt();
+			status.push(message);
 		},
 		onError: (err, nextAttempt) => {
-			error = err;
-			attempt = nextAttempt;
+			status.onError(err, nextAttempt);
 		},
 	});
 
 	$effect(() => {
 		if (autoStart) stream.start();
 		return () => {
-			buffer.stop();
+			status.stop();
 			stream.stop();
 		};
 	});
 
-	return {
-		get state() {
-			return state;
-		},
-		get lastMessage() {
-			return buffer.lastMessage;
-		},
-		get messages() {
-			return buffer.messages;
-		},
-		get error() {
-			return error;
-		},
-		get attempt() {
-			return attempt;
-		},
+	return status.attach({
 		get streaming() {
-			return state === 'streaming';
+			return status.state === 'streaming';
 		},
 		start() {
 			stream.start();
 		},
 		stop() {
-			buffer.stop();
+			status.stop();
 			stream.stop();
 		},
-	};
+	});
 }
