@@ -194,7 +194,13 @@ const config: Linter.Config[] = [
 	// plugin the docs build imports, written as plain ESM and deliberately not in
 	// apps/docs/tsconfig.json, whose `include` is src/-only.
 	{
-		files: ['**/*.config.ts', '**/*.config.js', 'eslint.config.ts', '**/mdsvex/**/*.js'],
+		files: [
+			'**/*.config.ts',
+			'**/*.config.js',
+			'eslint.config.ts',
+			'vitest.shared.ts',
+			'**/mdsvex/**/*.js',
+		],
 		languageOptions: {
 			parserOptions: { project: false },
 		},
