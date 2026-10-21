@@ -17,6 +17,28 @@ function fixedTransport(...deltas: string[]): ChatTransport {
 	};
 }
 
+/** A transport gated on an explicit promise, capturing the caller's AbortSignal. */
+function createGatedTransport(reply = 'late') {
+	let abortedSignal: AbortSignal | undefined;
+	let release: (() => void) | undefined;
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	// eslint-disable-next-line @typescript-eslint/require-await -- async generator
+	const transport: ChatTransport = async function* (request) {
+		abortedSignal = request.signal;
+		await gate;
+		yield { text: reply };
+	};
+	return {
+		transport,
+		release: () => release?.(),
+		get signal() {
+			return abortedSignal;
+		},
+	};
+}
+
 describe('useLLMChat', () => {
 	it('starts empty (or with the seeded messages) and not streaming', () => {
 		const chat = useLLMChat({ transport: fixedTransport() });
@@ -100,16 +122,8 @@ describe('useLLMChat', () => {
 	});
 
 	it('is a no-op when send() is called while already streaming', async () => {
-		let release: (() => void) | undefined;
-		const gate = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-		const transport: ChatTransport = async function* () {
-			await gate;
-			yield { text: 'done' };
-		};
-		const chat = useLLMChat({ transport });
+		const gated = createGatedTransport('done');
+		const chat = useLLMChat({ transport: gated.transport });
 
 		const first = chat.send('first');
 		expect(chat.streaming).toBe(true);
@@ -118,33 +132,23 @@ describe('useLLMChat', () => {
 		await chat.send('second');
 		expect(chat.messages).toHaveLength(2); // only the first user+reply pair
 
-		release?.();
+		gated.release();
 		await first;
 		expect(chat.streaming).toBe(false);
 	});
 
 	it('stop() aborts the in-flight stream and clears the streaming flag', async () => {
-		let abortedSignal: AbortSignal | undefined;
-		let release: (() => void) | undefined;
-		const gate = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-		const transport: ChatTransport = async function* (request) {
-			abortedSignal = request.signal;
-			await gate;
-			yield { text: 'late' };
-		};
-		const chat = useLLMChat({ transport });
+		const gated = createGatedTransport();
+		const chat = useLLMChat({ transport: gated.transport });
 
 		const pending = chat.send('hi');
 		expect(chat.streaming).toBe(true);
 
 		chat.stop();
 		expect(chat.streaming).toBe(false);
-		expect(abortedSignal?.aborted).toBe(true);
+		expect(gated.signal?.aborted).toBe(true);
 
-		release?.();
+		gated.release();
 		await pending;
 	});
 
@@ -182,19 +186,9 @@ describe('useLLMChat', () => {
 	});
 
 	it('reset() aborts an in-flight stream and clears state', async () => {
-		let abortedSignal: AbortSignal | undefined;
-		let release: (() => void) | undefined;
-		const gate = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-		const transport: ChatTransport = async function* (request) {
-			abortedSignal = request.signal;
-			await gate;
-			yield { text: 'late' };
-		};
+		const gated = createGatedTransport();
 		const chat = useLLMChat({
-			transport,
+			transport: gated.transport,
 			initialMessages: [{ role: 'system', content: 'init' }],
 		});
 
@@ -204,9 +198,9 @@ describe('useLLMChat', () => {
 		chat.reset();
 		expect(chat.streaming).toBe(false);
 		expect(chat.messages).toEqual([{ role: 'system', content: 'init' }]);
-		expect(abortedSignal?.aborted).toBe(true);
+		expect(gated.signal?.aborted).toBe(true);
 
-		release?.();
+		gated.release();
 		await pending;
 	});
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
 import { createLlmProxy, type FetchLike } from '../src/proxy.js';
+import { expectProblemError } from './problem-helper.js';
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 	return new Response(JSON.stringify(body), {
@@ -79,17 +80,10 @@ describe('createLlmProxy', () => {
 			});
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
-		const error = await proxy
-			.complete({ prompt: 'x' })
-			.then(() => undefined)
-			.catch((e: unknown) => e);
-
-		expect(error).toBeInstanceOf(ProblemError);
-		if (error instanceof ProblemError) {
-			expect(error.status).toBe(502);
-			expect(error.detail).toBe('upstream exploded');
-			expect(error.extensions.endpoint).toBe('/api/ai/chat');
-		}
+		const error = await expectProblemError(proxy.complete({ prompt: 'x' }));
+		expect(error.status).toBe(502);
+		expect(error.detail).toBe('upstream exploded');
+		expect(error.extensions.endpoint).toBe('/api/ai/chat');
 	});
 
 	it('forwards an abort signal to fetch', async () => {
