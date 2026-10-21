@@ -3,20 +3,16 @@ import { sentioPlugin } from '../src/vite';
 
 const originalEnv = { ...process.env };
 
-describe('sentioPlugin', () => {
-	beforeEach(() => {
-		for (const k of Object.keys(process.env)) {
-			if (!(k in originalEnv)) delete process.env[k];
-		}
-		Object.assign(process.env, originalEnv);
-	});
+function resetEnv() {
+	for (const k of Object.keys(process.env)) {
+		if (!(k in originalEnv)) delete process.env[k];
+	}
+	Object.assign(process.env, originalEnv);
+}
 
-	afterEach(() => {
-		for (const k of Object.keys(process.env)) {
-			if (!(k in originalEnv)) delete process.env[k];
-		}
-		Object.assign(process.env, originalEnv);
-	});
+describe('sentioPlugin', () => {
+	beforeEach(resetEnv);
+	afterEach(resetEnv);
 
 	it('returns a pre-enforced plugin', () => {
 		const p = sentioPlugin();

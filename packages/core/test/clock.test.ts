@@ -46,40 +46,36 @@ describe('withClock handle', () => {
 		handle = withClock(clock);
 	});
 
-	it('writes the clock onto event.locals', async () => {
+	async function invokeHandle(
+		resolve: () => Promise<Response> = async () => new Response('ok'),
+	): Promise<Record<string, unknown>> {
 		const locals: Record<string, unknown> = {};
 		const event = { locals } as unknown as Parameters<typeof handle>[0]['event'];
 		await handle({
 			event,
-			resolve: async () => new Response('ok'),
+			resolve,
 		} as unknown as Parameters<typeof handle>[0]);
+		return locals;
+	}
+
+	it('writes the clock onto event.locals', async () => {
+		const locals = await invokeHandle();
 		expect((locals as { clock?: Clock }).clock).toBe(clock);
 	});
 
 	it('rebinds getClock() inside the ALS-scoped resolve', async () => {
-		const locals: Record<string, unknown> = {};
-		const event = { locals } as unknown as Parameters<typeof handle>[0]['event'];
-
 		let observed: Clock | undefined;
-		await handle({
-			event,
-			resolve: async () => {
-				observed = getClock();
-				return new Response('ok');
-			},
-		} as unknown as Parameters<typeof handle>[0]);
+		await invokeHandle(async () => {
+			observed = getClock();
+			return new Response('ok');
+		});
 
 		expect(observed).toBe(clock);
 		expect(observed?.now().toISOString()).toBe(pinned.toISOString());
 	});
 
 	it('does not leak the bound clock past resolve', async () => {
-		const locals: Record<string, unknown> = {};
-		const event = { locals } as unknown as Parameters<typeof handle>[0]['event'];
-		await handle({
-			event,
-			resolve: async () => new Response('ok'),
-		} as unknown as Parameters<typeof handle>[0]);
+		await invokeHandle();
 		expect(getClock()).toBe(systemClock);
 	});
 });
