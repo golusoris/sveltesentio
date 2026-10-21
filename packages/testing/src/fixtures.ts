@@ -30,121 +30,99 @@ function fieldsToInvalidParams(fields: FieldReasons): InvalidParam[] {
 	return out;
 }
 
+interface ProblemDefaults {
+	readonly type: string;
+	readonly title: string;
+	readonly status: number;
+}
+
+function buildProblem(
+	defaults: ProblemDefaults,
+	options: ProblemBaseOptions,
+	extra?: Partial<ProblemErrorInit>,
+): ProblemError {
+	return new ProblemError({
+		type: options.type ?? defaults.type,
+		title: options.title ?? defaults.title,
+		status: options.status ?? defaults.status,
+		...(options.detail !== undefined ? { detail: options.detail } : {}),
+		...(options.instance !== undefined ? { instance: options.instance } : {}),
+		...(options.extensions !== undefined ? { extensions: options.extensions } : {}),
+		...extra,
+	});
+}
+
+const VALIDATION_DEFAULTS: ProblemDefaults = {
+	type: 'https://golusoris.dev/problems/validation',
+	title: 'Validation failed',
+	status: 422,
+};
+
+const AUTH_DEFAULTS: ProblemDefaults = {
+	type: 'https://golusoris.dev/problems/unauthenticated',
+	title: 'Authentication required',
+	status: 401,
+};
+
+const FORBIDDEN_DEFAULTS: ProblemDefaults = {
+	type: 'https://golusoris.dev/problems/forbidden',
+	title: 'Forbidden',
+	status: 403,
+};
+
+const NOT_FOUND_DEFAULTS: ProblemDefaults = {
+	type: 'https://golusoris.dev/problems/not-found',
+	title: 'Resource not found',
+	status: 404,
+};
+
+const RATE_LIMITED_DEFAULTS: ProblemDefaults = {
+	type: 'https://golusoris.dev/problems/rate-limited',
+	title: 'Too many requests',
+	status: 429,
+};
+
+const SERVER_ERROR_DEFAULTS: ProblemDefaults = {
+	type: 'about:blank',
+	title: 'Internal server error',
+	status: 500,
+};
+
 export interface ValidationProblemOptions extends ProblemBaseOptions {
 	readonly fields: FieldReasons;
 }
 
-export function validationProblem({
-	fields,
-	type = 'https://golusoris.dev/problems/validation',
-	title = 'Validation failed',
-	status = 422,
-	detail,
-	instance,
-	extensions,
-}: ValidationProblemOptions): ProblemError {
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		invalidParams: fieldsToInvalidParams(fields),
-		...(extensions !== undefined ? { extensions } : {}),
+export function validationProblem(options: ValidationProblemOptions): ProblemError {
+	return buildProblem(VALIDATION_DEFAULTS, options, {
+		invalidParams: fieldsToInvalidParams(options.fields),
 	});
 }
 
-export function authProblem({
-	type = 'https://golusoris.dev/problems/unauthenticated',
-	title = 'Authentication required',
-	status = 401,
-	detail,
-	instance,
-	extensions,
-}: ProblemBaseOptions = {}): ProblemError {
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		...(extensions !== undefined ? { extensions } : {}),
-	});
+export function authProblem(options: ProblemBaseOptions = {}): ProblemError {
+	return buildProblem(AUTH_DEFAULTS, options);
 }
 
-export function forbiddenProblem({
-	type = 'https://golusoris.dev/problems/forbidden',
-	title = 'Forbidden',
-	status = 403,
-	detail,
-	instance,
-	extensions,
-}: ProblemBaseOptions = {}): ProblemError {
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		...(extensions !== undefined ? { extensions } : {}),
-	});
+export function forbiddenProblem(options: ProblemBaseOptions = {}): ProblemError {
+	return buildProblem(FORBIDDEN_DEFAULTS, options);
 }
 
-export function notFoundProblem({
-	type = 'https://golusoris.dev/problems/not-found',
-	title = 'Resource not found',
-	status = 404,
-	detail,
-	instance,
-	extensions,
-}: ProblemBaseOptions = {}): ProblemError {
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		...(extensions !== undefined ? { extensions } : {}),
-	});
+export function notFoundProblem(options: ProblemBaseOptions = {}): ProblemError {
+	return buildProblem(NOT_FOUND_DEFAULTS, options);
 }
 
-export function rateLimitedProblem({
-	type = 'https://golusoris.dev/problems/rate-limited',
-	title = 'Too many requests',
-	status = 429,
-	detail,
-	instance,
-	extensions,
-	retryAfterSeconds,
-}: ProblemBaseOptions & { readonly retryAfterSeconds?: number } = {}): ProblemError {
-	const ext: Record<string, unknown> = { ...(extensions ?? {}) };
-	if (retryAfterSeconds !== undefined) ext['retry-after'] = retryAfterSeconds;
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		extensions: ext,
-	});
+export function rateLimitedProblem(
+	options: ProblemBaseOptions & { readonly retryAfterSeconds?: number } = {},
+): ProblemError {
+	const { retryAfterSeconds } = options;
+	const extensions: Record<string, unknown> = {
+		...(options.extensions ?? {}),
+		...(retryAfterSeconds !== undefined ? { 'retry-after': retryAfterSeconds } : {}),
+	};
+	return buildProblem(RATE_LIMITED_DEFAULTS, options, { extensions });
 }
 
-export function serverErrorProblem({
-	type = 'about:blank',
-	title = 'Internal server error',
-	status = 500,
-	detail,
-	instance,
-	extensions,
-}: ProblemBaseOptions = {}): ProblemError {
-	return new ProblemError({
-		type,
-		title,
-		status,
-		...(detail !== undefined ? { detail } : {}),
-		...(instance !== undefined ? { instance } : {}),
-		...(extensions !== undefined ? { extensions } : {}),
-	});
+export function serverErrorProblem(options: ProblemBaseOptions = {}): ProblemError {
+	return buildProblem(SERVER_ERROR_DEFAULTS, options);
 }
 
 export interface ProblemResponseOptions {
