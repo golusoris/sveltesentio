@@ -65,6 +65,8 @@ function unitProject(opts?: UnitProjectOptions): UserWorkspaceConfig {
 interface ComponentProjectOptions {
 	name?: 'components' | 'component';
 	autoCleanup?: boolean;
+	/** Per-test timeout for the component lane only; the unit lane keeps Vitest's default. */
+	testTimeout?: number;
 }
 
 /**
@@ -90,6 +92,9 @@ function componentProject(opts: SvelteVitestOptions): UserWorkspaceConfig {
 			environment: 'jsdom',
 			include: ['test/**/*.svelte.test.ts'],
 			setupFiles: ['./test/setup-component.ts'],
+			...(opts.component?.testTimeout === undefined
+				? {}
+				: { testTimeout: opts.component.testTimeout }),
 		},
 	};
 }
