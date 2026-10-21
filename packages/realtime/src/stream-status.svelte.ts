@@ -43,8 +43,14 @@ export interface StreamStatus<TState extends string, TMessage> extends StreamSta
 	/**
 	 * Attach reactive status getters to `target` via `Object.defineProperties` so
 	 * each property remains a live getter without object-spread pitfall.
+	 *
+	 * `NoInfer` keeps `TTarget` inferred from `target` alone: TypeScript 5.5
+	 * otherwise infers it from the caller's declared return type and rejects a
+	 * target that lacks the getters this call adds.
 	 */
-	attach<TTarget extends object>(target: TTarget): TTarget & StreamStatusGetters<TState, TMessage>;
+	attach<TTarget extends object>(
+		target: TTarget,
+	): NoInfer<TTarget> & StreamStatusGetters<TState, TMessage>;
 }
 
 /**
@@ -54,7 +60,7 @@ export interface StreamStatus<TState extends string, TMessage> extends StreamSta
 export function attachStreamStatus<TTarget extends object, TState extends string, TMessage>(
 	target: TTarget,
 	status: StreamStatus<TState, TMessage>,
-): TTarget & StreamStatusGetters<TState, TMessage> {
+): NoInfer<TTarget> & StreamStatusGetters<TState, TMessage> {
 	Object.defineProperties(target, {
 		state: { get: () => status.state, enumerable: true },
 		lastMessage: { get: () => status.lastMessage, enumerable: true },
