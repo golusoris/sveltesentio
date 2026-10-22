@@ -1,32 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Clock } from '../src/clock';
+import { ctx, freshClock, svelteContextMock } from './clock-fixtures';
 
 // Force the browser code paths: esm-env's BROWSER is statically false under
 // node, so the `if (BROWSER)` and `BROWSER ? performance.now() : ...` branches
 // are otherwise unreachable here. Flip it to true and back the context API
 // with a Map so client-side clock resolution can be tested.
 vi.mock('esm-env', () => ({ BROWSER: true }));
-
-const ctx = new Map<unknown, unknown>();
-vi.mock('svelte', () => ({
-	setContext: (key: unknown, value: unknown) => {
-		ctx.set(key, value);
-		return value;
-	},
-	getContext: (key: unknown) => ctx.get(key),
-	hasContext: (key: unknown) => ctx.has(key),
-}));
+vi.mock('svelte', () => svelteContextMock());
 
 const { setClock, useClock, getClock, systemClock, createHydrationClock } =
 	await import('../src/clock');
-
-function freshClock(now: Date): Clock {
-	const ms = now.getTime();
-	return {
-		now: () => new Date(ms),
-		monotonic: () => 0,
-	};
-}
 
 afterEach(() => {
 	ctx.clear();

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
 import { createAuditLog, type AiAuditRecord } from '../src/audit.js';
+import { expectProblemError } from './problem-helper.js';
 import {
 	anthropicAdapter,
 	createLLMProxy,
@@ -30,6 +31,16 @@ function fakeClient(overrides: Partial<LLMClient> = {}): LLMClient {
 		},
 		...overrides,
 	};
+}
+
+function createRecordingAudit(id: string) {
+	const written: AiAuditRecord[] = [];
+	const audit = createAuditLog({
+		sink: (r) => void written.push(r),
+		clock: { now: () => new Date('2026-06-14T00:00:00.000Z') },
+		idFactory: () => id,
+	});
+	return { written, audit };
 }
 
 describe('createLLMProxy', () => {
@@ -69,12 +80,7 @@ describe('createLLMProxy', () => {
 	});
 
 	it('writes one audit record on a successful completion (model + output + latency)', async () => {
-		const written: AiAuditRecord[] = [];
-		const audit = createAuditLog({
-			sink: (r) => void written.push(r),
-			clock: { now: () => new Date('2026-06-14T00:00:00.000Z') },
-			idFactory: () => 'audit-1',
-		});
+		const { written, audit } = createRecordingAudit('audit-1');
 		const proxy = createLLMProxy({
 			client: fakeClient({
 				complete: async () => ({ text: 'answer', model: 'claude-opus-4-8' }),
@@ -99,12 +105,7 @@ describe('createLLMProxy', () => {
 	});
 
 	it('writes one audit record after a stream completes, with the assembled output', async () => {
-		const written: AiAuditRecord[] = [];
-		const audit = createAuditLog({
-			sink: (r) => void written.push(r),
-			clock: { now: () => new Date('2026-06-14T00:00:00.000Z') },
-			idFactory: () => 'audit-2',
-		});
+		const { written, audit } = createRecordingAudit('audit-2');
 		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
 		const stream = async function* (): AsyncIterable<LLMChunk> {
 			yield { text: 'a' };
@@ -160,17 +161,12 @@ describe('createLLMProxy', () => {
 			}),
 		});
 
-		const error = await proxy
-			.complete({ model: 'claude-opus-4-8', messages: [] })
-			.then(() => undefined)
-			.catch((e: unknown) => e);
-
-		expect(error).toBeInstanceOf(ProblemError);
-		if (error instanceof ProblemError) {
-			expect(error.status).toBe(502);
-			expect(error.detail).toBe('upstream down');
-			expect(error.extensions.model).toBe('claude-opus-4-8');
-		}
+		const error = await expectProblemError(
+			proxy.complete({ model: 'claude-opus-4-8', messages: [] }),
+		);
+		expect(error.status).toBe(502);
+		expect(error.detail).toBe('upstream down');
+		expect(error.extensions.model).toBe('claude-opus-4-8');
 	});
 
 	it('passes a ProblemError from the client through unchanged', async () => {

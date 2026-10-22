@@ -199,6 +199,7 @@ const config: Linter.Config[] = [
 			'**/*.config.js',
 			'eslint.config.ts',
 			'vitest.shared.ts',
+			'test-support/**/*.ts',
 			'**/mdsvex/**/*.js',
 		],
 		languageOptions: {
