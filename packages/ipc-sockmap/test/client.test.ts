@@ -62,16 +62,37 @@ const SOCK = '/run/golusoris/api.sock';
 const MAP = '/sys/fs/bpf/golusoris/sockhash';
 
 /** Create a connected client whose socket the test controls. */
-async function connectedClient(opts?: { bpfMapPath?: string; reachablePaths?: string[] }) {
+async function connectedClient(opts?: {
+	bpfMapPath?: string;
+	reachablePaths?: string[];
+	requestTimeoutMs?: number;
+	writeError?: unknown;
+}) {
 	const socket = new FakeSocket();
+	if (opts && 'writeError' in opts) {
+		socket.write = (): boolean => {
+			throw opts.writeError;
+		};
+	}
 	const connect = vi.fn(() => socket);
 	const client = await createIpcClient({
 		socketPath: SOCK,
 		bpfMapPath: opts?.bpfMapPath,
 		access: reachable(opts?.reachablePaths ?? [SOCK]),
 		connect,
+		requestTimeoutMs: opts?.requestTimeoutMs,
 	});
 	return { client, socket, connect };
+}
+
+/** Run an async test under fake timers, restoring real timers afterwards. */
+async function withFakeTimers(fn: () => Promise<void>): Promise<void> {
+	vi.useFakeTimers();
+	try {
+		await fn();
+	} finally {
+		vi.useRealTimers();
+	}
 }
 
 describe('createIpcClient', () => {
@@ -157,24 +178,15 @@ describe('createIpcClient', () => {
 	});
 
 	it('rejects on request timeout', async () => {
-		vi.useFakeTimers();
-		try {
-			const socket = new FakeSocket();
-			const client = await createIpcClient({
-				socketPath: SOCK,
-				access: reachable([SOCK]),
-				connect: () => socket,
-				requestTimeoutMs: 1000,
-			});
+		await withFakeTimers(async () => {
+			const { client } = await connectedClient({ requestTimeoutMs: 1000 });
 			const pending = client.request(Uint8Array.from([1]));
 			// attach the rejection assertion before the timer fires so the
 			// rejection is never momentarily unhandled
 			const assertion = expect(pending).rejects.toBeInstanceOf(ProblemError);
 			await vi.advanceTimersByTimeAsync(1001);
 			await assertion;
-		} finally {
-			vi.useRealTimers();
-		}
+		});
 	});
 
 	it('rejects with a ProblemError when a malformed frame is received', async () => {
@@ -188,51 +200,26 @@ describe('createIpcClient', () => {
 	});
 
 	it('wraps a synchronous socket.write failure in a ProblemError', async () => {
-		const socket = new FakeSocket();
-		socket.write = (): boolean => {
-			throw new Error('EPIPE');
-		};
-		const client = await createIpcClient({
-			socketPath: SOCK,
-			access: reachable([SOCK]),
-			connect: () => socket,
-		});
+		const { client } = await connectedClient({ writeError: new Error('EPIPE') });
 		await expect(client.request(Uint8Array.from([1]))).rejects.toBeInstanceOf(ProblemError);
 	});
 
 	it('passes a ProblemError thrown by socket.write through unwrapped', async () => {
 		const original = new ProblemError({ type: 'urn:x', title: 'boom', status: 500 });
-		const socket = new FakeSocket();
-		socket.write = (): boolean => {
-			throw original;
-		};
-		const client = await createIpcClient({
-			socketPath: SOCK,
-			access: reachable([SOCK]),
-			connect: () => socket,
-		});
+		const { client } = await connectedClient({ writeError: original });
 		await expect(client.request(Uint8Array.from([1]))).rejects.toBe(original);
 	});
 
 	it('clears a pending timeout when the write fails', async () => {
-		vi.useFakeTimers();
-		try {
-			const socket = new FakeSocket();
-			socket.write = (): boolean => {
-				throw new Error('EPIPE');
-			};
-			const client = await createIpcClient({
-				socketPath: SOCK,
-				access: reachable([SOCK]),
-				connect: () => socket,
+		await withFakeTimers(async () => {
+			const { client } = await connectedClient({
 				requestTimeoutMs: 1000,
+				writeError: new Error('EPIPE'),
 			});
 			await expect(client.request(Uint8Array.from([1]))).rejects.toBeInstanceOf(ProblemError);
 			// the timer was cleared by the write-failure path, so advancing it is a no-op
 			await vi.advanceTimersByTimeAsync(2000);
-		} finally {
-			vi.useRealTimers();
-		}
+		});
 	});
 
 	it('rejects immediately once a fatal transport error has been recorded', async () => {
@@ -242,23 +229,14 @@ describe('createIpcClient', () => {
 	});
 
 	it('clears the per-request timer when a response resolves it', async () => {
-		vi.useFakeTimers();
-		try {
-			const socket = new FakeSocket();
-			const client = await createIpcClient({
-				socketPath: SOCK,
-				access: reachable([SOCK]),
-				connect: () => socket,
-				requestTimeoutMs: 1000,
-			});
+		await withFakeTimers(async () => {
+			const { client, socket } = await connectedClient({ requestTimeoutMs: 1000 });
 			const pending = client.request(Uint8Array.from([1]));
 			socket.emit('data', encodeFrame(Uint8Array.from([0x42])));
 			expect(Array.from(await pending)).toEqual([0x42]);
 			// the resolve cleared the timer; advancing past it must not reject
 			await vi.advanceTimersByTimeAsync(2000);
-		} finally {
-			vi.useRealTimers();
-		}
+		});
 	});
 
 	it('ignores a response frame that has no matching pending request', async () => {
