@@ -7,6 +7,7 @@ import type {
 	MessageShape,
 } from '@bufbuild/protobuf';
 import { ProblemError } from '@sveltesentio/core/problem';
+import { describeConnectErrorContract } from '../../../test-support/connect-error';
 import {
 	createClient,
 	createTransport,
@@ -133,34 +134,23 @@ describe('withCredentialsFetch', () => {
 	});
 });
 
-describe('connectErrorToProblem', () => {
-	it('maps a NotFound ConnectError to the not_found problem type + 404', () => {
-		const problem = connectErrorToProblem(new ConnectError('gone', Code.NotFound));
-		expect(problem).toBeInstanceOf(ProblemError);
-		expect(problem.type).toBe('urn:sveltesentio:rpc:not_found');
-		expect(problem.status).toBe(404);
-		expect(problem.detail).toBe('gone');
-		expect(problem.cause).toBeInstanceOf(ConnectError);
-	});
+describeConnectErrorContract('connectErrorToProblem', {
+	map: connectErrorToProblem,
+	ConnectError,
+	Code,
+	describe,
+	it,
+	expect,
+});
 
-	it('maps PermissionDenied to forbidden + 403 and Unauthenticated to 401', () => {
-		expect(connectErrorToProblem(new ConnectError('no', Code.PermissionDenied)).status).toBe(403);
+describe('connectErrorToProblem — realtime-specific behavior', () => {
+	it('maps PermissionDenied to forbidden and Unauthenticated to auth_required', () => {
+		expect(connectErrorToProblem(new ConnectError('no', Code.PermissionDenied)).type).toBe(
+			'urn:sveltesentio:rpc:forbidden',
+		);
 		expect(connectErrorToProblem(new ConnectError('no', Code.Unauthenticated)).type).toBe(
 			'urn:sveltesentio:rpc:auth_required',
 		);
-	});
-
-	it('falls back to a generated urn + status 500 for unmapped codes', () => {
-		const problem = connectErrorToProblem(new ConnectError('boom', Code.DataLoss));
-		expect(problem.type).toBe('urn:sveltesentio:rpc:data_loss');
-		expect(problem.status).toBe(500);
-	});
-
-	it('normalises a non-ConnectError reason via ConnectError.from', () => {
-		const problem = connectErrorToProblem(new Error('plain'));
-		expect(problem).toBeInstanceOf(ProblemError);
-		expect(problem.status).toBe(500);
-		expect(problem.detail).toBe('plain');
 	});
 
 	it('lifts an X-Correlation-Id from error metadata into extensions', () => {

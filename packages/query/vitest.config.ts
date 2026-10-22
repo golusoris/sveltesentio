@@ -1,6 +1,7 @@
 import { nodeVitestConfig } from '../../vitest.shared.ts';
 
 export default nodeVitestConfig({
+	setupFiles: ['./test/setup.ts'],
 	coverage: {
 		exclude: ['src/index.ts'],
 		thresholds: {

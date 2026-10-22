@@ -1,14 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
-
-// query-client.ts imports `QueryClient` from @tanstack/svelte-query, whose
-// barrel re-exports `.svelte` files. Mock keeps the real query-core QueryClient.
-// The factory is dynamically imported *inside* the mock body so `vi.mock`
-// hoisting does not hit the helper's temporal dead zone.
-vi.mock('@tanstack/svelte-query', async () => {
-	const { svelteQueryMockFactory } = await import('./_svelte-query-mock.js');
-	return svelteQueryMockFactory();
-});
 
 const { createQueryClient } = await import('../src/query-client.js');
 
