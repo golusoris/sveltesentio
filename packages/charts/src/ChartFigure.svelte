@@ -16,16 +16,11 @@ alternative without constraining which charting library renders the visual:
 Plain `tsc` does not type-check `.svelte`; the typed core lives in
 `./a11y-table` and `./preset` and is unit-tested there.
 -->
-<script lang="ts" generics="TDatum">
-	import {
-		buildDataTableModel,
-		type ChartSeries,
-		type ChartAccessors,
-		type BuildTableOptions,
-	} from './a11y-table.js';
+<script module lang="ts">
+	import type { ChartSeries, ChartAccessors, BuildTableOptions } from './a11y-table.js';
 	import type { Snippet } from 'svelte';
 
-	interface Props<T> {
+	export interface ChartFigureProps<T> {
 		/** Accessible name for the figure — required (no anonymous charts). */
 		title: string;
 		/** Optional one-sentence semantic summary, exposed via `aria-describedby`. */
@@ -46,6 +41,10 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 		/** The visual chart. Receives nothing; renders LayerChart/uPlot/etc. */
 		chart: Snippet;
 	}
+</script>
+
+<script lang="ts" generics="TDatum">
+	import { buildDataTableModel } from './a11y-table.js';
 
 	const {
 		title,
@@ -56,7 +55,7 @@ Plain `tsc` does not type-check `.svelte`; the typed core lives in
 		showDataTable = true,
 		idBase,
 		chart,
-	}: Props<TDatum> = $props();
+	}: ChartFigureProps<TDatum> = $props();
 
 	const base = $derived(idBase ?? `chart-${title.replace(/\W+/g, '-').toLowerCase()}`);
 	const titleId = $derived(`${base}-title`);

@@ -70,7 +70,8 @@
 	"files": [
 		"src",
 		"CHANGELOG.md",
-		"!src/**/*.stories.svelte"
+		"!src/**/*.stories.svelte",
+		"!src/stories-data.ts"
 	],
 	"keywords": [
 		"sveltesentio",

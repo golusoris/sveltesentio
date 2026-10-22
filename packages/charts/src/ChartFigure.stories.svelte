@@ -1,41 +1,15 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import ChartFigure from './ChartFigure.svelte';
-	import type { ChartSeries, ChartAccessors } from './a11y-table.js';
-
-	interface Point {
-		t: string;
-		v: number | null;
-	}
-
-	const accessors: ChartAccessors<Point> = { x: (d) => d.t, y: (d) => d.v };
-
-	const series: ChartSeries<Point>[] = [
-		{
-			key: 'sessions',
-			label: 'Sessions',
-			data: [
-				{ t: 'Mon', v: 1200 },
-				{ t: 'Tue', v: 1800 },
-				{ t: 'Wed', v: 1600 },
-				{ t: 'Thu', v: 2400 },
-			],
-		},
-		{
-			key: 'errors',
-			label: 'Errors',
-			data: [
-				{ t: 'Mon', v: 24 },
-				{ t: 'Tue', v: 12 },
-				{ t: 'Wed', v: 30 },
-				{ t: 'Thu', v: 8 },
-			],
-		},
-	];
+	import {
+		dayAccessors as accessors,
+		sampleWeekdaySeries as series,
+		type DayPoint,
+	} from './stories-data.js';
 
 	const { Story } = defineMeta({
 		title: 'charts/ChartFigure',
-		component: ChartFigure as unknown as typeof ChartFigure<Point>,
+		component: ChartFigure as unknown as typeof ChartFigure<DayPoint>,
 		tags: ['autodocs'],
 	});
 </script>

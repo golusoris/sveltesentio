@@ -4,8 +4,26 @@
 // (LayerChart) and the SR table (buildDataTableModel) so the two cannot drift.
 // No Svelte, no DOM — unit-testable in plain Node.
 
-import type { ChartSeries, ChartAccessors } from './a11y-table.js';
+import type { ChartSeries, ChartAccessors, BuildTableOptions } from './a11y-table.js';
 import { chartSeriesColor } from './palette.js';
+
+/** Base props shared by all cartesian chart wrappers (<AreaChart>, <BarChart>, etc.). */
+export interface CartesianChartBaseProps<TDatum> {
+	/** Accessible name for the figure — required (no anonymous charts). */
+	title: string;
+	/** Optional one-sentence summary, exposed via `aria-describedby`. */
+	description?: string | undefined;
+	/** One or more series; each gets a palette color unless it sets `color`. */
+	series: readonly CartesianSeries<TDatum>[];
+	/** x / y accessors, shared across series (visual + SR table). */
+	accessors: ChartAccessors<TDatum>;
+	/** SR-table formatting / labelling options. */
+	tableOptions?: BuildTableOptions<TDatum> | undefined;
+	/** Whether to render the visually-hidden SR data table. @default true */
+	showDataTable?: boolean | undefined;
+	/** Stable id prefix for aria wiring; auto-derived from the title if omitted. */
+	idBase?: string | undefined;
+}
 
 /**
  * A cartesian series definition for the Line / Area / Bar / Scatter wrappers.

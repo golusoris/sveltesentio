@@ -16,5 +16,5 @@ export default svelteVitestConfig({
 		// the strict default.
 		testTimeout: 20_000,
 	},
-	coverage: { exclude: ['src/**/*.svelte'] },
+	coverage: { exclude: ['src/**/*.svelte', 'src/stories-data.ts'] },
 });
