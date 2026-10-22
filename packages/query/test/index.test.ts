@@ -1,11 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// The index pulls the rune hooks + `.svelte` re-exports transitively; the shared
-// mock stubs them so the barrel imports cleanly in the node test environment.
-vi.mock('@tanstack/svelte-query', async () => {
-	const { svelteQueryMockFactory } = await import('./_svelte-query-mock.js');
-	return svelteQueryMockFactory();
-});
+import { describe, it, expect } from 'vitest';
 
 const index = (await import('../src/index.js')) as Record<string, unknown>;
 

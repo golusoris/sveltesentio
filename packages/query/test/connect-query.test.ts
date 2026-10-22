@@ -2,13 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Code, ConnectError, type CallOptions, type Client } from '@connectrpc/connect';
 import type { DescService } from '@bufbuild/protobuf';
 import { ProblemError } from '@sveltesentio/core';
+import { describeConnectErrorContract } from '../../../test-support/connect-error';
 import { accessorFromCall, type SvelteQueryMock } from './_svelte-query-mock.js';
-
-// Dynamic import inside the factory keeps `vi.mock` hoisting hoist-safe.
-vi.mock('@tanstack/svelte-query', async () => {
-	const { svelteQueryMockFactory } = await import('./_svelte-query-mock.js');
-	return svelteQueryMockFactory();
-});
 
 const sq = (await import('@tanstack/svelte-query')) as unknown as SvelteQueryMock;
 const { useConnectQuery, createConnectQuery, connectQueryOptions, connectErrorToProblem } =
@@ -64,38 +59,20 @@ function clientRejecting(reason: unknown): Client<DescService> {
 	return { getUser } as unknown as Client<DescService>;
 }
 
-describe('connectErrorToProblem — RFC 9457 default mapper', () => {
-	it('maps a NotFound ConnectError to a problem with status 404 + urn type', () => {
-		const problem = connectErrorToProblem(new ConnectError('gone', Code.NotFound));
-		expect(problem).toBeInstanceOf(ProblemError);
-		expect(problem.type).toBe('urn:sveltesentio:rpc:not_found');
-		expect(problem.status).toBe(404);
-		expect(problem.detail).toBe('gone');
-		expect(problem.cause).toBeInstanceOf(ConnectError);
-	});
+describeConnectErrorContract('connectErrorToProblem — RFC 9457 default mapper', {
+	map: connectErrorToProblem,
+	ConnectError,
+	Code,
+	describe,
+	it,
+	expect,
+});
 
-	it('maps Unauthenticated → 401 and PermissionDenied → 403', () => {
-		expect(connectErrorToProblem(new ConnectError('x', Code.Unauthenticated)).status).toBe(401);
-		expect(connectErrorToProblem(new ConnectError('x', Code.PermissionDenied)).status).toBe(403);
-	});
-
+describe('connectErrorToProblem — query-specific behavior', () => {
 	it('maps ResourceExhausted → 429 (so the retry policy treats it as retryable)', () => {
 		expect(
 			connectErrorToProblem(new ConnectError('slow down', Code.ResourceExhausted)).status,
 		).toBe(429);
-	});
-
-	it('falls back to status 500 + a generated urn for unmapped codes', () => {
-		const problem = connectErrorToProblem(new ConnectError('boom', Code.DataLoss));
-		expect(problem.type).toBe('urn:sveltesentio:rpc:data_loss');
-		expect(problem.status).toBe(500);
-	});
-
-	it('normalises a non-ConnectError reason via ConnectError.from (→ 500)', () => {
-		const problem = connectErrorToProblem(new Error('plain'));
-		expect(problem).toBeInstanceOf(ProblemError);
-		expect(problem.status).toBe(500);
-		expect(problem.detail).toBe('plain');
 	});
 
 	it('passes an existing ProblemError through untouched (idempotent)', () => {

@@ -133,6 +133,8 @@ export function v8Coverage(opts: V8CoverageOptions) {
 export interface NodeVitestOptions {
 	/** Per-test timeout for the suite; keeps Vitest's default when omitted. */
 	testTimeout?: number;
+	/** Setup files executed before each test file; keeps Vitest's default when omitted. */
+	setupFiles?: string[];
 	coverage: V8CoverageOptions;
 }
 
@@ -147,6 +149,7 @@ export function nodeVitestConfig(opts: NodeVitestOptions): ViteUserConfig {
 			include: ['test/**/*.test.ts'],
 			environment: 'node',
 			...(opts.testTimeout === undefined ? {} : { testTimeout: opts.testTimeout }),
+			...(opts.setupFiles === undefined ? {} : { setupFiles: opts.setupFiles }),
 			coverage: v8Coverage(opts.coverage),
 		},
 	};

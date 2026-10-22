@@ -2,12 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
 import { accessorFromCall, type SvelteQueryMock } from './_svelte-query-mock.js';
 
-// Dynamic import inside the factory keeps `vi.mock` hoisting hoist-safe.
-vi.mock('@tanstack/svelte-query', async () => {
-	const { svelteQueryMockFactory } = await import('./_svelte-query-mock.js');
-	return svelteQueryMockFactory();
-});
-
 const sq = (await import('@tanstack/svelte-query')) as unknown as SvelteQueryMock;
 const { createSentioMutation, useOptimistic } = await import('../src/mutation.js');
 

@@ -1,14 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ProblemError } from '@sveltesentio/core';
 
-// hydration.ts re-exports HydrationBoundary/QueryClientProvider (.svelte) and
-// uses the real dehydrate/QueryClient — the mock keeps query-core intact.
-// Dynamic import inside the factory keeps `vi.mock` hoisting hoist-safe.
-vi.mock('@tanstack/svelte-query', async () => {
-	const { svelteQueryMockFactory } = await import('./_svelte-query-mock.js');
-	return svelteQueryMockFactory();
-});
-
 const hydration = await import('../src/hydration.js');
 const { serverPrefetch, dehydrate, hydrate, HydrationBoundary, QueryClientProvider } = hydration;
 
