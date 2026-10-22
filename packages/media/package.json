@@ -9,6 +9,7 @@
 		"@storybook/addon-svelte-csf": "5.1.5",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/core": "workspace:*",
+		"@sveltesentio/testing": "workspace:*",
 		"@testing-library/jest-dom": "^7.0.0",
 		"@testing-library/svelte": "^5.4.2",
 		"axe-core": "^4.13.0",

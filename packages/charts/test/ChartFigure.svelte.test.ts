@@ -1,7 +1,7 @@
-import axe from 'axe-core';
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import Harness from './ChartFigureHarness.svelte';
+import Harness from './ChartHarness.svelte';
+import { expectNoAxeViolations } from './axe-helper.js';
 import type { ChartAccessors, ChartSeries } from '../src/a11y-table.js';
 import type { Point } from './fixture-types.js';
 
@@ -20,20 +20,6 @@ const series: ChartSeries<Point>[] = [
 		],
 	},
 ];
-
-// WCAG 2.2 AA tag set (mirrors @sveltesentio/testing's axeDefaults / ADR-0031).
-const WCAG_22_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
-
-async function expectNoAxeViolations(container: HTMLElement): Promise<void> {
-	const results = await axe.run(container, {
-		runOnly: { type: 'tag', values: WCAG_22_AA_TAGS },
-		resultTypes: ['violations'],
-	});
-	const serious = results.violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical',
-	);
-	expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
-}
 
 function renderFigure(props: Partial<Parameters<typeof renderProps>[0]> = {}) {
 	return render(Harness, renderProps(props));

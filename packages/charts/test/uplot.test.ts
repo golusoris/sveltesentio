@@ -187,6 +187,17 @@ describe('createUPlotChart — options + pre-mount', () => {
 });
 
 describe('createUPlotChart — lifecycle with injected ctor', () => {
+	async function createMountedChart(data?: AlignedData) {
+		const { ctor, records } = makeFakeCtor();
+		const handle = createUPlotChart({
+			uPlot: ctor,
+			config: { width: 200, height: 100, series: [{ label: 'a' }] },
+			...(data !== undefined ? { data } : {}),
+		});
+		await handle.mount(fakeTarget);
+		return { ctor, records, handle };
+	}
+
 	it('constructs uPlot on mount with the frozen opts and initial data', async () => {
 		const { ctor, records } = makeFakeCtor();
 		const initial: AlignedData = [
@@ -218,23 +229,13 @@ describe('createUPlotChart — lifecycle with injected ctor', () => {
 	});
 
 	it('mount is idempotent — a second mount does not construct a second instance', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		await handle.mount(fakeTarget);
 		expect(records).toHaveLength(1);
 	});
 
 	it('update after mount forwards setData to the live instance', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		const next: AlignedData = [
 			[3, 4],
 			[30, 40],
@@ -262,23 +263,13 @@ describe('createUPlotChart — lifecycle with injected ctor', () => {
 	});
 
 	it('setSize after mount forwards to the live instance', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		handle.setSize({ width: 320, height: 180 });
 		expect(records[0]?.instance.setSizeCalls).toEqual([{ width: 320, height: 180 }]);
 	});
 
 	it('destroy tears down the instance and resets mounted; it is idempotent', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		handle.destroy();
 		expect(records[0]?.instance.destroyed).toBe(true);
 		expect(handle.mounted).toBe(false);
@@ -286,12 +277,7 @@ describe('createUPlotChart — lifecycle with injected ctor', () => {
 	});
 
 	it('can be re-mounted after destroy, constructing a fresh instance', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		handle.destroy();
 		await handle.mount(fakeTarget);
 		expect(records).toHaveLength(2);
@@ -299,12 +285,7 @@ describe('createUPlotChart — lifecycle with injected ctor', () => {
 	});
 
 	it('update / setSize after destroy are no-ops (no setData on the dead instance)', async () => {
-		const { ctor, records } = makeFakeCtor();
-		const handle = createUPlotChart({
-			uPlot: ctor,
-			config: { width: 200, height: 100, series: [{ label: 'a' }] },
-		});
-		await handle.mount(fakeTarget);
+		const { handle, records } = await createMountedChart();
 		handle.destroy();
 		handle.update([[9], [99]]);
 		handle.setSize({ width: 1, height: 1 });
