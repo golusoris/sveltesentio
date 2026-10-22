@@ -13,7 +13,7 @@ vi.mock('@tanstack/svelte-query', async () => {
 const sq = (await import('@tanstack/svelte-query')) as unknown as SvelteQueryMock;
 const { useConnectQuery, createConnectQuery, connectQueryOptions, connectErrorToProblem } =
 	await import('../src/connect-query.js');
-import type { UnaryMethodSelector } from '../src/connect-query.js';
+import type { UnaryMethodSelector, ConnectQueryOptions } from '../src/connect-query.js';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -104,38 +104,46 @@ describe('connectErrorToProblem — RFC 9457 default mapper', () => {
 	});
 });
 
+/** Default ConnectQueryOptions shape for the standard test User client. */
+function defaultUserQueryOptions(): ConnectQueryOptions<DescService, User, ['user', number]> {
+	const { client } = clientResolving({ id: 1, name: 'Ada' });
+	return {
+		client,
+		queryKey: ['user', 1],
+		call: getUserBy(1),
+	};
+}
+
+/** Builds ConnectQueryOptions for User query with optional property overrides. */
+function buildTestConnectQueryOptions(
+	overrides?: Partial<ConnectQueryOptions<DescService, User, ['user', number]>>,
+) {
+	return connectQueryOptions<DescService, User, ['user', number]>({
+		...defaultUserQueryOptions(),
+		...overrides,
+	});
+}
+
+/** Invokes useConnectQuery with default User query options. */
+function invokeDefaultConnectQuery() {
+	useConnectQuery<DescService, User, ['user', number]>(defaultUserQueryOptions());
+}
+
 describe('connectQueryOptions — shaped options (pure, no runes)', () => {
 	it('produces a queryFn + the passed key with a 30s stale-time default', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		const opts = connectQueryOptions<DescService, User, ['user', number]>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-		});
+		const opts = buildTestConnectQueryOptions();
 		expect(opts.staleTime).toBe(30_000);
 		expect(opts.queryKey).toEqual(['user', 1]);
 		expect(typeof opts.queryFn).toBe('function');
 	});
 
 	it('lets the caller override the stale-time default (rest spread last)', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		const opts = connectQueryOptions<DescService, User>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-			staleTime: 0,
-		});
+		const opts = buildTestConnectQueryOptions({ staleTime: 0 });
 		expect(opts.staleTime).toBe(0);
 	});
 
 	it('forwards extra TanStack options (enabled) without leaking client/call/mapError', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		const opts = connectQueryOptions<DescService, User>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-			enabled: false,
-		});
+		const opts = buildTestConnectQueryOptions({ enabled: false });
 		expect(opts.enabled).toBe(false);
 		expect('client' in opts).toBe(false);
 		expect('call' in opts).toBe(false);
@@ -199,23 +207,13 @@ describe('connectQueryOptions — shaped options (pure, no runes)', () => {
 
 describe('useConnectQuery — v6 Accessor<Options> bridge to createQuery', () => {
 	it('passes an Accessor<Options> (a function returning the options) to createQuery', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		useConnectQuery<DescService, User>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-		});
+		invokeDefaultConnectQuery();
 		expect(sq.createQuery).toHaveBeenCalledOnce();
 		expect(typeof sq.createQuery.mock.calls[0]![0]).toBe('function');
 	});
 
 	it('the accessor returns the connect-shaped options (30s stale + queryFn)', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		useConnectQuery<DescService, User, ['user', number]>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-		});
+		invokeDefaultConnectQuery();
 		const opts = accessorFromCall(sq.createQuery)();
 		expect(opts.staleTime).toBe(30_000);
 		expect(opts.queryKey).toEqual(['user', 1]);
@@ -223,12 +221,7 @@ describe('useConnectQuery — v6 Accessor<Options> bridge to createQuery', () =>
 	});
 
 	it('produces a fresh options object each accessor invocation (no shared mutation)', () => {
-		const { client } = clientResolving({ id: 1, name: 'Ada' });
-		useConnectQuery<DescService, User>({
-			client,
-			queryKey: ['user', 1],
-			call: getUserBy(1),
-		});
+		invokeDefaultConnectQuery();
 		const accessor = accessorFromCall(sq.createQuery);
 		expect(accessor()).not.toBe(accessor());
 		expect(accessor().queryKey).toEqual(accessor().queryKey);
