@@ -1,9 +1,9 @@
-import axe from 'axe-core';
 import { render } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import CartesianHarness from './CartesianChartHarness.svelte';
 import PieHarness from './PieChartHarness.svelte';
 import ChartHarness from './ChartHarness.svelte';
+import { expectNoAxeViolations } from './axe-helper.js';
 import type { CartesianSeries } from '../src/chart-series.js';
 import type { ChartAccessors, ChartSeries } from '../src/a11y-table.js';
 import type { Point, Slice } from './fixture-types.js';
@@ -34,20 +34,6 @@ const slices: Slice[] = [
 	{ name: 'Firefox', count: 30 },
 	{ name: 'Safari', count: 10 },
 ];
-
-// WCAG 2.2 AA tag set (mirrors @sveltesentio/testing's axeDefaults / ADR-0031).
-const WCAG_22_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
-
-async function expectNoAxeViolations(container: HTMLElement): Promise<void> {
-	const results = await axe.run(container, {
-		runOnly: { type: 'tag', values: WCAG_22_AA_TAGS },
-		resultTypes: ['violations'],
-	});
-	const serious = results.violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical',
-	);
-	expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
-}
 
 const CARTESIAN_KINDS = ['line', 'area', 'bar', 'scatter'] as const;
 
@@ -193,6 +179,7 @@ describe('low-level Chart wrapper', () => {
 
 	function renderLowLevel(props: { description?: string; showDataTable?: boolean } = {}) {
 		return render(ChartHarness, {
+			as: 'chart',
 			title: 'Custom composition',
 			description: props.description,
 			series: figureSeries,
