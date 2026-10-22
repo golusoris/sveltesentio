@@ -1,5 +1,8 @@
+import { afterEach, beforeEach, expect } from 'vitest';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createSveltesentioServer, createSveltesentioServerWith } from '../src/index.js';
@@ -60,4 +63,85 @@ export async function callTool(
 	const res = await client.callTool({ name, arguments: args });
 	const content = res.content as TextContent[];
 	return { isError: res.isError === true, text: content[0]?.text ?? '' };
+}
+
+/**
+ * Lifecycle helper connecting a real client to an in-memory MCP server rooted
+ * at the repository root for each test in the enclosing describe block.
+ */
+export function useRealServer(): { readonly client: Client } {
+	let client: Client;
+
+	beforeEach(async () => {
+		client = await connectClient(repoRoot);
+	});
+
+	afterEach(async () => {
+		await client.close();
+	});
+
+	return {
+		get client() {
+			return client;
+		},
+	};
+}
+
+/**
+ * Lifecycle helper creating an ephemeral directory tree, booting an in-memory
+ * MCP server against it, and cleaning both up after each test.
+ */
+export function useSyntheticServer(
+	prefix: string,
+	subdirs: readonly string[] = [],
+	seed?: (root: string) => Promise<void>,
+): { readonly root: string; readonly client: Client } {
+	let root: string;
+	let client: Client;
+
+	beforeEach(async () => {
+		root = await mkdtemp(join(tmpdir(), prefix));
+		for (const dir of subdirs) {
+			await mkdir(join(root, dir), { recursive: true });
+		}
+		if (seed) {
+			await seed(root);
+		}
+		client = await connectClient(root);
+	});
+
+	afterEach(async () => {
+		await client.close();
+		await rm(root, { recursive: true, force: true });
+	});
+
+	return {
+		get root() {
+			return root;
+		},
+		get client() {
+			return client;
+		},
+	};
+}
+
+/** Parses markdown index output `- slug` lines into slug strings. */
+export function parseIndexSlugs(indexText: string): string[] {
+	return indexText.split('\n').map((line) => line.replace(/^- /, ''));
+}
+
+/** Asserts that slugs are sorted matching `${slug}.md` code-unit ordering. */
+export function expectSortedByFilename(slugs: readonly string[]): void {
+	const byFilename = [...slugs].sort((a, b) => {
+		const fa = `${a}.md`;
+		const fb = `${b}.md`;
+		return fa < fb ? -1 : fa > fb ? 1 : 0;
+	});
+	expect(slugs).toEqual(byFilename);
+}
+
+/** Asserts standard markdown content shape and non-empty text. */
+export function expectMarkdownContent(c: ResourceContent): void {
+	expect(c.mimeType).toBe('text/markdown');
+	expect(c.text.length).toBeGreaterThan(0);
 }
