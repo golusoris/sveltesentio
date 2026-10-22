@@ -67,16 +67,20 @@ jobs:
     # Linux only (HISS-21, #328): portability.yml runs lint on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - &setup_node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - &cache_pnpm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - &pnpm_install
+        run: corepack enable && pnpm install --frozen-lockfile
       - name: Lint affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
@@ -116,16 +120,10 @@ jobs:
     # Linux only (HISS-21, #328): portability.yml runs the type check on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - name: Typecheck affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
@@ -163,16 +161,10 @@ jobs:
     # Linux only (HISS-21, #328): portability.yml runs the unit tests on Linux, macOS and Windows; this job adds coverage.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - name: Test affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
@@ -198,16 +190,10 @@ jobs:
     # Linux only (HISS-21, #328): the build output does not depend on the runner OS.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - name: Build affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
@@ -226,16 +212,10 @@ jobs:
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       # One Playwright version is in the lockfile, so one browser install serves every workspace.
       - name: Install Chromium, Firefox and WebKit
         run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium firefox webkit
@@ -251,16 +231,10 @@ jobs:
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - name: Install Chromium, Firefox and WebKit
         run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium firefox webkit
       # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
@@ -292,16 +266,10 @@ jobs:
     # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - run: pnpm audit --audit-level=high
 
   # Declared by the security:high facet. gitleaks owns secret scanning; trivy below scans
