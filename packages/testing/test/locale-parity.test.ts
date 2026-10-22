@@ -16,6 +16,13 @@ import {
 	type PlaceholderMismatch,
 } from '../src/locale-parity.js';
 
+function expectCleanParity(result: ParityResult) {
+	expect(result.missingKeys).toEqual([]);
+	expect(result.extraKeys).toEqual([]);
+	expect(result.emptyValues).toEqual([]);
+	expect(result.placeholderMismatches).toEqual([]);
+}
+
 describe('pure in-memory parity checks', () => {
 	describe('positive cases', () => {
 		it('accepts identical maps with matching placeholders and formatters', () => {
@@ -31,10 +38,7 @@ describe('pure in-memory parity checks', () => {
 			};
 
 			const result: ParityResult = compareLocales(base, target);
-			expect(result.missingKeys).toEqual([]);
-			expect(result.extraKeys).toEqual([]);
-			expect(result.emptyValues).toEqual([]);
-			expect(result.placeholderMismatches).toEqual([]);
+			expectCleanParity(result);
 		});
 
 		it('assertLocaleParity passes on identical and compatible multi-locale maps', () => {
@@ -199,10 +203,7 @@ describe('pure in-memory parity checks', () => {
 			expect(missing(keySet(base), keySet(target))).toEqual([]);
 
 			const result = compareLocales(base, target);
-			expect(result.missingKeys).toEqual([]);
-			expect(result.extraKeys).toEqual([]);
-			expect(result.emptyValues).toEqual([]);
-			expect(result.placeholderMismatches).toEqual([]);
+			expectCleanParity(result);
 
 			expect(() => assertLocaleParity({ en: {}, de: {} }, { base: 'en' })).not.toThrow();
 		});
@@ -249,10 +250,7 @@ describe('pure in-memory parity checks', () => {
 			]);
 
 			const result = compareLocales(base, target);
-			expect(result.missingKeys).toEqual([]);
-			expect(result.extraKeys).toEqual([]);
-			expect(result.emptyValues).toEqual([]);
-			expect(result.placeholderMismatches).toEqual([]);
+			expectCleanParity(result);
 		});
 
 		it('detects nested missing keys and empty values', () => {

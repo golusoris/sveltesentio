@@ -6,13 +6,17 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { analyzeChanges, PACKAGE_DIRECTORY_MAP } from '../../../scripts/ci-affected.mjs';
 
+function expectNoCodeChanges(result: ReturnType<typeof analyzeChanges>) {
+	expect(result.allAffected).toBe(false);
+	expect(result.hasCodeChanges).toBe(false);
+	expect(result.affectedPackages).toEqual([]);
+	expect(result.turboFilter).toBe('');
+}
+
 describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 	it('returns no code changes when file list is empty', () => {
 		const result = analyzeChanges([]);
-		expect(result.allAffected).toBe(false);
-		expect(result.hasCodeChanges).toBe(false);
-		expect(result.affectedPackages).toEqual([]);
-		expect(result.turboFilter).toBe('');
+		expectNoCodeChanges(result);
 	});
 
 	// docs/principles.md and docs/adr/** were in this list until A2-13: the mcp tests
@@ -28,10 +32,7 @@ describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 			'CODE_OF_CONDUCT.md',
 		];
 		const result = analyzeChanges(docsFiles);
-		expect(result.allAffected).toBe(false);
-		expect(result.hasCodeChanges).toBe(false);
-		expect(result.affectedPackages).toEqual([]);
-		expect(result.turboFilter).toBe('');
+		expectNoCodeChanges(result);
 	});
 
 	it('runs the packages that read a changed docs file, without their dependents', () => {
