@@ -37,12 +37,12 @@ jobs:
       - name: Stop on a draft pull request
         if: github.event.pull_request.draft == true
         shell: bash
-        env:
+        env: &draft_env
           TITLE: Gate not run on a draft
           MESSAGE: >-
             The gate did not run because the pull request is a draft.
             It runs when the pull request is marked ready for review.
-        run: |
+        run: &draft_run |
           echo "::error title=$TITLE::$MESSAGE"
           echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
           exit 1
@@ -59,118 +59,64 @@ jobs:
   lint:
     name: ${{ strategy.job-total > 1 && format('Lint ({0})', matrix.runner) || 'Lint' }}
     runs-on: ${{ matrix.runner }}
-    strategy:
+    strategy: &matrix_strategy
       fail-fast: false
       matrix:
         runner: ${{ fromJSON(inputs.runners) }}
-    defaults:
+    defaults: &bash_defaults
       run:
         # The coverage check quotes for bash; Windows runners default to PowerShell.
         shell: bash
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Stop on a draft pull request
+      - &stop_draft
+        name: Stop on a draft pull request
         if: github.event.pull_request.draft == true
         shell: bash
         # inputs.working-directory does not exist before checkout.
         working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        env: *draft_env
+        run: *draft_run
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - &setup_node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - &cache_pnpm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pnpm-store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - &pnpm_install
+        run: corepack enable && pnpm install --frozen-lockfile
       - run: pnpm lint
 
   typecheck:
     name: ${{ strategy.job-total > 1 && format('Type check ({0})', matrix.runner) || 'Type check' }}
     runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: ${{ fromJSON(inputs.runners) }}
-    defaults:
-      run:
-        # The coverage check quotes for bash; Windows runners default to PowerShell.
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
+    strategy: *matrix_strategy
+    defaults: *bash_defaults
     steps:
-      - name: Stop on a draft pull request
-        if: github.event.pull_request.draft == true
-        shell: bash
-        # inputs.working-directory does not exist before checkout.
-        working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *stop_draft
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - run: pnpm typecheck
 
   test:
     name: ${{ strategy.job-total > 1 && format('Test (coverage {0}%, {1})', inputs.coverage-threshold, matrix.runner) || format('Test (coverage {0}%)', inputs.coverage-threshold) }}
     runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: ${{ fromJSON(inputs.runners) }}
-    defaults:
-      run:
-        # The coverage check quotes for bash; Windows runners default to PowerShell.
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
+    strategy: *matrix_strategy
+    defaults: *bash_defaults
     steps:
-      - name: Stop on a draft pull request
-        if: github.event.pull_request.draft == true
-        shell: bash
-        # inputs.working-directory does not exist before checkout.
-        working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *stop_draft
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       # Options after the script name reach the test script. `pnpm test -- --coverage`
       # hands vitest a literal `--` instead, after which it ignores --coverage and
       # writes no summary (pnpm 11, measured with apps/sveltekit-fixture).
@@ -215,68 +161,28 @@ jobs:
     name: Build
     # Linux only (HISS-21, #328): The build output does not depend on the runner OS; lint, type check and test carry the platform legs.
     runs-on: ubuntu-26.04
-    defaults:
+    defaults: &defaults_wd
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - name: Stop on a draft pull request
-        if: github.event.pull_request.draft == true
-        shell: bash
-        # inputs.working-directory does not exist before checkout.
-        working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *stop_draft
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - run: pnpm build
 
   audit:
     name: Security audit
     # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
+    defaults: *defaults_wd
     steps:
-      - name: Stop on a draft pull request
-        if: github.event.pull_request.draft == true
-        shell: bash
-        # inputs.working-directory does not exist before checkout.
-        working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *stop_draft
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - run: pnpm audit --audit-level=high
 
   e2e:
@@ -284,34 +190,13 @@ jobs:
     if: inputs.run-e2e
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
+    defaults: *defaults_wd
     steps:
-      - name: Stop on a draft pull request
-        if: github.event.pull_request.draft == true
-        shell: bash
-        # inputs.working-directory does not exist before checkout.
-        working-directory: ${{ github.workspace }}
-        env:
-          TITLE: Gate not run on a draft
-          MESSAGE: >-
-            The gate did not run because the pull request is a draft.
-            It runs when the pull request is marked ready for review.
-        run: |
-          echo "::error title=$TITLE::$MESSAGE"
-          echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ inputs.node-version }}
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - run: corepack enable && pnpm install --frozen-lockfile
+      - *stop_draft
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - name: Upload Playwright report
