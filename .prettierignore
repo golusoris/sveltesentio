@@ -81,11 +81,12 @@ tools/figures/astro.mjs
 tools/figures/build.mjs
 tools/figures/checks.mjs
 tools/figures/core.mjs
-tools/figures/dist/THIRD-PARTY-LICENSES.txt
-tools/figures/dist/loader.js
-tools/figures/dist/player.js
+tools/figures/eslint.figures.mjs
 tools/figures/figures.css
 tools/figures/mkdocs_hook.py
+tools/figures/player/THIRD-PARTY-LICENSES.txt
+tools/figures/player/loader.js
+tools/figures/player/player.js
 tools/figures/serve.mjs
 tools/figures/third_party/interfig/VENDOR.md
 tools/figures/third_party/interfig/upstream/LICENSE
