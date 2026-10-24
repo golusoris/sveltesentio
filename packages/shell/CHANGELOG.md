@@ -2,10 +2,9 @@
 
 ## [0.4.1](https://github.com/golusoris/sveltesentio/compare/shell-v0.4.0...shell-v0.4.1) (2026-10-24)
 
-
 ### Code Refactoring
 
-* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+- **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
 
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/shell-v0.3.1...shell-v0.4.0) (2026-10-14)
 

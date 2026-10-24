@@ -2,11 +2,10 @@
 
 ## [0.7.1](https://github.com/golusoris/sveltesentio/compare/charts-v0.7.0...charts-v0.7.1) (2026-10-24)
 
-
 ### Code Refactoring
 
-* **charts:** share the cartesian chart wiring and story data ([#439](https://github.com/golusoris/sveltesentio/issues/439)) ([fcab5d2](https://github.com/golusoris/sveltesentio/commit/fcab5d2fa2b237aeaf760d976b4562adabc962e9))
-* use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
+- **charts:** share the cartesian chart wiring and story data ([#439](https://github.com/golusoris/sveltesentio/issues/439)) ([fcab5d2](https://github.com/golusoris/sveltesentio/commit/fcab5d2fa2b237aeaf760d976b4562adabc962e9))
+- use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
 
 ## [0.7.0](https://github.com/golusoris/sveltesentio/compare/charts-v0.6.1...charts-v0.7.0) (2026-10-14)
 
