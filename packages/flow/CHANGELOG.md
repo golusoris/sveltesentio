@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/golusoris/sveltesentio/compare/flow-v0.7.0...flow-v0.7.1) (2026-10-24)
+
+
+### Code Refactoring
+
+* **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
+
 ## [0.7.0](https://github.com/golusoris/sveltesentio/compare/flow-v0.6.0...flow-v0.7.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES

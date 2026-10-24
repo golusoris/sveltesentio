@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/golusoris/sveltesentio/compare/api-v0.6.0...api-v0.6.1) (2026-10-24)
+
+
+### Code Refactoring
+
+* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/api-v0.5.0...api-v0.6.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
