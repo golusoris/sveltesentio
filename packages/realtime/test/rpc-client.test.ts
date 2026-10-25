@@ -6,7 +6,6 @@ import type {
 	DescService,
 	MessageShape,
 } from '@bufbuild/protobuf';
-import { ProblemError } from '@sveltesentio/core/problem';
 import { describeConnectErrorContract } from '../../../test-support/connect-error';
 import {
 	createClient,
