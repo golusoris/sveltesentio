@@ -2,7 +2,7 @@ name: release-please
 
 on:
   push:
-    branches: [main]
+    branches: [main, release-please--branches--main]
   # Manual run: publishes the package versions that main already holds and
   # cuts no release. It recovers a release whose tags and forge releases exist
   # while the registry refused the publish step. `pnpm -r publish` skips every
@@ -15,6 +15,75 @@ permissions:
   contents: read
 
 jobs:
+  format-release-pr:
+    # Runs on every push to the release branch, whoever pushed it: a branch
+    # rebuilt outside the release-please job (#430) arrived unformatted.
+    if: github.ref == 'refs/heads/release-please--branches--main'
+    runs-on: ubuntu-26.04
+    concurrency:
+      group: release-pr-format
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      # A release pull request opened with the workflow token starts no checks; the App token does.
+      - name: Mint the release token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      # Format release change logs: release-please generates `*` bullets and
+      # double blank lines (gap C14-13) which fail prettier and markdownlint.
+      # The commit goes through the GraphQL createCommitOnBranch mutation, which
+      # GitHub signs for the App token: main requires signed commits, and an
+      # unsigned commit on the release branch blocks its squash merge (#336).
+      # expectedHeadOid refuses the commit if the branch moved concurrently;
+      # the moved branch is left to the newer run.
+      - name: Format the release change logs
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'
+          # The format commit triggers this job again, which then finds nothing to change.
+          if git diff --quiet; then
+            exit 0
+          fi
+          base=$(git rev-parse HEAD)
+          git diff --name-only -z | while IFS= read -r -d '' path; do
+            jq -n --arg path "$path" --rawfile text "$path" \
+              '{path: $path, contents: ($text | @base64)}'
+          done | jq -s --arg repo "$GITHUB_REPOSITORY" --arg branch "$BRANCH" --arg base "$base" '{
+            query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
+            variables: {input: {
+              branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+              expectedHeadOid: $base,
+              message: {headline: "chore: format the generated change logs"},
+              fileChanges: {additions: .}
+            }}
+          }' >"$RUNNER_TEMP/format-commit.json"
+          if ! gh api graphql --input "$RUNNER_TEMP/format-commit.json"; then
+            if [ "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" != "$base" ]; then
+              echo "::notice::A newer run formats the moved branch"
+              exit 0
+            fi
+            exit 1
+          fi
+
   release-please:
     # A manual run started from any other branch is skipped: only main is
     # published. A push run is on main by its trigger.
@@ -43,64 +112,6 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-      # Format release change logs: release-please generates `*` bullets and
-      # double blank lines (gap C14-13) which fail prettier and markdownlint.
-      # The commit goes through the GraphQL createCommitOnBranch mutation, which
-      # GitHub signs for the App token: main requires signed commits, and an
-      # unsigned commit on the release branch blocks its squash merge (#336).
-      # expectedHeadOid refuses the commit if the branch moved concurrently;
-      # the moved branch is left to the newer run.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
-        with:
-          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
-          path: release-pr
-          fetch-depth: 1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
-        with:
-          node-version: '24'
-
-      # Step `env` is evaluated even when `if` is false, so it carries the raw
-      # output: fromJSON of an empty `pr` (the release PR "remained the same")
-      # fails the template and turns main red. `with` is evaluated only when
-      # the step runs, which keeps the checkout `ref` above safe.
-      - name: Format the release change logs
-        if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}
-        working-directory: release-pr
-        env:
-          PR_JSON: ${{ steps.release.outputs.pr }}
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BRANCH=$(jq -er '.headBranchName' <<<"$PR_JSON")
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'
-          if git diff --quiet; then
-            exit 0
-          fi
-          base=$(git rev-parse HEAD)
-          git diff --name-only -z | while IFS= read -r -d '' path; do
-            jq -n --arg path "$path" --rawfile text "$path" \
-              '{path: $path, contents: ($text | @base64)}'
-          done | jq -s --arg repo "$GITHUB_REPOSITORY" --arg branch "$BRANCH" --arg base "$base" '{
-            query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
-            variables: {input: {
-              branch: {repositoryNameWithOwner: $repo, branchName: $branch},
-              expectedHeadOid: $base,
-              message: {headline: "chore: format the generated change logs"},
-              fileChanges: {additions: .}
-            }}
-          }' >"$RUNNER_TEMP/format-commit.json"
-          if ! gh api graphql --input "$RUNNER_TEMP/format-commit.json"; then
-            if [ "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" != "$base" ]; then
-              echo "::notice::A newer run formats the moved branch"
-              exit 0
-            fi
-            exit 1
-          fi
 
       # --- Publish to npm — runs ONLY when release-please cut a release, or
       # on a manual run (see `workflow_dispatch` above). ---

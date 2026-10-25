@@ -37,7 +37,7 @@ fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 git -C "$root" ls-files -z -- '*.ts' '*.js' '*.mjs' '*.cjs' \
-	':!:.config/hiss/testdata/**' ':!:.config/semgrep/testdata/**' ':!:tools/figures/dist/**' >"$work/files"
+	':!:.config/hiss/testdata/**' ':!:.config/semgrep/testdata/**' ':!:tools/figures/player/**' >"$work/files"
 count="$(tr -cd '\0' <"$work/files" | wc -c)"
 if ((count == 0 || count > max_files)); then
 	printf 'semgrep: %d files selected, expected 1..%d\n' "$count" "$max_files" >&2

@@ -1,11 +1,13 @@
 // Holds the release workflow to its change log formatting contract:
 // release-please generates raw change logs with `*` bullets and double blank
-// lines that violate prettier and markdownlint rules. A formatting step runs
-// on the release PR branch before merge and commits the formatted change logs
-// through the GitHub API, which signs the commit: main requires signed commits,
-// and an unsigned commit on the release branch blocks its squash merge (#336).
-// This test validates the workflow structure and verifies prettier + markdownlint
-// formatting behavior in both directions on real upstream output.
+// lines that violate prettier and markdownlint rules. A formatting job runs on
+// push to the release branch so changelogs from any producer of the branch
+// (release-please or the merge train) are formatted before merge. The commit
+// goes through the GitHub GraphQL API, which signs the commit: main requires
+// signed commits, and an unsigned commit on the release branch blocks its
+// squash merge (#336). This test validates the workflow structure and verifies
+// prettier + markdownlint formatting behavior in both directions on real
+// upstream output.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -34,7 +36,67 @@ function steps(source) {
 	return found;
 }
 
-const isRelease = (step) => step.some((line) => /\bid:\s*release\b/.test(line));
+function jobs(source) {
+	const jobList = [];
+	let inJobs = false;
+	let currentJob = null;
+
+	for (const line of source.split('\n')) {
+		if (/^jobs:\s*$/.test(line)) {
+			inJobs = true;
+			continue;
+		}
+		if (!inJobs) continue;
+		if (/^\S/.test(line)) {
+			inJobs = false;
+			continue;
+		}
+		const jobHeader = line.match(/^ {2}([a-zA-Z0-9_-]+):\s*$/);
+		if (jobHeader) {
+			currentJob = { id: jobHeader[1], lines: [line] };
+			jobList.push(currentJob);
+		} else if (currentJob) {
+			currentJob.lines.push(line);
+		}
+	}
+	return jobList;
+}
+
+function jobHasReleaseBranchGate(job) {
+	let inJobIf = false;
+	for (const line of job.lines) {
+		if (/^ {4}if:\s*/.test(line)) {
+			if (/github\.ref\s*==\s*['"]refs\/heads\/release-please--branches--main['"]/.test(line)) {
+				return true;
+			}
+			inJobIf = true;
+		} else if (inJobIf) {
+			if (/^ {4}\S/.test(line)) {
+				inJobIf = false;
+			} else if (
+				/github\.ref\s*==\s*['"]refs\/heads\/release-please--branches--main['"]/.test(line)
+			) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+function hasReleaseBranchTrigger(source) {
+	const onMatch = source.match(/(?:^|\n)(?:'on'|on):\s*([\s\S]*?)(?=\n[a-z0-9_-]+:|$)/i);
+	if (!onMatch) return false;
+	const onBlock = onMatch[1];
+	const pushMatch = onBlock.match(/(?:^|\n)\s*push:\s*([\s\S]*?)(?=\n\s*(?:[a-z0-9_-]+:|$)|\s*$)/i);
+	if (!pushMatch) return false;
+	const pushBlock = pushMatch[1];
+	return (
+		/\bbranches:\s*\[[^\]]*\brelease-please--branches--main\b[^\]]*\]/.test(pushBlock) ||
+		/\bbranches:\s*[\r\n]+(?:\s*-[^\r\n]+[\r\n]+)*\s*-\s*['"]?release-please--branches--main['"]?/.test(
+			pushBlock,
+		)
+	);
+}
 
 const isFormat = (step) =>
 	step.some(
@@ -46,21 +108,27 @@ const isFormat = (step) =>
 /** Every reason the change log formatting step breaks the contract. */
 export function formatFindings(source) {
 	const list = steps(source);
-	const release = list.findIndex(isRelease);
 	const format = list.findIndex(isFormat);
 	if (format < 0) return ['step missing'];
-	if (release < 0) return ['release step missing'];
+
 	const findings = [];
-	if (format < release) {
-		findings.push('step before the release step');
+	if (!hasReleaseBranchTrigger(source)) {
+		findings.push('trigger missing');
 	}
-	const formatStep = list[format];
-	const hasGate = formatStep.some((line) =>
-		/steps\.release\.outputs\.prs_created\s*==\s*'true'/.test(line),
+
+	const jobList = jobs(source);
+	const formatJob = jobList.find((j) =>
+		j.lines.some(
+			(line) =>
+				/\bname:\s*Format the release change logs\b/.test(line) ||
+				/\bprettier\b.*CHANGELOG\.md/.test(line),
+		),
 	);
-	if (!hasGate) {
-		findings.push('step without the prs_created gate');
+	if (!formatJob || !jobHasReleaseBranchGate(formatJob)) {
+		findings.push('step without the release branch gate');
 	}
+
+	const formatStep = list[format];
 	const hasPrettierWrite = formatStep.some((line) => /\bprettier\b.*--write\b/.test(line));
 	const hasPrettierCheck = formatStep.some((line) => /\bprettier\b.*--check\b/.test(line));
 	if (hasPrettierCheck || !hasPrettierWrite) {
@@ -106,19 +174,11 @@ export function envFindings(source) {
 }
 
 const step = (...lines) => lines.map((line) => `${STEP_BODY}${line}`).join('\n');
-const job = (...parts) => `jobs:\n  release:\n    steps:\n${parts.join('')}`;
 
-const releaseStep =
-	`${STEP_START}id: release\n` +
-	`${step(
-		"if: ${{ github.event_name == 'push' }}",
-		'uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0',
-	)}\n`;
+const defaultTrigger = 'on:\n  push:\n    branches: [main, release-please--branches--main]\n';
+const defaultJobGate = "    if: ${{ github.ref == 'refs/heads/release-please--branches--main' }}\n";
 
 const formatStepFixture = (extra = {}) => {
-	const gate =
-		extra.gate ??
-		"if: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.pr != '' }}";
 	const prettierCmd =
 		extra.prettierCmd ?? "pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'";
 	const commitLines = extra.commitLines ?? [
@@ -129,19 +189,17 @@ const formatStepFixture = (extra = {}) => {
 		`    variables: {input: {expectedHeadOid: $base, fileChanges: {additions: .}}}}' >"$RUNNER_TEMP/format-commit.json"`,
 		'  if ! gh api graphql --input "$RUNNER_TEMP/format-commit.json"; then',
 	];
-	const envEntry = extra.envEntry ?? '  PR_JSON: ${{ steps.release.outputs.pr }}';
+	const envEntry = extra.envEntry ?? '  BRANCH: ${{ github.ref_name }}';
 	return (
 		`${STEP_START}name: Format the release change logs\n` +
 		`${step(
-			gate,
-			'working-directory: release-pr',
 			'env:',
 			envEntry,
 			'run: |',
-			`  BRANCH=$(jq -er '.headBranchName' <<<"$PR_JSON")`,
 			'  corepack enable',
 			'  pnpm install --frozen-lockfile',
 			`  ${prettierCmd}`,
+			'  # Loop safety: format commit re-triggers push; prettier diff quiet -> exit 0.',
 			'  if git diff --quiet; then',
 			'    exit 0',
 			'  fi',
@@ -154,6 +212,13 @@ const formatStepFixture = (extra = {}) => {
 			'  fi',
 		)}\n`
 	);
+};
+
+const workflowFixture = (extra = {}) => {
+	const trigger = extra.trigger ?? defaultTrigger;
+	const gate = extra.jobGate !== undefined ? extra.jobGate : defaultJobGate;
+	const stepsContent = extra.steps ?? formatStepFixture(extra);
+	return `${trigger}jobs:\n  format-release-pr:\n${gate}    steps:\n${stepsContent}`;
 };
 
 // Raw first entry of git show 72fea84:packages/core/CHANGELOG.md
@@ -211,12 +276,12 @@ describe('release-please.yml changelog format step', () => {
 	});
 
 	it('accepts the raw step output in step env', () => {
-		assert.deepEqual(envFindings(job(releaseStep, formatStepFixture())), []);
+		assert.deepEqual(envFindings(workflowFixture()), []);
 	});
 
 	it('detects fromJSON of a step output in step env', () => {
 		const envEntry = '  BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}';
-		assert.deepEqual(envFindings(job(releaseStep, formatStepFixture({ envEntry }))), [
+		assert.deepEqual(envFindings(workflowFixture({ envEntry })), [
 			`fromJSON of a step output in step env (${envEntry.trim()})`,
 		]);
 	});
@@ -225,44 +290,68 @@ describe('release-please.yml changelog format step', () => {
 		const checkout =
 			`${STEP_START}uses: actions/checkout@0123 # v0\n` +
 			`${step('with:', '  ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}')}\n`;
-		assert.deepEqual(envFindings(job(releaseStep, checkout)), []);
+		assert.deepEqual(envFindings(workflowFixture({ steps: checkout })), []);
 	});
 
 	it('detects step missing', () => {
-		assert.deepEqual(formatFindings(job(releaseStep)), ['step missing']);
+		assert.deepEqual(formatFindings(workflowFixture({ steps: '' })), ['step missing']);
 	});
 
-	it('detects step without the prs_created gate', () => {
+	it('detects trigger missing', () => {
 		assert.deepEqual(
-			formatFindings(
-				job(releaseStep, formatStepFixture({ gate: "if: ${{ github.event_name == 'push' }}" })),
-			),
-			['step without the prs_created gate'],
+			formatFindings(workflowFixture({ trigger: 'on:\n  push:\n    branches: [main]\n' })),
+			['trigger missing'],
 		);
 	});
 
-	it('detects step before the release step', () => {
-		assert.deepEqual(formatFindings(job(formatStepFixture(), releaseStep)), [
-			'step before the release step',
+	it('detects step without the release branch gate', () => {
+		assert.deepEqual(
+			formatFindings(
+				workflowFixture({ jobGate: "    if: ${{ github.ref == 'refs/heads/main' }}\n" }),
+			),
+			['step without the release branch gate'],
+		);
+		assert.deepEqual(formatFindings(workflowFixture({ jobGate: '' })), [
+			'step without the release branch gate',
 		]);
+	});
+
+	it('boundary: release branch gate without expression syntax is accepted', () => {
+		assert.deepEqual(
+			formatFindings(
+				workflowFixture({
+					jobGate: "    if: github.ref == 'refs/heads/release-please--branches--main'\n",
+				}),
+			),
+			[],
+		);
+	});
+
+	it('boundary: push trigger with YAML sequence syntax is accepted', () => {
+		assert.deepEqual(
+			formatFindings(
+				workflowFixture({
+					trigger:
+						'on:\n  push:\n    branches:\n      - main\n      - release-please--branches--main\n',
+				}),
+			),
+			[],
+		);
 	});
 
 	it('detects prettier invoked with --check instead of --write', () => {
 		assert.deepEqual(
 			formatFindings(
-				job(
-					releaseStep,
-					formatStepFixture({
-						prettierCmd: "pnpm exec prettier --check CHANGELOG.md 'packages/*/CHANGELOG.md'",
-					}),
-				),
+				workflowFixture({
+					prettierCmd: "pnpm exec prettier --check CHANGELOG.md 'packages/*/CHANGELOG.md'",
+				}),
 			),
 			['prettier invoked with --check instead of --write'],
 		);
 	});
 
 	it('accepts the API commit with its head guard', () => {
-		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture())), []);
+		assert.deepEqual(formatFindings(workflowFixture()), []);
 	});
 
 	it('detects a local git commit and push', () => {
@@ -271,7 +360,7 @@ describe('release-please.yml changelog format step', () => {
 			'  base=$(git rev-parse HEAD~1)',
 			'  if ! git push origin "HEAD:refs/heads/$BRANCH"; then',
 		];
-		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture({ commitLines }))), [
+		assert.deepEqual(formatFindings(workflowFixture({ commitLines })), [
 			'local git commit or push (unsigned)',
 			'commit without createCommitOnBranch and expectedHeadOid',
 		]);
@@ -282,7 +371,7 @@ describe('release-please.yml changelog format step', () => {
 			`  jq -n '{query: "mutation { createCommitOnBranch(input: $input) { commit { oid } } }"}' >"$RUNNER_TEMP/c.json"`,
 			'  if ! gh api graphql --input "$RUNNER_TEMP/c.json"; then',
 		];
-		assert.deepEqual(formatFindings(job(releaseStep, formatStepFixture({ commitLines }))), [
+		assert.deepEqual(formatFindings(workflowFixture({ commitLines })), [
 			'commit without createCommitOnBranch and expectedHeadOid',
 		]);
 	});

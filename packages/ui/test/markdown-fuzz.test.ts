@@ -43,6 +43,11 @@ const markdown = fc
 	.array(fc.oneof(fc.constantFrom(...FRAGMENTS), fc.string({ maxLength: 40 })), { maxLength: 12 })
 	.map((parts) => parts.join(''));
 
+// Counterexamples fast-check found on main, replayed on every run before the
+// random inputs. `[]()`: an empty link target rendered as `<a href="">`
+// (seed 893195788, 2026-10-23).
+const SEEDS: [string][] = [['[]()']];
+
 const URI_ATTRS = new Set(['href', 'src', 'xlink:href']);
 const allowedTags = new Set(ALLOWED_TAGS);
 const allowedAttrs = new Set(ALLOWED_ATTR);
@@ -84,13 +89,24 @@ describe('violations', () => {
 	});
 });
 
+describe('renderMarkdown — fuzz counterexamples', () => {
+	it('drops an empty link target', () => {
+		expect(renderMarkdown('[]()')).toBe('<p><a></a></p>\n');
+		expect(renderMarkdown('<a href="">x</a>')).toBe('<p><a>x</a></p>\n');
+	});
+
+	it('keeps a non-empty allowed link target', () => {
+		expect(renderMarkdown('[x](/a)')).toBe('<p><a href="/a">x</a></p>\n');
+	});
+});
+
 describe('renderMarkdown — property fuzzing', () => {
 	it('emits only allowlisted tags, attributes and URIs', () => {
 		fc.assert(
 			fc.property(markdown, (source) => {
 				expect(violations(renderMarkdown(source))).toEqual([]);
 			}),
-			{ numRuns: 300 },
+			{ numRuns: 300, examples: SEEDS },
 		);
 	});
 
@@ -99,7 +115,7 @@ describe('renderMarkdown — property fuzzing', () => {
 			fc.property(markdown, (source) => {
 				expect(violations(renderMarkdown(renderMarkdown(source)))).toEqual([]);
 			}),
-			{ numRuns: 100 },
+			{ numRuns: 100, examples: SEEDS },
 		);
 	});
 });

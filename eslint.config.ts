@@ -250,6 +250,10 @@ const config: Linter.Config[] = [
 			'**/.turbo/**',
 			'**/coverage/**',
 			'**/storybook-static/**',
+			// The governance engine's committed figure player (loader.js, player.js): emitted
+			// bundle output, not source this repository governs; on the old path it fell under
+			// `**/dist/**`.
+			'tools/figures/player/**',
 			// The HISS-20 fixture corpus is input to the rules, not source governed by
 			// them. Its gap fixtures are deliberate violations that must stay
 			// unreported, and its positives are deliberate violations that the
