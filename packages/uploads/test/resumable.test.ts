@@ -49,7 +49,7 @@ class FakeUpload implements TusUpload {
 function fresh(): TusUploadConstructor {
 	FakeUpload.last = undefined;
 	FakeUpload.instances = 0;
-	return FakeUpload as unknown as TusUploadConstructor;
+	return FakeUpload;
 }
 
 function blob(bytes = 100): Blob {
@@ -85,9 +85,9 @@ function failWith(error: Error): ProblemError {
 
 describe('createResumableUpload — construction', () => {
 	it('throws a ProblemError when neither endpoint nor uploadUrl is given', () => {
-		expect(() => createResumableUpload(blob(), {} as never)).toThrow(ProblemError);
+		expect(() => createResumableUpload(blob(), {})).toThrow(ProblemError);
 		try {
-			createResumableUpload(blob(), {} as never);
+			createResumableUpload(blob(), {});
 		} catch (e) {
 			expect(e).toBeInstanceOf(ProblemError);
 			expect((e as ProblemError).status).toBe(422);

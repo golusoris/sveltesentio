@@ -21,14 +21,14 @@ function makeForm(valid: boolean, data: Out): SuperValidated<Out> {
 		posted: true,
 		errors: {},
 		data,
-	} as SuperValidated<Out>;
+	};
 }
 
 type FailSpy = ReturnType<typeof vi.fn<(status: number, data: unknown) => ActionFailure<unknown>>>;
 
 /** Builds a config whose `superValidate` always returns the given form. */
 function config(form: SuperValidated<Out>): FormActionConfig & { fail: FailSpy } {
-	const superValidate = vi.fn(async () => form) as unknown as SuperValidateFn;
+	const superValidate = vi.fn(() => Promise.resolve(form)) as unknown as SuperValidateFn;
 	const fail: FailSpy = vi.fn((status: number, data: unknown) => ({ status, data }));
 	return { superValidate, fail: fail as FormActionConfig['fail'] & FailSpy };
 }
@@ -40,9 +40,9 @@ describe('formAction', () => {
 		const form = makeForm(true, { email: 'dev@example.com', age: 30 });
 		const cfg = config(form);
 		let received: SuperValidated<Out> | undefined;
-		const handler = vi.fn(async (ctx: { form: SuperValidated<Out> }) => {
+		const handler = vi.fn((ctx: { form: SuperValidated<Out> }) => {
 			received = ctx.form;
-			return { ok: true } as const;
+			return Promise.resolve({ ok: true } as const);
 		});
 
 		const action = formAction<Out, typeof event, { ok: true }>(schema, handler, cfg);
@@ -57,7 +57,7 @@ describe('formAction', () => {
 	it('fails without running the handler when the form is invalid', async () => {
 		const form = makeForm(false, { email: '', age: 0 });
 		const cfg = config(form);
-		const handler = vi.fn(async () => ({ ok: true }) as const);
+		const handler = vi.fn(() => Promise.resolve({ ok: true } as const));
 
 		const action = formAction<Out, typeof event, { ok: true }>(schema, handler, cfg);
 		const result = (await action(event)) as ActionFailure<FailData>;
@@ -71,16 +71,18 @@ describe('formAction', () => {
 	it('maps a thrown ProblemError into field errors and fails with its status', async () => {
 		const form = makeForm(true, { email: 'taken@example.com', age: 30 });
 		const cfg = config(form);
-		const handler = vi.fn(async () => {
-			throw new ProblemError({
-				type: 'https://example.com/validation',
-				status: 422,
-				invalidParams: [
-					{ name: 'email', reason: 'already registered' },
-					{ name: 'email', reason: 'must be a work address' },
-				],
-			});
-		});
+		const handler = vi.fn(() =>
+			Promise.reject(
+				new ProblemError({
+					type: 'https://example.com/validation',
+					status: 422,
+					invalidParams: [
+						{ name: 'email', reason: 'already registered' },
+						{ name: 'email', reason: 'must be a work address' },
+					],
+				}),
+			),
+		);
 
 		const action = formAction<Out, typeof event, never>(schema, handler, cfg);
 		const result = (await action(event)) as ActionFailure<FailData>;
@@ -97,13 +99,15 @@ describe('formAction', () => {
 		const form = makeForm(true, { email: 'x@example.com', age: 30 });
 		(form.errors as Record<string, string[]>).email = ['pre-existing'];
 		const cfg = config(form);
-		const handler = vi.fn(async () => {
-			throw new ProblemError({
-				type: 'about:blank',
-				status: 409,
-				invalidParams: [{ name: 'email', reason: 'conflict' }],
-			});
-		});
+		const handler = vi.fn(() =>
+			Promise.reject(
+				new ProblemError({
+					type: 'about:blank',
+					status: 409,
+					invalidParams: [{ name: 'email', reason: 'conflict' }],
+				}),
+			),
+		);
 
 		const action = formAction<Out, typeof event, never>(schema, handler, cfg);
 		const result = (await action(event)) as ActionFailure<FailData>;
@@ -115,12 +119,14 @@ describe('formAction', () => {
 	it('defaults the fail status to 400 when the ProblemError carries none', async () => {
 		const form = makeForm(true, { email: 'x@example.com', age: 30 });
 		const cfg = config(form);
-		const handler = vi.fn(async () => {
-			throw new ProblemError({
-				type: 'about:blank',
-				invalidParams: [{ name: 'age', reason: 'too young' }],
-			});
-		});
+		const handler = vi.fn(() =>
+			Promise.reject(
+				new ProblemError({
+					type: 'about:blank',
+					invalidParams: [{ name: 'age', reason: 'too young' }],
+				}),
+			),
+		);
 
 		const action = formAction<Out, typeof event, never>(schema, handler, cfg);
 		const result = (await action(event)) as ActionFailure<FailData>;
@@ -133,9 +139,7 @@ describe('formAction', () => {
 		const form = makeForm(true, { email: 'x@example.com', age: 30 });
 		const cfg = config(form);
 		const boom = new Error('database is down');
-		const handler = vi.fn(async () => {
-			throw boom;
-		});
+		const handler = vi.fn(() => Promise.reject(boom));
 
 		const action = formAction<Out, typeof event, never>(schema, handler, cfg);
 		await expect(action(event)).rejects.toBe(boom);

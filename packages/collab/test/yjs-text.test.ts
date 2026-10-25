@@ -36,7 +36,7 @@ describe('yjs-text', () => {
 		const { yText } = newText();
 		const snapshots: string[] = [];
 		const unsub = observeYjsText(yText, () => {
-			snapshots.push(yText.toString());
+			snapshots.push(snapshotYjsText(yText));
 		});
 		insertYjsText(yText, 0, 'a');
 		appendYjsText(yText, 'b');

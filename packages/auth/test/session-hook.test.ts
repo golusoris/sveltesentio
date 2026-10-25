@@ -29,21 +29,21 @@ function fakeEvent(init: FakeEventInit = {}): SessionEvent<Session> & {
 
 describe('resolveSessionLocals', () => {
 	it('populates locals.session when the cookie resolves to a session', async () => {
-		const resolve: SessionResolver<Session> = async () => SESSION;
+		const resolve: SessionResolver<Session> = () => Promise.resolve(SESSION);
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
 		await resolveSessionLocals(event, { resolve });
 		expect(event.locals.session).toEqual(SESSION);
 	});
 
 	it('passes the raw cookie token through to the resolver verbatim', async () => {
-		const resolve = vi.fn<SessionResolver<Session>>(async () => SESSION);
+		const resolve = vi.fn<SessionResolver<Session>>(() => Promise.resolve(SESSION));
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'opaque-token-xyz' } });
 		await resolveSessionLocals(event, { resolve });
 		expect(resolve).toHaveBeenCalledExactlyOnceWith('opaque-token-xyz');
 	});
 
 	it('sets locals.session to null and skips the resolver when the cookie is absent', async () => {
-		const resolve = vi.fn<SessionResolver<Session>>(async () => SESSION);
+		const resolve = vi.fn<SessionResolver<Session>>(() => Promise.resolve(SESSION));
 		const event = fakeEvent();
 		await resolveSessionLocals(event, { resolve });
 		expect(event.locals.session).toBeNull();
@@ -51,14 +51,14 @@ describe('resolveSessionLocals', () => {
 	});
 
 	it('sets locals.session to null when the resolver rejects the token (invalid/expired)', async () => {
-		const resolve: SessionResolver<Session> = async () => null;
+		const resolve: SessionResolver<Session> = () => Promise.resolve(null);
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'stale-tok' } });
 		await resolveSessionLocals(event, { resolve });
 		expect(event.locals.session).toBeNull();
 	});
 
 	it('honours a custom cookieName', async () => {
-		const resolve = vi.fn<SessionResolver<Session>>(async () => SESSION);
+		const resolve = vi.fn<SessionResolver<Session>>(() => Promise.resolve(SESSION));
 		const event = fakeEvent({ cookies: { 'x-session': 'tok' } });
 		await resolveSessionLocals(event, { resolve, cookieName: 'x-session' });
 		expect(resolve).toHaveBeenCalledExactlyOnceWith('tok');
@@ -66,7 +66,7 @@ describe('resolveSessionLocals', () => {
 	});
 
 	it('honours a custom localsKey', async () => {
-		const resolve: SessionResolver<Session> = async () => SESSION;
+		const resolve: SessionResolver<Session> = () => Promise.resolve(SESSION);
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
 		await resolveSessionLocals(event, { resolve, localsKey: 'auth' });
 		expect((event.locals as Record<string, Session | null>).auth).toEqual(SESSION);
@@ -74,9 +74,7 @@ describe('resolveSessionLocals', () => {
 	});
 
 	it('swallows a thrown resolver error and falls back to null by default (passthrough)', async () => {
-		const resolve: SessionResolver<Session> = async () => {
-			throw new Error('upstream 503');
-		};
+		const resolve: SessionResolver<Session> = () => Promise.reject(new Error('upstream 503'));
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
 		await expect(resolveSessionLocals(event, { resolve })).resolves.toBeUndefined();
 		expect(event.locals.session).toBeNull();
@@ -84,9 +82,7 @@ describe('resolveSessionLocals', () => {
 
 	it('rethrows a thrown resolver error when onResolveError is rethrow', async () => {
 		const boom = new Error('upstream 503');
-		const resolve: SessionResolver<Session> = async () => {
-			throw boom;
-		};
+		const resolve: SessionResolver<Session> = () => Promise.reject(boom);
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
 		await expect(resolveSessionLocals(event, { resolve, onResolveError: 'rethrow' })).rejects.toBe(
 			boom,
@@ -99,9 +95,7 @@ describe('resolveSessionLocals', () => {
 			title: 'Session revoked',
 			status: 401,
 		});
-		const resolve: SessionResolver<Session> = async () => {
-			throw problem;
-		};
+		const resolve: SessionResolver<Session> = () => Promise.reject(problem);
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
 		await expect(resolveSessionLocals(event, { resolve })).rejects.toBe(problem);
 		await expect(
@@ -114,22 +108,22 @@ describe('handleSession', () => {
 	const passthrough = new Response('ok', { status: 200 });
 
 	it('hydrates locals.session then resolves the request', async () => {
-		const resolve: SessionResolver<Session> = async () => SESSION;
+		const resolve: SessionResolver<Session> = () => Promise.resolve(SESSION);
 		const hook = handleSession({ resolve });
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
-		const kitResolve = vi.fn(async () => passthrough);
-		const out = await hook({ event: event as never, resolve: kitResolve as never });
+		const kitResolve = vi.fn(() => Promise.resolve(passthrough));
+		const out = await hook({ event: event as never, resolve: kitResolve });
 		expect(out).toBe(passthrough);
 		expect(kitResolve).toHaveBeenCalledOnce();
 		expect(event.locals.session).toEqual(SESSION);
 	});
 
 	it('resolves the request as unauthenticated when no cookie is present', async () => {
-		const resolve = vi.fn<SessionResolver<Session>>(async () => SESSION);
+		const resolve = vi.fn<SessionResolver<Session>>(() => Promise.resolve(SESSION));
 		const hook = handleSession({ resolve });
 		const event = fakeEvent();
-		const kitResolve = vi.fn(async () => passthrough);
-		const out = await hook({ event: event as never, resolve: kitResolve as never });
+		const kitResolve = vi.fn(() => Promise.resolve(passthrough));
+		const out = await hook({ event: event as never, resolve: kitResolve });
 		expect(out).toBe(passthrough);
 		expect(event.locals.session).toBeNull();
 		expect(resolve).not.toHaveBeenCalled();
@@ -137,31 +131,27 @@ describe('handleSession', () => {
 
 	it('runs resolution before resolve() so downstream hooks see the session', async () => {
 		const order: string[] = [];
-		const resolve: SessionResolver<Session> = async () => {
+		const resolve: SessionResolver<Session> = () => {
 			order.push('resolve-session');
-			return SESSION;
+			return Promise.resolve(SESSION);
 		};
 		const hook = handleSession({ resolve });
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
-		const kitResolve = vi.fn(async () => {
+		const kitResolve = vi.fn(() => {
 			order.push('kit-resolve');
-			return passthrough;
+			return Promise.resolve(passthrough);
 		});
-		await hook({ event: event as never, resolve: kitResolve as never });
+		await hook({ event: event as never, resolve: kitResolve });
 		expect(order).toEqual(['resolve-session', 'kit-resolve']);
 	});
 
 	it('propagates a ProblemError from the resolver instead of resolving', async () => {
 		const problem = new ProblemError({ type: 'urn:golusoris:auth:session_revoked', status: 401 });
-		const resolve: SessionResolver<Session> = async () => {
-			throw problem;
-		};
+		const resolve: SessionResolver<Session> = () => Promise.reject(problem);
 		const hook = handleSession({ resolve });
 		const event = fakeEvent({ cookies: { [SESSION_COOKIE_NAME]: 'tok' } });
-		const kitResolve = vi.fn(async () => passthrough);
-		await expect(hook({ event: event as never, resolve: kitResolve as never })).rejects.toBe(
-			problem,
-		);
+		const kitResolve = vi.fn(() => Promise.resolve(passthrough));
+		await expect(hook({ event: event as never, resolve: kitResolve })).rejects.toBe(problem);
 		expect(kitResolve).not.toHaveBeenCalled();
 	});
 });

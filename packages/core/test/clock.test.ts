@@ -47,14 +47,14 @@ describe('withClock handle', () => {
 	});
 
 	async function invokeHandle(
-		resolve: () => Promise<Response> = async () => new Response('ok'),
+		resolve: () => Promise<Response> = () => Promise.resolve(new Response('ok')),
 	): Promise<Record<string, unknown>> {
 		const locals: Record<string, unknown> = {};
 		const event = { locals } as unknown as Parameters<typeof handle>[0]['event'];
 		await handle({
 			event,
 			resolve,
-		} as unknown as Parameters<typeof handle>[0]);
+		});
 		return locals;
 	}
 
@@ -65,9 +65,9 @@ describe('withClock handle', () => {
 
 	it('rebinds getClock() inside the ALS-scoped resolve', async () => {
 		let observed: Clock | undefined;
-		await invokeHandle(async () => {
+		await invokeHandle(() => {
 			observed = getClock();
-			return new Response('ok');
+			return Promise.resolve(new Response('ok'));
 		});
 
 		expect(observed).toBe(clock);

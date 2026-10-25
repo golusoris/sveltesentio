@@ -65,11 +65,11 @@ describe('createYjsText (text rune)', () => {
 
 		store.insert(0, 'hello');
 		store.append(' world');
-		expect(yText.toString()).toBe('hello world');
+		expect(yText.toJSON()).toBe('hello world');
 		expect(store.value).toBe('hello world');
 
 		store.delete(5, 6);
-		expect(yText.toString()).toBe('hello');
+		expect(yText.toJSON()).toBe('hello');
 		expect(store.value).toBe('hello');
 	});
 

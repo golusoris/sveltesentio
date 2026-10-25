@@ -54,7 +54,7 @@ function clientResolving(value: User): {
 }
 
 /** Build a fake typed Connect client whose `getUser` rejects with `reason`. */
-function clientRejecting(reason: unknown): Client<DescService> {
+function clientRejecting(reason: Error): Client<DescService> {
 	const getUser = vi.fn((_req: { id: number }, _opts?: CallOptions) => Promise.reject(reason));
 	return { getUser } as unknown as Client<DescService>;
 }

@@ -46,11 +46,11 @@ describe('applyElkLayout', () => {
 	// A fake ELK that places each node at (index*100, index*100) so the test does
 	// not load the real elkjs bundle (deterministic + fast, mirrors layout.test).
 	function fakeLayoutFactory(_options: ElkLayoutOptions = {}) {
-		return async function layout<E extends CanvasEdgeLike>(
+		return function layout<E extends CanvasEdgeLike>(
 			nodes: readonly { id: string; width: number; height: number }[],
 			edges: readonly E[],
 		) {
-			return {
+			return Promise.resolve({
 				nodes: nodes.map((n, i) => ({
 					id: n.id,
 					x: i * 100,
@@ -61,7 +61,7 @@ describe('applyElkLayout', () => {
 				edges,
 				width: nodes.length * 100,
 				height: nodes.length * 100,
-			};
+			});
 		};
 	}
 
@@ -83,16 +83,16 @@ describe('applyElkLayout', () => {
 
 	it('keeps a node at its original position when ELK does not place it', async () => {
 		function partialFactory() {
-			return async function layout<E extends CanvasEdgeLike>(
+			return function layout<E extends CanvasEdgeLike>(
 				_nodes: readonly { id: string; width: number; height: number }[],
 				edges: readonly E[],
 			) {
-				return {
+				return Promise.resolve({
 					nodes: [{ id: 'a', x: 42, y: 7, width: 10, height: 10 }],
 					edges,
 					width: 100,
 					height: 100,
-				};
+				});
 			};
 		}
 		const nodes = [node('a'), node('b', { position: { x: 11, y: 22 } })];

@@ -15,7 +15,7 @@ function call(
 			params: {},
 			id: 'test',
 			options: {} as never,
-		} as never),
+		}),
 	);
 }
 

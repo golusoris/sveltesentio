@@ -43,7 +43,7 @@ describe('yjs-map', () => {
 		const { yMap } = newMap<number>();
 		const calls: string[][] = [];
 		const unsub = observeYjsMap(yMap, (event) => {
-			calls.push([...event.keysChanged]);
+			calls.push(Array.from(event.keysChanged, String));
 		});
 		setYjsMap(yMap, 'a', 1);
 		setYjsMap(yMap, 'b', 2);

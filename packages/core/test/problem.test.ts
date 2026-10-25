@@ -50,7 +50,7 @@ describe('ProblemError', () => {
 			status: 400,
 			detail: 'x',
 			balance: 30,
-		} as never);
+		});
 		expect(err.extensions['balance']).toBe(30);
 	});
 
@@ -170,7 +170,7 @@ describe('problemFromDocument extras', () => {
 			instance: '/orders/42',
 			'invalid-params': [{ name: 'qty', reason: 'must be positive' }],
 			traceId: 'abc-123',
-		} as never);
+		});
 		expect(err.instance).toBe('/orders/42');
 		expect(err.invalidParams).toEqual([{ name: 'qty', reason: 'must be positive' }]);
 		expect(err.extensions['traceId']).toBe('abc-123');

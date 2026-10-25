@@ -43,7 +43,7 @@ describe('sanitizeOverride', () => {
 		expect(sanitizeOverride(dirty)).toEqual({ primary: 'oklch(0.5 0.1 120)' });
 	});
 	it('returns an empty object when nothing is valid', () => {
-		expect(sanitizeOverride({ primary: 'nope' } as ThemeOverride)).toEqual({});
+		expect(sanitizeOverride({ primary: 'nope' })).toEqual({});
 	});
 });
 
@@ -57,7 +57,7 @@ describe('overrideToInlineStyle', () => {
 		expect(style).toContain('--color-card-foreground: oklch(0.9 0 0);');
 	});
 	it('returns "" when the override sanitises to empty', () => {
-		expect(overrideToInlineStyle({ primary: 'bad' } as ThemeOverride)).toBe('');
+		expect(overrideToInlineStyle({ primary: 'bad' })).toBe('');
 	});
 });
 
@@ -84,9 +84,9 @@ describe('serialize/parse round-trip', () => {
 		expect(parseOverride(serializeOverride(override))).toEqual(override);
 	});
 	it('drops invalid entries on serialise', () => {
-		expect(
-			serializeOverride({ primary: 'bad', accent: 'oklch(0.6 0.1 60)' } as ThemeOverride),
-		).toBe(JSON.stringify({ accent: 'oklch(0.6 0.1 60)' }));
+		expect(serializeOverride({ primary: 'bad', accent: 'oklch(0.6 0.1 60)' })).toBe(
+			JSON.stringify({ accent: 'oklch(0.6 0.1 60)' }),
+		);
 	});
 	it('parse returns {} for null/empty/garbage/non-object/array', () => {
 		expect(parseOverride(null)).toEqual({});

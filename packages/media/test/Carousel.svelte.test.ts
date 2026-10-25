@@ -24,14 +24,14 @@ describe('Carousel', () => {
 
 	it('sizes nav buttons to the 32px desktop target by default', () => {
 		const { getByRole } = render(Harness, { label: 'Featured titles' });
-		const next = getByRole('button', { name: 'Next slide' }) as HTMLElement;
+		const next = getByRole('button', { name: 'Next slide' });
 		expect(next.style.minWidth).toBe('32px');
 		expect(next.style.minHeight).toBe('32px');
 	});
 
 	it('upgrades nav buttons to the 44px target on the handheld preset', () => {
 		const { getByRole } = render(Harness, { label: 'Featured titles', preset: 'handheld' });
-		const next = getByRole('button', { name: 'Next slide' }) as HTMLElement;
+		const next = getByRole('button', { name: 'Next slide' });
 		expect(next.style.minWidth).toBe('44px');
 		expect(next.style.minHeight).toBe('44px');
 	});

@@ -39,6 +39,7 @@ function fakeStreamingService(): DescService {
 
 /** Async-iterable of fixed messages, the shape `transport.stream` resolves to. */
 async function* yieldAll<T>(items: readonly T[]): AsyncIterable<T> {
+	await Promise.resolve();
 	for (const item of items) yield item;
 }
 
@@ -118,10 +119,10 @@ describe('withCredentialsFetch', () => {
 
 	it('preserves caller-supplied init fields while adding credentials', async () => {
 		let captured: RequestInit | undefined;
-		const base = ((_input: RequestInfo | URL, init?: RequestInit) => {
+		const base = (_input: RequestInfo | URL, init?: RequestInit) => {
 			captured = init;
 			return Promise.resolve(new Response(null, { status: 200 }));
-		}) as unknown as typeof globalThis.fetch;
+		};
 
 		const wrapped = withCredentialsFetch(base, 'same-origin');
 		const headers = { 'X-Test': '1' };

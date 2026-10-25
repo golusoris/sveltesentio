@@ -4,6 +4,7 @@ key / value accessors (the Pie wrapper's distinct prop shape).
 -->
 <script lang="ts">
 	import PieChart from '../src/PieChart.svelte';
+	import type { KeyAccessor, ValueAccessor } from '../src/chart-series.js';
 	import type { BuildTableOptions } from '../src/a11y-table.js';
 	import type { Slice } from './fixture-types.js';
 
@@ -11,8 +12,8 @@ key / value accessors (the Pie wrapper's distinct prop shape).
 		title: string;
 		description?: string | undefined;
 		data: readonly Slice[];
-		key: (datum: Slice) => string | number;
-		value: (datum: Slice) => number | null | undefined;
+		key: KeyAccessor<Slice>;
+		value: ValueAccessor<Slice>;
 		valueLabel?: string | undefined;
 		tableOptions?: BuildTableOptions<Slice> | undefined;
 		showDataTable?: boolean | undefined;

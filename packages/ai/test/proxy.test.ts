@@ -13,7 +13,9 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 
 describe('createLlmProxy', () => {
 	it('POSTs a chat request to the app-owned endpoint and returns the parsed body', async () => {
-		const fetchImpl: FetchLike = vi.fn(async () => jsonResponse({ reply: 'hello there' }));
+		const fetchImpl: FetchLike = vi.fn(() =>
+			Promise.resolve(jsonResponse({ reply: 'hello there' })),
+		);
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
 		const result = await proxy.chat<{ reply: string }>({
@@ -33,9 +35,9 @@ describe('createLlmProxy', () => {
 
 	it('merges custom headers and never targets a provider URL', async () => {
 		let seenHeaders: Record<string, string> = {};
-		const fetchImpl: FetchLike = async (_url, init) => {
-			seenHeaders = (init?.headers ?? {}) as Record<string, string>;
-			return jsonResponse({ ok: true });
+		const fetchImpl: FetchLike = (_url, init) => {
+			seenHeaders = init?.headers ?? {};
+			return Promise.resolve(jsonResponse({ ok: true }));
 		};
 		const proxy = createLlmProxy({
 			endpoint: '/api/ai/complete',
@@ -48,18 +50,20 @@ describe('createLlmProxy', () => {
 	});
 
 	it('throws a ProblemError parsed from an RFC 9457 problem+json body', async () => {
-		const fetchImpl: FetchLike = async () =>
-			new Response(
-				JSON.stringify({
-					type: 'https://errors.example/rate-limited',
-					title: 'Too Many Requests',
-					status: 429,
-					detail: 'Slow down.',
-				}),
-				{
-					status: 429,
-					headers: { 'content-type': 'application/problem+json' },
-				},
+		const fetchImpl: FetchLike = () =>
+			Promise.resolve(
+				new Response(
+					JSON.stringify({
+						type: 'https://errors.example/rate-limited',
+						title: 'Too Many Requests',
+						status: 429,
+						detail: 'Slow down.',
+					}),
+					{
+						status: 429,
+						headers: { 'content-type': 'application/problem+json' },
+					},
+				),
 			);
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
@@ -72,12 +76,14 @@ describe('createLlmProxy', () => {
 	});
 
 	it('throws a generic ProblemError on a non-problem non-2xx response', async () => {
-		const fetchImpl: FetchLike = async () =>
-			new Response('upstream exploded', {
-				status: 502,
-				statusText: 'Bad Gateway',
-				headers: { 'content-type': 'text/plain' },
-			});
+		const fetchImpl: FetchLike = () =>
+			Promise.resolve(
+				new Response('upstream exploded', {
+					status: 502,
+					statusText: 'Bad Gateway',
+					headers: { 'content-type': 'text/plain' },
+				}),
+			);
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 
 		const error = await expectProblemError(proxy.complete({ prompt: 'x' }));
@@ -89,9 +95,9 @@ describe('createLlmProxy', () => {
 	it('forwards an abort signal to fetch', async () => {
 		const controller = new AbortController();
 		let seenSignal: AbortSignal | undefined;
-		const fetchImpl: FetchLike = async (_url, init) => {
+		const fetchImpl: FetchLike = (_url, init) => {
 			seenSignal = init?.signal;
-			return jsonResponse({ ok: true });
+			return Promise.resolve(jsonResponse({ ok: true }));
 		};
 		const proxy = createLlmProxy({ endpoint: '/api/ai/chat', fetch: fetchImpl });
 		await proxy.chat({ messages: [] }, { signal: controller.signal });
@@ -99,11 +105,13 @@ describe('createLlmProxy', () => {
 	});
 
 	it('returns a text body when the success response is not JSON', async () => {
-		const fetchImpl: FetchLike = async () =>
-			new Response('plain reply', {
-				status: 200,
-				headers: { 'content-type': 'text/plain' },
-			});
+		const fetchImpl: FetchLike = () =>
+			Promise.resolve(
+				new Response('plain reply', {
+					status: 200,
+					headers: { 'content-type': 'text/plain' },
+				}),
+			);
 		const proxy = createLlmProxy({ endpoint: '/api/ai/complete', fetch: fetchImpl });
 		const result = await proxy.complete<string>({ prompt: 'hi' });
 		expect(result).toBe('plain reply');
@@ -111,7 +119,7 @@ describe('createLlmProxy', () => {
 
 	it('falls back to global fetch when none is injected', async () => {
 		const original = globalThis.fetch;
-		const spy = vi.fn(async () => jsonResponse({ via: 'global' }));
+		const spy = vi.fn(() => Promise.resolve(jsonResponse({ via: 'global' })));
 		(globalThis as { fetch: unknown }).fetch = spy;
 		try {
 			const proxy = createLlmProxy({ endpoint: '/api/ai/chat' });

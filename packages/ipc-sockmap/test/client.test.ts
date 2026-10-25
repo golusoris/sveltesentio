@@ -54,8 +54,9 @@ class FakeSocket implements SocketLike {
 
 const reachable =
 	(paths: readonly string[]): AccessFn =>
-	async (path: string) => {
-		if (!paths.includes(path)) throw new Error(`ENOENT: ${path}`);
+	(path: string) => {
+		if (!paths.includes(path)) return Promise.reject(new Error(`ENOENT: ${path}`));
+		return Promise.resolve();
 	};
 
 const SOCK = '/run/golusoris/api.sock';

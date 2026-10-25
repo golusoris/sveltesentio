@@ -7,12 +7,12 @@ import {
 
 interface PendingWaiter<T> {
 	resolve: (result: IteratorResult<T>) => void;
-	reject: (error: unknown) => void;
+	reject: (error: Error) => void;
 }
 
 interface FakeStreamState<T> {
 	queue: IteratorResult<T>[];
-	errors: unknown[];
+	errors: Error[];
 	pending: PendingWaiter<T> | undefined;
 }
 
@@ -22,7 +22,7 @@ interface FakeStream<T> {
 	markAborted(): void;
 	emit(value: T): void;
 	complete(): void;
-	fail(error: unknown): void;
+	fail(error: Error): void;
 }
 
 function createFakeAsyncIterable<T>(state: FakeStreamState<T>): AsyncIterable<T> {
@@ -30,7 +30,8 @@ function createFakeAsyncIterable<T>(state: FakeStreamState<T>): AsyncIterable<T>
 		[Symbol.asyncIterator](): AsyncIterator<T> {
 			return {
 				next(): Promise<IteratorResult<T>> {
-					if (state.errors.length > 0) return Promise.reject(state.errors.shift());
+					const err = state.errors.shift();
+					if (err) return Promise.reject(err);
 					const queued = state.queue.shift();
 					if (queued) return Promise.resolve(queued);
 					return new Promise<IteratorResult<T>>((resolve, reject) => {
@@ -81,7 +82,7 @@ function createFakeStream<T>(): FakeStream<T> {
 				state.queue.push({ value: undefined as never, done: true });
 			}
 		},
-		fail(error: unknown): void {
+		fail(error: Error): void {
 			if (state.pending) {
 				const { reject } = state.pending;
 				state.pending = undefined;
@@ -305,6 +306,8 @@ describe('createConnectStream', () => {
 
 	it('start and stop keep working when detached from the handle', () => {
 		let calls = 0;
+		// Detach methods to verify they function when unbound from the handle.
+		// eslint-disable-next-line @typescript-eslint/unbound-method -- intentionally detaching to verify handle independence
 		const { start, stop } = createConnectStream<number>({
 			call: () => {
 				calls += 1;

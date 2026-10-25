@@ -56,9 +56,7 @@ describe('aiAuditRecordSchema', () => {
 	});
 
 	it('rejects a non-ISO timestamp', () => {
-		const result = aiAuditRecordSchema.safeParse(
-			baseEntry({ id: 'x', timestamp: 'not-a-date' } as Partial<AiAuditRecord>),
-		);
+		const result = aiAuditRecordSchema.safeParse(baseEntry({ id: 'x', timestamp: 'not-a-date' }));
 		expect(result.success).toBe(false);
 	});
 
@@ -113,7 +111,9 @@ describe('createAuditLog', () => {
 			clock: fixedClock,
 			idFactory: () => 'id',
 			redact: (entry) => {
-				const { prompt: _p, output: _o, ...rest } = entry;
+				const rest = { ...entry };
+				delete rest.prompt;
+				delete rest.output;
 				return { ...rest, promptHash: 'sha256:p', outputHash: 'sha256:o' };
 			},
 		});

@@ -28,7 +28,7 @@ describe('passkey wrappers', () => {
 		const response = { id: 'cred-1', type: 'public-key' };
 		startRegistration.mockResolvedValueOnce(response);
 
-		const result = await registerPasskey(optionsJSON as never, { useAutoRegister: true });
+		const result = await registerPasskey(optionsJSON, { useAutoRegister: true });
 
 		expect(startRegistration).toHaveBeenCalledWith({ optionsJSON, useAutoRegister: true });
 		expect(result).toBe(response);
@@ -39,7 +39,7 @@ describe('passkey wrappers', () => {
 		const response = { id: 'cred-2', type: 'public-key' };
 		startAuthentication.mockResolvedValueOnce(response);
 
-		const result = await authenticatePasskey(optionsJSON as never);
+		const result = await authenticatePasskey(optionsJSON);
 
 		expect(startAuthentication).toHaveBeenCalledWith({
 			optionsJSON,
