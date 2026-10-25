@@ -5,7 +5,7 @@ import {
 	createAuthorizationRequest,
 	exchangeAuthorizationCode,
 } from '../src/oidc.js';
-import type { FetchLike } from '../src/oidc.js';
+import type { FetchLike, TokenExchangeInit } from '../src/oidc.js';
 
 describe('buildAuthorizationUrl', () => {
 	it('builds a PKCE authorization URL with all required query params', () => {
@@ -138,6 +138,16 @@ function jsonResponse(body: unknown, status = 200): Response {
 	});
 }
 
+function formBody(init?: RequestInit): URLSearchParams {
+	return new URLSearchParams(
+		typeof init?.body === 'string'
+			? init.body
+			: init?.body instanceof URLSearchParams
+				? init.body
+				: '',
+	);
+}
+
 describe('exchangeAuthorizationCode', () => {
 	const base = {
 		tokenEndpoint: 'https://idp.example/token',
@@ -147,15 +157,15 @@ describe('exchangeAuthorizationCode', () => {
 		codeVerifier: 'verifier',
 	};
 
+	const exchangeError = (
+		fetch: FetchLike,
+		extra: Partial<TokenExchangeInit> = {},
+	): Promise<unknown> =>
+		exchangeAuthorizationCode({ ...base, ...extra, fetch }).catch((e: unknown): unknown => e);
+
 	it('POSTs the PKCE exchange and parses the token response', async () => {
 		const fetchMock = vi.fn<FetchLike>((_input, init) => {
-			const body = new URLSearchParams(
-				typeof init?.body === 'string'
-					? init.body
-					: init?.body instanceof URLSearchParams
-						? init.body
-						: '',
-			);
+			const body = formBody(init);
 			expect(init?.method).toBe('POST');
 			expect(body.get('grant_type')).toBe('authorization_code');
 			expect(body.get('code')).toBe('auth-code');
@@ -202,29 +212,23 @@ describe('exchangeAuthorizationCode', () => {
 		const fetchMock = vi.fn<FetchLike>(() =>
 			Promise.resolve(new Response('nope', { status: 500, statusText: 'Server Error' })),
 		);
-		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
-			(e: unknown) => e,
-		);
+		const error = await exchangeError(fetchMock);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).status).toBe(500);
 	});
 
 	it('throws a ProblemError when the network request itself fails', async () => {
 		const fetchMock = vi.fn<FetchLike>(() => Promise.reject(new TypeError('network down')));
-		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
-			(e: unknown) => e,
-		);
+		const error = await exchangeError(fetchMock);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).type).toBe('urn:sveltesentio:auth:token_exchange_failed');
 	});
 
 	it('refuses a plain-http token endpoint without sending the request', async () => {
 		const fetchMock = vi.fn<FetchLike>(() => Promise.resolve(jsonResponse({ access_token: 'at' })));
-		const error = await exchangeAuthorizationCode({
-			...base,
+		const error = await exchangeError(fetchMock, {
 			tokenEndpoint: 'http://idp.example/token',
-			fetch: fetchMock,
-		}).catch((e: unknown) => e);
+		});
 		expect(error).toBeInstanceOf(ProblemError);
 		expect(error).toMatchObject({
 			type: 'urn:sveltesentio:auth:token_exchange_failed',
@@ -235,13 +239,7 @@ describe('exchangeAuthorizationCode', () => {
 
 	it('sends client_secret for a confidential client and an overridden grant_type', async () => {
 		const fetchMock = vi.fn<FetchLike>((_input, init) => {
-			const body = new URLSearchParams(
-				typeof init?.body === 'string'
-					? init.body
-					: init?.body instanceof URLSearchParams
-						? init.body
-						: '',
-			);
+			const body = formBody(init);
 			expect(body.get('client_id')).toBe('app');
 			expect(body.get('client_secret')).toBe('s3cret');
 			expect(body.get('grant_type')).toBe('urn:example:custom');
@@ -261,9 +259,7 @@ describe('exchangeAuthorizationCode', () => {
 		const fetchMock = vi.fn<FetchLike>(() =>
 			Promise.resolve(jsonResponse({ token_type: 'Bearer' })),
 		);
-		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
-			(e: unknown) => e,
-		);
+		const error = await exchangeError(fetchMock);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).detail).toContain('access_token');
 	});
