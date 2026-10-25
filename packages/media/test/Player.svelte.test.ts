@@ -9,16 +9,19 @@ const captions: MediaTrack[] = [
 	{ src: '/en.vtt', kind: 'captions', srclang: 'en', label: 'English', default: true },
 ];
 
+const playStub = vi.fn().mockResolvedValue(undefined);
+const pauseStub = vi.fn();
+
 beforeAll(() => {
 	// jsdom HTMLMediaElement has no real playback; stub the methods the keyboard
 	// handler calls so dispatch can run without throwing.
 	Object.defineProperty(HTMLMediaElement.prototype, 'play', {
 		configurable: true,
-		value: vi.fn().mockResolvedValue(undefined),
+		value: playStub,
 	});
 	Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
 		configurable: true,
-		value: vi.fn(),
+		value: pauseStub,
 	});
 });
 
@@ -76,6 +79,7 @@ describe('Player', () => {
 	});
 
 	it('toggles play/pause on Space and k via the keyboard handler', async () => {
+		playStub.mockClear();
 		const { container } = render(Player, {
 			src: '/clip.mp4',
 			title: 'Demo reel',
@@ -85,9 +89,9 @@ describe('Player', () => {
 
 		// jsdom reports paused === true by default → Space should call play().
 		await fireEvent.keyDown(video, { key: ' ' });
-		expect(video.play).toHaveBeenCalledTimes(1);
+		expect(playStub).toHaveBeenCalledTimes(1);
 		await fireEvent.keyDown(video, { key: 'k' });
-		expect(video.play).toHaveBeenCalledTimes(2);
+		expect(playStub).toHaveBeenCalledTimes(2);
 	});
 
 	it('seeks backward/forward on arrow keys', async () => {

@@ -8,9 +8,10 @@ import {
 
 describe('loadEdgePipeline', () => {
 	it('loads a pipeline through the injected factory and runs inference', async () => {
-		const pipelineFn = vi.fn(async (input: unknown) => ({ label: 'POSITIVE', input }));
-		const pipeline = vi.fn(async () => pipelineFn);
-		const factory: TransformersFactory = async () => ({ pipeline }) satisfies TransformersModule;
+		const pipelineFn = vi.fn((input: unknown) => Promise.resolve({ label: 'POSITIVE', input }));
+		const pipeline = vi.fn(() => Promise.resolve(pipelineFn));
+		const factory: TransformersFactory = () =>
+			Promise.resolve({ pipeline }) satisfies Promise<TransformersModule>;
 
 		const handle = await loadEdgePipeline('text-classification', {
 			model: 'Xenova/distilbert-base-uncased',
@@ -30,8 +31,8 @@ describe('loadEdgePipeline', () => {
 	});
 
 	it('passes undefined model when none is supplied', async () => {
-		const pipeline = vi.fn(async () => async () => [0.1, 0.2]);
-		const factory: TransformersFactory = async () => ({ pipeline });
+		const pipeline = vi.fn(() => Promise.resolve(() => Promise.resolve([0.1, 0.2])));
+		const factory: TransformersFactory = () => Promise.resolve({ pipeline });
 		const handle = await loadEdgePipeline('feature-extraction', { factory });
 		expect(handle.model).toBeUndefined();
 		expect(pipeline).toHaveBeenCalledWith('feature-extraction', undefined, undefined);
@@ -39,9 +40,8 @@ describe('loadEdgePipeline', () => {
 	});
 
 	it('propagates a factory load failure (optional peer missing)', async () => {
-		const factory: TransformersFactory = async () => {
-			throw new Error("Cannot find module '@huggingface/transformers'");
-		};
+		const factory: TransformersFactory = () =>
+			Promise.reject(new Error("Cannot find module '@huggingface/transformers'"));
 		await expect(loadEdgePipeline('summarization', { factory })).rejects.toThrow(
 			/@huggingface\/transformers/,
 		);

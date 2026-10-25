@@ -15,7 +15,7 @@ import {
 // A deterministic ELK double: stacks children top-to-bottom, no real elkjs.
 function fakeElkFactory(): ElkFactory {
 	const elk: ElkLike = {
-		async layout(graph: ElkNode): Promise<ElkNode> {
+		layout(graph: ElkNode): Promise<ElkNode> {
 			let y = 0;
 			const children = (graph.children ?? []).map((c) => {
 				const node: ElkNode = {
@@ -28,18 +28,19 @@ function fakeElkFactory(): ElkFactory {
 				y += (c.height ?? 0) + 80;
 				return node;
 			});
-			return { id: graph.id, children, width: 200, height: y };
+			return Promise.resolve({ id: graph.id, children, width: 200, height: y });
 		},
 	};
-	return async () => elk;
+	return () => Promise.resolve(elk);
 }
 
 function throwingElkFactory(message: string): ElkFactory {
-	return async () => ({
-		async layout(): Promise<ElkNode> {
-			throw new Error(message);
-		},
-	});
+	return () =>
+		Promise.resolve({
+			layout(): Promise<ElkNode> {
+				return Promise.reject(new Error(message));
+			},
+		});
 }
 
 type Listener = (event: Event) => void;
@@ -278,11 +279,14 @@ describe('layoutWorkerHandler', () => {
 
 	it('stringifies non-Error throwables in the failure message', async () => {
 		const replies: LayoutWorkerResponse[] = [];
-		const stringThrower: ElkFactory = async () => ({
-			async layout(): Promise<ElkNode> {
-				throw 'raw string failure';
-			},
-		});
+		const stringThrower: ElkFactory = () =>
+			Promise.resolve({
+				layout(): Promise<ElkNode> {
+					// Deliberately throwing a non-Error primitive to test worker rejection formatting for raw string throwables.
+					// eslint-disable-next-line @typescript-eslint/only-throw-error
+					throw 'raw string failure';
+				},
+			});
 		const handle = layoutWorkerHandler((r) => replies.push(r), stringThrower);
 		await handle({
 			data: { id: 1, options: {}, nodes: [], edges: [] },

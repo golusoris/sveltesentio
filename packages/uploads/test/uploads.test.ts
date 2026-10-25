@@ -93,7 +93,7 @@ describe('stripExif (injected reencoder)', () => {
 	it('re-encodes to a new File, dropping metadata', async () => {
 		const input = new File([new Uint8Array([1, 2, 3])], 'photo.jpg', { type: 'image/jpeg' });
 		const out = await stripExif(input, {
-			reencode: async () => new Blob([new Uint8Array([9, 9])], { type: 'image/jpeg' }),
+			reencode: () => Promise.resolve(new Blob([new Uint8Array([9, 9])], { type: 'image/jpeg' })),
 		});
 		expect(out).toBeInstanceOf(File);
 		expect(out.name).toBe('photo.jpg');
@@ -105,9 +105,9 @@ describe('stripExif (injected reencoder)', () => {
 		const input = new File([new Uint8Array([1, 2, 3])], 'scan.tiff', { type: 'image/tiff' });
 		let seenType: string | undefined;
 		const out = await stripExif(input, {
-			reencode: async (_file, type) => {
+			reencode: (_file, type) => {
 				seenType = type;
-				return new Blob([new Uint8Array([0])], { type });
+				return Promise.resolve(new Blob([new Uint8Array([0])], { type }));
 			},
 		});
 		expect(seenType).toBe('image/jpeg');
@@ -120,9 +120,9 @@ describe('stripExif (injected reencoder)', () => {
 		const out = await stripExif(input, {
 			type: 'image/webp',
 			quality: 0.5,
-			reencode: async (_file, _type, quality) => {
+			reencode: (_file, _type, quality) => {
 				seenQuality = quality;
-				return new Blob([new Uint8Array([0])], { type: 'image/webp' });
+				return Promise.resolve(new Blob([new Uint8Array([0])], { type: 'image/webp' }));
 			},
 		});
 		expect(out.type).toBe('image/webp');

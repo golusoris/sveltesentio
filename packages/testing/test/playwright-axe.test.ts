@@ -49,23 +49,27 @@ describe('filterPlaywrightViolations', () => {
 
 describe('applyAxeConfig', () => {
 	it('chains withTags + disableRules on the supplied builder', () => {
+		const withTags = vi.fn().mockReturnThis();
+		const disableRules = vi.fn().mockReturnThis();
 		const builder: AxeBuilderLike = {
-			withTags: vi.fn().mockReturnThis(),
-			disableRules: vi.fn().mockReturnThis(),
+			withTags,
+			disableRules,
 		};
 		const out = applyAxeConfig(builder, axeConfig({ disableRules: ['region'] }));
-		expect(builder.withTags).toHaveBeenCalledWith(WCAG_22_AA_TAGS);
-		expect(builder.disableRules).toHaveBeenCalledWith(['region']);
+		expect(withTags).toHaveBeenCalledWith(WCAG_22_AA_TAGS);
+		expect(disableRules).toHaveBeenCalledWith(['region']);
 		expect(out).toBe(builder);
 	});
 
 	it('skips disableRules call when list is empty', () => {
+		const withTags = vi.fn().mockReturnThis();
+		const disableRules = vi.fn().mockReturnThis();
 		const builder: AxeBuilderLike = {
-			withTags: vi.fn().mockReturnThis(),
-			disableRules: vi.fn().mockReturnThis(),
+			withTags,
+			disableRules,
 		};
 		applyAxeConfig(builder);
-		expect(builder.withTags).toHaveBeenCalledOnce();
-		expect(builder.disableRules).not.toHaveBeenCalled();
+		expect(withTags).toHaveBeenCalledOnce();
+		expect(disableRules).not.toHaveBeenCalled();
 	});
 });

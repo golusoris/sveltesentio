@@ -78,11 +78,14 @@ export function installResizeObserverStub(): void {
 	defineSizeGetter('clientWidth', '__stubClientWidth');
 }
 
-function defineSizeGetter(prop: 'clientHeight' | 'clientWidth', field: keyof StubbedElement): void {
+function defineSizeGetter(
+	prop: 'clientHeight' | 'clientWidth',
+	field: '__stubClientHeight' | '__stubClientWidth',
+): void {
 	Object.defineProperty(HTMLElement.prototype, prop, {
 		configurable: true,
 		get(this: StubbedElement) {
-			return (this[field] as number | undefined) ?? 0;
+			return this[field] ?? 0;
 		},
 	});
 }

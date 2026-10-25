@@ -26,8 +26,8 @@ function fakeEvent(init: FakeEventInit = {}) {
 
 const SECRET = randomBytes(32);
 const CONTEXT: CsrfContext = { sessionId: 'sess_1', secret: SECRET };
-const alwaysValid: CsrfVerifier = async () => true;
-const alwaysInvalid: CsrfVerifier = async () => false;
+const alwaysValid: CsrfVerifier = () => Promise.resolve(true);
+const alwaysInvalid: CsrfVerifier = () => Promise.resolve(false);
 
 describe('evaluateCsrf', () => {
 	const deps = {
@@ -95,11 +95,11 @@ describe('handleCsrf', () => {
 	it('passes through safe methods without consulting the context', async () => {
 		const getContext = vi.fn();
 		const hook = handleCsrf({ getContext });
-		const resolve = vi.fn(async () => passthrough);
+		const resolve = vi.fn(() => Promise.resolve(passthrough));
 		const event = fakeEvent({ method: 'GET' });
 		const out = await hook({
 			event: event as never,
-			resolve: resolve as never,
+			resolve,
 		});
 		expect(out).toBe(passthrough);
 		expect(resolve).toHaveBeenCalledOnce();
@@ -108,24 +108,24 @@ describe('handleCsrf', () => {
 
 	it('resolves the request when the token is valid', async () => {
 		const hook = handleCsrf({ getContext: () => CONTEXT, verify: alwaysValid });
-		const resolve = vi.fn(async () => passthrough);
+		const resolve = vi.fn(() => Promise.resolve(passthrough));
 		const event = fakeEvent({
 			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
 			headers: { [CSRF_HEADER_NAME]: 'tok' },
 		});
-		const out = await hook({ event: event as never, resolve: resolve as never });
+		const out = await hook({ event: event as never, resolve });
 		expect(out).toBe(passthrough);
 		expect(resolve).toHaveBeenCalledOnce();
 	});
 
 	it('returns a 403 problem response when the token is invalid', async () => {
 		const hook = handleCsrf({ getContext: () => CONTEXT, verify: alwaysInvalid });
-		const resolve = vi.fn(async () => passthrough);
+		const resolve = vi.fn(() => Promise.resolve(passthrough));
 		const event = fakeEvent({
 			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
 			headers: { [CSRF_HEADER_NAME]: 'tok' },
 		});
-		const out = await hook({ event: event as never, resolve: resolve as never });
+		const out = await hook({ event: event as never, resolve });
 		expect(resolve).not.toHaveBeenCalled();
 		expect(out.status).toBe(403);
 		expect(out.headers.get('content-type')).toBe('application/problem+json');
@@ -139,9 +139,9 @@ describe('handleCsrf', () => {
 			getContext: () => undefined,
 			onReject: () => new Response('denied', { status: 419 }),
 		});
-		const resolve = vi.fn(async () => passthrough);
+		const resolve = vi.fn(() => Promise.resolve(passthrough));
 		const event = fakeEvent();
-		const out = await hook({ event: event as never, resolve: resolve as never });
+		const out = await hook({ event: event as never, resolve });
 		expect(out.status).toBe(419);
 	});
 });

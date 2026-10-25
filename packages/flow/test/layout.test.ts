@@ -4,7 +4,7 @@ import { createElkLayout, type ElkFactory, type ElkLike } from '../src/layout.js
 
 function fakeElkFactory(): ElkFactory {
 	const elk: ElkLike = {
-		async layout(graph: ElkNode): Promise<ElkNode> {
+		layout(graph: ElkNode): Promise<ElkNode> {
 			let y = 0;
 			const children = (graph.children ?? []).map((c) => {
 				const node: ElkNode = {
@@ -17,15 +17,15 @@ function fakeElkFactory(): ElkFactory {
 				y += (c.height ?? 0) + 80;
 				return node;
 			});
-			return {
+			return Promise.resolve({
 				id: graph.id,
 				children,
 				width: 200,
 				height: y,
-			};
+			});
 		},
 	};
-	return async () => elk;
+	return () => Promise.resolve(elk);
 }
 
 describe('createElkLayout', () => {
@@ -45,11 +45,12 @@ describe('createElkLayout', () => {
 	});
 
 	it('falls back to {x:0,y:0} when the factory omits a node', async () => {
-		const factory: ElkFactory = async () => ({
-			async layout(graph: ElkNode): Promise<ElkNode> {
-				return { id: graph.id, children: [], width: 0, height: 0 };
-			},
-		});
+		const factory: ElkFactory = () =>
+			Promise.resolve({
+				layout(graph: ElkNode): Promise<ElkNode> {
+					return Promise.resolve({ id: graph.id, children: [], width: 0, height: 0 });
+				},
+			});
 		const layout = createElkLayout({}, factory);
 		const result = await layout([{ id: 'a', width: 50, height: 20 }], []);
 		expect(result.nodes[0]).toEqual({ id: 'a', x: 0, y: 0, width: 50, height: 20 });
@@ -57,12 +58,13 @@ describe('createElkLayout', () => {
 
 	it('merges user layoutOptions over defaults', async () => {
 		let captured: Record<string, string> | undefined;
-		const factory: ElkFactory = async () => ({
-			async layout(graph: ElkNode): Promise<ElkNode> {
-				captured = graph.layoutOptions;
-				return { id: graph.id, children: [] };
-			},
-		});
+		const factory: ElkFactory = () =>
+			Promise.resolve({
+				layout(graph: ElkNode): Promise<ElkNode> {
+					captured = graph.layoutOptions;
+					return Promise.resolve({ id: graph.id, children: [] });
+				},
+			});
 		const layout = createElkLayout(
 			{ algorithm: 'force', layoutOptions: { 'elk.spacing.nodeNode': '40' } },
 			factory,

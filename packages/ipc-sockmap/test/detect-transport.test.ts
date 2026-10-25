@@ -3,8 +3,9 @@ import { detectTransport, type AccessFn } from '../src/transport.js';
 
 /** Build an access fn that resolves only for the listed reachable paths. */
 const accessFor = (reachable: readonly string[]): AccessFn =>
-	vi.fn(async (path: string) => {
-		if (!reachable.includes(path)) throw new Error(`ENOENT: ${path}`);
+	vi.fn((path: string) => {
+		if (!reachable.includes(path)) return Promise.reject(new Error(`ENOENT: ${path}`));
+		return Promise.resolve();
 	});
 
 const SOCK = '/run/golusoris/api.sock';

@@ -117,6 +117,23 @@ describe('CI Affected Package Selection (scripts/ci-affected.mjs)', () => {
 	});
 });
 
+interface RenovatePackageRule {
+	matchUpdateTypes?: string[];
+	matchPackageNames?: string[];
+	groupName?: string | null;
+	minimumReleaseAge?: string | null;
+	allowedVersions?: string;
+}
+
+interface RenovateConfig {
+	vulnerabilityAlerts?: {
+		enabled?: boolean;
+		minimumReleaseAge?: string | null;
+		schedule?: string[];
+	};
+	packageRules?: RenovatePackageRule[];
+}
+
 describe('Renovate Configuration (renovate.json)', () => {
 	const rootDir = resolve(__dirname, '../../..');
 	const renovatePath = resolve(rootDir, 'renovate.json');
@@ -124,51 +141,45 @@ describe('Renovate Configuration (renovate.json)', () => {
 	it('exists and is valid JSON', () => {
 		expect(existsSync(renovatePath)).toBe(true);
 		const content = readFileSync(renovatePath, 'utf8');
-		expect(() => JSON.parse(content)).not.toThrow();
+		expect(() => {
+			JSON.parse(content);
+		}).not.toThrow();
 	});
 
 	it('has vulnerabilityAlerts enabled with immediate schedule and no minimumReleaseAge cooldown', () => {
-		const config = JSON.parse(readFileSync(renovatePath, 'utf8'));
+		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
 		expect(config.vulnerabilityAlerts).toBeDefined();
-		expect(config.vulnerabilityAlerts.enabled).toBe(true);
-		expect(config.vulnerabilityAlerts.minimumReleaseAge).toBeNull();
-		expect(config.vulnerabilityAlerts.schedule).toEqual(['at any time']);
+		expect(config.vulnerabilityAlerts?.enabled).toBe(true);
+		expect(config.vulnerabilityAlerts?.minimumReleaseAge).toBeNull();
+		expect(config.vulnerabilityAlerts?.schedule).toEqual(['at any time']);
 	});
 
 	it('guarantees vulnerability updates are never grouped into batch PRs', () => {
-		const config = JSON.parse(readFileSync(renovatePath, 'utf8'));
-		const vulnRule = config.packageRules?.find((r: { matchUpdateTypes?: string[] }) =>
+		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
+		const vulnRule = config.packageRules?.find((r) =>
 			r.matchUpdateTypes?.includes('vulnerability'),
 		);
 		expect(vulnRule).toBeDefined();
-		expect(vulnRule.groupName).toBeNull();
-		expect(vulnRule.minimumReleaseAge).toBeNull();
+		expect(vulnRule?.groupName).toBeNull();
+		expect(vulnRule?.minimumReleaseAge).toBeNull();
 	});
 
 	it('preserves undici allowedVersions cap for jsdom 29 compatibility', () => {
-		const config = JSON.parse(readFileSync(renovatePath, 'utf8'));
-		const undiciRule = config.packageRules?.find((r: { matchPackageNames?: string[] }) =>
-			r.matchPackageNames?.includes('undici'),
-		);
+		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
+		const undiciRule = config.packageRules?.find((r) => r.matchPackageNames?.includes('undici'));
 		expect(undiciRule).toBeDefined();
-		expect(undiciRule.allowedVersions).toBe('<8');
+		expect(undiciRule?.allowedVersions).toBe('<8');
 	});
 
 	it('groups non-major dev dependencies and tooling to reduce CI PR storms', () => {
-		const config = JSON.parse(readFileSync(renovatePath, 'utf8'));
-		const devRule = config.packageRules?.find(
-			(r: { groupName?: string }) => r.groupName === 'devDependencies (non-major)',
-		);
+		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
+		const devRule = config.packageRules?.find((r) => r.groupName === 'devDependencies (non-major)');
 		expect(devRule).toBeDefined();
 
-		const linterRule = config.packageRules?.find(
-			(r: { groupName?: string }) => r.groupName === 'linters and formatters',
-		);
+		const linterRule = config.packageRules?.find((r) => r.groupName === 'linters and formatters');
 		expect(linterRule).toBeDefined();
 
-		const testRule = config.packageRules?.find(
-			(r: { groupName?: string }) => r.groupName === 'test tooling',
-		);
+		const testRule = config.packageRules?.find((r) => r.groupName === 'test tooling');
 		expect(testRule).toBeDefined();
 	});
 });

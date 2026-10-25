@@ -24,9 +24,9 @@ function scriptedClock(ticks: readonly number[]): ProxyClock {
 /** A fake provider client driven entirely from the test (no network/keys). */
 function fakeClient(overrides: Partial<LLMClient> = {}): LLMClient {
 	return {
-		complete: async (): Promise<LLMCompletion> => ({ text: 'ok', model: 'fake' }),
-		// eslint-disable-next-line @typescript-eslint/require-await -- async generator default
+		complete: (): Promise<LLMCompletion> => Promise.resolve({ text: 'ok', model: 'fake' }),
 		stream: async function* (): AsyncIterable<LLMChunk> {
+			await Promise.resolve();
 			yield { text: 'ok' };
 		},
 		...overrides,
@@ -45,10 +45,12 @@ function createRecordingAudit(id: string) {
 
 describe('createLLMProxy', () => {
 	it('forwards complete() to the injected client and returns its result', async () => {
-		const complete = vi.fn(async (): Promise<LLMCompletion> => ({
-			text: 'hello there',
-			model: 'claude',
-		}));
+		const complete = vi.fn((): Promise<LLMCompletion> =>
+			Promise.resolve({
+				text: 'hello there',
+				model: 'claude',
+			}),
+		);
 		const proxy = createLLMProxy({ client: fakeClient({ complete }) });
 
 		const result = await proxy.complete({
@@ -83,7 +85,7 @@ describe('createLLMProxy', () => {
 		const { written, audit } = createRecordingAudit('audit-1');
 		const proxy = createLLMProxy({
 			client: fakeClient({
-				complete: async () => ({ text: 'answer', model: 'claude-opus-4-8' }),
+				complete: () => Promise.resolve({ text: 'answer', model: 'claude-opus-4-8' }),
 			}),
 			audit,
 			clock: scriptedClock([1000, 1320]),
@@ -155,9 +157,7 @@ describe('createLLMProxy', () => {
 	it('wraps a thrown provider error from complete() as a ProblemError', async () => {
 		const proxy = createLLMProxy({
 			client: fakeClient({
-				complete: async () => {
-					throw new Error('upstream down');
-				},
+				complete: () => Promise.reject(new Error('upstream down')),
 			}),
 		});
 
@@ -177,9 +177,7 @@ describe('createLLMProxy', () => {
 		});
 		const proxy = createLLMProxy({
 			client: fakeClient({
-				complete: async () => {
-					throw original;
-				},
+				complete: () => Promise.reject(original),
 			}),
 		});
 
@@ -228,18 +226,17 @@ describe('anthropicAdapter', () => {
 	it('maps roles, hoists the system turn, and joins text blocks on complete()', async () => {
 		let seen: Parameters<AnthropicSdkLike['messages']['create']>[0] | undefined;
 		const sdk = fakeAnthropic(
-			async (body) => {
+			(body) => {
 				seen = body;
-				return {
+				return Promise.resolve({
 					model: 'claude-opus-4-8',
 					content: [
 						{ type: 'text', text: 'Hello ' },
 						{ type: 'thinking', text: 'IGNORE' },
 						{ type: 'text', text: 'world' },
 					],
-				};
+				});
 			},
-			// eslint-disable-next-line @typescript-eslint/require-await -- unused here
 			async function* () {
 				/* not used */
 			},
@@ -263,11 +260,10 @@ describe('anthropicAdapter', () => {
 	it('prefers an explicit system param over a system message', async () => {
 		let seen: Parameters<AnthropicSdkLike['messages']['create']>[0] | undefined;
 		const sdk = fakeAnthropic(
-			async (body) => {
+			(body) => {
 				seen = body;
-				return { content: [{ type: 'text', text: 'x' }] };
+				return Promise.resolve({ content: [{ type: 'text', text: 'x' }] });
 			},
-			// eslint-disable-next-line @typescript-eslint/require-await
 			async function* () {},
 		);
 		const client = anthropicAdapter(sdk);
@@ -281,16 +277,16 @@ describe('anthropicAdapter', () => {
 	});
 
 	it('yields only text_delta content_block_delta events on stream()', async () => {
-		// eslint-disable-next-line @typescript-eslint/require-await -- async generator
 		const stream: AnthropicSdkLike['messages']['stream'] =
 			async function* (): AsyncIterable<AnthropicStreamEvent> {
+				await Promise.resolve();
 				yield { type: 'message_start' };
 				yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hel' } };
 				yield { type: 'content_block_delta', delta: { type: 'input_json_delta', text: 'NO' } };
 				yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'lo' } };
 				yield { type: 'message_stop' };
 			};
-		const sdk = fakeAnthropic(async () => ({ content: [] }), stream);
+		const sdk = fakeAnthropic(() => Promise.resolve({ content: [] }), stream);
 		const client = anthropicAdapter(sdk);
 
 		const out: string[] = [];
@@ -310,9 +306,9 @@ describe('ollamaAdapter', () => {
 	it('prepends the system message and returns content on complete()', async () => {
 		let seen: Parameters<OllamaSdkLike['chat']>[0] | undefined;
 		const sdk: OllamaSdkLike = {
-			chat: async (body) => {
+			chat: (body) => {
 				seen = body;
-				return { model: 'llama3.1', message: { content: 'pong' } };
+				return Promise.resolve({ model: 'llama3.1', message: { content: 'pong' } });
 			},
 		};
 		const client = ollamaAdapter(sdk);
@@ -333,7 +329,7 @@ describe('ollamaAdapter', () => {
 
 	it('falls back to the requested model when the response omits one', async () => {
 		const sdk: OllamaSdkLike = {
-			chat: async () => ({ message: { content: 'x' } }),
+			chat: () => Promise.resolve({ message: { content: 'x' } }),
 		};
 		const client = ollamaAdapter(sdk);
 		const result = await client.complete({ model: 'mistral', messages: [] });
@@ -342,11 +338,13 @@ describe('ollamaAdapter', () => {
 
 	it('throws a ProblemError if a non-streaming call returns a stream', async () => {
 		const sdk: OllamaSdkLike = {
-			// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-			chat: async () =>
-				(async function* () {
-					yield { message: { content: 'oops' } };
-				})(),
+			chat: () =>
+				Promise.resolve(
+					(async function* () {
+						await Promise.resolve();
+						yield { message: { content: 'oops' } };
+					})(),
+				),
 		};
 		const client = ollamaAdapter(sdk);
 		await expect(client.complete({ model: 'm', messages: [] })).rejects.toBeInstanceOf(
@@ -356,13 +354,15 @@ describe('ollamaAdapter', () => {
 
 	it('yields each streamed chunk on stream()', async () => {
 		const sdk: OllamaSdkLike = {
-			// eslint-disable-next-line @typescript-eslint/require-await -- async generator
-			chat: async () =>
-				(async function* () {
-					yield { message: { content: 'a' } };
-					yield { message: { content: '' } };
-					yield { message: { content: 'b' }, done: true };
-				})(),
+			chat: () =>
+				Promise.resolve(
+					(async function* () {
+						await Promise.resolve();
+						yield { message: { content: 'a' } };
+						yield { message: { content: '' } };
+						yield { message: { content: 'b' }, done: true };
+					})(),
+				),
 		};
 		const client = ollamaAdapter(sdk);
 
@@ -378,7 +378,7 @@ describe('ollamaAdapter', () => {
 
 	it('yields the single message when a streaming call returns a non-stream', async () => {
 		const sdk: OllamaSdkLike = {
-			chat: async () => ({ message: { content: 'whole' } }),
+			chat: () => Promise.resolve({ message: { content: 'whole' } }),
 		};
 		const client = ollamaAdapter(sdk);
 		const out: string[] = [];

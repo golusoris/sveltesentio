@@ -27,13 +27,15 @@ function memoryStore(initial: string | null): TokenStore & { token: string | nul
 describe('authMiddleware — request decoration', () => {
 	it('attaches the bearer token to outgoing requests', async () => {
 		let seenAuth: string | null = null;
-		const fetch: typeof globalThis.fetch = async (input) => {
+		const fetch: typeof globalThis.fetch = (input) => {
 			const request = input as Request;
 			seenAuth = request.headers.get('authorization');
-			return new Response(JSON.stringify({ id: 'u1' }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			});
+			return Promise.resolve(
+				new Response(JSON.stringify({ id: 'u1' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				}),
+			);
 		};
 		const store = memoryStore('tok-1');
 		const api = createClient<Paths>({
@@ -48,12 +50,14 @@ describe('authMiddleware — request decoration', () => {
 
 	it('sends no Authorization header when unauthenticated', async () => {
 		let hasAuth = true;
-		const fetch: typeof globalThis.fetch = async (input) => {
+		const fetch: typeof globalThis.fetch = (input) => {
 			hasAuth = (input as Request).headers.has('authorization');
-			return new Response(JSON.stringify({ id: 'anon' }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			});
+			return Promise.resolve(
+				new Response(JSON.stringify({ id: 'anon' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				}),
+			);
 		};
 		const store = memoryStore(null);
 		const api = createClient<Paths>({
@@ -67,12 +71,14 @@ describe('authMiddleware — request decoration', () => {
 
 	it('honours a custom header and scheme', async () => {
 		let seen: string | null = null;
-		const fetch: typeof globalThis.fetch = async (input) => {
+		const fetch: typeof globalThis.fetch = (input) => {
 			seen = (input as Request).headers.get('x-api-key');
-			return new Response(JSON.stringify({ id: 'u' }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			});
+			return Promise.resolve(
+				new Response(JSON.stringify({ id: 'u' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				}),
+			);
 		};
 		const store = memoryStore('raw-key');
 		const api = createClient<Paths>({
@@ -88,19 +94,23 @@ describe('authMiddleware — request decoration', () => {
 describe('authMiddleware — refresh on 401 + retry', () => {
 	it('refreshes the token and retries the request once', async () => {
 		const tokens: Array<string | null> = [];
-		const fetch: typeof globalThis.fetch = async (input) => {
+		const fetch: typeof globalThis.fetch = (input) => {
 			const auth = (input as Request).headers.get('authorization');
 			tokens.push(auth);
 			if (auth === 'Bearer expired') {
-				return new Response(JSON.stringify({ status: 401 }), {
-					status: 401,
-					headers: { 'content-type': 'application/problem+json' },
-				});
+				return Promise.resolve(
+					new Response(JSON.stringify({ status: 401 }), {
+						status: 401,
+						headers: { 'content-type': 'application/problem+json' },
+					}),
+				);
 			}
-			return new Response(JSON.stringify({ id: 'u9' }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			});
+			return Promise.resolve(
+				new Response(JSON.stringify({ id: 'u9' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				}),
+			);
 		};
 		const store = memoryStore('expired');
 		const refresh = vi.fn(() => 'fresh');
@@ -118,12 +128,14 @@ describe('authMiddleware — refresh on 401 + retry', () => {
 
 	it('does not loop when the retry also returns 401 (throws ProblemError once)', async () => {
 		let calls = 0;
-		const fetch: typeof globalThis.fetch = async () => {
+		const fetch: typeof globalThis.fetch = () => {
 			calls += 1;
-			return new Response(JSON.stringify({ type: 'x', title: 'Nope', status: 401 }), {
-				status: 401,
-				headers: { 'content-type': 'application/problem+json' },
-			});
+			return Promise.resolve(
+				new Response(JSON.stringify({ type: 'x', title: 'Nope', status: 401 }), {
+					status: 401,
+					headers: { 'content-type': 'application/problem+json' },
+				}),
+			);
 		};
 		const store = memoryStore('expired');
 		const refresh = vi.fn(() => 'still-bad');
@@ -139,11 +151,13 @@ describe('authMiddleware — refresh on 401 + retry', () => {
 	});
 
 	it('maps a thrown refresh failure to ProblemError', async () => {
-		const fetch: typeof globalThis.fetch = async () =>
-			new Response('{}', {
-				status: 401,
-				headers: { 'content-type': 'application/problem+json' },
-			});
+		const fetch: typeof globalThis.fetch = () =>
+			Promise.resolve(
+				new Response('{}', {
+					status: 401,
+					headers: { 'content-type': 'application/problem+json' },
+				}),
+			);
 		const store = memoryStore('expired');
 		const refresh = vi.fn(() => {
 			throw new Error('network down');
@@ -162,11 +176,13 @@ describe('authMiddleware — refresh on 401 + retry', () => {
 	});
 
 	it('maps a null-token refresh (unrecoverable session) to ProblemError', async () => {
-		const fetch: typeof globalThis.fetch = async () =>
-			new Response('{}', {
-				status: 401,
-				headers: { 'content-type': 'application/problem+json' },
-			});
+		const fetch: typeof globalThis.fetch = () =>
+			Promise.resolve(
+				new Response('{}', {
+					status: 401,
+					headers: { 'content-type': 'application/problem+json' },
+				}),
+			);
 		const store = memoryStore('expired');
 		const refresh = vi.fn(() => null);
 		const api = createClient<Paths>({
@@ -185,11 +201,13 @@ describe('authMiddleware — refresh on 401 + retry', () => {
 
 	it('leaves non-refresh statuses untouched', async () => {
 		const refresh = vi.fn(() => 'fresh');
-		const fetch: typeof globalThis.fetch = async () =>
-			new Response(JSON.stringify({ id: 'u' }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			});
+		const fetch: typeof globalThis.fetch = () =>
+			Promise.resolve(
+				new Response(JSON.stringify({ id: 'u' }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' },
+				}),
+			);
 		const store = memoryStore('tok');
 		const api = createClient<Paths>({
 			baseUrl: 'https://api.test',

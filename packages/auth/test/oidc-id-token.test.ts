@@ -19,8 +19,8 @@ let foreignKey: CryptoKeyPair;
 let jwks: { keys: JsonWebKey[] };
 
 beforeAll(async () => {
-	signingKey = (await crypto.subtle.generateKey(alg, true, ['sign', 'verify'])) as CryptoKeyPair;
-	foreignKey = (await crypto.subtle.generateKey(alg, true, ['sign', 'verify'])) as CryptoKeyPair;
+	signingKey = await crypto.subtle.generateKey(alg, true, ['sign', 'verify']);
+	foreignKey = await crypto.subtle.generateKey(alg, true, ['sign', 'verify']);
 	const publicJwk = await crypto.subtle.exportKey('jwk', signingKey.publicKey);
 	jwks = { keys: [{ ...publicJwk, kid: 'k1', alg: 'RS256', use: 'sig' } as JsonWebKey] };
 });
@@ -60,9 +60,12 @@ function jsonResponse(body: unknown): Response {
 }
 
 function idpFetch(idToken: string) {
-	return vi.fn<FetchLike>(async (input) => {
-		if (String(input) === JWKS_URI) return jsonResponse(jwks);
-		return jsonResponse({ access_token: 'at', token_type: 'Bearer', id_token: idToken });
+	return vi.fn<FetchLike>((input) => {
+		const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+		if (url === JWKS_URI) return Promise.resolve(jsonResponse(jwks));
+		return Promise.resolve(
+			jsonResponse({ access_token: 'at', token_type: 'Bearer', id_token: idToken }),
+		);
 	});
 }
 
@@ -78,7 +81,8 @@ const base: TokenExchangeInit = {
 };
 
 function without(field: 'issuer' | 'jwksUri' | 'nonce'): TokenExchangeInit {
-	const { [field]: _omitted, ...rest } = base;
+	const rest = { ...base };
+	delete rest[field];
 	return rest;
 }
 
@@ -149,8 +153,8 @@ describe('exchangeAuthorizationCode id_token validation', () => {
 	});
 
 	it('skips validation when the response has no id_token', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () =>
-			jsonResponse({ access_token: 'at', token_type: 'Bearer' }),
+		const fetchMock = vi.fn<FetchLike>(() =>
+			Promise.resolve(jsonResponse({ access_token: 'at', token_type: 'Bearer' })),
 		);
 		const tokens = await exchangeAuthorizationCode({ ...without('issuer'), fetch: fetchMock });
 		expect(tokens.access_token).toBe('at');

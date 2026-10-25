@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+// Plain .ts test file cannot use $effect.root rune; effect_root required for reactive test scope.
+// eslint-disable-next-line svelte/no-svelte-internal
 import { effect_root, flush } from 'svelte/internal/client';
 import { writable, readable } from 'svelte/store';
 import { mirror, readOnce } from '../src/store-rune.svelte.js';

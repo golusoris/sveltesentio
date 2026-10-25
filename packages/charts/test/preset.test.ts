@@ -50,7 +50,7 @@ describe('prefersReducedMotion', () => {
 			addEventListener: vi.fn(),
 			removeEventListener: vi.fn(),
 			dispatchEvent: vi.fn(),
-		})) as unknown as typeof globalThis.matchMedia;
+		}));
 		expect(prefersReducedMotion()).toBe(true);
 	});
 });

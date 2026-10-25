@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import js from '@eslint/js';
 import sentio from '@sveltesentio/core/eslint';
 import ts from '@typescript-eslint/eslint-plugin';
@@ -22,6 +24,24 @@ const SANCTIONED_TIME_READS = [
 	'packages/ai/src/audit.ts',
 	'packages/ai/src/server.ts',
 ];
+
+const testPackageConfigs: Linter.Config[] = readdirSync(resolve(import.meta.dirname, 'packages'), {
+	withFileTypes: true,
+})
+	.filter(
+		(dirent) =>
+			dirent.isDirectory() &&
+			existsSync(resolve(import.meta.dirname, 'packages', dirent.name, 'tsconfig.test.json')),
+	)
+	.map((dirent) => ({
+		files: [`packages/${dirent.name}/test/**/*.ts`],
+		languageOptions: {
+			parserOptions: {
+				project: [`packages/${dirent.name}/tsconfig.test.json`],
+				tsconfigRootDir: import.meta.dirname,
+			},
+		},
+	}));
 
 const config: Linter.Config[] = [
 	js.configs.recommended,
@@ -54,6 +74,7 @@ const config: Linter.Config[] = [
 			'no-console': ['error', { allow: ['warn', 'error'] }],
 		},
 	},
+	...testPackageConfigs,
 	{
 		files: ['**/*.svelte'],
 		languageOptions: {

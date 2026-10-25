@@ -65,13 +65,13 @@ describe('sentioPlugin', () => {
 		expect(code).toBeUndefined();
 	});
 
-	it('logs the resolved config when verbose is enabled', () => {
+	it('logs the resolved config when verbose is enabled', async () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		try {
 			const p = sentioPlugin({ verbose: true });
 			const fn = p.configResolved;
 			const cr = typeof fn === 'function' ? fn : fn?.handler;
-			cr?.call(
+			await cr?.call(
 				null as never,
 				{
 					mode: 'production',
@@ -88,13 +88,13 @@ describe('sentioPlugin', () => {
 		}
 	});
 
-	it('does not log when verbose is disabled', () => {
+	it('does not log when verbose is disabled', async () => {
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 		try {
 			const p = sentioPlugin({ verbose: false });
 			const fn = p.configResolved;
 			const cr = typeof fn === 'function' ? fn : fn?.handler;
-			cr?.call(
+			await cr?.call(
 				null as never,
 				{
 					mode: 'development',

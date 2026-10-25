@@ -42,7 +42,7 @@ function fakeDeps(): CodegenDeps & {
 	openapiTS: ReturnType<typeof vi.fn>;
 	astToString: ReturnType<typeof vi.fn>;
 } {
-	const openapiTS = vi.fn(async () => ['node-a', 'node-b']);
+	const openapiTS = vi.fn(() => Promise.resolve(['node-a', 'node-b']));
 	const astToString = vi.fn(() => 'export interface paths {}');
 	return { openapiTS, astToString };
 }
@@ -88,7 +88,7 @@ describe('generateTypes', () => {
 
 	it('does not double up the trailing newline', async () => {
 		const deps: CodegenDeps = {
-			openapiTS: async () => ['x'],
+			openapiTS: () => Promise.resolve(['x']),
 			astToString: () => 'line\n',
 		};
 		const out = await generateTypes(deps, { source: SPEC, banner: false });
@@ -154,10 +154,11 @@ describe('runCodegen', () => {
 		const written: Array<{ path: string; contents: string }> = [];
 		const logs: string[] = [];
 		const deps: CodegenCliDeps = {
-			openapiTS: async () => ['n'],
+			openapiTS: () => Promise.resolve(['n']),
 			astToString: () => 'export interface paths {}',
-			writeFile: async (path, contents) => {
+			writeFile: (path, contents) => {
 				written.push({ path, contents });
+				return Promise.resolve();
 			},
 			log: (message) => logs.push(message),
 		};
@@ -175,9 +176,9 @@ describe('runCodegen', () => {
 
 	it('works without a log sink', async () => {
 		const deps: CodegenCliDeps = {
-			openapiTS: async () => ['n'],
+			openapiTS: () => Promise.resolve(['n']),
 			astToString: () => 'export interface paths {}',
-			writeFile: async () => undefined,
+			writeFile: () => Promise.resolve(),
 		};
 		await expect(runCodegen(deps, ['spec.yaml', 'out.ts'])).resolves.toMatchObject({
 			outFile: 'out.ts',

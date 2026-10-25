@@ -5,6 +5,7 @@ import {
 	emulatorCspDirectives,
 	mergeCspDirectives,
 	originOf,
+	type CspSource,
 } from '../src/csp.js';
 
 describe('originOf', () => {
@@ -70,7 +71,7 @@ describe('emulatorCspDirectives', () => {
 			dataBaseUrl: 'https://x.example',
 			extraScriptOrigins: ["'self'", 'https://x.example'],
 		});
-		for (const list of Object.values(d)) {
+		for (const list of Object.values(d) as (readonly CspSource[] | undefined)[]) {
 			expect(new Set(list).size).toBe(list?.length);
 		}
 	});

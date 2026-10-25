@@ -67,11 +67,10 @@ describe('no-direct-time rule', () => {
 		expect(sentioEslint.meta.name).toBe('@sveltesentio/core');
 		expect(sentioEslint.rules['no-direct-time']).toBe(noDirectTime);
 		expect(sentioEslint.rules['chart-a11y-wrapper']).toBe(chartA11yWrapper);
-		expect(noDirectTime.meta?.messages).toMatchObject({
-			dateNow: expect.any(String),
-			newDate: expect.any(String),
-			performanceNow: expect.any(String),
-		});
+		const messages = noDirectTime.meta?.messages;
+		expect(typeof messages?.dateNow).toBe('string');
+		expect(typeof messages?.newDate).toBe('string');
+		expect(typeof messages?.performanceNow).toBe('string');
 	});
 });
 

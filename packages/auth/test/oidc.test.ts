@@ -148,19 +148,27 @@ describe('exchangeAuthorizationCode', () => {
 	};
 
 	it('POSTs the PKCE exchange and parses the token response', async () => {
-		const fetchMock = vi.fn<FetchLike>(async (_input, init) => {
-			const body = new URLSearchParams(String(init?.body));
+		const fetchMock = vi.fn<FetchLike>((_input, init) => {
+			const body = new URLSearchParams(
+				typeof init?.body === 'string'
+					? init.body
+					: init?.body instanceof URLSearchParams
+						? init.body
+						: '',
+			);
 			expect(init?.method).toBe('POST');
 			expect(body.get('grant_type')).toBe('authorization_code');
 			expect(body.get('code')).toBe('auth-code');
 			expect(body.get('code_verifier')).toBe('verifier');
 			expect(body.get('client_id')).toBe('app');
-			return jsonResponse({
-				access_token: 'at',
-				token_type: 'Bearer',
-				expires_in: 3600,
-				refresh_token: 'rt',
-			});
+			return Promise.resolve(
+				jsonResponse({
+					access_token: 'at',
+					token_type: 'Bearer',
+					expires_in: 3600,
+					refresh_token: 'rt',
+				}),
+			);
 		});
 		const tokens = await exchangeAuthorizationCode({ ...base, fetch: fetchMock });
 		expect(tokens.access_token).toBe('at');
@@ -170,8 +178,8 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('throws a ProblemError carrying the RFC 9457 body on non-2xx', async () => {
-		const fetchMock = vi.fn<FetchLike>(
-			async () =>
+		const fetchMock = vi.fn<FetchLike>(() =>
+			Promise.resolve(
 				new Response(
 					JSON.stringify({
 						type: 'urn:golusoris:auth:invalid_grant',
@@ -181,6 +189,7 @@ describe('exchangeAuthorizationCode', () => {
 					}),
 					{ status: 400, headers: { 'content-type': 'application/problem+json' } },
 				),
+			),
 		);
 		await expect(exchangeAuthorizationCode({ ...base, fetch: fetchMock })).rejects.toMatchObject({
 			type: 'urn:golusoris:auth:invalid_grant',
@@ -190,25 +199,27 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('throws a ProblemError on a plain non-2xx without a problem body', async () => {
-		const fetchMock = vi.fn<FetchLike>(
-			async () => new Response('nope', { status: 500, statusText: 'Server Error' }),
+		const fetchMock = vi.fn<FetchLike>(() =>
+			Promise.resolve(new Response('nope', { status: 500, statusText: 'Server Error' })),
 		);
-		const error = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch((e) => e);
+		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
+			(e: unknown) => e,
+		);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).status).toBe(500);
 	});
 
 	it('throws a ProblemError when the network request itself fails', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () => {
-			throw new TypeError('network down');
-		});
-		const error = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch((e) => e);
+		const fetchMock = vi.fn<FetchLike>(() => Promise.reject(new TypeError('network down')));
+		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
+			(e: unknown) => e,
+		);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).type).toBe('urn:sveltesentio:auth:token_exchange_failed');
 	});
 
 	it('refuses a plain-http token endpoint without sending the request', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () => jsonResponse({ access_token: 'at' }));
+		const fetchMock = vi.fn<FetchLike>(() => Promise.resolve(jsonResponse({ access_token: 'at' })));
 		const error = await exchangeAuthorizationCode({
 			...base,
 			tokenEndpoint: 'http://idp.example/token',
@@ -223,13 +234,19 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('sends client_secret for a confidential client and an overridden grant_type', async () => {
-		const fetchMock = vi.fn<FetchLike>(async (_input, init) => {
-			const body = new URLSearchParams(String(init?.body));
+		const fetchMock = vi.fn<FetchLike>((_input, init) => {
+			const body = new URLSearchParams(
+				typeof init?.body === 'string'
+					? init.body
+					: init?.body instanceof URLSearchParams
+						? init.body
+						: '',
+			);
 			expect(body.get('client_id')).toBe('app');
 			expect(body.get('client_secret')).toBe('s3cret');
 			expect(body.get('grant_type')).toBe('urn:example:custom');
 			expect(body.get('code')).toBe('auth-code');
-			return jsonResponse({ access_token: 'at', token_type: 'Bearer' });
+			return Promise.resolve(jsonResponse({ access_token: 'at', token_type: 'Bearer' }));
 		});
 		await exchangeAuthorizationCode({
 			...base,
@@ -241,8 +258,12 @@ describe('exchangeAuthorizationCode', () => {
 	});
 
 	it('throws a ProblemError when access_token is missing', async () => {
-		const fetchMock = vi.fn<FetchLike>(async () => jsonResponse({ token_type: 'Bearer' }));
-		const error = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch((e) => e);
+		const fetchMock = vi.fn<FetchLike>(() =>
+			Promise.resolve(jsonResponse({ token_type: 'Bearer' })),
+		);
+		const error: unknown = await exchangeAuthorizationCode({ ...base, fetch: fetchMock }).catch(
+			(e: unknown) => e,
+		);
 		expect(error).toBeInstanceOf(ProblemError);
 		expect((error as ProblemError).detail).toContain('access_token');
 	});

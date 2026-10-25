@@ -24,7 +24,6 @@ function createGatedTransport(reply = 'late') {
 	const gate = new Promise<void>((resolve) => {
 		release = resolve;
 	});
-	// eslint-disable-next-line @typescript-eslint/require-await -- async generator
 	const transport: ChatTransport = async function* (request) {
 		abortedSignal = request.signal;
 		await gate;
