@@ -26,12 +26,6 @@ exceptions:
     path: .github/workflows/release-please.yml
     reason: "Category A, interval stated by the expiry (entered 2026-10-13, re-reviewed 2026-10-19, #280 still open): the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)"
     expires: "2027-01-09"
-  # category C, entered 2026-10-25 (entry + 10 days): Dependabot alerts 141-144 stay open, not dismissed
-  - rule: "backlog.caps.forge_alerts"
-    tool: "backlog"
-    reason: >-
-      category C, entered 2026-10-25 (entry + 10 days): Dependabot alerts #141 #142 package.json sveltekit-2 alias for scripts/check-kit-compat.mjs, #143 #144 tools/compose-lib-fixture/kit2/package-lock.json fixture; GHSA-27mw-82g8-phjj, GHSA-pfhg-q3qv-9q6r, severity low, @sveltejs/kit < 3.0.0, development scope only; first patched 3.0.0 is a major outside the peer range kit 2; removal tracked in #461
-    expires: "2026-11-04"
 register:
   sources:
     expected: 13

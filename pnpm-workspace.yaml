@@ -22,16 +22,13 @@ onlyBuiltDependencies:
 # (measured 2026-10-11, audit clean). Add an override only when no upstream
 # release carries the fix, and give it the reason and the condition that ends it.
 overrides:
-  # @sveltejs/kit 2.70.3, the newest 2.x, asks for cookie ^0.6.0, which resolves
-  # to 0.6.0 (GHSA-pxg6-pf52-xh8x, fixed in 0.7.0). `<1` because 1.x bundles its
-  # own types, which take precedence over @types/cookie and drop
-  # CookieParseOptions, the name SvelteKit's own types use; 2.x additionally
-  # removes parse/serialize. Scoped to kit 2: the workspace is on kit 3, which
-  # asks for cookie ^2.0.1 and calls its parseCookie. Kit 2 is still installed
-  # as the peer of runed (through bits-ui and layerchart). Ends when no
-  # dependency resolves kit 2 or a 2.x release widens the range. Review by
-  # 2027-01-09.
-  '@sveltejs/kit@2>cookie': '>=0.7.0 <1'
+  # runed 0.35.1 (through bits-ui and svelte-toolbelt) and 0.37.1 (through
+  # layerchart) declare an optional @sveltejs/kit peer ^2.21.0, which kept
+  # SvelteKit 2.70.3 and its cookie 0.6.0 (GHSA-pxg6-pf52-xh8x) in the lockfile
+  # after the kit 2 alias was dropped (ADR-0058). Ends when bits-ui,
+  # svelte-toolbelt and layerchart depend on runed >=0.38.0, whose peer is
+  # ^3.0.0. Review by 2027-01-09.
+  'runed>@sveltejs/kit': '^3.0.0'
 allowBuilds:
   esbuild: set this to true or false
   onnxruntime-node: set this to true or false

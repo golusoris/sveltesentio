@@ -50,16 +50,14 @@ export const TYPESCRIPT_PEER = '>=5.5 <7';
 /**
  * The range of every other floored peer, for the packages that declare it.
  * svelte: sveltekit-superforms 3 declares ^5.56.4, and layerchart 2.6.1 fails
- * its tests on 5.56.3. @sveltejs/kit and vite: the lowest releases with no
- * advisory in the GitHub advisory database; 2.70.1 is affected by
- * GHSA-29g2-3rmr-qm68, and 8.0.15 by GHSA-v6wh-96g9-6wx3 and
- * GHSA-fx2h-pf6j-xcff. Both lie above the API floors: kit 2.53.0 is the first
- * release whose vite peer admits vite 8, and @sveltejs/vite-plugin-svelte 7
- * requires vite 8.
+ * its tests on 5.56.3. @sveltejs/kit: floor 3.0.0 = first kit 3, 0 advisories,
+ * measured 2026-10-25. vite: lowest release with no advisory in the GitHub
+ * advisory database; 8.0.15 is affected by GHSA-v6wh-96g9-6wx3 and
+ * GHSA-fx2h-pf6j-xcff.
  */
 export const PEER_RANGES = Object.freeze({
 	svelte: '>=5.56.4',
-	'@sveltejs/kit': '>=2.70.2',
+	'@sveltejs/kit': '^3.0.0',
 	vite: '>=8.0.16',
 });
 

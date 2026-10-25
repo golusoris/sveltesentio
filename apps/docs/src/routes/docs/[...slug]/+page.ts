@@ -9,7 +9,7 @@ export const entries: EntryGenerator = () => allSlugs().map((slug) => ({ slug })
 export const load: PageLoad = async ({ params }) => {
 	const entry = docBySlug(params.slug);
 	if (!entry) {
-		// SvelteKit 2's `error()` returns `never` and throws internally, so `throw`
+		// SvelteKit 3's `error()` returns `never` and throws internally, so `throw`
 		// is the SvelteKit 1 idiom and reads as throwing a non-Error value.
 		error(404, `No doc for "${params.slug}"`);
 	}

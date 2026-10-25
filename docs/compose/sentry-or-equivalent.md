@@ -93,7 +93,7 @@ pnpm -F @sveltesentio/observability add -D @sentry/cli@^2
 ```
 
 Pin major version; `@sentry/sveltekit` follows SvelteKit-major
-compatibility (currently SvelteKit 2.x).
+compatibility (currently SvelteKit 3.x).
 
 ## Server-side bootstrap
 
