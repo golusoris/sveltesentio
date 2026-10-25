@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/golusoris/sveltesentio/compare/auth-v0.9.0...auth-v0.9.1) (2026-10-25)
+
+### Code Refactoring
+
+- **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
+- use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
+
 ## [0.9.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.8.0...auth-v0.9.0) (2026-10-19)
 
 ### ⚠ BREAKING CHANGES

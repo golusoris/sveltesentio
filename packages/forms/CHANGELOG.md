@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1](https://github.com/golusoris/sveltesentio/compare/forms-v0.5.0...forms-v0.5.1) (2026-10-25)
+
+### Code Refactoring
+
+- use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/forms-v0.4.1...forms-v0.5.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES
