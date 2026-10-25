@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// Builds and type-checks the #lib import forms of docs/compose on one
-// SvelteKit major: `node tools/compose-lib-fixture/run.mjs kit2` or `kit3`.
+// Builds and type-checks the #lib import forms of docs/compose on
+// SvelteKit 3: `node tools/compose-lib-fixture/run.mjs kit3`.
 //
-// Both majors share the app in src/; each kit directory holds only what
-// differs between them (package.json and lockfile, adapter configuration,
-// tsconfig). The run copies src/ into the kit directory, installs the
+// The fixture runs the app in src/; kit3 holds its configuration
+// (package.json and lockfile, adapter configuration, tsconfig).
+// The run copies src/ into the kit directory, installs the
 // lockfile, builds, checks that the prerendered page holds the text every
 // import form contributes, and runs svelte-check with warnings as errors.
 //
 // The copy is replaced on every run, so an edit belongs in src/, never in
-// kit2/src or kit3/src (both are ignored by git).
+// kit3/src (ignored by git).
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 
-export const KITS = Object.freeze(['kit2', 'kit3']);
+export const KITS = Object.freeze(['kit3']);
 
 /**
  * The text the prerendered start page holds when every import form resolved:

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Type-checks every package that declares a `@sveltejs/kit` peer against each
-// SvelteKit major the peer range `>=2.70.2` admits.
+// Type-checks every package that declares a `@sveltejs/kit` peer against
+// SvelteKit 3 (peer range `^3.0.0`, ADR-0058).
 //
 // The packages ship their TypeScript source as their types, so a consumer's
 // compiler reads it with the consumer's SvelteKit. `skipLibCheck` does not skip
@@ -9,7 +9,7 @@
 // broke under SvelteKit 3, which exports the hook types from
 // `@sveltejs/kit/hooks` only.
 //
-// Each package is checked with its own `tsconfig.test.json`, once per major,
+// Each package is checked with its own `tsconfig.test.json`,
 // with every `@sveltejs/kit` specifier mapped to that major's type bundle. The
 // bundle declares `@sveltejs/kit` and its subpaths as ambient modules, so the
 // mapping only has to bring the right file into the program.
@@ -25,10 +25,8 @@ const KIT = '@sveltejs/kit';
 const KIT_TYPES = join('types', 'index.d.ts');
 const KIT_TYPES_SUFFIX = `/${KIT}/${KIT_TYPES}`;
 
-// SvelteKit 3 is the workspace's own devDependency; SvelteKit 2 is installed
-// beside it at the repository root under the alias `sveltekit-2`.
+// SvelteKit 3 is the workspace's own devDependency.
 export const KIT_INSTALLS = [
-	{ major: 2, dir: join(root, 'node_modules', 'sveltekit-2') },
 	{ major: 3, dir: join(root, 'packages', 'core', 'node_modules', '@sveltejs', 'kit') },
 ];
 
@@ -131,7 +129,7 @@ async function main() {
 	}
 
 	if (failed) process.exit(1);
-	console.log(`OK: every package with a ${KIT} peer type-checks against each major.`);
+	console.log(`OK: every package with a ${KIT} peer type-checks against SvelteKit 3.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

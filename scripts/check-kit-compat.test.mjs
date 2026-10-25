@@ -10,7 +10,7 @@ import { KIT_INSTALLS, kitPeerPackages, readKit, typeErrors } from './check-kit-
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const ts = createRequire(join(root, 'package.json'))('typescript');
 
-// The named import SvelteKit 2 accepts and SvelteKit 3 refuses: the defect the check exists for.
+// The named import SvelteKit 3 refuses: the defect the check exists for.
 const NAMED_IMPORT = `import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => resolve(event);
@@ -43,7 +43,6 @@ const TSCONFIG = {
 
 describe('check-kit-compat', () => {
 	let tempRoot;
-	let kit2;
 	let kit3;
 
 	async function project(name, source) {
@@ -56,7 +55,7 @@ describe('check-kit-compat', () => {
 
 	before(async () => {
 		tempRoot = await mkdtemp(join(tmpdir(), 'kit-compat-test-'));
-		[kit2, kit3] = await Promise.all(KIT_INSTALLS.map((install) => readKit(install)));
+		[kit3] = await Promise.all(KIT_INSTALLS.map((install) => readKit(install)));
 	});
 
 	after(async () => {
@@ -66,10 +65,9 @@ describe('check-kit-compat', () => {
 	});
 
 	describe('readKit', () => {
-		it('reads the two installs as majors 2 and 3', () => {
-			assert.match(kit2.version, /^2\./);
+		it('reads the SvelteKit 3 install', () => {
 			assert.match(kit3.version, /^3\./);
-			assert.notEqual(kit2.types, kit3.types);
+			assert.ok(kit3.types.endsWith('index.d.ts'));
 		});
 
 		it('refuses an install of another major', async () => {
@@ -97,9 +95,9 @@ describe('check-kit-compat', () => {
 		it('lists only the packages that declare the peer, sorted', async () => {
 			const base = join(tempRoot, 'packages');
 			const manifests = {
-				zeta: { peerDependencies: { '@sveltejs/kit': '>=2.0.0' } },
-				alpha: { peerDependencies: { '@sveltejs/kit': '>=2.0.0', svelte: '>=5.0.0' } },
-				'dev-only': { devDependencies: { '@sveltejs/kit': '^2.70.3' } },
+				zeta: { peerDependencies: { '@sveltejs/kit': '>=3.0.0' } },
+				alpha: { peerDependencies: { '@sveltejs/kit': '>=3.0.0', svelte: '>=5.0.0' } },
+				'dev-only': { devDependencies: { '@sveltejs/kit': '^3.0.0' } },
 				'no-peers': {},
 			};
 			for (const [name, manifest] of Object.entries(manifests)) {
@@ -122,11 +120,6 @@ describe('check-kit-compat', () => {
 	});
 
 	describe('typeErrors', () => {
-		it('accepts the named Handle import under SvelteKit 2', async () => {
-			const config = await project('named-kit2', NAMED_IMPORT);
-			assert.deepEqual(typeErrors(ts, config, kit2.types), []);
-		});
-
 		it('refuses the named Handle import under SvelteKit 3', async () => {
 			const config = await project('named-kit3', NAMED_IMPORT);
 			const findings = typeErrors(ts, config, kit3.types);
@@ -136,14 +129,17 @@ describe('check-kit-compat', () => {
 			);
 		});
 
-		it('accepts the derived Handle type under both majors', async () => {
+		it('accepts the derived Handle type under SvelteKit 3', async () => {
 			const config = await project('derived', DERIVED);
-			assert.deepEqual(typeErrors(ts, config, kit2.types), []);
 			assert.deepEqual(typeErrors(ts, config, kit3.types), []);
 		});
 
 		it('reports a second SvelteKit type bundle in the program', async () => {
-			const source = `/// <reference path=${JSON.stringify(kit2.types)} />\n${DERIVED}`;
+			const strayDir = join(tempRoot, 'stray', '@sveltejs', 'kit', 'types');
+			await mkdir(strayDir, { recursive: true });
+			const strayTypes = join(strayDir, 'index.d.ts');
+			await writeFile(strayTypes, 'export {};');
+			const source = `/// <reference path=${JSON.stringify(strayTypes)} />\n${DERIVED}`;
 			const config = await project('two-bundles', source);
 			const findings = typeErrors(ts, config, kit3.types);
 			assert.ok(

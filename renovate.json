@@ -40,23 +40,6 @@
 			"description": "TypeScript 7 drops the JavaScript compiler API that test/reexports.test.ts and SvelteKit load_tsconfig use, and typescript-eslint does not support it (#228). Revisit trigger: a typescript-eslint release whose peer range admits typescript 7."
 		},
 		{
-			"matchDepNames": ["sveltekit-2"],
-			"allowedVersions": "<3",
-			"description": "sveltekit-2 is the alias scripts/check-kit-compat.mjs type-checks the kit peer packages against; it must stay on SvelteKit 2 while the peer range admits 2. The workspace's own @sveltejs/kit takes the majors."
-		},
-		{
-			"matchFileNames": ["tools/compose-lib-fixture/kit2/package.json"],
-			"matchPackageNames": ["@sveltejs/kit"],
-			"allowedVersions": "<3",
-			"description": "The kit2 compose fixture builds the docs/compose import forms on the newest SvelteKit 2; it stays on 2 while the kit peer range admits 2. The kit3 fixture takes the majors."
-		},
-		{
-			"matchFileNames": ["tools/compose-lib-fixture/kit2/package.json"],
-			"matchPackageNames": ["@sveltejs/adapter-static"],
-			"allowedVersions": "<4",
-			"description": "adapter-static 4 requires SvelteKit 3; the kit2 compose fixture keeps the last major that runs on SvelteKit 2."
-		},
-		{
 			"matchDepTypes": ["devDependencies"],
 			"matchUpdateTypes": ["minor", "patch"],
 			"groupName": "devDependencies (non-major)"

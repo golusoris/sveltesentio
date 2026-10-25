@@ -266,8 +266,7 @@ that the app declares in its `package.json`:
 
 SvelteKit 3 removed the built-in alias for `src/lib`; a build that still
 imports through it stops with `module_removed_lib`. Vite and TypeScript resolve
-`#lib` themselves, so the same import works on SvelteKit 2 from 2.70.2, the
-lowest release the packages accept, and on SvelteKit 3. TypeScript applies
+`#lib` themselves, so the same import works on SvelteKit 3. TypeScript applies
 no extension or index lookup to the wildcard, which decides the form of a
 specifier:
 
@@ -286,8 +285,8 @@ under `src/lib/server/` stays server-only when it is imported through
 `#lib`.
 
 `tools/compose-lib-fixture/run.mjs` builds
-and type-checks one app that uses every form above, on SvelteKit 2 and on
-SvelteKit 3, and `scripts/check-compose-imports.mjs` refuses any other form
+and type-checks one app that uses every form above, on SvelteKit 3, and
+`scripts/check-compose-imports.mjs` refuses any other form
 in a recipe. The `Compose recipes` workflow runs both on every pull request
 that changes a recipe.
 

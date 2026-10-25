@@ -17,7 +17,7 @@ const WORKSPACE = [
 	'packages:',
 	"  - 'packages/*'",
 	'overrides:',
-	"  '@sveltejs/kit@2>cookie': '>=0.7.0 <1'",
+	"  'runed>@sveltejs/kit': '^3.0.0'",
 	'',
 ].join('\n');
 
@@ -103,12 +103,12 @@ describe('withOverrides', () => {
 			WORKSPACE,
 			new Map([
 				['svelte', '5.56.4'],
-				['@sveltejs/kit', '2.53.0'],
+				['@sveltejs/kit', '3.0.0'],
 			]),
 		);
 		assert.match(
 			text,
-			/overrides:\n {2}'svelte': 5\.56\.4\n {2}'@sveltejs\/kit': 2\.53\.0\n {2}'@sveltejs\/kit@2>cookie'/,
+			/overrides:\n {2}'svelte': 5\.56\.4\n {2}'@sveltejs\/kit': 3\.0\.0\n {2}'runed>@sveltejs\/kit'/,
 		);
 	});
 
@@ -126,7 +126,7 @@ describe('withOverrides', () => {
 	});
 
 	it('keeps a scoped override of a floored peer apart from the peer itself', () => {
-		const text = withOverrides(WORKSPACE, new Map([['@sveltejs/kit', '2.53.0']]));
+		const text = withOverrides(WORKSPACE, new Map([['@sveltejs/kit', '3.0.0']]));
 		assert.equal(text.split('\n').filter((line) => line.includes('@sveltejs/kit')).length, 2);
 	});
 });

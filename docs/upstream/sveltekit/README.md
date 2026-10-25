@@ -129,5 +129,5 @@ await invalidate('app:posts'); // re-runs loads with depends('app:posts')
 
 ## Links
 
-- v2 migration: <https://svelte.dev/docs/kit/migrating-to-sveltekit-2>
+- v3 migration: <https://svelte.dev/docs/kit/migrating-to-sveltekit-3>
 - Adapters: <https://svelte.dev/docs/kit/adapters>
