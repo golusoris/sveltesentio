@@ -2,10 +2,9 @@
 
 ## [0.5.1](https://github.com/golusoris/sveltesentio/compare/i18n-v0.5.0...i18n-v0.5.1) (2026-10-25)
 
-
 ### Code Refactoring
 
-* **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
+- **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
 
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/i18n-v0.4.1...i18n-v0.5.0) (2026-10-14)
 

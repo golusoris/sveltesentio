@@ -2,11 +2,10 @@
 
 ## [0.4.1](https://github.com/golusoris/sveltesentio/compare/testing-v0.4.0...testing-v0.4.1) (2026-10-25)
 
-
 ### Code Refactoring
 
-* **testing:** build problem fixtures through one helper ([#426](https://github.com/golusoris/sveltesentio/issues/426)) ([cdf74d7](https://github.com/golusoris/sveltesentio/commit/cdf74d777beb5045fc33697b803e71529f985e43))
-* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+- **testing:** build problem fixtures through one helper ([#426](https://github.com/golusoris/sveltesentio/issues/426)) ([cdf74d7](https://github.com/golusoris/sveltesentio/commit/cdf74d777beb5045fc33697b803e71529f985e43))
+- **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
 
 ## [0.4.0](https://github.com/golusoris/sveltesentio/compare/testing-v0.3.1...testing-v0.4.0) (2026-10-19)
 

@@ -2,17 +2,15 @@
 
 ## [0.8.2](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.1...ui-v0.8.2) (2026-10-25)
 
-
 ### Bug Fixes
 
-* **ci:** stop the macOS portability tests from crossing the 5 s timeout ([#429](https://github.com/golusoris/sveltesentio/issues/429)) ([a71ae3a](https://github.com/golusoris/sveltesentio/commit/a71ae3a77a0233e39996abcbe375700434bc6914))
-* **ui:** drop an empty URI attribute in renderMarkdown ([#459](https://github.com/golusoris/sveltesentio/issues/459)) ([5d3452b](https://github.com/golusoris/sveltesentio/commit/5d3452bdf5824d2e88c66130c9dfd0e15e78fe54))
-
+- **ci:** stop the macOS portability tests from crossing the 5 s timeout ([#429](https://github.com/golusoris/sveltesentio/issues/429)) ([a71ae3a](https://github.com/golusoris/sveltesentio/commit/a71ae3a77a0233e39996abcbe375700434bc6914))
+- **ui:** drop an empty URI attribute in renderMarkdown ([#459](https://github.com/golusoris/sveltesentio/issues/459)) ([5d3452b](https://github.com/golusoris/sveltesentio/commit/5d3452bdf5824d2e88c66130c9dfd0e15e78fe54))
 
 ### Code Refactoring
 
-* **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
-* use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
+- **test:** share one axe helper and fold ai test setup ([#437](https://github.com/golusoris/sveltesentio/issues/437)) ([64455d3](https://github.com/golusoris/sveltesentio/commit/64455d375441d7ae10a2af94098925c2afa52b6e))
+- use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
 
 ## [0.8.1](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.0...ui-v0.8.1) (2026-10-19)
 

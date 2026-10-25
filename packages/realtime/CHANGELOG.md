@@ -2,17 +2,15 @@
 
 ## [0.7.1](https://github.com/golusoris/sveltesentio/compare/realtime-v0.7.0...realtime-v0.7.1) (2026-10-25)
 
-
 ### Bug Fixes
 
-* **realtime:** keep stream status attach typing on the TypeScript floor ([#432](https://github.com/golusoris/sveltesentio/issues/432)) ([1d38253](https://github.com/golusoris/sveltesentio/commit/1d3825367eff63be4717309ee647bc0c3fcaee61))
-
+- **realtime:** keep stream status attach typing on the TypeScript floor ([#432](https://github.com/golusoris/sveltesentio/issues/432)) ([1d38253](https://github.com/golusoris/sveltesentio/commit/1d3825367eff63be4717309ee647bc0c3fcaee61))
 
 ### Code Refactoring
 
-* **realtime:** share stream status between useSSE and useConnectStream ([#427](https://github.com/golusoris/sveltesentio/issues/427)) ([ce91fdc](https://github.com/golusoris/sveltesentio/commit/ce91fdc6f5a979f5906c34be7f9fe8f9c0ee1306))
-* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
-* use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
+- **realtime:** share stream status between useSSE and useConnectStream ([#427](https://github.com/golusoris/sveltesentio/issues/427)) ([ce91fdc](https://github.com/golusoris/sveltesentio/commit/ce91fdc6f5a979f5906c34be7f9fe8f9c0ee1306))
+- **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+- use svelte's shipped rune types and share the Anthropic request ([#431](https://github.com/golusoris/sveltesentio/issues/431)) ([8f47b77](https://github.com/golusoris/sveltesentio/commit/8f47b777488d665a867454a13d612a8c950a56d6))
 
 ## [0.7.0](https://github.com/golusoris/sveltesentio/compare/realtime-v0.6.0...realtime-v0.7.0) (2026-10-17)
 
