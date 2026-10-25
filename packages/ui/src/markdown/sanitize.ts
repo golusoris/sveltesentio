@@ -101,7 +101,9 @@ function mergeConfig(config?: Config): Config {
  * 1. Drops `data:` URIs on `src`/`href`/`xlink:href` unless they are a safe
  *    image MIME. DOMPurify's `DATA_URI_TAGS` allowance lets ANY `data:` through
  *    on `<img>` etc. regardless of `ALLOWED_URI_REGEXP`, so this closes the
- *    `data:image/svg+xml` (scriptable) bypass.
+ *    `data:image/svg+xml` (scriptable) bypass. Also drops an empty URI
+ *    attribute: DOMPurify keeps `href=""` (from markdown `[]()`) without testing
+ *    it against `ALLOWED_URI_REGEXP`.
  * 2. Adds `rel="noopener noreferrer"` + `target="_blank"` to external links
  *    (including protocol-relative `//host`) — robust against inline-token
  *    smuggling a `marked` renderer override misses.
@@ -109,9 +111,11 @@ function mergeConfig(config?: Config): Config {
 function hardenNode(node: Element): void {
 	for (const attr of ['src', 'href', 'xlink:href']) {
 		const value = node.getAttribute(attr);
+		if (value === null) continue;
 		// Strip C0 controls + space before the protocol test so none can mask a
 		// `data:` URI (see stripControlChars).
-		if (value && /^data:/i.test(stripControlChars(value)) && !SAFE_DATA_URI.test(value)) {
+		const bare = stripControlChars(value);
+		if (bare === '' || (/^data:/i.test(bare) && !SAFE_DATA_URI.test(value))) {
 			node.removeAttribute(attr);
 		}
 	}
