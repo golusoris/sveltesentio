@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/golusoris/sveltesentio/compare/mcp-v0.5.0...mcp-v0.5.1) (2026-10-25)
+
+
+### Code Refactoring
+
+* **mcp:** fold repeated server setup in the mcp tests ([#438](https://github.com/golusoris/sveltesentio/issues/438)) ([45bd879](https://github.com/golusoris/sveltesentio/commit/45bd87937548958a480b38aa468e75857253162f))
+* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/mcp-v0.4.0...mcp-v0.5.0) (2026-10-14)
 
 ### ⚠ BREAKING CHANGES

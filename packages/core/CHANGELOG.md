@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/golusoris/sveltesentio/compare/core-v0.6.0...core-v0.6.1) (2026-10-25)
+
+
+### Code Refactoring
+
+* **core:** fold repeated setup in the clock and vite tests ([#436](https://github.com/golusoris/sveltesentio/issues/436)) ([01f706d](https://github.com/golusoris/sveltesentio/commit/01f706daa6cc43079430844d7c4a7e2b49faa579))
+* **test:** share one node Vitest config across ten packages ([#435](https://github.com/golusoris/sveltesentio/issues/435)) ([dafbf95](https://github.com/golusoris/sveltesentio/commit/dafbf95b0007e93cae98cf02d2a01337df033590))
+
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/core-v0.5.0...core-v0.6.0) (2026-10-19)
 
 ### Features
