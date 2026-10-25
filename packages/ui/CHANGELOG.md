@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.2...ui-v0.8.3) (2026-10-25)
+
+
+### Bug Fixes
+
+* **lint:** lint the package tests with type information ([#463](https://github.com/golusoris/sveltesentio/issues/463)) ([4e654bb](https://github.com/golusoris/sveltesentio/commit/4e654bbe0a64b7e7127422d3c899d1532ca6a4fa))
+
 ## [0.8.2](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.1...ui-v0.8.2) (2026-10-25)
 
 ### Bug Fixes
