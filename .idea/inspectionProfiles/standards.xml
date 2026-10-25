@@ -7,12 +7,5 @@
     </inspection_tool>
     <inspection_tool class="GoUnhandledErrorResult" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="GoInfiniteFor" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="HISS01DAGControlFlow" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="HISS02BoundedLoops" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="HISS04ComplexityLOC" enabled="true" level="ERROR" enabled_by_default="true">
-      <option name="maxLoc" value="75" />
-      <option name="maxStatements" value="50" />
-    </inspection_tool>
-    <inspection_tool class="HISS07ZeroUnwrap" enabled="true" level="ERROR" enabled_by_default="true" />
   </profile>
 </component>

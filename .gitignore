@@ -1,8 +1,6 @@
 node_modules/
 .turbo/
 dist/
-# praetor figure engine ships its built bundle; adoption verifies the committed text
-!/tools/figures/dist/
 .svelte-kit/
 build/
 storybook-static/
@@ -33,4 +31,6 @@ Thumbs.db
 /.standards/worktrees/
 /.agents/mcp_config.json
 /.standards/cache/
+/.claude/settings.local.json
+/.standards-receipt.json
 # END praetor private artifacts

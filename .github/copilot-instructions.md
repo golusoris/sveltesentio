@@ -115,7 +115,7 @@ make verify-all
 
 **SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (Go meta-framework, same author). Same opt-in module discipline. Same compliance targets (OWASP ASVS L2 / WCAG 2.2 AA / SLSA Build Level 3 / EU CRA / EU AI Act); SLSA today = Build Level 2, Level 3 open (#280). Same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks). Expressed in Svelte 5 runes + TypeScript, not Go + fx.
 
-Pointers: [README.md](README.md) = user-facing pitch. [docs/principles.md](docs/principles.md) = full coding contract (§2). [docs/ux-principles.md](docs/ux-principles.md) = UX rules (§3).
+Pointers: [README.md](../README.md) = user-facing pitch. [docs/principles.md](../docs/principles.md) = full coding contract (§2). [docs/ux-principles.md](../docs/ux-principles.md) = UX rules (§3).
 
 ## HISS in this repository
 
@@ -162,7 +162,7 @@ Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, 
     - Never pull React/Vue/Solid component libraries via cross-framework bridges: non-Svelte UI dep = architectural smell.
     - Capability exists only outside Svelte ecosystem -> open `D*` row, discuss before adding bridge.
 
-[docs/principles.md](docs/principles.md) holds Power-of-10, OWASP ASVS L2, WCAG 2.2 AA, supply-chain, testing, performance contract. Deviations require PR comment citing subsection.
+[docs/principles.md](../docs/principles.md) holds Power-of-10, OWASP ASVS L2, WCAG 2.2 AA, supply-chain, testing, performance contract. Deviations require PR comment citing subsection.
 
 ## Workflow discipline (evidence-driven)
 
@@ -185,7 +185,7 @@ Wrappers justified only when they:
 
 ## Repository layout
 
-Full annotated tree: [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md).
+Full annotated tree: [docs/architecture/repository-layout.md](../docs/architecture/repository-layout.md).
 
 | Path               | Holds                                                                                                                                                                                                                    |
 | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -285,8 +285,8 @@ Release PRs additionally:
 
 ## When in doubt
 
-1. Read [docs/principles.md](docs/principles.md): coding/security/compliance contract (§2).
-2. Read [docs/ux-principles.md](docs/ux-principles.md): UI/UX rules per interface type (§3).
+1. Read [docs/principles.md](../docs/principles.md): coding/security/compliance contract (§2).
+2. Read [docs/ux-principles.md](../docs/ux-principles.md): UI/UX rules per interface type (§3).
 3. Read per-subpackage `AGENTS.md` for touched area.
 4. Read `.workingdir/STATE.md`: current author work + locked decisions.
 5. Read `.workingdir/PLAN.md`: full roadmap + framework mission.
