@@ -92,6 +92,16 @@ describe('evaluateCsrf', () => {
 describe('handleCsrf', () => {
 	const passthrough = new Response('ok', { status: 200 });
 
+	function tokenRequest(verify: CsrfVerifier) {
+		const hook = handleCsrf({ getContext: () => CONTEXT, verify });
+		const resolve = vi.fn(() => Promise.resolve(passthrough));
+		const event = fakeEvent({
+			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
+			headers: { [CSRF_HEADER_NAME]: 'tok' },
+		});
+		return { hook, resolve, event };
+	}
+
 	it('passes through safe methods without consulting the context', async () => {
 		const getContext = vi.fn();
 		const hook = handleCsrf({ getContext });
@@ -107,24 +117,14 @@ describe('handleCsrf', () => {
 	});
 
 	it('resolves the request when the token is valid', async () => {
-		const hook = handleCsrf({ getContext: () => CONTEXT, verify: alwaysValid });
-		const resolve = vi.fn(() => Promise.resolve(passthrough));
-		const event = fakeEvent({
-			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
-			headers: { [CSRF_HEADER_NAME]: 'tok' },
-		});
+		const { hook, resolve, event } = tokenRequest(alwaysValid);
 		const out = await hook({ event: event as never, resolve });
 		expect(out).toBe(passthrough);
 		expect(resolve).toHaveBeenCalledOnce();
 	});
 
 	it('returns a 403 problem response when the token is invalid', async () => {
-		const hook = handleCsrf({ getContext: () => CONTEXT, verify: alwaysInvalid });
-		const resolve = vi.fn(() => Promise.resolve(passthrough));
-		const event = fakeEvent({
-			cookies: { [CSRF_COOKIE_NAME]: 'tok' },
-			headers: { [CSRF_HEADER_NAME]: 'tok' },
-		});
+		const { hook, resolve, event } = tokenRequest(alwaysInvalid);
 		const out = await hook({ event: event as never, resolve });
 		expect(resolve).not.toHaveBeenCalled();
 		expect(out.status).toBe(403);
