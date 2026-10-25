@@ -2,10 +2,9 @@
 
 ## [0.5.2](https://github.com/golusoris/sveltesentio/compare/uploads-v0.5.1...uploads-v0.5.2) (2026-10-25)
 
-
 ### Bug Fixes
 
-* **lint:** lint the package tests with type information ([#463](https://github.com/golusoris/sveltesentio/issues/463)) ([4e654bb](https://github.com/golusoris/sveltesentio/commit/4e654bbe0a64b7e7127422d3c899d1532ca6a4fa))
+- **lint:** lint the package tests with type information ([#463](https://github.com/golusoris/sveltesentio/issues/463)) ([4e654bb](https://github.com/golusoris/sveltesentio/commit/4e654bbe0a64b7e7127422d3c899d1532ca6a4fa))
 
 ## [0.5.1](https://github.com/golusoris/sveltesentio/compare/uploads-v0.5.0...uploads-v0.5.1) (2026-10-25)
 

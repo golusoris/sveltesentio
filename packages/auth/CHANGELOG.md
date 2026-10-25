@@ -2,19 +2,17 @@
 
 ## [0.10.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.9.1...auth-v0.10.0) (2026-10-25)
 
-
 ### ⚠ BREAKING CHANGES
 
-* the @sveltejs/kit peer range of ai, auth, core, forms, i18n, query, realtime and shell is now ^3.0.0; SvelteKit 2 is no longer supported. Migration: change "@sveltejs/kit": "^2.70.2" to "@sveltejs/kit": "^3.0.0" in package.json, run `npx sv migrate sveltekit-3`, then follow the upstream guide <https://svelte.dev/docs/kit/migrating-to-sveltekit-3> for the steps the tool does not automate. sveltesentio hook exports need no code change. See docs/migrations/kit-2-to-3.md and ADR-0058.
+- the @sveltejs/kit peer range of ai, auth, core, forms, i18n, query, realtime and shell is now ^3.0.0; SvelteKit 2 is no longer supported. Migration: change "@sveltejs/kit": "^2.70.2" to "@sveltejs/kit": "^3.0.0" in package.json, run `npx sv migrate sveltekit-3`, then follow the upstream guide <https://svelte.dev/docs/kit/migrating-to-sveltekit-3> for the steps the tool does not automate. sveltesentio hook exports need no code change. See docs/migrations/kit-2-to-3.md and ADR-0058.
 
 ### Features
 
-* require SvelteKit 3 in the @sveltejs/kit peer range ([8ec6ab5](https://github.com/golusoris/sveltesentio/commit/8ec6ab56812c2f63d4148cc34b154ef92d0e3408))
-
+- require SvelteKit 3 in the @sveltejs/kit peer range ([8ec6ab5](https://github.com/golusoris/sveltesentio/commit/8ec6ab56812c2f63d4148cc34b154ef92d0e3408))
 
 ### Bug Fixes
 
-* **lint:** lint the package tests with type information ([#463](https://github.com/golusoris/sveltesentio/issues/463)) ([4e654bb](https://github.com/golusoris/sveltesentio/commit/4e654bbe0a64b7e7127422d3c899d1532ca6a4fa))
+- **lint:** lint the package tests with type information ([#463](https://github.com/golusoris/sveltesentio/issues/463)) ([4e654bb](https://github.com/golusoris/sveltesentio/commit/4e654bbe0a64b7e7127422d3c899d1532ca6a4fa))
 
 ## [0.9.1](https://github.com/golusoris/sveltesentio/compare/auth-v0.9.0...auth-v0.9.1) (2026-10-25)
 
