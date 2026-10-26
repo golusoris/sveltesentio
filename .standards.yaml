@@ -19,6 +19,14 @@ overrides:
     # Owner-approved 2026-10-11: one maintainer today, so praetor renders 0 required
     # approvals. Restore independent when a second maintainer or a review bot can approve.
     review_mode: single_maintainer
+    # Required by the classic branch rule today; declared here so the ruleset carries them
+    # and the classic rule can be retired.
+    status_contexts:
+      - Build
+      - Lint
+      - Security audit
+      - Test (coverage)
+      - Type check
 # Declared per-file exceptions: one rule, one file, a reason and an expiry at most 90 days
 # ahead. An expired entry fails its gate like a missing one.
 exceptions:
