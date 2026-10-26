@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.3...ui-v0.9.0) (2026-10-26)
+
+
+### Features
+
+* **ui:** move presetSnatchArr to the Violet Amber palette ([#482](https://github.com/golusoris/sveltesentio/issues/482)) ([3f91305](https://github.com/golusoris/sveltesentio/commit/3f913054f24db338dbe879f7a3d0c6e81b08b40b))
+
 ## [0.8.3](https://github.com/golusoris/sveltesentio/compare/ui-v0.8.2...ui-v0.8.3) (2026-10-25)
 
 ### Bug Fixes
