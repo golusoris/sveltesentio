@@ -32,7 +32,7 @@ describe('presetSnatchArr recorded contrast ratios (ui-variants2 M3)', () => {
 		{ pair: 'foreground/card', light: 18.9, dark: 16.19 },
 		{ pair: 'mutedForeground/background', light: 6.31, dark: 7.99 },
 		{ pair: 'mutedForeground/card', light: 6.62, dark: 7.29 },
-		{ pair: 'primaryForeground/primary', light: 10.25, dark: 8.69 },
+		{ pair: 'primaryForeground/primary', light: 10.77, dark: 8.23 },
 		{ pair: 'destructiveForeground/destructive', light: 5.21, dark: 5.21 },
 	];
 
@@ -140,8 +140,8 @@ describe('paletteToCssVars & paletteCss', () => {
 		const lightVars = paletteToCssVars(presetSnatchArr.light);
 		const lines = lightVars.split('\n');
 		expect(lines).toHaveLength(23);
-		expect(lightVars).toContain('\t--color-brand: oklch(0.38 0.16 285);');
-		expect(lightVars).toContain('\t--color-nav-active-foreground: oklch(0.20 0.10 285);');
+		expect(lightVars).toContain('\t--color-brand: oklch(0.38 0.22 285);');
+		expect(lightVars).toContain('\t--color-nav-active-foreground: oklch(0.20 0.12 285);');
 	});
 
 	it('emits :root and .dark rules in paletteCss with expected layout', () => {

@@ -65,7 +65,7 @@ const p = toastPreset('10foot'); // top-center, 40rem, scaled padding
 
 ### Colour palettes and contrast checking
 
-`@sveltesentio/ui/presets` provides colour-palette presets alongside interface-type sizing presets. `presetSnatchArr` is the first colour-palette preset (SnatchArr Palette A: deep purple-indigo theme with WCAG 2.2 AA compliance across all 20 required text and non-text pairs).
+`@sveltesentio/ui/presets` provides colour-palette presets alongside interface-type sizing presets. `presetSnatchArr` is the first colour-palette preset (SnatchArr Violet Amber: a violet brand with deep chroma and an amber accent, with WCAG 2.2 AA compliance across all 20 required text and non-text pairs).
 
 ```ts
 import { presetSnatchArr, paletteCss, checkPaletteContrast } from '@sveltesentio/ui/presets';
