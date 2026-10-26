@@ -57,7 +57,7 @@ sveltesentio/
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
 │   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · peer-floors · release-please · refresh-upstream-docs
-│                                   # scorecard · codeql · auto-assign — see "CI gates" for what each enforces
+│                                   # scorecard · codeql — see "CI gates" for what each enforces
 │
 ├── .devcontainer/
 │   └── devcontainer.json           # Node 24 (ADR-0021), pnpm, zsh + oh-my-zsh, 15 VS Code extensions, ports 5173/4173/6006
