@@ -56,6 +56,15 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      # ci-affected.mjs imports prettier to list the files the format check covers.
+      - &cache_pnpm
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+      - &pnpm_install
+        run: corepack enable && pnpm install --frozen-lockfile
       - name: Detect affected packages and surfaces
         id: changes
         env:
@@ -77,14 +86,8 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-      - &cache_pnpm
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-      - &pnpm_install
-        run: corepack enable && pnpm install --frozen-lockfile
+      - *cache_pnpm
+      - *pnpm_install
       - name: Lint affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
