@@ -330,12 +330,16 @@ rules:
         state: enforced
         runner: node
         mechanism: >-
-          scripts/ci-affected.mjs computes the affected set, and ci.yml gates the
-          heavy jobs on `has_code_changes` while the if:always() `CI Gate`
-          aggregator still reports. The aggregator runs scripts/ci-gate.mjs,
-          which accepts a skipped heavy job only when Detect Changes succeeded
-          and reported no code changes on a non-push event, and requires every
-          other need to succeed (scripts/ci-gate.test.mjs). The script is itself linted by
+          scripts/ci-affected.mjs computes the affected set on pull requests and
+          forces full runs on non-PR events (push, schedule, workflow_dispatch,
+          merge_group). ci.yml gates heavy jobs on `has_code_changes`, filters
+          prettier-checked files, and skips story tests when unaffected.
+          portability.yml runs diff-aware turbo tasks and skips when unaffected,
+          while the if:always() `CI Gate` aggregator still reports. The
+          aggregator runs scripts/ci-gate.mjs, which accepts a skipped heavy job
+          only when Detect Changes succeeded and reported no code changes on a
+          non-push event, and requires every other need to succeed
+          (scripts/ci-gate.test.mjs). The script is itself linted by
           `pnpm lint:scripts`, and turbo.json names the root configs as
           globalDependencies so a cached result cannot outlive the config that
           produced it.

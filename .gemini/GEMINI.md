@@ -134,7 +134,7 @@ Harness above = rule text. Rows below = TypeScript adaptation + repository enfor
 | HISS-10   | Zero-warning tolerance across `tsc`, ESLint, Prettier. No `any`.                                                                                     | Exit code 1          |
 | HISS-15   | Positive, negative, boundary tests mandatory for every public export. Gate: each exported value named in a test of its package; three cases = review. | `pnpm check:export-tests` |
 | HISS-17   | Turn start reads `.workingdir/STATE.md` + `OPEN.md`; turn end runs `praetorctl state sync .`.                                                        | `make state-audit`   |
-| HISS-18   | `scripts/ci-affected.mjs` skips unaffected packages; `CI Gate` still reports.                                                                        | Review (runner time) |
+| HISS-18   | `scripts/ci-affected.mjs` diff-aware on PR, full on non-PR events; `CI Gate` still reports.                                                          | `CI Gate` / `Detect Changes` |
 | HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
 | HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
 | HISS-21   | `portability.yml` runs lint, typecheck, test on `ubuntu-26.04`, `macos-26`, `windows-2025`; each leg required in `.github/rulesets/main.json` (#328). | `Platform Neutrality (<OS>)` |
