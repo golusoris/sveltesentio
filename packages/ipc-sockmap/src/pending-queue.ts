@@ -1,7 +1,7 @@
 import type { ProblemError } from '@sveltesentio/core';
 
 /**
- * The in-flight request bookkeeping the IPC client does.
+ * The in-flight request bookkeeping that the IPC client does.
  *
  * Requests go out in order and responses come back in order, so a FIFO is the
  * whole protocol state. `createIpcClient` held this inline — the array, the
