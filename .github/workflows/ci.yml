@@ -46,6 +46,9 @@ jobs:
       has_code_changes: ${{ steps.changes.outputs.has_code_changes }}
       turbo_filter: ${{ steps.changes.outputs.turbo_filter }}
       affected_packages: ${{ steps.changes.outputs.affected_packages }}
+      changed_files: ${{ steps.changes.outputs.changed_files }}
+      prettier_files: ${{ steps.changes.outputs.prettier_files }}
+      has_stories: ${{ steps.changes.outputs.has_stories }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,6 +59,7 @@ jobs:
       - name: Detect affected packages and surfaces
         id: changes
         env:
+          CI_EVENT: ${{ github.event_name }}
           BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD~1' }}
           HEAD_REF: ${{ github.sha }}
         run: node scripts/ci-affected.mjs
@@ -111,7 +115,22 @@ jobs:
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/
       - run: pnpm test:scripts
-      - run: node_modules/.bin/prettier --check .
+      - name: Check formatting with prettier
+        env:
+          PRETTIER_FILES: ${{ needs.detect-changes.outputs.prettier_files }}
+          ALL_AFFECTED: ${{ needs.detect-changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ]; then
+            if [ -z "$PRETTIER_FILES" ]; then
+              echo "ci-scope: skip (no prettier files changed)"
+              exit 0
+            fi
+            # shellcheck disable=SC2086
+            node_modules/.bin/prettier --check $PRETTIER_FILES
+          else
+            node_modules/.bin/prettier --check .
+          fi
 
   typecheck:
     name: Type check
@@ -218,11 +237,21 @@ jobs:
       - *pnpm_install
       # One Playwright version is in the lockfile, so one browser install serves every workspace.
       - name: Install Chromium, Firefox and WebKit
+        if: github.event_name != 'pull_request' || needs.detect-changes.outputs.all_affected == 'true' || needs.detect-changes.outputs.has_stories == 'true'
         run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium firefox webkit
       # Every story is rendered in Chromium, Firefox and WebKit; an axe violation or a render error fails the run.
       # Stories come from every package, so the run is not narrowed to the affected ones.
       - name: Run every story with axe
-        run: pnpm test:stories
+        env:
+          HAS_STORIES: ${{ needs.detect-changes.outputs.has_stories }}
+          ALL_AFFECTED: ${{ needs.detect-changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ] && [ "$HAS_STORIES" != "true" ]; then
+            echo "ci-scope: skip (no affected package has stories)"
+            exit 0
+          fi
+          pnpm test:stories
 
   e2e:
     name: End-to-end

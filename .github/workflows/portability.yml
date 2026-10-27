@@ -52,15 +52,68 @@ jobs:
           exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
       - run: corepack enable && pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
+      - name: Detect affected packages and surfaces
+        id: changes
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD~1' }}
+          HEAD_REF: ${{ github.sha }}
+        run: node scripts/ci-affected.mjs
+      - name: Lint
+        env:
+          TURBO_FILTER: ${{ steps.changes.outputs.turbo_filter }}
+          ALL_AFFECTED: ${{ steps.changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ] && [ -z "$TURBO_FILTER" ]; then
+            echo "ci-scope: skip (zero affected packages)"
+            exit 0
+          fi
+          if [ -n "$TURBO_FILTER" ]; then
+            # shellcheck disable=SC2086
+            pnpm exec turbo run lint $TURBO_FILTER
+          else
+            pnpm lint
+          fi
+      - name: Type check
+        env:
+          TURBO_FILTER: ${{ steps.changes.outputs.turbo_filter }}
+          ALL_AFFECTED: ${{ steps.changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ] && [ -z "$TURBO_FILTER" ]; then
+            echo "ci-scope: skip (zero affected packages)"
+            exit 0
+          fi
+          if [ -n "$TURBO_FILTER" ]; then
+            # shellcheck disable=SC2086
+            pnpm exec turbo run typecheck $TURBO_FILTER
+          else
+            pnpm typecheck
+          fi
       # Turbo starts up to 10 package test tasks at once and each Vitest run
       # takes cores - 1 workers, which oversubscribes the 3-core, 7 GB macOS
       # runner: tests that take about 50 ms alone took 1 to 7 s there and
       # crossed the 5 s timeout. Two packages at a time keeps every leg bounded.
-      - run: pnpm test --concurrency=2
+      - name: Test
+        env:
+          TURBO_FILTER: ${{ steps.changes.outputs.turbo_filter }}
+          ALL_AFFECTED: ${{ steps.changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ] && [ -z "$TURBO_FILTER" ]; then
+            echo "ci-scope: skip (zero affected packages)"
+            exit 0
+          fi
+          if [ -n "$TURBO_FILTER" ]; then
+            # shellcheck disable=SC2086
+            pnpm exec turbo run test --concurrency=2 $TURBO_FILTER
+          else
+            pnpm test --concurrency=2
+          fi

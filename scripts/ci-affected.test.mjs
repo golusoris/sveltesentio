@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, posix } from 'node:path';
@@ -11,7 +11,11 @@ import {
 	SHARED_SURFACE_PATTERNS,
 	analyzeChanges,
 	getGitDiffFiles,
+	isFullEvent,
 	loadRootReaders,
+	loadStoryPackages,
+	resolvePrettierFiles,
+	runCiAffected,
 } from './ci-affected.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -362,5 +366,163 @@ describe('ci-affected: getGitDiffFiles', () => {
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe('ci-affected: runCiAffected and scope detection', () => {
+	/**
+	 * Runs the CLI helper with spawnSync to capture status, stdout, stderr, and GITHUB_OUTPUT.
+	 * @param {string[]} args
+	 * @param {Record<string, string>} [env]
+	 */
+	function runCli(args = [], env = {}) {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-affected-test-'));
+		const outputFile = join(dir, 'github_output');
+		writeFileSync(outputFile, '');
+		try {
+			const res = spawnSync(process.execPath, [join(root, 'scripts/ci-affected.mjs'), ...args], {
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					GITHUB_OUTPUT: outputFile,
+					...env,
+				},
+			});
+			return {
+				status: res.status,
+				stdout: res.stdout ?? '',
+				stderr: res.stderr ?? '',
+				githubOutput: readFileSync(outputFile, 'utf8'),
+			};
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	}
+
+	it('positive: one file in packages/forms -> forms + dependents only, count 1', async () => {
+		const cli = runCli(['--files', 'packages/forms/src/index.ts'], { CI_EVENT: 'pull_request' });
+		assert.equal(cli.status, 0);
+		assert.match(cli.stderr, /^ci-scope: diff-aware, 1 changed files vs origin\/main/);
+		const parsed = JSON.parse(cli.stdout);
+		assert.equal(parsed.allAffected, false);
+		assert.equal(parsed.hasCodeChanges, true);
+		assert.equal(parsed.changedFiles, 1);
+		assert.deepEqual(parsed.affectedPackages, ['@sveltesentio/forms']);
+		assert.equal(parsed.turboFilter, '--filter=...@sveltesentio/forms...');
+		assert.equal(parsed.prettierFiles, 'packages/forms/src/index.ts');
+		assert.equal(parsed.hasStories, false);
+		assert.match(cli.githubOutput, /all_affected=false/);
+		assert.match(cli.githubOutput, /has_code_changes=true/);
+		assert.match(cli.githubOutput, /changed_files=1/);
+		assert.match(cli.githubOutput, /prettier_files=packages\/forms\/src\/index\.ts/);
+		assert.match(cli.githubOutput, /has_stories=false/);
+	});
+
+	it('negative: bad BASE_REF -> nonzero exit', () => {
+		const cli = runCli(['--base', 'refs/heads/no-such-branch'], { CI_EVENT: 'pull_request' });
+		assert.notEqual(cli.status, 0);
+		assert.match(cli.stderr, /ci-affected: git diff refs\/heads\/no-such-branch\.\.\.HEAD failed/);
+	});
+
+	it('negative: CI_EVENT=push -> full mode', () => {
+		const cli = runCli(['--files', 'packages/forms/src/index.ts'], { CI_EVENT: 'push' });
+		assert.equal(cli.status, 0);
+		assert.match(cli.stderr, /^ci-scope: full \(push event\)/);
+		const parsed = JSON.parse(cli.stdout);
+		assert.equal(parsed.allAffected, true);
+		assert.equal(parsed.hasCodeChanges, true);
+		assert.equal(parsed.turboFilter, '');
+		assert.equal(parsed.affectedPackages.length, Object.keys(PACKAGE_DIRECTORY_MAP).length);
+		assert.equal(parsed.prettierFiles, '');
+		assert.equal(parsed.hasStories, true);
+		assert.match(cli.githubOutput, /all_affected=true/);
+		assert.match(cli.githubOutput, /turbo_filter=\n/);
+		assert.match(cli.githubOutput, /prettier_files=\n/);
+		assert.match(cli.githubOutput, /has_stories=true/);
+	});
+
+	it('negative: shared surface file -> full mode', () => {
+		const cli = runCli(['--files', 'package.json'], { CI_EVENT: 'pull_request' });
+		assert.equal(cli.status, 0);
+		assert.match(cli.stderr, /^ci-scope: full \(shared surface: package\.json\)/);
+		const parsed = JSON.parse(cli.stdout);
+		assert.equal(parsed.allAffected, true);
+		assert.equal(parsed.hasCodeChanges, true);
+		assert.deepEqual(parsed.sharedSurfaces, ['package.json']);
+		assert.equal(parsed.turboFilter, '');
+		assert.equal(parsed.prettierFiles, '');
+		assert.equal(parsed.hasStories, true);
+		assert.match(cli.githubOutput, /all_affected=true/);
+	});
+
+	it('boundary: empty diff -> count 0, nothing selected', () => {
+		const cli = runCli(['--files'], { CI_EVENT: 'pull_request' });
+		assert.equal(cli.status, 0);
+		assert.match(cli.stderr, /^ci-scope: diff-aware, 0 changed files vs origin\/main/);
+		const parsed = JSON.parse(cli.stdout);
+		assert.equal(parsed.allAffected, false);
+		assert.equal(parsed.hasCodeChanges, false);
+		assert.deepEqual(parsed.affectedPackages, []);
+		assert.equal(parsed.turboFilter, '');
+		assert.equal(parsed.changedFiles, 0);
+		assert.equal(parsed.prettierFiles, '');
+		assert.equal(parsed.hasStories, false);
+		assert.match(cli.githubOutput, /all_affected=false/);
+		assert.match(cli.githubOutput, /has_code_changes=false/);
+		assert.match(cli.githubOutput, /changed_files=0/);
+	});
+
+	it('boundary: docs-only -> no code changes', () => {
+		const cli = runCli(['--files', 'README.md'], { CI_EVENT: 'pull_request' });
+		assert.equal(cli.status, 0);
+		assert.match(cli.stderr, /^ci-scope: diff-aware, 1 changed files vs origin\/main/);
+		const parsed = JSON.parse(cli.stdout);
+		assert.equal(parsed.allAffected, false);
+		assert.equal(parsed.hasCodeChanges, false);
+		assert.deepEqual(parsed.affectedPackages, []);
+		assert.equal(parsed.turboFilter, '');
+		assert.equal(parsed.changedFiles, 1);
+		assert.equal(parsed.prettierFiles, 'README.md');
+		assert.equal(parsed.hasStories, false);
+		assert.match(cli.githubOutput, /has_code_changes=false/);
+	});
+
+	it('derives packages with stories from apps/storybook config globs', () => {
+		const storyPkgs = loadStoryPackages();
+		assert.ok(storyPkgs.includes('@sveltesentio/storybook'));
+		assert.ok(storyPkgs.includes('@sveltesentio/ui'));
+		assert.ok(storyPkgs.includes('@sveltesentio/charts'));
+		assert.ok(storyPkgs.includes('@sveltesentio/flow'));
+		assert.ok(storyPkgs.includes('@sveltesentio/media'));
+		assert.ok(!storyPkgs.includes('@sveltesentio/collab'));
+	});
+
+	it('identifies full CI events vs pull_request via isFullEvent', () => {
+		assert.equal(isFullEvent('push'), true);
+		assert.equal(isFullEvent('schedule'), true);
+		assert.equal(isFullEvent('workflow_dispatch'), true);
+		assert.equal(isFullEvent('merge_group'), true);
+		assert.equal(isFullEvent('pull_request'), false);
+		assert.equal(isFullEvent(null), false);
+		assert.equal(isFullEvent(undefined), false);
+	});
+
+	it('supports direct programmatic invocation via runCiAffected', async () => {
+		const res = await runCiAffected({
+			ciEvent: 'pull_request',
+			explicitFiles: ['packages/forms/src/index.ts'],
+		});
+		assert.equal(res.allAffected, false);
+		assert.equal(res.changedFiles, 1);
+		assert.equal(res.hasStories, false);
+	});
+
+	it('resolvePrettierFiles excludes deleted and ignored files', async () => {
+		const res = await resolvePrettierFiles([
+			'packages/forms/src/index.ts',
+			'CLAUDE.md',
+			'does-not-exist.ts',
+		]);
+		assert.equal(res, 'packages/forms/src/index.ts');
 	});
 });
