@@ -11,6 +11,7 @@
 		"@storybook/addon-svelte-csf": "5.1.5",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/testing": "workspace:*",
+		"@tailwindcss/oxide": "^4.3.3",
 		"@testing-library/jest-dom": "^7.0.0",
 		"@testing-library/svelte": "^5.4.2",
 		"@types/jsdom": "^30.0.0",
