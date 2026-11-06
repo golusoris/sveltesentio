@@ -23,6 +23,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Linux only (HISS-21, #328): checks the pull request title, not the code.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - name: Check PR title
         env:
@@ -41,6 +42,7 @@ jobs:
     name: Detect Changes
     # Linux only (HISS-21, #328): computes the turbo filter from git history, which is the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     outputs:
       all_affected: ${{ steps.changes.outputs.all_affected }}
       has_code_changes: ${{ steps.changes.outputs.has_code_changes }}
@@ -79,6 +81,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs lint on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - &checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -114,6 +117,7 @@ jobs:
           exit "$status"
       - run: pnpm check:cycles
       - run: pnpm check:declared-imports
+      - run: pnpm check:job-timeouts
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/
@@ -141,6 +145,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs the type check on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -182,6 +187,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs the unit tests on Linux, macOS and Windows; this job adds coverage.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -211,6 +217,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): the build output does not depend on the runner OS.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -233,6 +240,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
@@ -262,6 +270,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
@@ -297,6 +306,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -379,6 +389,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Linux only (HISS-21, #328): compares the exports maps of two revisions, which are the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

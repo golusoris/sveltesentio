@@ -33,6 +33,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Linux only (HISS-21, #328): checks the pull request title, not the code.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - name: Stop on a draft pull request
         if: github.event.pull_request.draft == true
@@ -59,6 +60,7 @@ jobs:
   lint:
     name: ${{ strategy.job-total > 1 && format('Lint ({0})', matrix.runner) || 'Lint' }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     strategy: &matrix_strategy
       fail-fast: false
       matrix:
@@ -96,6 +98,7 @@ jobs:
   typecheck:
     name: ${{ strategy.job-total > 1 && format('Type check ({0})', matrix.runner) || 'Type check' }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     strategy: *matrix_strategy
     defaults: *bash_defaults
     steps:
@@ -109,6 +112,7 @@ jobs:
   test:
     name: ${{ strategy.job-total > 1 && format('Test (coverage {0}%, {1})', inputs.coverage-threshold, matrix.runner) || format('Test (coverage {0}%)', inputs.coverage-threshold) }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     strategy: *matrix_strategy
     defaults: *bash_defaults
     steps:
@@ -161,6 +165,7 @@ jobs:
     name: Build
     # Linux only (HISS-21, #328): The build output does not depend on the runner OS; lint, type check and test carry the platform legs.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     defaults: &defaults_wd
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -176,6 +181,7 @@ jobs:
     name: Security audit
     # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     defaults: *defaults_wd
     steps:
       - *stop_draft
@@ -190,6 +196,7 @@ jobs:
     if: inputs.run-e2e
     # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     defaults: *defaults_wd
     steps:
       - *stop_draft

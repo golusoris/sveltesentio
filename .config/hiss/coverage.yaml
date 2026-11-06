@@ -100,6 +100,25 @@ rules:
           scanner reads TypeScript and reports it; the fixture moved to
           positive/. The `fetch` with no signal stays a genuine gap: nothing
           this repository runs reports it.
+      - language: internal
+        state: enforced
+        runner: node
+        mechanism: >-
+          scripts/check-job-timeouts.mjs (`pnpm check:job-timeouts`) runs in
+          `make verify-all` and in the ci.yml `lint` job. It fails when a
+          workflow job that runs steps has no integer `timeout-minutes` from 1
+          to 120, and when a job calling a reusable workflow declares the key,
+          which GitHub Actions refuses there. Fixtures:
+          testdata/HISS-02/internal/positive/job-without-timeout.yml is refused
+          (exit 1) and negative/job-with-timeout.yml passes (exit 0);
+          scripts/check-job-timeouts.test.mjs replays both fixtures in
+          `pnpm test:scripts`, beside the unit cases for each shape.
+        rationale: >-
+          A job without a timeout runs for the six-hour default when it hangs;
+          three stories and e2e runs hung that way before the check landed.
+          `praetorctl audit` reports a missing job timeout only as a warning,
+          so this script is the check that fails. Verified by removing
+          `timeout-minutes` from scorecard.yml: the script exits 1.
 
   - id: HISS-04
     title: Complexity Bounds
