@@ -43,10 +43,66 @@ describe('csrfCookieOptions', () => {
 });
 
 describe('loginNonceCookieOptions', () => {
-	it('scopes to /login path with short TTL', () => {
+	it('sets Path=/ with short TTL for __Host- compatibility', () => {
 		const opts = loginNonceCookieOptions();
-		expect(opts.path).toBe('/login');
+		expect(opts.path).toBe('/');
 		expect(opts.httpOnly).toBe(true);
+		expect(opts.secure).toBe(true);
+		expect(opts.sameSite).toBe('lax');
 		expect(opts.maxAge).toBe(5 * 60);
+	});
+});
+
+describe('__Host- cookie invariant across helpers', () => {
+	function isValidHostCookie(opts: { path?: string; secure?: boolean; domain?: string }): boolean {
+		return opts.path === '/' && opts.secure === true && !('domain' in opts);
+	}
+
+	it('pairs every __Host- name with path=/, secure=true, and no domain key (positive)', () => {
+		const pairs = [
+			{ name: SESSION_COOKIE_NAME, opts: sessionCookieOptions() },
+			{ name: CSRF_COOKIE_NAME, opts: csrfCookieOptions() },
+			{ name: LOGIN_NONCE_COOKIE_NAME, opts: loginNonceCookieOptions() },
+		];
+
+		for (const { name, opts } of pairs) {
+			expect(name.startsWith('__Host-')).toBe(true);
+			expect(opts.path).toBe('/');
+			expect(opts.secure).toBe(true);
+			expect('domain' in opts).toBe(false);
+			expect(isValidHostCookie(opts)).toBe(true);
+		}
+	});
+
+	it('rejects options with path /login, missing secure, or domain key (negative)', () => {
+		const badPath = { path: '/login', secure: true };
+		expect(isValidHostCookie(badPath)).toBe(false);
+
+		const badDomain = { path: '/', secure: true, domain: 'example.com' };
+		expect(isValidHostCookie(badDomain)).toBe(false);
+
+		const badInsecure = { path: '/', secure: false };
+		expect(isValidHostCookie(badInsecure)).toBe(false);
+	});
+
+	it('keeps the __Host- attributes for out-of-range helper inputs (negative)', () => {
+		for (const maxAge of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+			expect(isValidHostCookie(loginNonceCookieOptions(maxAge))).toBe(true);
+			expect(isValidHostCookie(sessionCookieOptions({ maxAge }))).toBe(true);
+			expect(isValidHostCookie(csrfCookieOptions({ maxAge }))).toBe(true);
+		}
+		for (const sameSite of ['strict', 'none'] as const) {
+			expect(isValidHostCookie(sessionCookieOptions({ sameSite }))).toBe(true);
+			expect(isValidHostCookie(csrfCookieOptions({ sameSite }))).toBe(true);
+		}
+	});
+
+	it('keeps path / for boundary maxAge 0 and 1 (boundary)', () => {
+		for (const maxAge of [0, 1]) {
+			const opts = loginNonceCookieOptions(maxAge);
+			expect(opts.path).toBe('/');
+			expect(opts.maxAge).toBe(maxAge);
+			expect(isValidHostCookie(opts)).toBe(true);
+		}
 	});
 });
