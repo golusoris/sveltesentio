@@ -4,6 +4,11 @@
 			"args": ["decisions", "serve"],
 			"command": "praetorctl",
 			"type": "stdio"
+		},
+		"sveltesentio": {
+			"args": ["packages/mcp/bin/sveltesentio-mcp.ts"],
+			"command": "node",
+			"type": "stdio"
 		}
 	}
 }
