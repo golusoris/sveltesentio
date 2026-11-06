@@ -102,192 +102,73 @@ make verify-all
 
 ---
 
-<!-- markdownlint-disable MD013 -->
-
 # Agent guide — sveltesentio
 
-> Cross-tool context: [Claude Code](https://claude.com/claude-code), [Cursor](https://cursor.sh), [Aider](https://aider.chat), [Codex](https://github.com/openai/codex), [Continue](https://continue.dev), other coding assistants.
-> **Read before suggesting changes.** Then read per-subpackage `AGENTS.md` for touched area.
+> For Claude Code, Cursor, Aider, Codex, Continue. Read before changes; then per-package `AGENTS.md`.
 
 ## What this repo is
 
-`sveltesentio` = pnpm workspace monorepo (`github.com/lusoris/sveltesentio`). Wraps pinned set of best-in-class libraries as opt-in `@sveltesentio/*` packages. Apps compose only what they need; nothing else ships.
-
-**SvelteKit analog of [golusoris/golusoris](https://github.com/golusoris/golusoris)** (Go meta-framework, same author). Same opt-in module discipline. Same compliance targets (OWASP ASVS L2 / WCAG 2.2 AA / SLSA Build Level 3 / EU CRA / EU AI Act); SLSA today = Build Level 2, Level 3 open (#280). Same AI-assisted-development conventions (AGENTS.md + CLAUDE.md + Skills + Hooks). Expressed in Svelte 5 runes + TypeScript, not Go + fx.
-
-Pointers: [README.md](README.md) = user-facing pitch. [docs/principles.md](docs/principles.md) = full coding contract (§2). [docs/ux-principles.md](docs/ux-principles.md) = UX rules (§3).
+`sveltesentio` = pnpm monorepo (`github.com/lusoris/sveltesentio`). Opt-in `@sveltesentio/*` modules (Svelte 5 runes + TS). SvelteKit analog of `golusoris/golusoris` (OWASP ASVS L2, WCAG 2.2 AA, SLSA Build Level 2, Level 3 open #280, EU CRA, EU AI Act).
+Pitch: [README.md](README.md).
 
 ## HISS in this repository
 
-Harness above = rule text. Rows below = TypeScript adaptation + repository enforcement.
+TypeScript: HISS-03/09 n/a; HISS-11..14 in upstream catalog.
 
-- HISS-03 (manual heap management), HISS-09 (pointer arithmetic): no analogue in TypeScript.
-- HISS-11..14: tracked by upstream HISS-20 coverage catalog, not asserted here.
+| HISS | Rule | Check |
+|:---|:---|:---|
+| 01 | No package cycles | `pnpm check:cycles` |
+| 02 | `AbortSignal` on I/O | ESLint/review |
+| 04 | <=60 LOC, McCabe <=10, component <=100 | ESLint |
+| 07 | No `!`, unhandled promises, empty catch | `@typescript-eslint` |
+| 08 | No `eval`/`new Function`/unsanitised `innerHTML`; DOMPurify | ESLint/CodeQL |
+| 10 | 0 warnings, no `any` | Exit 1 |
+| 15 | Each export named in a test; 3 cases = review | `pnpm check:export-tests` |
+| 17 | State read/sync | `make state-audit` |
+| 18 | Diff-aware on PR, full otherwise | `CI Gate` |
+| 19 | Upstream libs = existing code | Review |
+| 20 | Coverage verified | `make hiss-coverage` |
+| 21 | Linux/macOS/Windows legs required (#328) | `portability.yml` |
 
-| Invariant | Repository rule                                                                                                                                      | Enforced by          |
-| :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
-| HISS-01   | No circular imports between `@sveltesentio/*` packages.                                                                                              | `pnpm check:cycles`  |
-| HISS-02   | Explicit `AbortSignal` timeout on all I/O.                                                                                                           | ESLint / review      |
-| HISS-04   | Function length $\le 60$ LOC, McCabe Cyclomatic $\le 10$, Svelte component $\le 100$ lines.                                                          | ESLint `complexity`  |
-| HISS-07   | No non-null `!`, no floating promises, no empty `catch`. All errors flow through `@sveltesentio/core/errors` (RFC 9457).                             | `@typescript-eslint` |
-| HISS-08   | No `eval` / `new Function`; no unsanitised `innerHTML`, DOMPurify at every boundary.                                                                 | ESLint / CodeQL      |
-| HISS-10   | Zero-warning tolerance across `tsc`, ESLint, Prettier. No `any`.                                                                                     | Exit code 1          |
-| HISS-15   | Positive, negative, boundary tests mandatory for every public export. Gate: each exported value named in a test of its package; three cases = review. | `pnpm check:export-tests` |
-| HISS-17   | Turn start reads `.workingdir/STATE.md` + `OPEN.md`; turn end runs `praetorctl state sync .`.                                                        | `make state-audit`   |
-| HISS-18   | `scripts/ci-affected.mjs` diff-aware on PR, full on non-PR events; `CI Gate` still reports.                                                          | `CI Gate` / `Detect Changes` |
-| HISS-19   | Upstream libs count as existing code (see streamlining rule).                                                                                        | Review blocker       |
-| HISS-20   | `.config/hiss/coverage.yaml` declares enforcement per invariant, per language; `praetorctl hiss coverage --verify` replays fixture corpus both ways. | `make hiss-coverage` |
-| HISS-21   | `portability.yml` runs lint, typecheck, test on `ubuntu-26.04`, `macos-26`, `windows-2025`; each leg required in `.github/rulesets/main.json` (#328). | `Platform Neutrality (<OS>)` |
-
-Gate steps inside `make verify-all`, beside engine checks: `pnpm run ci` (lint, typecheck, test, build, all workspaces); `pnpm check:cycles`; `pnpm check:declared-imports` (imports and @sveltesentio/* ranges declared per package); `pnpm audit --audit-level=high` (supply-chain gate CI enforces).
+Gate: `pnpm run ci`, `pnpm check:cycles`, `pnpm check:declared-imports`, `pnpm audit --audit-level=high`.
 
 ## Hard rules
 
-1. **Never break public API** without `Migration:` footer (before/after Svelte snippet) + codemod, or explicit "manual migration" note with line-level diff guidance. No API-diff gate runs in CI yet (#288): reviewer compares public surface by hand.
-2. **Never add transitive dependency** without weighing alternatives from awesome-lists harvest (`.workingdir/research/svelte-ecosystem-audit.md`). State choice in PR if non-obvious.
-3. **Public surface of every package = `src/index.ts` named exports** (+ documented sub-exports like `ui/toast`, `media/player`). Apps never import internals (anything under `src/internal/` or unexported). Package `exports` map = enforcement gate.
-4. **No top-level side effects in package modules.** No `window.` access, no DOM reads, no `setInterval` at import time. Use vite plugins, SvelteKit hooks, or explicit `register(app)` entry points.
-5. **All errors flow through `@sveltesentio/core/errors`** (RFC 9457 `application/problem+json` parser + typed `ProblemDetails`). Never throw raw `Error` from package code.
-6. **All time uses `@sveltesentio/core/clock`.** `Date.now()` / `new Date()` / `performance.now()` banned in package source outside `test/`. Enforced by custom eslint rule (`eslint.config.js`).
-7. **No `console.log` in package source.** `console.warn` / `console.error` only, or structured logger from `@sveltesentio/core/log` once it lands. Enforced by eslint `no-console`.
-8. **Svelte 5 runes-first.** Never `$:`, never `writable()` for server state (use `@sveltesentio/query`), never `export let` (use `$props()`). Enforced by eslint-plugin-svelte.
-9. **No `any` — ever.** Use `unknown`, narrow with Zod or type guards. Enforced by `@typescript-eslint/no-explicit-any: error`.
-10. **Every merged commit: 0 eslint · 0 tsc · 0 `pnpm audit` vulns · axe-clean on stories.** `// eslint-disable-*` requires justification comment on adjacent line.
-11. **No guessing on major decisions.** Agents never lock library picks, module surface, API shape, or compliance posture on their own.
-    - Agent job: present evidence + ≥ 2 named alternatives, open/update `D*` row in `.workingdir/research/decisions-needed.md`.
-    - Only project owner (`@lusoris`) closes `D*` row to `locked (ADR-NNNN)`.
-    - Evidence = (a) cited file:line in consuming application, (b) measured benchmark / bundle analysis, or (c) existing ADR.
-    - Not evidence: "Seems good", "commonly used", awesome-list consensus. Those = pointers to where evidence could be gathered.
-12. **Strict SvelteKit universe.** Library picks must be (a) Svelte 5 runes-native with first-class TS types, or (b) framework-agnostic libraries composing cleanly with SvelteKit SSR (TanStack, Zod, Yjs, Vite plugins, ConnectRPC, openapi-fetch, elkjs, etc.).
-    - Never pull React/Vue/Solid component libraries via cross-framework bridges: non-Svelte UI dep = architectural smell.
-    - Capability exists only outside Svelte ecosystem -> open `D*` row, discuss before adding bridge.
+1. Append-only API; breaking change needs `Migration:` footer (before/after snippet) + codemod or line-level manual-migration note; no API-diff gate yet (#288): reviewer diffs surface.
+2. No new transitive dep without weighing alternatives in `.workingdir/research/svelte-ecosystem-audit.md`; non-obvious pick -> justify in PR.
+3. Public surface = `src/index.ts` named exports (+ `ui/toast` subpaths); apps never import `src/internal/`; `exports` enforces.
+4. No top-level side effects (no `window.`, DOM reads, import `setInterval`); use vite plugins, hooks, `register(app)`.
+5. Errors via `@sveltesentio/core/errors` (RFC 9457 `ProblemDetails`); never throw raw `Error`.
+6. Time via `@sveltesentio/core/clock`; banned outside `test/`: `Date.now()`, `new Date()`, `performance.now()` (eslint).
+7. Zero `console.log` (warn/error only, or `@sveltesentio/core/log`; eslint `no-console`).
+8. Svelte 5 runes-first: no `$:`, no `writable()` for server state (`@sveltesentio/query`), no `export let` (`$props()`; eslint).
+9. Zero `any`: use `unknown`, narrow via Zod/type guards (`@typescript-eslint/no-explicit-any`).
+10. Merged commit: 0 eslint, 0 tsc, 0 audit vulns, axe-clean stories; `// eslint-disable-*` needs adjacent justification.
+11. Agents never lock library picks, module surface, API shape, compliance posture. Open/update `D*` in `.workingdir/research/decisions-needed.md` with evidence + >= 2 options; owner (`@lusoris`) closes to `locked (ADR-NNNN)`; evidence = app line, benchmark, ADR; consensus != evidence.
+12. SvelteKit universe: runes-native + TS types or framework-agnostic (TanStack, Zod, Yjs, Vite, ConnectRPC, openapi-fetch, elkjs); no React/Vue/Solid bridges; external capability needs `D*` row.
 
-[docs/principles.md](docs/principles.md) holds Power-of-10, OWASP ASVS L2, WCAG 2.2 AA, supply-chain, testing, performance contract. Deviations require PR comment citing subsection.
+## Workflow discipline
 
-## Workflow discipline (evidence-driven)
+Research-first; apps = truth for promotion (`.workingdir/research/deepread-*.md`, `.workingdir/PLAN.md`).
+Before proposing package, sub-export, API:
+1. `.workingdir/research/decisions-needed.md`: open question? Add evidence, do not guess.
+2. `.workingdir/research/svelte-ecosystem-audit.md`: evaluated? Obsoletes wrapper?
+3. `.workingdir/research/existing-apps-deepread.md`: pattern in >= 2 apps? Single-app stays local.
+4. No evidence: research; open `D*` row.
 
-sveltesentio = deliberately **research-first**. **Consuming applications = source of truth** for which patterns deserve promotion into framework. Four app deep reads from 2026-04 (`.workingdir/research/deepread-*.md`) stay as recorded evidence; those apps have no repository in the organisation today (measured 2026-10-11). Current consumers: `.workingdir/PLAN.md`.
+Streamlining: clean upstream lib -> do not wrap; document in `docs/compose/`; consumer imports upstream. Wrappers: (a) enforce invariant from `docs/principles.md`, (b) compose libs into matrix, (c) encode cross-app decision.
 
-Before proposing new package, sub-export, or API shape, agent must:
+## References
 
-1. Check `.workingdir/research/decisions-needed.md`: question already open? Add evidence there, do not ship guess.
-2. Check `.workingdir/research/svelte-ecosystem-audit.md`: upstream library already evaluated? Does it obsolete proposed wrapper?
-3. Check `.workingdir/research/existing-apps-deepread.md`: pattern observed in ≥ 2 consuming applications? One-off patterns stay in their app.
-4. No evidence yet: **do research, don't guess.** Open `D*` row in `decisions-needed.md`, wait for evidence.
-
-**Streamlining rule** (2026-04-17): existing library in Svelte / Tailwind / JS ecosystem already solves problem cleanly -> do **not** wrap it into `@sveltesentio/*` package. Document composition pattern in `docs/compose/`; consumers import upstream library directly.
-
-Wrappers justified only when they:
-
-- (a) enforce cross-cutting invariant from `docs/principles.md`, or
-- (b) compose multiple libraries into pinned matrix, or
-- (c) encode decision otherwise re-litigated per app.
-
-## Repository layout
-
-Full annotated tree: [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md).
-
-| Path               | Holds                                                                                                                                                                                                                    |
-| :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/<name>/` | `@sveltesentio/*` publishable module, 19 published. `src/index.ts` = entire public API (named exports only); `src/internal/` = off-limits to consumers; `AGENTS.md` = per-package conventions, read before touching area |
-| `apps/`            | `storybook` (Storybook 10 showcase, axe via addon-a11y), `docs` (docs site, mdsvex), `integration` (integration-test app consuming every published package), `sveltekit-fixture` (minimal SvelteKit app; caller target of reusable `ci-sveltekit.yml` self-test)                                                              |
-| `examples/`        | 19 per-package canonical usage snippets + README                                                                                                                                                                         |
-| `docs/`            | `principles.md` (§2), `ux-principles.md` (§3), `adr/`, `architecture/`, `migrations/`, `compliance/`, `compose/`, `upstream/`                                                                                            |
-| `.claude/`         | `settings.json` hooks; skills `/wire-module`, `/scaffold-route`, `/add-shadcn`, `/add-storybook`                                                                                                                         |
-| `.github/`         | CODEOWNERS, issue + PR templates, workflows (see "CI gates")                                                                                                                                                             |
-| `.workingdir/`     | local-only planning state, gitignored: PLAN, STATE, V0.1.0, BACKLOG; `research/` = per-library audits, app deep-reads, D-row decision ledger                                                                             |
-
-Sub-exports (`ui/toast`, `media/player`, …) = module subpaths, not directories. Per-subpackage `AGENTS.md` files give package-level conventions, idioms, pinned doc URLs. Create one per package when its Phase lands (not before).
-
-## Package purpose table
-
-| Package                     | Phase | Key dependencies                                                                           | What it provides                                                                                                                                                                                                                                  |
-| --------------------------- | ----- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@sveltesentio/core`        | 2     | vite, zod, openapi-fetch                                                                   | env schema, RFC 9457 error parser, id/clock utils, CSP helpers, vite plugin                                                                                                                                                                       |
-| `@sveltesentio/api`         | 4     | openapi-fetch, openapi-typescript (optional)                                               | typed openapi-fetch client + RFC 9457 `problemMiddleware` + codegen recipe                                                                                                                                                                        |
-| `@sveltesentio/ui`          | 3     | shadcn-svelte, bits-ui, tailwindcss@4, mode-watcher                                        | Tailwind preset, oklch tokens, shadcn CLI wrapper, interface-type presets, headless DataTable/command/toast                                                                                                                                       |
-| `@sveltesentio/query`       | 4     | @tanstack/svelte-query                                                                     | load helpers, optimistic updates, SSR hydration, pagination                                                                                                                                                                                       |
-| `@sveltesentio/forms`       | 5     | sveltekit-superforms, zod                                                                  | form patterns, field components, action helpers, error mapping                                                                                                                                                                                    |
-| `@sveltesentio/i18n`        | 6     | @inlang/paraglide-js                                                                       | locale detection, message helpers, SvelteKit middleware, RTL                                                                                                                                                                                      |
-| `@sveltesentio/auth`        | 7     | oauth4webapi, @simplewebauthn/browser                                                      | OIDC/session client, passkeys, permission runes, TOTP MFA                                                                                                                                                                                         |
-| `@sveltesentio/realtime`    | 8     | sveltekit-sse, @connectrpc/connect-web                                                     | SSE + ConnectRPC + WebSocket transport adapter                                                                                                                                                                                                    |
-| `@sveltesentio/collab`      | 8b    | yjs, y-websocket, y-indexeddb                                                              | CRDT + Svelte binding + sync provider                                                                                                                                                                                                             |
-| `@sveltesentio/flow`        | 9     | @xyflow/svelte                                                                             | node editor wrappers, DAG helpers, canvas utilities                                                                                                                                                                                               |
-| `@sveltesentio/uploads`     | 9b    | tus-js-client, exifr, file-type                                                            | resumable uploads + EXIF read + client-side guards                                                                                                                                                                                                |
-| `@sveltesentio/media`       | 10    | vidstack, hls.js, embla-carousel-svelte                                                    | player/image/carousel sub-exports                                                                                                                                                                                                                 |
-| `@sveltesentio/emulator`    | 10    | (EmulatorJS — external/CDN)                                                                | EmulatorJS Svelte loader + CSP directives for wasm/worker                                                                                                                                                                                         |
-| `@sveltesentio/shell`       | 10b   | @vite-pwa/sveltekit, vite-plugin-pwa                                                       | device-class layouts, D-pad routing, PWA install                                                                                                                                                                                                  |
-| `@sveltesentio/charts`      | 11    | layerchart                                                                                 | dashboard chart wrappers, semantic color presets                                                                                                                                                                                                  |
-| `@sveltesentio/ai`          | 12    | @anthropic-ai/sdk (server), @huggingface/transformers, ollama-js (proxy)                   | LLM chat streaming, edge AI, semantic search, audit hook                                                                                                                                                                                          |
-| `@sveltesentio/ipc-sockmap` | 12b   | @sveltesentio/core (Linux server-only; Tier 3 reads pinned BPF sockmap owned by golusoris) | Colocated SvelteKit ↔ Golusoris IPC — AF_UNIX (Tier 1) + framing + transport-ladder detection; eBPF SK_MSG (Tier 3) observe/handoff via `./sockmap` (probeSockmap + activationListeners + readSockmapStats); golusoris owns map writes (ADR-0051) |
-| `@sveltesentio/testing`     | ortho | vitest (optional peer), @axe-core/playwright                                               | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures                                                                                                                                                    |
-| `@sveltesentio/mcp`         | ortho | @modelcontextprotocol/sdk                                                                  | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue                                                                                                                           |
-
-**All 19 packages above: built + published to npm as of v0.1.0 milestone (see `.workingdir/V0.1.0.md`). Phase column records original build order, not pending work.**
-
-Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`. Full golusoris cross-reference: `.workingdir/research/module-backlog.md`.
-
-## Common tasks
-
-| Task                                                     | Command / Skill                                                                                            |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Add a new `@sveltesentio/*` package                      | `/wire-module` skill                                                                                       |
-| Scaffold a SvelteKit route (Superforms + TanStack Query) | `/scaffold-route` skill                                                                                    |
-| Add a shadcn-svelte component                            | `/add-shadcn` skill                                                                                        |
-| Add a Storybook story                                    | `/add-storybook` skill                                                                                     |
-| Bootstrap dev environment                                | `make setup`                                                                                               |
-| Run full CI locally                                      | `make ci`                                                                                                  |
-| Run every story with axe                                 | `pnpm test:stories`                                                                                        |
-| Run the end-to-end tests (auth, media, shell)            | `pnpm test:e2e`                                                                                            |
-| Add a new root-level dep                                 | `pnpm add -Dw <dep>`                                                                                       |
-| Add a workspace-package dep                              | `pnpm --filter @sveltesentio/<pkg> add <dep>`                                                              |
-| Create release PR                                        | (automated by release-please — open a branch + Conventional-Commit PR; `release-please.yml` runs on merge) |
-
-## Pinned upstream docs
-
-Version-pinned snapshots live in `docs/upstream/` (maintained by `refresh-upstream-docs.yml`). Library not yet snapshotted -> check library repo directly for exact version in `pnpm-lock.yaml`. Public docs may be ahead of or behind pinned version.
-
-Current peer-range targets (consumers must satisfy these):
-
-| Package                  | Version target | Notes                                                           |
-| ------------------------ | -------------- | --------------------------------------------------------------- |
-| `svelte`                 | >=5.56.4       | runes-first; floor = superforms 3 peer + layerchart, measured   |
-| `@sveltejs/kit`          | ^3.0.0         | ADR-0058; kit 2 dropped; floor 3.0.0, 0 advisories             |
-| `vite`                   | >=8.0.16       | core peer; lowest vite 8 with 0 advisories                      |
-| `typescript`             | ^6.0.3         | ADR-0020; published peerDep `>=5.5 <7`                          |
-| `zod`                    | ^4             | v3 unsupported                                                  |
-| `tailwindcss`            | ^4             | v3 unsupported; preset compatible only with v4                  |
-| `@tanstack/svelte-query` | ^6             | ADR-0008                                                        |
-| `node`                   | >=24           | ADR-0021; LTS; closes D5                                        |
-| `pnpm`                   | >=10           | workspace features required                                     |
+- Layout: [repository-layout.md](docs/architecture/repository-layout.md); sub-exports = module subpaths.
+- Packages (19 published): [packages.md](docs/architecture/packages.md); backlog `.workingdir/research/module-backlog.md`.
+- Tasks: [common-tasks.md](docs/contributing/common-tasks.md).
+- Peers: [peer-ranges.md](docs/upstream/peer-ranges.md), `docs/upstream/`.
 
 ## CI gates
 
-Every PR must pass:
+PR: Conventional Commits, 0 ESLint errors, Prettier, 0 `turbo typecheck` errors, Vitest green + >= 70% coverage (>= 85% `auth`, `forms`), Playwright e2e green (`auth`, `media`, `shell`), axe-core clean (ADR-0056), `pnpm audit` clean, `codeql.yml` clean.
 
-- **Conventional Commits** PR title (`commitlint` via `ci.yml`).
-- **ESLint flat config**: 0 errors (TS + Svelte + a11y).
-- **Prettier**: formatted (checked; not auto-fixed in CI).
-- **TypeScript**: 0 errors across workspaces (`turbo typecheck`).
-- **Vitest**: green + ≥ 70% coverage (≥ 85% for `auth`, `forms`).
-- **Playwright**: end-to-end tests green for `auth`, `media` and `shell` (`End-to-end` job; affected packages only).
-- **axe-core**: clean on every Storybook story (`Stories (axe)` job: each story runs as a Chromium test and fails on a violation, ADR-0056).
-- **`pnpm audit`**: clean (no `>=high` advisories).
-- **`codeql.yml`**: clean.
+Release: SLSA Build Level 2, CycloneDX SBOM; Level 3 open (#280, exception `HISS-11`). Details: [ci-gates.md](docs/contributing/ci-gates.md).
 
-Main + weekly schedule, not PRs: `scorecard.yml` job `Scorecard threshold` reads published OpenSSF Scorecard result for pushed commit (`scripts/scorecard-threshold.mjs`); score < 7 -> job fails + opens/updates one issue labelled `scorecard`; next passing run closes it. `peer-floors.yml` job `Peer floors` (weekly + PRs changing a `packages/*/package.json`, release PR included): pins svelte, `@sveltejs/kit`, vite, typescript to lowest release of declared peer range (`scripts/pin-peer-floors.mjs`), then typecheck + test every package; lockfile CI = upper end of each range, this job = lower end.
-
-Release PRs additionally:
-
-- **SLSA provenance**: Build Level 2 via `actions/attest-build-provenance` in `release-please.yml`.
-- **SBOM**: CycloneDX, workflow artifact only.
-- **Open (#280)**: Level 3, cosign, npm provenance, SBOM on release. Exception `HISS-11` in `.standards.yaml`, expires 2027-01-09.
-
-## When in doubt
-
-1. Read [docs/principles.md](docs/principles.md): coding/security/compliance contract (§2).
-2. Read [docs/ux-principles.md](docs/ux-principles.md): UI/UX rules per interface type (§3).
-3. Read per-subpackage `AGENTS.md` for touched area.
-4. Read `.workingdir/STATE.md`: current author work + locked decisions.
-5. Read `.workingdir/PLAN.md`: full roadmap + framework mission.
-6. Decision not locked yet -> check `.workingdir/research/decisions-needed.md`, **add evidence, don't ship guess**.
+Deviation from [principles.md](docs/principles.md) (§2) or [ux-principles.md](docs/ux-principles.md) (§3): PR comment cites subsection. Unsure: per-package `AGENTS.md`, `.workingdir/STATE.md`, `PLAN.md`.
