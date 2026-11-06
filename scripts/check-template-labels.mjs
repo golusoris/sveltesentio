@@ -64,6 +64,7 @@ export async function withTimeout(
 	}
 }
 
+/** Returns trimmed label names from a comma-delimited string; throws when empty or exceeding limit. */
 function parseLabelString(value, where) {
 	const items = value
 		.split(',')
@@ -78,16 +79,23 @@ function parseLabelString(value, where) {
 	return items;
 }
 
+/** Returns trimmed label names from an array; throws on non-string, blank item, or exceeding limit. */
 function parseLabelArray(items, where) {
 	if (items.length > LABEL_LIMIT) {
 		throw new Error(`${where}: exceeds limit of ${LABEL_LIMIT} labels, got ${items.length}`);
 	}
+	const trimmed = [];
 	for (const item of items) {
 		if (typeof item !== 'string') {
 			throw new Error(`${where}: label item must be a string, got ${typeof item}`);
 		}
+		const label = item.trim();
+		if (label.length === 0) {
+			throw new Error(`${where}: label item must not be blank`);
+		}
+		trimmed.push(label);
 	}
-	return items;
+	return trimmed;
 }
 
 /** The labels one issue form names; throws on an invalid form, doc, or label item. */
@@ -229,6 +237,7 @@ export async function revalidateMissing(repository, token, missing, fetchImpl = 
 	return stillMissing;
 }
 
+/** Reads a JSON list of label names from a file; throws on invalid items or exceeding limit. */
 async function readLabelsFile(file) {
 	const content = await readFile(file, {
 		encoding: 'utf8',
@@ -247,6 +256,7 @@ async function readLabelsFile(file) {
 	return names;
 }
 
+/** Resolves repository labels from file or API; throws when neither source is configured. */
 async function repoLabels(argv, env, fetchImpl = fetch) {
 	const flag = argv.indexOf('--labels-file');
 	if (flag !== -1) {

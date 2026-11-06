@@ -82,6 +82,18 @@ describe('templateLabels', () => {
 		);
 	});
 
+	it('refuses blank label items in an array and trims surrounding whitespace', () => {
+		assert.throws(
+			() => templateLabels("name: Bug\nlabels: ['bug', '']\n", 'x.yml'),
+			/x\.yml.*label item must not be blank/,
+		);
+		assert.throws(
+			() => templateLabels("name: Bug\nlabels: ['bug', '   ']\n", 'x.yml'),
+			/x\.yml.*label item must not be blank/,
+		);
+		assert.deepEqual(templateLabels("name: Bug\nlabels: [' bug ']\n"), ['bug']);
+	});
+
 	it('enforces LABEL_LIMIT per form boundaries', () => {
 		const labels99 = Array.from({ length: LABEL_LIMIT - 1 }, (_, i) => `l${i}`);
 		const labels100 = Array.from({ length: LABEL_LIMIT }, (_, i) => `l${i}`);
