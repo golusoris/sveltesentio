@@ -26,6 +26,6 @@ Overview of `@sveltesentio/*` publishable workspace packages, dependencies, and 
 | `@sveltesentio/testing`     | ortho | vitest (optional peer), @axe-core/playwright                                               | `testClock({ now })` (ADR-0052), a11y harness (ADR-0031), Superforms + TanStack Query fixtures                                                                                                                                                    |
 | `@sveltesentio/mcp`         | ortho | @modelcontextprotocol/sdk                                                                  | MCP server exposing ADR/compose/compliance docs + module-lookup tool to Claude Code / Cursor / Aider / Codex / Continue                                                                                                                           |
 
-All 19 packages above: built + published to npm as of v0.1.0 milestone (see `.workingdir/V0.1.0.md`). Phase column records original build order, not pending work.
+All 19 packages above: built + published to npm as of the v0.1.0 release tag (tracked in [CHANGELOG.md](../../CHANGELOG.md) and [.release-please-manifest.json](../../.release-please-manifest.json)). Phase column records original build order, not pending work.
 
-Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`. Full golusoris cross-reference: `.workingdir/research/module-backlog.md`.
+Deferred to post-v0.1.0: `observability`, `notify`, `page`, `outbox`, `leader`, `pdf`, `ocr`, `search`, `fs`, `payments`.
