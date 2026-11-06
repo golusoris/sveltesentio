@@ -20,7 +20,7 @@ sveltesentio/
 ├── .release-please-manifest.json   # per-package published version manifest
 ├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
 │
-├── packages/                       # @sveltesentio/* publishable modules — 19 published; see the package purpose table below
+├── packages/                       # @sveltesentio/* publishable modules — 19 published; see packages.md
 │   ├── core/                       # every package follows this shape:
 │   │   ├── src/index.ts            #   the entire public API (named exports only)
 │   │   ├── src/internal/           #   off-limits to consumers
@@ -77,3 +77,17 @@ sveltesentio/
 ├── CONTRIBUTING.md                 # dev workflow for contributors
 └── CHANGELOG.md                    # Keep a Changelog 1.1 (release-please-managed)
 ```
+
+## Key directories
+
+| Path               | Holds                                                                                                                                                                                                                                                                                                                                                                                             |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/<name>/` | `@sveltesentio/*` publishable module, 19 published. Package `exports` map = entire public API (root `src/index.ts` + subpath module exports use named exports only; `*/component` subpaths, e.g. `@sveltesentio/ui/button/component`, export the Svelte component as default export); `src/internal/` = off-limits to consumers; `AGENTS.md` = per-package conventions, read before touching area |
+| `apps/`            | `storybook` (Storybook 10 showcase, axe via addon-a11y), `docs` (docs site, mdsvex), `integration` (integration-test app consuming every published package), `sveltekit-fixture` (minimal SvelteKit app; caller target of reusable `ci-sveltekit.yml` self-test)                                                                                                                                  |
+| `examples/`        | 19 per-package canonical usage snippets + README                                                                                                                                                                                                                                                                                                                                                  |
+| `docs/`            | `principles.md` (§2), `ux-principles.md` (§3), `adr/`, `architecture/`, `migrations/`, `compliance/`, `compose/`, `upstream/`                                                                                                                                                                                                                                                                     |
+| `.claude/`         | `settings.json` hooks; skills `/wire-module`, `/scaffold-route`, `/add-shadcn`, `/add-storybook`                                                                                                                                                                                                                                                                                                  |
+| `.github/`         | CODEOWNERS, issue + PR templates, workflows                                                                                                                                                                                                                                                                                                                                                       |
+| `.workingdir/`     | local-only planning state, gitignored: PLAN, STATE, V0.1.0, BACKLOG; `research/` = per-library audits, app deep-reads, D-row decision ledger                                                                                                                                                                                                                                                      |
+
+See [packages.md](packages.md) for individual package purposes, phases, and key dependencies.
