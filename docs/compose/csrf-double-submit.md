@@ -266,14 +266,15 @@ Login is special: there's no session yet, so no HMAC. Use:
 
 - **Origin check** remains.
 - **Form token** written to an HttpOnly, short-lived cookie
-  (`__Host-login-nonce`, 5 min TTL) + posted in a hidden input.
+  (`__Host-login-nonce`, 5 min TTL; `__Host-` requires `Path=/`) + posted in a hidden input.
 
 ```ts
 // src/routes/login/+page.server.ts
 export async function load({ cookies }) {
   const nonce = crypto.randomBytes(16).toString('base64url');
   cookies.set('__Host-login-nonce', nonce, {
-    path: '/login',
+    // __Host- prefix requires Path=/ (RFC 6265bis)
+    path: '/',
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
@@ -289,7 +290,7 @@ export const actions = {
     if (!nonce || form.get('nonce') !== nonce) {
       return fail(403, { reason: 'nonce_mismatch' });
     }
-    cookies.delete('__Host-login-nonce', { path: '/login' });
+    cookies.delete('__Host-login-nonce', { path: '/' });
     // ... handle login
   },
 };
