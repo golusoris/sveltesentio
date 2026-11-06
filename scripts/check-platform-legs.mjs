@@ -20,6 +20,8 @@ export const EXPECTED_JOB_NAME = 'Platform Neutrality (${{ matrix.name }})';
 export const IO_TIMEOUT_MS = 10_000;
 export const EXPECTED_RUNS_ON = '${{ matrix.runner }}';
 export const PLATFORM_CONTEXT_RE = /^Platform Neutrality \((.+)\)$/;
+export const DRAFT_STEP_NAME = 'Stop on a draft pull request';
+export const DRAFT_STEP_IF = 'github.event.pull_request.draft == true';
 
 export const REQUIRED_LEGS = {
 	Linux: 'ubuntu-',
@@ -52,13 +54,17 @@ export function getPortabilityJob(
 	return doc.jobs.portability;
 }
 
-function stepFailsClosed(step) {
+function draftStepFailsClosed(step) {
 	if (typeof step?.run !== 'string') return false;
-	const lines = step.run
-		.split('\n')
-		.map((line) => line.trim())
-		.filter((line) => line.length > 0);
-	return lines.at(-1) === 'exit 1';
+	const lines = step.run.split('\n').map((line) => line.trim());
+	const nonEmpty = lines.filter((line) => line.length > 0);
+	if (nonEmpty.at(-1) !== 'exit 1') return false;
+	for (const line of lines) {
+		if (/\bexit\b/.test(line) && line !== 'exit 1') {
+			return false;
+		}
+	}
+	return true;
 }
 
 function getStepDescriptor(step) {
@@ -75,16 +81,30 @@ function getStepDescriptor(step) {
 	return '';
 }
 
+function checkDraftStep(step, i, relWorkflow, desc, findings) {
+	if (typeof step.if !== 'string' || step.if.trim() !== DRAFT_STEP_IF) {
+		findings.push(
+			`${relWorkflow}: steps[${i}] ('${desc}') 'if' must be '${DRAFT_STEP_IF}', got ${JSON.stringify(step.if ?? null)}`,
+		);
+	}
+	if (!draftStepFailsClosed(step)) {
+		findings.push(
+			`${relWorkflow}: steps[${i}] ('${desc}') draft-stop step must fail closed (last run line 'exit 1', no other exit codes)`,
+		);
+	}
+}
+
 function checkSingleStep(step, i, relWorkflow, findings) {
 	if (!step || typeof step !== 'object') return;
+	const desc = getStepDescriptor(step);
 	if (step['continue-on-error'] !== undefined && step['continue-on-error'] !== false) {
-		const desc = getStepDescriptor(step);
 		findings.push(`${relWorkflow}: steps[${i}] ('${desc}') continue-on-error prohibited`);
 	}
-	if (step.if !== undefined && !stepFailsClosed(step)) {
-		findings.push(
-			`${relWorkflow}: steps[${i}] 'if' prohibited unless step fails closed (last run line 'exit 1')`,
-		);
+	const isDraftStep = i === 0 && step.name === DRAFT_STEP_NAME;
+	if (isDraftStep) {
+		checkDraftStep(step, i, relWorkflow, desc, findings);
+	} else if (step.if !== undefined) {
+		findings.push(`${relWorkflow}: steps[${i}] ('${desc}') 'if' prohibited`);
 	}
 }
 
