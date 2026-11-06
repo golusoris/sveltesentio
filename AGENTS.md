@@ -113,7 +113,7 @@ make verify-all
 
 ## What this repo is
 
-pnpm monorepo, 19 `@sveltesentio/*` packages. SvelteKit analog of golusoris/golusoris. Svelte 5 runes + TypeScript. Compliance: ASVS L2, WCAG 2.2 AA, SLSA L2 (#280 tracks L3). Pointers: [docs/principles.md](docs/principles.md) (§2), [docs/ux-principles.md](docs/ux-principles.md) (§3).
+pnpm monorepo, 19 `@sveltesentio/*` packages. SvelteKit analog of golusoris/golusoris. Svelte 5 runes + TypeScript. Compliance: ASVS L2, WCAG 2.2 AA, SLSA L2 (#280 tracks L3), EU CRA, EU AI Act. Pointers: [docs/principles.md](docs/principles.md) (§2), [docs/ux-principles.md](docs/ux-principles.md) (§3).
 
 ## HISS in this repository
 
@@ -130,9 +130,9 @@ Harness above = rule text. HISS-03/09: no TypeScript analogue. HISS-11..14: trac
 - HISS-18: `scripts/ci-affected.mjs` diff-aware on PR, full otherwise
 - HISS-19: upstream libs = existing code (streamlining rule; review blocker)
 - HISS-20: `.config/hiss/coverage.yaml` replayed both ways (`make hiss-coverage`)
-- HISS-21: `portability.yml` on ubuntu-26.04 + macos-26 + windows-2025 (#328)
+- HISS-21: `portability.yml` on ubuntu-26.04 + macos-26 + windows-2025; each leg required in `.github/rulesets/main.json` (#328)
 
-`make verify-all` gate: `pnpm run ci` + `pnpm check:cycles` + `pnpm check:declared-imports` + `pnpm audit --audit-level=high`.
+`make verify-all` gate: see [Makefile](Makefile).
 
 ## Hard rules
 
@@ -141,13 +141,13 @@ Harness above = rule text. HISS-03/09: no TypeScript analogue. HISS-11..14: trac
 3. **Public surface = `src/index.ts` named exports** + documented sub-exports. Apps never import `src/internal/`.
 4. **No top-level side effects** in package modules — no `window.`, no DOM reads, no `setInterval` at import.
 5. **All errors via `core/errors`** (RFC 9457). Never throw raw `Error`.
-6. **All time via `core/clock`.** `Date.now()` / `new Date()` banned in package source. ESLint rule enforced.
+6. **All time via `core/clock`.** `Date.now()` / `new Date()` / `performance.now()` banned in package source outside `test/`. ESLint rule enforced.
 7. **No `console.log`** in package source. `console.warn`/`console.error` only. ESLint `no-console`.
-8. **Svelte 5 runes-first.** No `$:`, no `writable()`, no `export let`. ESLint enforced.
+8. **Svelte 5 runes-first.** No `$:`, no `writable()` for server state (use `@sveltesentio/query`), no `export let`. ESLint enforced.
 9. **No `any`.** Use `unknown` + Zod / type guards.
-10. **0 eslint · 0 tsc · 0 audit vulns · axe-clean** on every merge. `eslint-disable` needs justification comment.
+10. **0 eslint · 0 tsc · 0 audit vulns · axe-clean** on every merge. `eslint-disable` needs justification comment on adjacent line.
 11. **No guessing on major decisions.** Present evidence + >=2 alternatives, open `D*` row in `decisions-needed.md`. Only owner closes to `locked (ADR-N)`.
-12. **Strict SvelteKit universe.** Svelte 5 runes-native or framework-agnostic (TanStack, Zod, etc.). No React/Vue bridges.
+12. **Strict SvelteKit universe.** Svelte 5 runes-native or framework-agnostic only. No React/Vue/Solid bridges; non-Svelte UI dep = `D*` row.
 
 Full contract: [docs/principles.md](docs/principles.md). Deviations cite subsection in PR.
 

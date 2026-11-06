@@ -37,7 +37,7 @@ export const load = async ({ locals }) => {
 ```svelte
 <!-- +page.svelte -->
 <script lang="ts">
-  import { usePermissions } from '@sveltesentio/auth';
+  import { usePermissions } from '@sveltesentio/auth/use-permissions';
   const { can } = usePermissions();
 </script>
 
