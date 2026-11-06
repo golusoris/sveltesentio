@@ -411,7 +411,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-      # No install step: the check uses only node builtins and the REST API.
+      - *cache_pnpm
+      - *pnpm_install
       - name: Check that every label an issue form names exists
         env:
           GITHUB_TOKEN: ${{ github.token }}

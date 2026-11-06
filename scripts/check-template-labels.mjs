@@ -6,11 +6,8 @@
 // missing one is dropped without a message, so a triage label that was never
 // created leaves every new issue untriaged and nobody notices.
 //
-// The reading accepts two forms of the `labels` key and nothing else, so a form
-// this script does not know fails instead of reading as "no labels":
-//   labels: ['bug', "triage", enhancement]
-//   labels:
-//     - bug
+// GitHub issue forms accept labels as an array (inline or block list) or as a
+// comma-delimited string. Duplicate keys and malformed docs are refused.
 // The repository labels come from the GitHub REST API (GITHUB_REPOSITORY and
 // GITHUB_TOKEN, as in a workflow run) or from a JSON file of label names given
 // with --labels-file. With neither, the check fails: it never passes unread.
@@ -20,6 +17,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parse } from 'yaml';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const templatesDir = join(root, '.github', 'ISSUE_TEMPLATE');
@@ -34,41 +32,39 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const FORM_FILE = /\.ya?ml$/;
 const NOT_A_FORM = new Set(['config.yml', 'config.yaml']);
 
-const BARE = /^[^\s'",[\]#][^'",[\]#]*$/;
-
-/** One list item: quoted with ' or ", or a bare word. */
-function unquote(raw, where) {
-	const item = raw.trim();
-	const quoted = /^'([^']*)'$/.exec(item) ?? /^"([^"]*)"$/.exec(item);
-	if (quoted) return quoted[1];
-	if (BARE.test(item)) return item.trim();
-	throw new Error(`${where}: cannot read label item ${JSON.stringify(item)}`);
-}
-
-/** The labels one issue form names; throws on a `labels` form it does not know. */
+/** The labels one issue form names; throws on an invalid form, doc, or label item. */
 export function templateLabels(source, where = 'template') {
-	const lines = source.split(/\r?\n/);
-	const at = lines.findIndex((line) => /^labels\s*:/.test(line));
-	if (at === -1) return [];
-	const rest = lines[at].replace(/^labels\s*:/, '').trim();
-	if (rest.startsWith('[')) {
-		const inline = /^\[(.*)\]\s*(#.*)?$/.exec(rest);
-		if (!inline) throw new Error(`${where}:${at + 1}: unclosed labels list`);
-		const body = inline[1].trim();
-		return body === '' ? [] : body.split(',').map((item) => unquote(item, `${where}:${at + 1}`));
+	let doc;
+	try {
+		doc = parse(source, { uniqueKeys: true });
+	} catch (error) {
+		throw new Error(`${where}: ${error instanceof Error ? error.message : String(error)}`, {
+			cause: error,
+		});
 	}
-	if (rest !== '' && !rest.startsWith('#')) {
-		throw new Error(`${where}:${at + 1}: labels is neither a list nor a block list`);
+	if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
+		throw new Error(`${where}: template must be a YAML mapping`);
 	}
-	const labels = [];
-	for (let index = at + 1; index < lines.length; index++) {
-		const line = lines[index];
-		if (line.trim() === '' || line.trimStart().startsWith('#')) continue;
-		const item = /^\s+-\s+(.*)$/.exec(line);
-		if (!item) break;
-		labels.push(unquote(item[1], `${where}:${index + 1}`));
+	if (!('labels' in doc) || doc.labels === null || doc.labels === undefined) {
+		return [];
 	}
-	return labels;
+	if (typeof doc.labels === 'string') {
+		return doc.labels
+			.split(',')
+			.map((label) => label.trim())
+			.filter((label) => label.length > 0);
+	}
+	if (Array.isArray(doc.labels)) {
+		for (const item of doc.labels) {
+			if (typeof item !== 'string') {
+				throw new Error(`${where}: label item must be a string, got ${typeof item}`);
+			}
+		}
+		return doc.labels;
+	}
+	throw new Error(
+		`${where}: labels must be an array or comma-delimited string, got ${typeof doc.labels}`,
+	);
 }
 
 /** Labels named by a template that are not in `repoLabels`, compared as GitHub does, ignoring case. */

@@ -41,10 +41,62 @@ describe('templateLabels', () => {
 		assert.deepEqual(templateLabels('name: Bug\nlabels: []\n'), []);
 	});
 
+	it('reads an indentless block list', () => {
+		assert.deepEqual(templateLabels('name: Bug\nlabels:\n- bug\n- triage\n'), ['bug', 'triage']);
+	});
+
+	it('reads a next-line flow list', () => {
+		assert.deepEqual(templateLabels("name: Bug\nlabels:\n  ['bug', 'triage']\n"), [
+			'bug',
+			'triage',
+		]);
+	});
+
+	it('reads a broken item indented on the next line', () => {
+		assert.deepEqual(templateLabels('name: Bug\nlabels:\n  - bug\n  -\n    triage\n'), [
+			'bug',
+			'triage',
+		]);
+	});
+
+	it('tolerates item comments', () => {
+		assert.deepEqual(templateLabels('name: Bug\nlabels:\n  - bug # default\n'), ['bug']);
+	});
+
+	it('tolerates brackets in inline comments', () => {
+		assert.deepEqual(templateLabels("name: Bug\nlabels: ['bug'] # see [docs]\n"), ['bug']);
+	});
+
+	it('reads comma-delimited strings as supported by GitHub issue forms', () => {
+		assert.deepEqual(templateLabels('name: Bug\nlabels: bug, triage\n'), ['bug', 'triage']);
+		assert.deepEqual(templateLabels('name: Bug\nlabels: "bug, help wanted"\n'), [
+			'bug',
+			'help wanted',
+		]);
+		assert.deepEqual(templateLabels('name: Bug\nlabels: bug\n'), ['bug']);
+	});
+
+	it('refuses duplicate keys', () => {
+		assert.throws(
+			() => templateLabels('name: Bug\nlabels: [bug]\nlabels: [triage]\n', 'x.yml'),
+			/x\.yml.*Map keys must be unique/,
+		);
+	});
+
+	it('refuses a template that is not a YAML mapping', () => {
+		assert.throws(() => templateLabels('', 'x.yml'), /x\.yml.*YAML mapping/);
+		assert.throws(() => templateLabels('- a\n- b\n', 'x.yml'), /x\.yml.*YAML mapping/);
+	});
+
 	it('refuses a labels form it does not know instead of reading it as empty', () => {
-		assert.throws(() => templateLabels('labels: bug\n', 'x.yml'), /x\.yml:1/);
-		assert.throws(() => templateLabels("labels: ['bug'\n"), /unclosed/);
-		assert.throws(() => templateLabels("labels: ['bug', 'tri'age']\n"), /cannot read label item/);
+		assert.throws(() => templateLabels('labels: { a: 1 }\n', 'x.yml'), /x\.yml/);
+		assert.throws(() => templateLabels('labels: 42\n', 'x.yml'), /x\.yml/);
+		assert.throws(
+			() => templateLabels('labels: [123]\n', 'x.yml'),
+			/x\.yml.*label item must be a string/,
+		);
+		assert.throws(() => templateLabels("labels: ['bug'\n", 'x.yml'), /x\.yml/);
+		assert.throws(() => templateLabels("labels: ['bug', 'tri'age']\n", 'x.yml'), /x\.yml/);
 	});
 });
 
