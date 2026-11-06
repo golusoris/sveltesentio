@@ -65,7 +65,7 @@ pnpm add -D @sveltesentio/mcp
 
 Clients start the server with `node` on the entry file in the checkout.
 `test/bin.test.ts` starts it the same way and calls `module_lookup` over stdio.
-This repo's `.mcp.json` runs the server from the checkout for contributors.
+This repo's `.mcp.json` runs the server from the checkout for contributors and sets `SVELTESENTIO_ROOT` to `.`, so a value inherited from the shell cannot point it at another checkout.
 
 ### Claude Code (`claude_desktop_config.json` / `~/.claude/mcp_servers.json`)
 

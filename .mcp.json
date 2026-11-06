@@ -8,6 +8,9 @@
 		"sveltesentio": {
 			"args": ["packages/mcp/bin/sveltesentio-mcp.ts"],
 			"command": "node",
+			"env": {
+				"SVELTESENTIO_ROOT": "."
+			},
 			"type": "stdio"
 		}
 	}
