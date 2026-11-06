@@ -81,6 +81,6 @@ export {};
 "packages/<name>": "0.0.1"
 ```
 
-7. Add entry to `AGENTS.md` package purpose table.
+7. Add entry to `docs/architecture/packages.md` package table.
 
 8. Update `.workingdir/STATE.md` with the new package.

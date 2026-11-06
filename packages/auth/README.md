@@ -6,7 +6,7 @@ Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable
 
 ## Status
 
-v0.6.0 — crypto primitives (PKCE, CSRF HMAC, `__Host-*` cookies, permissions) plus
+v0.10.0 — crypto primitives (PKCE, CSRF HMAC, `__Host-*` cookies, permissions) plus
 framework-agnostic OIDC orchestration: authorization-URL builder, PKCE code exchange,
 a `handleCsrf()` SvelteKit hook, typed MFA error narrowing, and passkey wrappers.
 The MFA Svelte components (`<MfaChallenge>` / `<MfaEnroll>`) and the `usePermissions()`
@@ -58,27 +58,28 @@ change a security decision.
 | `createPermissions(keys)` → `{ has, can, anyOf, allOf, permissions }`                         | Component-side permissions builder; server `load` returns permission keys (serialisable strings), component builds the API; wildcard-aware dot-path matching (`billing.*`, `*`) — underlying primitive `usePermissions()` rune wraps                                                                               | [ADR-0035](../../docs/adr/0035-load-derived-permissions.md)             |
 | `base64UrlEncode` / `base64UrlDecode` / `randomBytes(n)` / `randomBase64Url(n?)`              | Low-level primitives shared by above                                                                                                                                                                                                                                                                               | —                                                                       |
 
-### Orchestration (v0.2.0) — framework-agnostic orchestration over primitives
+### Orchestration (v0.5.0) — framework-agnostic orchestration over primitives
 
-| Export                                                                                    | Purpose                                                                                                                                                 | ADR                                                                     |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `buildAuthorizationUrl(init)`                                                             | Assembles OAuth/OIDC authorize URL with PKCE query params; `extraParams` = first-party-IdP adapter point (e.g. `provider`)                              | [ADR-0032](../../docs/adr/0032-custom-oidc-client-against-golusoris.md) |
-| `createAuthorizationRequest(init)` → `{ url, state, nonce, codeVerifier, codeChallenge }` | Generates fresh PKCE pair + state + nonce + redirect URL in 1 call                                                                                      | ADR-0032                                                                |
-| `exchangeAuthorizationCode(init)` → `TokenResponse`                                       | POSTs PKCE token exchange (injectable `fetch`); `ProblemError` on non-2xx; `id_token` checked by `oauth4webapi` (sig/iss/aud/exp/nonce), fails closed   | ADR-0057                                                                |
-| `handleCsrf({ getContext, ... })` → `Handle`                                              | SvelteKit hook enforcing double-submit token on unsafe methods; verifier + context + reject responder all injectable                                    | [ADR-0034](../../docs/adr/0034-httponly-cookie-sessions.md)             |
-| `evaluateCsrf(event, deps)` → `CsrfRejectionReason \| undefined`                          | Pure CSRF decision underlying `handleCsrf`; testable without SvelteKit runtime                                                                          | ADR-0034                                                                |
-| `handleAuthError(error, codes?)` → typed `AuthErrorState`                                 | Narrows `ProblemError` to `mfa-required` / `mfa-invalid` / `mfa-rate-limited` by `type` URN — never substring match; custom first-party codes supported | [ADR-0036](../../docs/adr/0036-mfa-ui-structured-errors.md)             |
-| `registerPasskey(optionsJSON)` / `authenticatePasskey(optionsJSON)`                       | Thin wrappers over `@simplewebauthn/browser` (optional peer, dynamic import); pass ceremony JSON through verbatim                                       | [ADR-0033](../../docs/adr/0033-simplewebauthn-passkeys.md)              |
-| `passkeysSupported()`                                                                     | Reports `browserSupportsWebAuthn()`; `false` when optional peer absent                                                                                  | ADR-0033                                                                |
+| Export                                                                                    | Purpose                                                                                                                                                              | ADR                                                                     |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `buildAuthorizationUrl(init)`                                                             | Assembles OAuth/OIDC authorize URL with PKCE query params; `extraParams` = first-party-IdP adapter point (e.g. `provider`)                                           | [ADR-0032](../../docs/adr/0032-custom-oidc-client-against-golusoris.md) |
+| `createAuthorizationRequest(init)` → `{ url, state, nonce, codeVerifier, codeChallenge }` | Generates fresh PKCE pair + state + nonce + redirect URL in 1 call                                                                                                   | ADR-0032                                                                |
+| `exchangeAuthorizationCode(init)` → `TokenResponse`                                       | POSTs PKCE token exchange (injectable `fetch`); `ProblemError` on non-2xx; `id_token` checked by `oauth4webapi` (sig/iss/aud/exp/nonce), fails closed (since v0.9.0) | ADR-0057                                                                |
+| `handleCsrf({ getContext, ... })` → `Handle`                                              | SvelteKit hook enforcing double-submit token on unsafe methods; verifier + context + reject responder all injectable                                                 | [ADR-0034](../../docs/adr/0034-httponly-cookie-sessions.md)             |
+| `evaluateCsrf(event, deps)` → `CsrfRejectionReason \| undefined`                          | Pure CSRF decision underlying `handleCsrf`; testable without SvelteKit runtime                                                                                       | ADR-0034                                                                |
+| `handleAuthError(error, codes?)` → typed `AuthErrorState`                                 | Narrows `ProblemError` to `mfa-required` / `mfa-invalid` / `mfa-rate-limited` by `type` URN — never substring match; custom first-party codes supported              | [ADR-0036](../../docs/adr/0036-mfa-ui-structured-errors.md)             |
+| `registerPasskey(optionsJSON)` / `authenticatePasskey(optionsJSON)`                       | Thin wrappers over `@simplewebauthn/browser` (optional peer, dynamic import); pass ceremony JSON through verbatim                                                    | [ADR-0033](../../docs/adr/0033-simplewebauthn-passkeys.md)              |
+| `passkeysSupported()`                                                                     | Reports `browserSupportsWebAuthn()`; `false` when optional peer absent                                                                                               | ADR-0033                                                                |
 
-### Runes and MFA UI (v0.6.0)
+### Runes and MFA UI (v0.5.0)
 
-| Export                                                                           | Purpose                                                                                                            | ADR      |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------- |
-| `usePermissions()` rune (`./use-permissions`)                                    | Per-route `load`-derived wrapper over `createPermissions()`                                                        | ADR-0035 |
-| `<MfaChallenge>` (`./mfa-challenge`) / `<MfaEnroll>` (`./mfa-enroll`) components | First-class MFA/TOTP UI rendering `handleAuthError()` states; `./mfa-view` view-model + `./session` hook back them | ADR-0036 |
+| Export                                         | Purpose                                                                                                                                                                                                                    | ADR      |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `usePermissions()` rune (`./use-permissions`)  | Per-route `load`-derived wrapper over `createPermissions()`                                                                                                                                                                | ADR-0035 |
+| `<MfaChallenge>` (`./mfa-challenge`) component | Accessible TOTP/OTP challenge UI; driven by typed `errorState: AuthErrorState` prop from `handleAuthError()` and `./mfa-view` view model; callback-based (`onSubmit`, `onResend`), no network or session hook dependencies | ADR-0036 |
+| `<MfaEnroll>` (`./mfa-enroll`) component       | Accessible TOTP enrolment UI; takes `secret`, optional `qr` / `otpauthUri`, `onVerify` callback, and optional `error?: string` prop for verification failures; pure view, no network or session hook dependencies          | ADR-0036 |
 
-## Orchestration surface (v0.6.0)
+## Orchestration surface (v0.10.0)
 
 ```ts
 import {

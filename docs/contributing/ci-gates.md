@@ -4,7 +4,9 @@ Continuous integration architecture, gates, schedules, and release attestations.
 
 ## PR verification gates
 
-Every PR must pass:
+PR verification is diff-aware: `scripts/ci-affected.mjs` inspects changed files and selects affected packages. On PRs with no code changes (e.g. docs-only), `lint`, `typecheck`, `test`, `build`, `stories`, `e2e`, and `audit` jobs are skipped, while `CI Gate` (`scripts/ci-gate.mjs`) still runs and accepts the skips for change-scoped jobs when `has_code_changes` is false.
+
+When code changes are present, every affected PR must pass:
 
 - **Conventional Commits**: PR title checked via `commitlint` in `ci.yml`.
 - **ESLint flat config**: 0 errors across TypeScript, Svelte, and accessibility rules.
