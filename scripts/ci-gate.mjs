@@ -44,6 +44,7 @@ export const MUST_SUCCEED = Object.freeze([
 	'secret-scan',
 	'dependency-scan',
 	'semgrep',
+	'template-labels',
 ]);
 
 /** Every need the gate knows, in the order the lists above name them. */

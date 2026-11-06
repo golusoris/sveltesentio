@@ -1,0 +1,56 @@
+name: Template labels watch
+
+# GitHub applies the `labels` of an issue form only when each label exists; a
+# missing one is dropped without a message, leaving new issues untriaged.
+#
+# A passing check during CI can go stale later when a label is deleted or edited
+# in repository settings. This workflow re-verifies that every label named in
+# .github/ISSUE_TEMPLATE exists:
+#   - on label changes: when a label is deleted or edited in repository settings;
+#   - weekly: catch-up verification on a recurring schedule;
+#   - workflow_dispatch: manual on-demand trigger.
+#
+# The `label` event runs on the default branch (docs.github.com/actions/reference/events-that-trigger-workflows#label).
+# A failure produces a visible red run on main. The job name differs from the
+# required `Template labels` context in ci.yml, so a run here never stands in for it.
+
+on:
+  label:
+    types: [deleted, edited]
+  schedule:
+    - cron: '30 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  template-labels:
+    name: Template labels (repository)
+    # Linux only (HISS-21, #328): compares issue form text with the label list of the repository.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - name: Check that every label an issue form names exists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-template-labels.mjs
