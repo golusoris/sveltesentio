@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "Platform Neutrality (Linux)"
+          },
+          {
+            "context": "Platform Neutrality (macOS)"
+          }
+        ]
+      },
+      "type": "required_status_checks"
+    }
+  ]
+}

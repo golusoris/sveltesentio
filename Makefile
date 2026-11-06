@@ -76,6 +76,7 @@ verify-all:
 	@pnpm check:publint
 	@pnpm check:svelte
 	@pnpm check:job-timeouts
+	@pnpm check:platform-legs
 	@pnpm check:kit-compat
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high
