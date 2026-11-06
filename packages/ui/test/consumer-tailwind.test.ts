@@ -4,6 +4,7 @@ import { Scanner } from '@tailwindcss/oxide';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
@@ -58,7 +59,7 @@ async function compileConsumerStylesheet(
 describe('Tailwind v4 consumer source scanning', () => {
 	it('resolves @sveltesentio/ui/tailwind.css through package.json exports', () => {
 		const resolved = require.resolve('@sveltesentio/ui/tailwind.css');
-		expect(resolved).toMatch(/packages\/ui\/src\/tailwind\.css$/);
+		expect(resolved).toBe(fileURLToPath(new URL('../src/tailwind.css', import.meta.url)));
 	});
 
 	it('refuses unexported CSS subpaths via package.json exports', () => {
