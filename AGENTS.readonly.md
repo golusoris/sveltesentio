@@ -128,15 +128,15 @@ TypeScript: HISS-03/09 n/a; HISS-11..14 in upstream catalog.
 
 1. Append-only API; breaking change needs `Migration:` footer (before/after snippet) + codemod or line-level manual-migration note; no API-diff gate yet (#288): reviewer diffs surface.
 2. No new transitive dep without weighing alternatives in `.workingdir/research/svelte-ecosystem-audit.md`; non-obvious pick -> justify in PR.
-3. Public surface = `src/index.ts` named exports (+ `ui/toast` subpaths); apps never import `src/internal/`; `exports` enforces; deviation -> PR comment citing the `docs/principles.md` subsection.
+3. Public surface = `src/index.ts` named exports (+ `ui/toast` subpaths); apps never import `src/internal/`; `exports` enforces; exception -> PR comment citing the `docs/principles.md` subsection.
 4. No top-level side effects (no `window.`, DOM reads, import `setInterval`); use vite plugins, hooks, `register(app)`.
-5. Errors via `@sveltesentio/core/errors` (RFC 9457 `ProblemDetails`); never throw raw `Error`; deviation -> PR comment citing the `docs/principles.md` subsection.
+5. Errors via `@sveltesentio/core/errors` (RFC 9457 `ProblemDetails`); never throw raw `Error`; exception -> PR comment citing the `docs/principles.md` subsection.
 6. Time via `@sveltesentio/core/clock`; banned outside `test/`: `Date.now()`, `new Date()`, `performance.now()` (eslint).
 7. Zero `console.log` (warn/error only, or `@sveltesentio/core/log`; eslint `no-console`).
 8. Svelte 5 runes-first: no `$:`, no `writable()` for server state (`@sveltesentio/query`), no `export let` (`$props()`; eslint).
 9. Zero `any`: use `unknown`, narrow via Zod/type guards (`@typescript-eslint/no-explicit-any`).
 10. Merged commit: 0 eslint, 0 tsc, 0 audit vulns, axe-clean stories; `// eslint-disable-*` needs adjacent justification.
-11. Agents never lock library picks, module surface, API shape, compliance posture. Open/update `D*` in `.workingdir/research/decisions-needed.md` with evidence + >= 2 options; owner (`@lusoris`) closes to `locked (ADR-NNNN)`; evidence = app line, benchmark, ADR; consensus != evidence.
+11. Agents never lock library picks, module surface, API shape, compliance posture; escalate: open/update `D*` in `.workingdir/research/decisions-needed.md` with evidence + >= 2 options; owner (`@lusoris`) closes to `locked (ADR-NNNN)`; evidence = app line, benchmark, ADR; consensus != evidence.
 12. SvelteKit universe: runes-native + TS types or framework-agnostic (TanStack, Zod, Yjs, Vite, ConnectRPC, openapi-fetch, elkjs); no React/Vue/Solid bridges; external capability needs `D*` row.
 
 ## Workflow discipline
