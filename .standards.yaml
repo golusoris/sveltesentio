@@ -34,6 +34,12 @@ exceptions:
     path: .github/workflows/release-please.yml
     reason: "Category A, interval stated by the expiry (entered 2026-10-13, re-reviewed 2026-10-19, #280 still open): the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)"
     expires: "2027-01-09"
+  # category C, entered 2026-11-06 (entry + 10 days): Dependabot alerts 145 146 148 149 stay open, not dismissed
+  - rule: "backlog.caps.forge_alerts"
+    tool: "backlog"
+    reason: >-
+      category C, entered 2026-11-06 (entry + 10 days): no in-range fix upstream. #145 #146 deepmerge 4.3.1 GHSA-gcqx-w48m-w2h4 (low, no patched release) through @sveltejs/vite-plugin-svelte and @rollup/plugin-node-resolve, build tooling, plus tools/compose-lib-fixture/kit3/package-lock.json; #149 minimatch 10.2.6 GHSA-g3hv-75wg-m249 (medium, fixed in 11.0.1) through eslint 10 @eslint/config-array ^10.2.4, lint tooling; #148 glob 11.1.0 GHSA-3g3m-2fjr-6pw4 (medium, fixed in 14.0.2) through workbox-build 7.4.1 glob ^11.0.1 under vite-plugin-pwa, build time only; each parent still declares the vulnerable major in its latest release
+    expires: "2026-11-16"
 register:
   sources:
     expected: 13
