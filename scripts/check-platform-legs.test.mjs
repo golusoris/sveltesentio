@@ -23,6 +23,7 @@ const WORKFLOW_DEFAULTS = {
 		{ name: 'macOS', runner: 'macos-26' },
 		{ name: 'Windows', runner: 'windows-2025' },
 	],
+	steps: undefined,
 };
 
 function legLine(leg) {
@@ -41,6 +42,22 @@ function jobGuardLines({ jobIf, continueOnError }) {
 	if (jobIf !== undefined) lines.push(`    if: ${jobIf}`);
 	if (continueOnError !== undefined) lines.push(`    continue-on-error: ${continueOnError}`);
 	return lines;
+}
+
+function formatSteps(steps) {
+	if (steps === undefined) {
+		return ['    steps:', "      - run: 'true'"];
+	}
+	if (steps === null) {
+		return [];
+	}
+	if (Array.isArray(steps) && steps.length === 0) {
+		return ['    steps: []'];
+	}
+	if (typeof steps === 'string') {
+		return [steps];
+	}
+	return ['    steps:', ...steps];
 }
 
 function makeWorkflow(overrides = {}) {
@@ -64,10 +81,14 @@ function makeWorkflow(overrides = {}) {
 		'        include:',
 		o.legs.map(legLine).join('\n'),
 		...(o.extraMatrix ? [o.extraMatrix] : []),
-		'    steps:',
-		"      - run: 'true'",
+		...formatSteps(o.steps),
 		'',
 	].join('\n');
+}
+
+/** Copy of `fields` without the keys whose value is undefined. */
+function definedOnly(fields) {
+	return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
 }
 
 function makeRuleset(
@@ -76,7 +97,7 @@ function makeRuleset(
 		'Platform Neutrality (macOS)',
 		'Platform Neutrality (Windows)',
 	],
-	{ enforcement = 'active', target = 'branch', include = ['refs/heads/main'] } = {},
+	{ enforcement = 'active', target = 'branch', include = ['refs/heads/main'], exclude } = {},
 ) {
 	const doc = {
 		rules: [
@@ -88,15 +109,9 @@ function makeRuleset(
 			},
 		],
 	};
-	if (enforcement !== undefined) doc.enforcement = enforcement;
-	if (target !== undefined) doc.target = target;
-	if (include !== undefined) {
-		doc.conditions = {
-			ref_name: {
-				include,
-			},
-		};
-	}
+	Object.assign(doc, definedOnly({ enforcement, target }));
+	const refName = definedOnly({ include, exclude });
+	if (Object.keys(refName).length > 0) doc.conditions = { ref_name: refName };
 	return JSON.stringify(doc, null, 2);
 }
 
@@ -285,6 +300,78 @@ describe('check-platform-legs', () => {
 			assert.equal(await main(dir), 1);
 		});
 
+		it('fails when step declares if on lint step without failing closed', async () => {
+			const dir = await setupFixture('step-if-lint', {
+				workflow: makeWorkflow({
+					steps: ['      - name: Lint', '        if: false', '        run: pnpm lint'],
+				}),
+				ruleset: makeRuleset(),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.ok(
+				findings.some((f) =>
+					/steps\[0\] 'if' prohibited unless step fails closed \(last run line 'exit 1'\)/.test(f),
+				),
+			);
+			assert.equal(await main(dir), 1);
+		});
+
+		it('fails when step declares continue-on-error true', async () => {
+			const dir = await setupFixture('step-continue-on-error', {
+				workflow: makeWorkflow({
+					steps: [
+						'      - name: Lint',
+						'        continue-on-error: true',
+						'        run: pnpm lint',
+					],
+				}),
+				ruleset: makeRuleset(),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.ok(findings.some((f) => /steps\[0\] \('Lint'\) continue-on-error prohibited/.test(f)));
+			assert.equal(await main(dir), 1);
+		});
+
+		it('fails when portability job steps is not a non-empty list', async () => {
+			const dir = await setupFixture('steps-empty', {
+				workflow: makeWorkflow({ steps: [] }),
+				ruleset: makeRuleset(),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.ok(findings.some((f) => /jobs\.portability\.steps must be a non-empty list/.test(f)));
+			assert.equal(await main(dir), 1);
+		});
+
+		it('fails when ruleset exclude removes included ref refs/heads/main', async () => {
+			const dir = await setupFixture('ruleset-exclude-main', {
+				workflow: makeWorkflow(),
+				ruleset: makeRuleset(undefined, {
+					exclude: ['refs/heads/main'],
+				}),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.ok(
+				findings.some((f) =>
+					/exclude refs\/heads\/main removes included ref refs\/heads\/main/.test(f),
+				),
+			);
+			assert.equal(await main(dir), 1);
+		});
+
+		it('fails when ruleset exclude contains ~ALL', async () => {
+			const dir = await setupFixture('ruleset-exclude-all', {
+				workflow: makeWorkflow(),
+				ruleset: makeRuleset(undefined, {
+					exclude: ['~ALL'],
+				}),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.ok(
+				findings.some((f) => /exclude ~ALL removes included ref refs\/heads\/main/.test(f)),
+			);
+			assert.equal(await main(dir), 1);
+		});
+
 		it('fails when ruleset enforcement is not active', async () => {
 			const dir = await setupFixture('ruleset-enforcement-inactive', {
 				workflow: makeWorkflow(),
@@ -432,6 +519,48 @@ describe('check-platform-legs', () => {
 	});
 
 	describe('boundary cases', () => {
+		it('allows draft stop step with if when it fails closed with exit 1', async () => {
+			const dir = await setupFixture('draft-stop-step-allowed', {
+				workflow: makeWorkflow({
+					steps: [
+						'      - name: Stop on a draft pull request',
+						'        if: github.event.pull_request.draft == true',
+						'        run: |',
+						'          echo "Draft PR"',
+						'          exit 1',
+						"      - run: 'true'",
+					],
+				}),
+				ruleset: makeRuleset(),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.deepEqual(findings, []);
+			assert.equal(await main(dir), 0);
+		});
+
+		it('allows empty ruleset exclude array', async () => {
+			const dir = await setupFixture('ruleset-empty-exclude', {
+				workflow: makeWorkflow(),
+				ruleset: makeRuleset(undefined, { exclude: [] }),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.deepEqual(findings, []);
+			assert.equal(await main(dir), 0);
+		});
+
+		it('allows ruleset exclude matching non-included refs', async () => {
+			const dir = await setupFixture('ruleset-feature-exclude', {
+				workflow: makeWorkflow(),
+				ruleset: makeRuleset(undefined, {
+					include: ['refs/heads/main'],
+					exclude: ['refs/heads/feature/*'],
+				}),
+			});
+			const { findings } = await checkPlatformLegs(dir);
+			assert.deepEqual(findings, []);
+			assert.equal(await main(dir), 0);
+		});
+
 		it('counts ubuntu-latest as Linux OS family', async () => {
 			const dir = await setupFixture('ubuntu-latest-leg', {
 				workflow: makeWorkflow({

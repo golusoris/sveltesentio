@@ -52,6 +52,52 @@ export function getPortabilityJob(
 	return doc.jobs.portability;
 }
 
+function stepFailsClosed(step) {
+	if (typeof step?.run !== 'string') return false;
+	const lines = step.run
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+	return lines.at(-1) === 'exit 1';
+}
+
+function getStepDescriptor(step) {
+	if (typeof step?.name === 'string' && step.name.trim() !== '') {
+		return step.name.trim();
+	}
+	if (typeof step?.uses === 'string' && step.uses.trim() !== '') {
+		return step.uses.trim();
+	}
+	if (typeof step?.run === 'string') {
+		const firstLine = step.run.split('\n').find((line) => line.trim() !== '');
+		if (firstLine) return firstLine.trim();
+	}
+	return '';
+}
+
+function checkSingleStep(step, i, relWorkflow, findings) {
+	if (!step || typeof step !== 'object') return;
+	if (step['continue-on-error'] !== undefined && step['continue-on-error'] !== false) {
+		const desc = getStepDescriptor(step);
+		findings.push(`${relWorkflow}: steps[${i}] ('${desc}') continue-on-error prohibited`);
+	}
+	if (step.if !== undefined && !stepFailsClosed(step)) {
+		findings.push(
+			`${relWorkflow}: steps[${i}] 'if' prohibited unless step fails closed (last run line 'exit 1')`,
+		);
+	}
+}
+
+function checkStepGuards(job, relWorkflow, findings) {
+	if (!Array.isArray(job.steps) || job.steps.length === 0) {
+		findings.push(`${relWorkflow}: jobs.portability.steps must be a non-empty list`);
+		return;
+	}
+	for (let i = 0; i < job.steps.length; i++) {
+		checkSingleStep(job.steps[i], i, relWorkflow, findings);
+	}
+}
+
 function checkJobGuards(job, relWorkflow, findings) {
 	if (job.name !== EXPECTED_JOB_NAME) {
 		findings.push(
@@ -73,6 +119,7 @@ function checkJobGuards(job, relWorkflow, findings) {
 			`${relWorkflow}: job-level 'continue-on-error' is prohibited on portability job, got ${JSON.stringify(job['continue-on-error'])}`,
 		);
 	}
+	checkStepGuards(job, relWorkflow, findings);
 }
 
 function checkMatrixStructure(matrix, relWorkflow, findings) {
@@ -140,6 +187,37 @@ function checkMatrixLegs(include, relWorkflow, findings) {
 	return seenLegNames;
 }
 
+// GitHub ruleset ref conditions take fnmatch globs and the ~ALL token. This check
+// covers exact match, ~ALL and a trailing '*' prefix; other glob forms pass unchecked.
+function excludeMatchesRef(excludeEntry, ref) {
+	if (excludeEntry === '~ALL') return true;
+	if (excludeEntry === ref) return true;
+	if (excludeEntry.endsWith('*')) {
+		return ref.startsWith(excludeEntry.slice(0, -1));
+	}
+	return false;
+}
+
+function checkSingleExclude(excludeEntry, include, relRuleset, findings) {
+	if (typeof excludeEntry !== 'string') return;
+	for (const ref of include) {
+		if (typeof ref === 'string' && excludeMatchesRef(excludeEntry, ref)) {
+			findings.push(`${relRuleset}: exclude ${excludeEntry} removes included ref ${ref}`);
+		}
+	}
+}
+
+function checkRulesetExcludes(rulesetDoc, relRuleset, findings) {
+	const include = rulesetDoc.conditions?.ref_name?.include;
+	const exclude = rulesetDoc.conditions?.ref_name?.exclude;
+	if (!Array.isArray(include) || !Array.isArray(exclude) || exclude.length === 0) {
+		return;
+	}
+	for (const excludeEntry of exclude) {
+		checkSingleExclude(excludeEntry, include, relRuleset, findings);
+	}
+}
+
 function checkRulesetEnvelope(rulesetDoc, relRuleset, findings) {
 	if (rulesetDoc.enforcement !== 'active') {
 		findings.push(
@@ -157,6 +235,7 @@ function checkRulesetEnvelope(rulesetDoc, relRuleset, findings) {
 			`${relRuleset}: ruleset conditions.ref_name.include must contain 'refs/heads/main'`,
 		);
 	}
+	checkRulesetExcludes(rulesetDoc, relRuleset, findings);
 }
 
 function checkBranchTrigger(workflowOn, eventName, pat, ref, relWorkflow, findings) {
