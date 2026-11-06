@@ -85,6 +85,18 @@ describe('__Host- cookie invariant across helpers', () => {
 		expect(isValidHostCookie(badInsecure)).toBe(false);
 	});
 
+	it('keeps the __Host- attributes for out-of-range helper inputs (negative)', () => {
+		for (const maxAge of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+			expect(isValidHostCookie(loginNonceCookieOptions(maxAge))).toBe(true);
+			expect(isValidHostCookie(sessionCookieOptions({ maxAge }))).toBe(true);
+			expect(isValidHostCookie(csrfCookieOptions({ maxAge }))).toBe(true);
+		}
+		for (const sameSite of ['strict', 'none'] as const) {
+			expect(isValidHostCookie(sessionCookieOptions({ sameSite }))).toBe(true);
+			expect(isValidHostCookie(csrfCookieOptions({ sameSite }))).toBe(true);
+		}
+	});
+
 	it('keeps path / for boundary maxAge 0 and 1 (boundary)', () => {
 		for (const maxAge of [0, 1]) {
 			const opts = loginNonceCookieOptions(maxAge);
