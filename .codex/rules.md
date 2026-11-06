@@ -99,6 +99,7 @@ make verify-all
 <!-- markdownlint-enable MD013 -->
 <!-- markdownlint-disable MD025 -->
 <!-- praetor:harness:end -->
+<!-- markdownlint-disable MD013 -->
 
 ---
 
@@ -118,19 +119,17 @@ TypeScript: HISS-03/09 n/a; HISS-11..14 in upstream catalog.
 | HISS | Rule | Check |
 |:---|:---|:---|
 | 01 | No package cycles | `pnpm check:cycles` |
-| 02 | `AbortSignal` on I/O | ESLint/review |
+| 02 | `AbortSignal.timeout` deadline on all I/O | ESLint/review |
 | 04 | <=60 LOC, McCabe <=10, component <=100 | ESLint |
 | 07 | No `!`, unhandled promises, empty catch | `@typescript-eslint` |
 | 08 | No `eval`/`new Function`/unsanitised `innerHTML`; DOMPurify | ESLint/CodeQL |
 | 10 | 0 warnings, no `any` | Exit 1 |
 | 15 | Each export named in a test; 3 cases = review | `pnpm check:export-tests` |
-| 17 | State read/sync | `make state-audit` |
+| 17 | Start: read `.workingdir/STATE.md`, `OPEN.md`; end: `praetorctl state sync .` | `make state-audit` |
 | 18 | Diff-aware on PR, full otherwise | `CI Gate` |
 | 19 | Upstream libs = existing code | Review |
 | 20 | Coverage verified | `make hiss-coverage` |
 | 21 | Linux/macOS/Windows legs required (#328) | `portability.yml` |
-
-Gate: `pnpm run ci`, `pnpm check:cycles`, `pnpm check:declared-imports`, `pnpm audit --audit-level=high`.
 
 ## Hard rules
 
@@ -171,4 +170,4 @@ PR: Conventional Commits, 0 ESLint errors, Prettier, 0 `turbo typecheck` errors,
 
 Release: SLSA Build Level 2, CycloneDX SBOM; Level 3 open (#280, exception `HISS-11`). Details: [ci-gates.md](../docs/contributing/ci-gates.md).
 
-Deviation from [principles.md](../docs/principles.md) (§2) or [ux-principles.md](../docs/ux-principles.md) (§3): PR comment cites subsection. Unsure: per-package `AGENTS.md`, `.workingdir/STATE.md`, `PLAN.md`.
+Before changes: [principles.md](../docs/principles.md) (§2), [ux-principles.md](../docs/ux-principles.md) (§3); deviation -> PR comment cites subsection. Unsure: per-package `AGENTS.md`, `PLAN.md`.
