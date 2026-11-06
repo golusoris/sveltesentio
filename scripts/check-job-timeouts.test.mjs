@@ -13,6 +13,16 @@ const ownWorkflows = join(
 	'workflows',
 );
 
+const hissFixtures = join(
+	fileURLToPath(new URL('.', import.meta.url)),
+	'..',
+	'.config',
+	'hiss',
+	'testdata',
+	'HISS-02',
+	'internal',
+);
+
 const makeJob = (body) => `jobs:\n  test:\n    ${body}\n    steps:\n      - run: true\n`;
 
 describe('check-job-timeouts', () => {
@@ -191,6 +201,16 @@ describe('check-job-timeouts', () => {
 			const dir = await workflowDir('empty-dir', {});
 			const rc = await main(dir);
 			assert.equal(rc, 1);
+		});
+	});
+
+	describe('HISS-02 coverage fixtures', () => {
+		it('refuses the positive fixture (job without timeout-minutes)', async () => {
+			assert.equal(await main(join(hissFixtures, 'positive')), 1);
+		});
+
+		it('accepts the negative fixture (job with timeout-minutes)', async () => {
+			assert.equal(await main(join(hissFixtures, 'negative')), 0);
 		});
 	});
 

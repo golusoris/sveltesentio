@@ -206,5 +206,6 @@ export async function main(dir = workflowsDir) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	process.exitCode = await main();
+	// An optional directory argument checks another folder, such as the HISS-02 fixtures.
+	process.exitCode = await main(process.argv[2] ?? workflowsDir);
 }

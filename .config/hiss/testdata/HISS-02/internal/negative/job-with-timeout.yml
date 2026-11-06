@@ -1,0 +1,9 @@
+# HISS-02 fixture: every step-running job declares timeout-minutes.
+# scripts/check-job-timeouts.mjs accepts it (exit 0).
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: 'true'
