@@ -98,6 +98,11 @@
 			"import": "./src/presets/index.ts",
 			"types": "./src/presets/index.ts"
 		},
+		"./tailwind.css": {
+			"style": "./src/tailwind.css",
+			"import": "./src/tailwind.css",
+			"default": "./src/tailwind.css"
+		},
 		"./theme-customizer": {
 			"import": "./src/theme/customizer-export.ts",
 			"types": "./src/theme/customizer-export.ts"
