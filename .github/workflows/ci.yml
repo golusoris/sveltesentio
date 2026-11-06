@@ -119,6 +119,7 @@ jobs:
       - run: pnpm check:declared-imports
       - run: pnpm check:job-timeouts
       - run: pnpm check:platform-legs
+      - run: pnpm check:playwright-image
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/
@@ -239,18 +240,18 @@ jobs:
     name: Stories (axe)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
-    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
+    # Linux only (HISS-21, #328): job runs in the Playwright Linux container image.
+    # Image tag must equal the lockfile Playwright version; scripts/check-playwright-image.mjs enforces.
     runs-on: ubuntu-26.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4
+      options: --user 1001
     timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
       - *cache_pnpm
       - *pnpm_install
-      # One Playwright version is in the lockfile, so one browser install serves every workspace.
-      - name: Install Chromium, Firefox and WebKit
-        if: github.event_name != 'pull_request' || needs.detect-changes.outputs.all_affected == 'true' || needs.detect-changes.outputs.has_stories == 'true'
-        run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium firefox webkit
       # Every story is rendered in Chromium, Firefox and WebKit; an axe violation or a render error fails the run.
       # Stories come from every package, so the run is not narrowed to the affected ones.
       - name: Run every story with axe
@@ -269,16 +270,18 @@ jobs:
     name: End-to-end
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
-    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
+    # Linux only (HISS-21, #328): job runs in the Playwright Linux container image.
+    # Image tag must equal the lockfile Playwright version; scripts/check-playwright-image.mjs enforces.
     runs-on: ubuntu-26.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4
+      options: --user 1001
     timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
       - *cache_pnpm
       - *pnpm_install
-      - name: Install Chromium, Firefox and WebKit
-        run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium firefox webkit
       # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
       - name: Run end-to-end tests of affected packages
         env:

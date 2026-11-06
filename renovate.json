@@ -62,6 +62,7 @@
 				"@vitest/**",
 				"@playwright/**",
 				"playwright",
+				"mcr.microsoft.com/playwright",
 				"@testing-library/**",
 				"@axe-core/**",
 				"jsdom"
