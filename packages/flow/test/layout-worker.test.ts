@@ -11,28 +11,7 @@ import {
 	type LayoutWorkerResponse,
 	type LayoutWorkerMessage,
 } from '../src/layout-worker.js';
-
-// A deterministic ELK double: stacks children top-to-bottom, no real elkjs.
-function fakeElkFactory(): ElkFactory {
-	const elk: ElkLike = {
-		layout(graph: ElkNode): Promise<ElkNode> {
-			let y = 0;
-			const children = (graph.children ?? []).map((c) => {
-				const node: ElkNode = {
-					id: c.id,
-					x: 0,
-					y,
-					width: c.width ?? 0,
-					height: c.height ?? 0,
-				};
-				y += (c.height ?? 0) + 80;
-				return node;
-			});
-			return Promise.resolve({ id: graph.id, children, width: 200, height: y });
-		},
-	};
-	return () => Promise.resolve(elk);
-}
+import { fakeElkFactory } from './fake-elk.js';
 
 function throwingElkFactory(message: string): ElkFactory {
 	return () =>
