@@ -392,3 +392,36 @@ rules:
           useConnectStream, and a requireAt helper needed by both ui and flow --
           both found by reading, neither by a tool. Recorded as manual so no gate
           claims it.
+
+  - id: HISS-21
+    title: Platform Neutrality
+    coverage:
+      - language: internal
+        state: enforced
+        runner: node
+        mechanism: >-
+          scripts/check-platform-legs.mjs (`pnpm check:platform-legs`) runs in
+          `make verify-all` and in the ci.yml `lint` job. It verifies that
+          .github/workflows/portability.yml defines matrix legs covering all
+          three OS families (ubuntu-*, macos-*, windows-*) with job name
+          template 'Platform Neutrality (${{ matrix.name }})' and runs-on
+          '${{ matrix.runner }}', and that each
+          leg's context is required by .github/rulesets/main.json
+          (Platform Neutrality (Linux), Platform Neutrality (macOS),
+          Platform Neutrality (Windows)) with zero unproduced contexts. It
+          refuses missing jobs.portability, unnamed/duplicate legs, runner OS
+          mismatches, matrix excludes/axes, job-level if/continue-on-error,
+          inactive/non-branch rulesets, and uncovered ruleset branch triggers.
+          Fixtures in testdata/HISS-21/internal/positive/ (matrix lacking the
+          Windows leg) are refused (exit 1) and negative/ (all three legs and
+          ruleset contexts) passes (exit 0); scripts/check-platform-legs.test.mjs
+          replays both fixtures in `pnpm test:scripts`, beside the unit cases.
+        rationale: >-
+          AGENTS.md declares HISS-21 enforced across Linux, macOS and Windows
+          by portability.yml and required status checks in main.json (#328).
+          Without this check, dropping a platform leg from the workflow matrix
+          or omitting its required check from the ruleset would pass silently.
+          Verified by temporarily removing the Windows leg from portability.yml:
+          the script exits 1. The check reads the committed ruleset file;
+          that file matching the live forge ruleset is the apply step's job
+          (read back through the forge API), not this script's.

@@ -1,0 +1,21 @@
+name: Platform Neutrality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  portability:
+    name: Platform Neutrality (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - name: Linux
+            runner: ubuntu-26.04
+          - name: macOS
+            runner: macos-26
+    steps:
+      - run: 'true'
