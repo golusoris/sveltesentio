@@ -396,6 +396,27 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node scripts/check-docs-drift.mjs
 
+  template-labels:
+    name: Template labels
+    # Linux only (HISS-21, #328): compares issue form text with the label list of the repository.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      # No install step: the check uses only node builtins and the REST API.
+      - name: Check that every label an issue form names exists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-template-labels.mjs
+
   ci-gate:
     name: CI Gate
     if: always()
@@ -414,6 +435,7 @@ jobs:
         dependency-scan,
         semgrep,
         docs-drift,
+        template-labels,
       ]
     # Linux only (HISS-21, #328): aggregates the results of the other jobs.
     runs-on: ubuntu-26.04

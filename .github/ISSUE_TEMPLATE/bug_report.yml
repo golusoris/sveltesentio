@@ -1,6 +1,6 @@
 name: Bug Report
 description: Report a bug in sveltesentio
-labels: ['bug', 'triage']
+labels: ['bug']
 assignees: ['lusoris']
 body:
   - type: markdown
