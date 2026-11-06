@@ -408,7 +408,10 @@ rules:
           '${{ matrix.runner }}', and that each
           leg's context is required by .github/rulesets/main.json
           (Platform Neutrality (Linux), Platform Neutrality (macOS),
-          Platform Neutrality (Windows)) with zero unproduced contexts.
+          Platform Neutrality (Windows)) with zero unproduced contexts. It
+          refuses missing jobs.portability, unnamed/duplicate legs, runner OS
+          mismatches, matrix excludes/axes, job-level if/continue-on-error,
+          inactive/non-branch rulesets, and uncovered ruleset branch triggers.
           Fixtures in testdata/HISS-21/internal/positive/ (matrix lacking the
           Windows leg) are refused (exit 1) and negative/ (all three legs and
           ruleset contexts) passes (exit 0); scripts/check-platform-legs.test.mjs
