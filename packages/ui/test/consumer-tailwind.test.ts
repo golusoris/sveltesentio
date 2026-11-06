@@ -16,33 +16,50 @@ interface ScannedConsumer {
 
 const IO_TIMEOUT_MS = 5000;
 
-async function compileConsumerStylesheet(
-	consumerCss: string,
-	base: string = dirname(require.resolve('@sveltesentio/ui/tailwind.css')),
-): Promise<ScannedConsumer> {
+type LoadedStylesheet = { path: string; base: string; content: string };
+
+/**
+ * Resolves a stylesheet target path for virtual, package, or relative specifiers.
+ * Emulates Tailwind compiler stylesheet resolution across monorepo package boundaries.
+ */
+function resolveStylesheetPath(id: string, loadBase: string, twEntry: string): string {
+	if (id === 'tailwindcss') {
+		return twEntry;
+	}
+	if (id.startsWith('@sveltesentio/ui/')) {
+		return require.resolve(id);
+	}
+	return resolve(loadBase, id);
+}
+
+/**
+ * Resolves and reads stylesheet content for Tailwind CSS compiler imports with an explicit I/O timeout.
+ * Prevents hanging compile passes when encountering circular or missing filesystem imports.
+ */
+async function loadStylesheet(id: string, base: string, tw: string): Promise<LoadedStylesheet> {
+	const targetPath = resolveStylesheetPath(id, base, tw);
+	const content = await readFile(targetPath, {
+		encoding: 'utf8',
+		signal: AbortSignal.timeout(IO_TIMEOUT_MS),
+	});
+	return {
+		path: targetPath,
+		base: dirname(targetPath),
+		content,
+	};
+}
+
+/**
+ * Compiles a consumer Tailwind CSS stylesheet and executes oxide source scanning on candidate tokens.
+ * Verifies that utility classes from component and package sources are emitted into final CSS.
+ */
+async function compileConsumerStylesheet(css: string, base?: string): Promise<ScannedConsumer> {
+	const targetBase = base ?? dirname(require.resolve('@sveltesentio/ui/tailwind.css'));
 	const twEntry = require.resolve('tailwindcss/index.css');
 
-	const compiled = await compile(consumerCss, {
-		base,
-		loadStylesheet: async (id: string, loadBase: string) => {
-			let targetPath: string;
-			if (id === 'tailwindcss') {
-				targetPath = twEntry;
-			} else if (id.startsWith('@sveltesentio/ui/')) {
-				targetPath = require.resolve(id);
-			} else {
-				targetPath = resolve(loadBase, id);
-			}
-			const content = await readFile(targetPath, {
-				encoding: 'utf8',
-				signal: AbortSignal.timeout(IO_TIMEOUT_MS),
-			});
-			return {
-				path: targetPath,
-				base: dirname(targetPath),
-				content,
-			};
-		},
+	const compiled = await compile(css, {
+		base: targetBase,
+		loadStylesheet: (id: string, loadBase: string) => loadStylesheet(id, loadBase, twEntry),
 	});
 
 	const scanner = new Scanner({ sources: compiled.sources });
@@ -54,6 +71,18 @@ async function compileConsumerStylesheet(
 		sources: compiled.sources,
 		candidates,
 	};
+}
+
+/**
+ * Asserts that dialog utility classes and rules are absent from scan candidates and built CSS.
+ * Prevents regressions where unimported or negated dialog components leak utilities into consumer bundles.
+ */
+function assertDialogUtilitiesAbsent(result: ScannedConsumer): void {
+	expect(result.candidates).not.toContain('bg-black/80');
+	expect(result.candidates).not.toContain('top-1/2');
+
+	expect(result.outputCss).not.toContain('.bg-black\\/80');
+	expect(result.outputCss).not.toContain('.top-1\\/2');
 }
 
 describe('Tailwind v4 consumer source scanning', () => {
@@ -90,11 +119,7 @@ describe('Tailwind v4 consumer source scanning', () => {
 		const result = await compileConsumerStylesheet(consumerCss);
 
 		expect(result.sources).toEqual([]);
-		expect(result.candidates).not.toContain('bg-black/80');
-		expect(result.candidates).not.toContain('top-1/2');
-
-		expect(result.outputCss).not.toContain('.bg-black\\/80');
-		expect(result.outputCss).not.toContain('.top-1\\/2');
+		assertDialogUtilitiesAbsent(result);
 	});
 
 	it('excludes story files via @source not directive', async () => {
@@ -103,8 +128,25 @@ describe('Tailwind v4 consumer source scanning', () => {
 		);
 
 		const result = await compileConsumerStylesheet(consumerCss);
-		const negated = result.sources.filter((s) => s.negated);
-		expect(negated.some((s) => s.pattern.includes('.stories.svelte'))).toBe(true);
+		const negated = result.sources.filter((s) => s.negated).map((s) => s.pattern);
+		expect(negated).toContain('./**/*.stories.*');
+		expect(negated).toContain('./**/*.{test,spec}.*');
+
+		// Behavioural check of the shipped @source lines: compile the text of
+		// src/tailwind.css against a fixture directory, where FixtureComponent
+		// uses font-semibold and only FixtureComponent.stories uses tracking-tighter.
+		const fixtureBase = fileURLToPath(new URL('./fixtures/story-exclusion', import.meta.url));
+		const shipped = await readFile(require.resolve('@sveltesentio/ui/tailwind.css'), {
+			encoding: 'utf8',
+			signal: AbortSignal.timeout(IO_TIMEOUT_MS),
+		});
+		const fixtureCss = ['@import "tailwindcss";', shipped].join('\n');
+		const fixtureResult = await compileConsumerStylesheet(fixtureCss, fixtureBase);
+
+		expect(fixtureResult.candidates).toContain('font-semibold');
+		expect(fixtureResult.candidates).not.toContain('tracking-tighter');
+		expect(fixtureResult.outputCss).toContain('.font-semibold');
+		expect(fixtureResult.outputCss).not.toContain('.tracking-tighter');
 	});
 
 	it('omits dialog utility rules when consumer stylesheet negates dialog path via @source not', async () => {
@@ -115,11 +157,6 @@ describe('Tailwind v4 consumer source scanning', () => {
 		].join('\n');
 
 		const result = await compileConsumerStylesheet(consumerCss);
-
-		expect(result.candidates).not.toContain('bg-black/80');
-		expect(result.candidates).not.toContain('top-1/2');
-
-		expect(result.outputCss).not.toContain('.bg-black\\/80');
-		expect(result.outputCss).not.toContain('.top-1\\/2');
+		assertDialogUtilitiesAbsent(result);
 	});
 });

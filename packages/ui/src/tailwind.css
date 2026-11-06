@@ -7,5 +7,5 @@
  * Paths resolve relative to this stylesheet directory (packages/ui/src).
  */
 @source ".";
-@source not "./**/*.stories.svelte";
-@source not "./**/*.test.ts";
+@source not "./**/*.stories.*";
+@source not "./**/*.{test,spec}.*";
