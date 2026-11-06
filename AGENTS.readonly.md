@@ -98,11 +98,11 @@ praetorctl audit
 
 # Agent guide — sveltesentio
 
-> For Claude Code, Cursor, Aider, Codex, Continue. Read before changes; then per-package `AGENTS.md`.
+> Read before changes; then per-package `AGENTS.md`.
 
 ## What this repo is
 
-`sveltesentio` = pnpm monorepo (`github.com/lusoris/sveltesentio`). Opt-in `@sveltesentio/*` modules (Svelte 5 runes + TS). SvelteKit analog of `golusoris/golusoris` (OWASP ASVS L2, WCAG 2.2 AA, SLSA Build Level 2, Level 3 open #280, EU CRA, EU AI Act).
+`sveltesentio` = pnpm monorepo. Opt-in `@sveltesentio/*` modules (Svelte 5 runes + TS). SvelteKit analog of `golusoris/golusoris` (OWASP ASVS L2, WCAG 2.2 AA, SLSA Build Level 2, Level 3 open #280, EU CRA, EU AI Act).
 Pitch: [README.md](README.md).
 
 ## HISS in this repository
@@ -128,9 +128,9 @@ TypeScript: HISS-03/09 n/a; HISS-11..14 in upstream catalog.
 
 1. Append-only API; breaking change needs `Migration:` footer (before/after snippet) + codemod or line-level manual-migration note; no API-diff gate yet (#288): reviewer diffs surface.
 2. No new transitive dep without weighing alternatives in `.workingdir/research/svelte-ecosystem-audit.md`; non-obvious pick -> justify in PR.
-3. Public surface = `src/index.ts` named exports (+ `ui/toast` subpaths); apps never import `src/internal/`; `exports` enforces.
+3. Public surface = `src/index.ts` named exports (+ `ui/toast` subpaths); apps never import `src/internal/`; `exports` enforces; deviation -> PR comment citing the `docs/principles.md` subsection.
 4. No top-level side effects (no `window.`, DOM reads, import `setInterval`); use vite plugins, hooks, `register(app)`.
-5. Errors via `@sveltesentio/core/errors` (RFC 9457 `ProblemDetails`); never throw raw `Error`.
+5. Errors via `@sveltesentio/core/errors` (RFC 9457 `ProblemDetails`); never throw raw `Error`; deviation -> PR comment citing the `docs/principles.md` subsection.
 6. Time via `@sveltesentio/core/clock`; banned outside `test/`: `Date.now()`, `new Date()`, `performance.now()` (eslint).
 7. Zero `console.log` (warn/error only, or `@sveltesentio/core/log`; eslint `no-console`).
 8. Svelte 5 runes-first: no `$:`, no `writable()` for server state (`@sveltesentio/query`), no `export let` (`$props()`; eslint).
@@ -142,24 +142,24 @@ TypeScript: HISS-03/09 n/a; HISS-11..14 in upstream catalog.
 ## Workflow discipline
 
 Research-first; apps = truth for promotion (`.workingdir/research/deepread-*.md`, `.workingdir/PLAN.md`).
-Before proposing package, sub-export, API:
+Before proposing package, subpath, API:
 1. `.workingdir/research/decisions-needed.md`: open question? Add evidence, do not guess.
 2. `.workingdir/research/svelte-ecosystem-audit.md`: evaluated? Obsoletes wrapper?
 3. `.workingdir/research/existing-apps-deepread.md`: pattern in >= 2 apps? Single-app stays local.
 4. No evidence: research; open `D*` row.
 
-Streamlining: clean upstream lib -> do not wrap; document in `docs/compose/`; consumer imports upstream. Wrappers: (a) enforce invariant from `docs/principles.md`, (b) compose libs into matrix, (c) encode cross-app decision.
+Clean upstream lib -> do not wrap; document in `docs/compose/`; consumer imports upstream. Wrappers: (a) enforce invariant from `docs/principles.md`, (b) compose libs into matrix, (c) encode cross-app decision.
 
 ## References
 
-- Layout: [repository-layout.md](docs/architecture/repository-layout.md); sub-exports = module subpaths.
+- Layout: [repository-layout.md](docs/architecture/repository-layout.md); subpaths.
 - Packages (19 published): [packages.md](docs/architecture/packages.md); backlog `.workingdir/research/module-backlog.md`.
 - Tasks: [common-tasks.md](docs/contributing/common-tasks.md).
 - Peers: [peer-ranges.md](docs/upstream/peer-ranges.md), `docs/upstream/`.
 
 ## CI gates
 
-PR: Conventional Commits, 0 ESLint errors, Prettier, 0 `turbo typecheck` errors, Vitest green + >= 70% coverage (>= 85% `auth`, `forms`), Playwright e2e green (`auth`, `media`, `shell`), axe-core clean (ADR-0056), `pnpm audit` clean, `codeql.yml` clean.
+PR: Conventional Commits, 0 ESLint errors, Prettier, 0 `turbo typecheck` errors, Vitest green + coverage thresholds, Playwright e2e green (`auth`, `media`, `shell`), axe-core clean (ADR-0056), `pnpm audit` clean, `codeql.yml` clean.
 
 Release: SLSA Build Level 2, CycloneDX SBOM; Level 3 open (#280, exception `HISS-11`). Details: [ci-gates.md](docs/contributing/ci-gates.md).
 
