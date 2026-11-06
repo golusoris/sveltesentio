@@ -18,21 +18,21 @@ import { parse, parseAllDocuments } from 'yaml';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
-export const PLAYWRIGHT_IMAGE_PREFIX = 'mcr.microsoft.com/playwright:';
-export const REQUIRED_CONTAINER_USER = '--user 1001';
-export const CONTAINER_USER_REGEX = /(^|\s)--user[=\s]+1001(:\S+)?(?=\s|$)/;
-export const REQUIRED_BROWSERS_PATH = '/ms-playwright';
-export const REDUNDANT_INSTALL_CMD = 'playwright install --with-deps';
-export const DIGEST_REGEX = /@sha256:[0-9a-fA-F]{64}$/;
+export const PLAYWRIGHT_IMAGE_PREFIX = 'mcr.microsoft.com/playwright:',
+	REQUIRED_CONTAINER_USER = '--user 1001',
+	CONTAINER_USER_REGEX = /(^|\s)--user[=\s]+1001(:\S+)?(?=\s|$)/,
+	REQUIRED_BROWSERS_PATH = '/ms-playwright',
+	REDUNDANT_INSTALL_CMD = 'playwright install --with-deps',
+	DIGEST_REGEX = /@sha256:[0-9a-fA-F]{64}$/;
 
 // Upper bounds (HISS-02): directory entries one scan reads, jobs per workflow,
 // documents/packages in lockfile, steps per job, and I/O deadline.
-export const ENTRY_LIMIT = 1_000;
-export const JOB_LIMIT = 100;
-export const LOCK_DOC_LIMIT = 10;
-export const LOCK_PACKAGE_LIMIT = 10_000;
-export const STEP_LIMIT = 100;
-export const IO_TIMEOUT_MS = 10_000;
+export const ENTRY_LIMIT = 1_000,
+	JOB_LIMIT = 100,
+	LOCK_DOC_LIMIT = 10,
+	LOCK_PACKAGE_LIMIT = 10_000,
+	STEP_LIMIT = 100,
+	IO_TIMEOUT_MS = 10_000;
 
 /** GitHub reads workflow files with either extension. */
 export const WORKFLOW_FILE = /\.ya?ml$/;
@@ -47,10 +47,7 @@ export async function withTimeout(
 	description = 'fs operation',
 ) {
 	let timer;
-	const noop = () => {};
-	if (typeof promise?.catch === 'function') {
-		promise.catch(noop);
-	}
+	promise?.catch?.(() => {});
 	try {
 		return await Promise.race([
 			promise,
@@ -72,18 +69,14 @@ function isMapping(value) {
 /**
  * Adds resolved playwright versions found in a packages dictionary.
  */
-function addPackageVersions(packages, versions) {
-	for (const key of Object.keys(packages)) {
+function extractPkgVersions(pkgs, versions) {
+	for (const key of Object.keys(pkgs)) {
 		if (key.startsWith('playwright@')) {
-			const rawVer = key.slice('playwright@'.length);
-			versions.add(rawVer.split('(')[0]);
+			versions.add(key.slice('playwright@'.length).split('(')[0]);
 		}
 	}
 }
 
-/**
- * Extracts unique resolved playwright package versions from parsed lockfile documents.
- */
 function collectPlaywrightVersions(
 	docs,
 	docLimit = LOCK_DOC_LIMIT,
@@ -95,18 +88,16 @@ function collectPlaywrightVersions(
 	const versions = new Set();
 	let totalPackages = 0;
 	for (const doc of docs) {
-		if (doc.errors && doc.errors.length > 0) {
-			throw doc.errors[0];
-		}
-		const data = doc.toJSON();
-		if (isMapping(data?.packages)) {
-			totalPackages += Object.keys(data.packages).length;
+		if (doc.errors?.length > 0) throw doc.errors[0];
+		const pkgs = doc.toJSON()?.packages;
+		if (isMapping(pkgs)) {
+			totalPackages += Object.keys(pkgs).length;
 			if (totalPackages > packageLimit) {
 				throw new Error(
 					`pnpm-lock.yaml exceeds limit of ${packageLimit} packages, got ${totalPackages}`,
 				);
 			}
-			addPackageVersions(data.packages, versions);
+			extractPkgVersions(pkgs, versions);
 		}
 	}
 	return versions;
@@ -126,26 +117,26 @@ export function getPlaywrightLockVersion(lockfileSource, limits = {}) {
 		const msg = error instanceof Error ? error.message : String(error);
 		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
 	}
-	if (versions.size === 0) {
-		return {
-			version: null,
-			finding: {
-				file: 'pnpm-lock.yaml',
-				message: 'no resolved playwright package found in pnpm-lock.yaml',
-			},
-		};
-	}
-	if (versions.size > 1) {
-		const list = Array.from(versions).sort().join(', ');
-		return {
-			version: null,
-			finding: {
-				file: 'pnpm-lock.yaml',
-				message: `expected exactly one playwright version in pnpm-lock.yaml, found ${list}`,
-			},
-		};
+	if (versions.size !== 1) {
+		const msg =
+			versions.size === 0
+				? 'no resolved playwright package found in pnpm-lock.yaml'
+				: `expected exactly one playwright version in pnpm-lock.yaml, found ${Array.from(versions).sort().join(', ')}`;
+		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
 	}
 	return { version: Array.from(versions)[0], finding: null };
+}
+
+async function readTextFile(path) {
+	try {
+		const content = await readFile(path, {
+			encoding: 'utf8',
+			signal: AbortSignal.timeout(IO_TIMEOUT_MS),
+		});
+		return { content, error: null };
+	} catch (err) {
+		return { content: null, error: err instanceof Error ? err.message : String(err) };
+	}
 }
 
 /**
@@ -153,20 +144,14 @@ export function getPlaywrightLockVersion(lockfileSource, limits = {}) {
  */
 export async function readLockfileVersion(rootDir, limits = {}) {
 	const lockfilePath = join(rootDir, 'pnpm-lock.yaml');
-	let source;
-	try {
-		source = await readFile(lockfilePath, {
-			encoding: 'utf8',
-			signal: AbortSignal.timeout(IO_TIMEOUT_MS),
-		});
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
+	const { content, error } = await readTextFile(lockfilePath);
+	if (error) {
 		return {
 			version: null,
-			finding: { file: 'pnpm-lock.yaml', message: `failed to read ${lockfilePath}: ${msg}` },
+			finding: { file: 'pnpm-lock.yaml', message: `failed to read ${lockfilePath}: ${error}` },
 		};
 	}
-	return getPlaywrightLockVersion(source, limits);
+	return getPlaywrightLockVersion(content, limits);
 }
 
 /**
@@ -181,11 +166,9 @@ function parseWorkflowJobs(source, file, jobLimit = JOB_LIMIT) {
 			cause: error,
 		});
 	}
-	if (!isMapping(doc)) {
-		return { finding: { file, job: null, message: `${file}: workflow must be a YAML mapping` } };
-	}
-	if (!('jobs' in doc) || !isMapping(doc.jobs)) {
-		return { finding: { file, job: null, message: `${file}: 'jobs' must be a YAML mapping` } };
+	if (!isMapping(doc) || !isMapping(doc.jobs)) {
+		const prop = isMapping(doc) ? "'jobs'" : 'workflow';
+		return { finding: { file, job: null, message: `${file}: ${prop} must be a YAML mapping` } };
 	}
 	const entries = Object.entries(doc.jobs);
 	if (entries.length > jobLimit) {
@@ -198,25 +181,22 @@ function checkImageTag(image, lockfileVersion) {
 	const ref = image.slice(PLAYWRIGHT_IMAGE_PREFIX.length);
 	const tag = ref.split('@')[0];
 	const tagVersion = tag.replace(/^v/, '').split('-')[0];
-	if (tagVersion !== lockfileVersion) {
-		return `tag version '${tag}' (${tagVersion}) does not match lockfile Playwright version '${lockfileVersion}'`;
-	}
-	return null;
+	return tagVersion === lockfileVersion
+		? null
+		: `tag version '${tag}' (${tagVersion}) does not match lockfile Playwright version '${lockfileVersion}'`;
 }
 
 function checkImageDigest(image) {
-	if (!DIGEST_REGEX.test(image)) {
-		return `container image '${image}' is missing required '@sha256:<64 hex>' digest`;
-	}
-	return null;
+	return DIGEST_REGEX.test(image)
+		? null
+		: `container image '${image}' is missing required '@sha256:<64 hex>' digest`;
 }
 
 function checkContainerOptions(container) {
 	const options = isMapping(container) ? container.options : undefined;
-	if (typeof options !== 'string' || !CONTAINER_USER_REGEX.test(options)) {
-		return `container options lacks required '${REQUIRED_CONTAINER_USER}'`;
-	}
-	return null;
+	return typeof options === 'string' && CONTAINER_USER_REGEX.test(options)
+		? null
+		: `container options lacks required '${REQUIRED_CONTAINER_USER}'`;
 }
 
 function checkBrowsersPath(jobDef, container) {
@@ -225,20 +205,15 @@ function checkBrowsersPath(jobDef, container) {
 		isMapping(container) && isMapping(container.env)
 			? container.env.PLAYWRIGHT_BROWSERS_PATH
 			: undefined;
-	if (jobVal === REQUIRED_BROWSERS_PATH || containerVal === REQUIRED_BROWSERS_PATH) {
-		return null;
-	}
+	if (jobVal === REQUIRED_BROWSERS_PATH || containerVal === REQUIRED_BROWSERS_PATH) return null;
 	if (jobVal === undefined && containerVal === undefined) {
 		return `missing required env.PLAYWRIGHT_BROWSERS_PATH: '${REQUIRED_BROWSERS_PATH}'`;
 	}
-	const actual = jobVal !== undefined ? jobVal : containerVal;
-	return `env.PLAYWRIGHT_BROWSERS_PATH must be '${REQUIRED_BROWSERS_PATH}', got '${actual}'`;
+	return `env.PLAYWRIGHT_BROWSERS_PATH must be '${REQUIRED_BROWSERS_PATH}', got '${jobVal ?? containerVal}'`;
 }
 
 function checkRedundantSteps(steps, stepLimit = STEP_LIMIT) {
-	if (!Array.isArray(steps)) {
-		return null;
-	}
+	if (!Array.isArray(steps)) return null;
 	if (steps.length > stepLimit) {
 		throw new Error(`exceeds limit of ${stepLimit} steps, got ${steps.length}`);
 	}
@@ -261,13 +236,8 @@ function collectJobChecks(image, lockfileVersion, container, jobDef, stepLimit) 
 }
 
 function getPlaywrightImage(container) {
-	if (typeof container === 'string') {
-		return container;
-	}
-	if (isMapping(container) && typeof container.image === 'string') {
-		return container.image;
-	}
-	return null;
+	if (typeof container === 'string') return container;
+	return isMapping(container) && typeof container.image === 'string' ? container.image : null;
 }
 
 function ensureStepLimit(file, jobId, steps, stepLimit) {
@@ -282,13 +252,9 @@ function ensureStepLimit(file, jobId, steps, stepLimit) {
  * Validates a single workflow job container definition and steps.
  */
 function checkJob(file, jobId, jobDef, lockfileVersion, stepLimit = STEP_LIMIT) {
-	if (!isMapping(jobDef)) {
-		return [];
-	}
+	if (!isMapping(jobDef)) return [];
 	const image = getPlaywrightImage(jobDef.container);
-	if (image === null || !image.startsWith(PLAYWRIGHT_IMAGE_PREFIX)) {
-		return [];
-	}
+	if (image === null || !image.startsWith(PLAYWRIGHT_IMAGE_PREFIX)) return [];
 	ensureStepLimit(file, jobId, jobDef.steps, stepLimit);
 	const findings = [];
 	for (const msg of collectJobChecks(image, lockfileVersion, jobDef.container, jobDef, stepLimit)) {
@@ -310,16 +276,119 @@ export function findPlaywrightImageViolations(
 ) {
 	const { jobLimit = JOB_LIMIT, stepLimit = STEP_LIMIT } = options;
 	const parsed = parseWorkflowJobs(source, file, jobLimit);
-	if (parsed.finding) {
-		return [parsed.finding];
-	}
+	if (parsed.finding) return [parsed.finding];
 	const findings = [];
 	for (const [jobId, jobDef] of parsed.entries) {
-		for (const finding of checkJob(file, jobId, jobDef, lockfileVersion, stepLimit)) {
-			findings.push(finding);
+		findings.push(...checkJob(file, jobId, jobDef, lockfileVersion, stepLimit));
+	}
+	return findings;
+}
+
+export const REQUIRED_BROWSERS_VAR = 'PLAYWRIGHT_BROWSERS_PATH';
+const TURBO_RUN_REGEX =
+	/(?:^|[\s;&|])(?:(?:pnpm|npx|yarn)\s+(?:exec\s+)?)?turbo\s+run\s+([^\n#;&|]+)/g;
+
+function listHasVar(list, varName) {
+	return Array.isArray(list) && list.includes(varName);
+}
+
+function taskHasVar(taskDef, varName) {
+	return (
+		isMapping(taskDef) &&
+		(listHasVar(taskDef.passThroughEnv, varName) || listHasVar(taskDef.env, varName))
+	);
+}
+
+export function extractTurboTasks(run) {
+	if (typeof run !== 'string') return [];
+	const tasks = [];
+	let match;
+	while ((match = TURBO_RUN_REGEX.exec(run)) !== null) {
+		for (const tok of match[1].trim().split(/\s+/)) {
+			if (!tok.startsWith('-') && !tok.startsWith('$') && /^[a-zA-Z0-9_:-]+$/.test(tok)) {
+				tasks.push(tok);
+			}
+		}
+	}
+	return tasks;
+}
+
+export function checkTurboPassThrough(turboConfig, tasks) {
+	if (!isMapping(turboConfig)) {
+		return [{ file: 'turbo.json', message: 'turbo.json: must be a JSON object' }];
+	}
+	if (
+		listHasVar(turboConfig.globalPassThroughEnv, REQUIRED_BROWSERS_VAR) ||
+		listHasVar(turboConfig.globalEnv, REQUIRED_BROWSERS_VAR)
+	) {
+		return [];
+	}
+	const configured = isMapping(turboConfig.tasks) ? turboConfig.tasks : {};
+	const findings = [];
+	for (const task of tasks) {
+		if (!taskHasVar(configured[task], REQUIRED_BROWSERS_VAR)) {
+			findings.push({
+				file: 'turbo.json',
+				task,
+				message: `turbo.json: task '${task}' must list ${REQUIRED_BROWSERS_VAR} in passThroughEnv, env, or globalPassThroughEnv`,
+			});
 		}
 	}
 	return findings;
+}
+
+export async function readTurboConfig(rootDir) {
+	const turboPath = join(rootDir, 'turbo.json');
+	const { content, error } = await readTextFile(turboPath);
+	if (error) {
+		return {
+			config: null,
+			finding: { file: 'turbo.json', message: `failed to read ${turboPath}: ${error}` },
+		};
+	}
+	try {
+		return { config: JSON.parse(content), finding: null };
+	} catch (error) {
+		const msg = error instanceof Error ? error.message : String(error);
+		return {
+			config: null,
+			finding: { file: 'turbo.json', message: `failed to parse ${turboPath}: ${msg}` },
+		};
+	}
+}
+
+export function getPlaywrightContainerJobs(source, file = 'workflow', jobLimit = JOB_LIMIT) {
+	const parsed = parseWorkflowJobs(source, file, jobLimit);
+	if (parsed.finding) return [];
+	const containerJobs = [];
+	for (const [jobId, jobDef] of parsed.entries) {
+		const image = isMapping(jobDef) ? getPlaywrightImage(jobDef.container) : null;
+		if (image !== null && image.startsWith(PLAYWRIGHT_IMAGE_PREFIX)) {
+			containerJobs.push({ jobId, jobDef });
+		}
+	}
+	return containerJobs;
+}
+
+function collectJobsTurboTasks(containerJobs, turboTasks) {
+	for (const { jobDef } of containerJobs) {
+		if (Array.isArray(jobDef.steps)) {
+			for (const step of jobDef.steps) {
+				for (const task of extractTurboTasks(step?.run)) {
+					turboTasks.add(task);
+				}
+			}
+		}
+	}
+}
+
+async function verifyTurboForContainers(rootDir, turboTasks) {
+	turboTasks.add('test:e2e');
+	const turboResult = await readTurboConfig(rootDir);
+	if (turboResult.finding) {
+		return [turboResult.finding];
+	}
+	return checkTurboPassThrough(turboResult.config, turboTasks);
 }
 
 /**
@@ -341,14 +410,23 @@ export async function scanWorkflows(rootDir, lockfileVersion, options = {}) {
 		.sort();
 
 	const findings = [];
+	let hasPlaywrightContainer = false;
+	const turboTasks = new Set();
 	for (const file of files) {
-		const source = await readFile(join(dir, file), {
-			encoding: 'utf8',
-			signal: AbortSignal.timeout(IO_TIMEOUT_MS),
-		});
-		for (const finding of findPlaywrightImageViolations(source, file, lockfileVersion, options)) {
-			findings.push(finding);
+		const { content: source, error } = await readTextFile(join(dir, file));
+		if (error) {
+			findings.push({ file, job: null, message: `${file}: failed to read: ${error}` });
+			continue;
 		}
+		findings.push(...findPlaywrightImageViolations(source, file, lockfileVersion, options));
+		const containers = getPlaywrightContainerJobs(source, file, options.jobLimit);
+		if (containers.length > 0) {
+			hasPlaywrightContainer = true;
+			collectJobsTurboTasks(containers, turboTasks);
+		}
+	}
+	if (hasPlaywrightContainer) {
+		findings.push(...(await verifyTurboForContainers(rootDir, turboTasks)));
 	}
 	return { files, findings };
 }
@@ -387,9 +465,7 @@ export async function main(rootDir = root) {
 		return 1;
 	}
 
-	for (const finding of workflowResult.findings) {
-		findings.push(finding);
-	}
+	findings.push(...workflowResult.findings);
 	const where = relative(root, rootDir) || rootDir;
 	return reportFindings(workflowResult.files, findings, where, lockResult.version);
 }

@@ -75,7 +75,7 @@ describe('check-playwright-image', () => {
 		}
 	});
 
-	const setupDir = async (name, lockYaml, workflowFiles) => {
+	const setupDir = async (name, lockYaml, workflowFiles, turboJson) => {
 		const dir = join(tempRoot, name);
 		await mkdir(join(dir, '.github', 'workflows'), { recursive: true });
 		if (lockYaml !== null) {
@@ -83,6 +83,19 @@ describe('check-playwright-image', () => {
 		}
 		for (const [file, source] of Object.entries(workflowFiles)) {
 			await writeFile(join(dir, '.github', 'workflows', file), source);
+		}
+		if (turboJson !== null) {
+			await writeFile(
+				join(dir, 'turbo.json'),
+				turboJson ??
+					JSON.stringify({
+						tasks: {
+							'test:e2e': {
+								passThroughEnv: ['PLAYWRIGHT_BROWSERS_PATH'],
+							},
+						},
+					}),
+			);
 		}
 		return dir;
 	};
