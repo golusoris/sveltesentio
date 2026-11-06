@@ -38,7 +38,8 @@ export const load = async ({ locals }) => {
 <!-- +page.svelte -->
 <script lang="ts">
   import { usePermissions } from '@sveltesentio/auth/use-permissions';
-  const { can } = usePermissions();
+  let { data } = $props();
+  const { can } = usePermissions(data.permissions);
 </script>
 
 {#if can('billing.read')}<BillingPanel />{/if}
