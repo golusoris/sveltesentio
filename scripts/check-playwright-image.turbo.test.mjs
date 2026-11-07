@@ -80,7 +80,7 @@ describe('check-playwright-image turbo passthrough checks', () => {
 		});
 
 		it('stops at double-dash separator', () => {
-			assert.deepEqual(extractTurboTasks('turbo run test:e2e -- --reporter=list'), ['test:e2e']);
+			assert.deepEqual(extractTurboTasks('turbo run test:e2e -- reporter list'), ['test:e2e']);
 		});
 
 		it('returns empty array when command does not invoke turbo run', () => {
