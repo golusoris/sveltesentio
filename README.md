@@ -93,7 +93,7 @@ make dev     # turbo dev (all packages watch)
 make ci      # lint + typecheck + test + build
 ```
 
-Requires Node 24+ (see [ADR-0021](docs/adr/0021-node-24-floor.md)) and pnpm 10+.
+Requires Node 24+ (see [ADR-0021](docs/adr/0021-node-24-floor.md)) and pnpm 12+.
 
 ## License
 
