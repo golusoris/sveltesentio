@@ -6,10 +6,11 @@ interface StoryIndex {
 }
 
 const ANIMATION_SETTLE_MS = 500;
+const MAX_STORIES = 500;
 
 test('every story matches its baseline screenshot', async ({ page, request }) => {
 	test.setTimeout(300_000);
-	const res = await request.get('/index.json');
+	const res = await request.get('/index.json', { timeout: 10_000 });
 	expect(res.ok()).toBe(true);
 	const index: StoryIndex = await res.json();
 	const storyIds = Object.values(index.entries)
@@ -17,8 +18,10 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 		.map((entry) => entry.id)
 		.sort();
 	expect(storyIds.length).toBeGreaterThan(0);
+	expect(storyIds.length).toBeLessThanOrEqual(MAX_STORIES);
 
-	const failures: string[] = [];
+	const errors: string[] = [];
+	const skipped: string[] = [];
 
 	for (const storyId of storyIds) {
 		try {
@@ -26,12 +29,12 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 				waitUntil: 'networkidle',
 				timeout: 30_000,
 			});
-			if (!response || !response.ok()) {
-				failures.push(`${storyId}: HTTP ${response?.status() ?? 'no response'}`);
+			if (!response?.ok()) {
+				errors.push(`${storyId}: HTTP ${response?.status() ?? 'no response'}`);
 				continue;
 			}
 		} catch {
-			failures.push(`${storyId}: navigation failed`);
+			errors.push(`${storyId}: navigation failed`);
 			continue;
 		}
 		await page.waitForTimeout(ANIMATION_SETTLE_MS);
@@ -39,7 +42,7 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 		const root = page.locator('#storybook-root');
 		const isVisible = await root.isVisible();
 		if (!isVisible) {
-			failures.push(`${storyId}: #storybook-root not visible`);
+			skipped.push(`${storyId}: #storybook-root not visible`);
 			continue;
 		}
 
@@ -48,7 +51,8 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 		});
 	}
 
-	if (failures.length > 0) {
-		console.warn(`Skipped ${failures.length} stories:\n${failures.join('\n')}`);
+	if (skipped.length > 0) {
+		console.warn(`Skipped ${skipped.length} stories:\n${skipped.join('\n')}`);
 	}
+	expect(errors, `${errors.length} stories failed to load:\n${errors.join('\n')}`).toHaveLength(0);
 });
