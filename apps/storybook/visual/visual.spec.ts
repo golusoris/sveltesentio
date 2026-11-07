@@ -46,7 +46,7 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 			continue;
 		}
 
-		await expect(root).toHaveScreenshot(`${storyId}.png`, {
+		await expect.soft(root).toHaveScreenshot(`${storyId}.png`, {
 			animations: 'disabled',
 		});
 	}
