@@ -104,7 +104,6 @@ and modernized NASA JPL Power-of-10 rules.
 | **Context Sync** | `standardsctl compile-context` | Transpiles canonical `AGENTS.md` to all AI targets       |
 
 <!-- praetor:readme-governance:start -->
-
 [![HISS Adopted][praetor-hiss-badge]][praetor-hiss-agents]
 [![Documentation Governance][praetor-docs-badge]][praetor-docs-runs]
 
@@ -130,5 +129,4 @@ private scratch-link policy.
 [praetor-hiss-agents]: https://github.com/golusoris/sveltesentio/blob/HEAD/AGENTS.md
 [praetor-docs-badge]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg
 [praetor-docs-runs]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml
-
 <!-- praetor:readme-governance:end -->
