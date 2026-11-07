@@ -75,7 +75,7 @@ describe('check-playwright-image turbo passthrough checks', () => {
 		});
 
 		it('skips space-separated values of value-taking flags', () => {
-			const cmd = 'turbo run test:e2e --concurrency 2 --filter ./packages/auth';
+			const cmd = 'turbo run test:e2e --concurrency 2 --filter auth --env-mode strict';
 			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
 		});
 

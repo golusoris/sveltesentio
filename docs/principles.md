@@ -150,13 +150,13 @@ Rules:
 
 ## §2.8 Testing
 
-| Layer             | Tool                             | Threshold                                                                                                    |
-| ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Unit              | Vitest                           | 70% line coverage (85% auth/forms packages)                                                                  |
-| Component         | @testing-library/svelte + Vitest | —                                                                                                            |
-| a11y              | axe-core + @axe-core/playwright  | 0 violations                                                                                                 |
-| E2E               | Playwright                       | Critical user paths                                                                                          |
-| Visual regression | Playwright screenshots           | Per-component baseline (target, not gated yet: [#325](https://github.com/golusoris/sveltesentio/issues/325)) |
+| Layer             | Tool                             | Threshold                                                                                                |
+| ----------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Unit              | Vitest                           | 70% line coverage (85% auth/forms packages)                                                              |
+| Component         | @testing-library/svelte + Vitest | —                                                                                                        |
+| a11y              | axe-core + @axe-core/playwright  | 0 violations                                                                                             |
+| E2E               | Playwright                       | Critical user paths                                                                                      |
+| Visual regression | Playwright screenshots           | Per-component baseline, gated via CI Gate ([#325](https://github.com/golusoris/sveltesentio/issues/325)) |
 
 Rules:
 

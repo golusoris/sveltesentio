@@ -293,6 +293,13 @@ const TURBO_VALUE_FLAGS = new Set([
 	'--concurrency',
 	'--cache-dir',
 	'--output-logs',
+	'--env-mode',
+	'--log-order',
+	'--log-prefix',
+	'--cache',
+	'--cache-workers',
+	'--continue',
+	'--global-deps',
 ]);
 
 function listHasVar(list, varName) {
