@@ -1,0 +1,8 @@
+# HISS-02 fixture: a step-running job with no timeout-minutes.
+# scripts/check-job-timeouts.mjs refuses it (exit 1).
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'

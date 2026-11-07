@@ -59,6 +59,9 @@
             "context": "Custom SAST (semgrep)"
           },
           {
+            "context": "Template labels"
+          },
+          {
             "context": "CodeQL analysis"
           },
           {

@@ -75,6 +75,9 @@ verify-all:
 	@pnpm check:export-tests
 	@pnpm check:publint
 	@pnpm check:svelte
+	@pnpm check:job-timeouts
+	@pnpm check:platform-legs
+	@pnpm check:playwright-image
 	@pnpm check:kit-compat
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high

@@ -23,6 +23,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Linux only (HISS-21, #328): checks the pull request title, not the code.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - name: Check PR title
         env:
@@ -41,6 +42,7 @@ jobs:
     name: Detect Changes
     # Linux only (HISS-21, #328): computes the turbo filter from git history, which is the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     outputs:
       all_affected: ${{ steps.changes.outputs.all_affected }}
       has_code_changes: ${{ steps.changes.outputs.has_code_changes }}
@@ -79,6 +81,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs lint on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - &checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -114,6 +117,9 @@ jobs:
           exit "$status"
       - run: pnpm check:cycles
       - run: pnpm check:declared-imports
+      - run: pnpm check:job-timeouts
+      - run: pnpm check:platform-legs
+      - run: pnpm check:playwright-image
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/
@@ -141,6 +147,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs the type check on Linux, macOS and Windows; this job adds the affected-package filter.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -182,6 +189,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): portability.yml runs the unit tests on Linux, macOS and Windows; this job adds coverage.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -211,6 +219,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): the build output does not depend on the runner OS.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -231,17 +240,21 @@ jobs:
     name: Stories (axe)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
-    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
+    # Linux only (HISS-21, #328): job runs in the Playwright Linux container image.
+    # Image tag must equal the lockfile Playwright version; scripts/check-playwright-image.mjs enforces.
     runs-on: ubuntu-26.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4
+      options: --user 1001
+    # Job steps resolve browsers under HOME otherwise; image preinstalls to /ms-playwright.
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
       - *cache_pnpm
       - *pnpm_install
-      # One Playwright version is in the lockfile, so one browser install serves every workspace.
-      - name: Install Chromium, Firefox and WebKit
-        if: github.event_name != 'pull_request' || needs.detect-changes.outputs.all_affected == 'true' || needs.detect-changes.outputs.has_stories == 'true'
-        run: pnpm --filter @sveltesentio/storybook exec playwright install --with-deps chromium firefox webkit
       # Every story is rendered in Chromium, Firefox and WebKit; an axe violation or a render error fails the run.
       # Stories come from every package, so the run is not narrowed to the affected ones.
       - name: Run every story with axe
@@ -260,15 +273,21 @@ jobs:
     name: End-to-end
     needs: [detect-changes]
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
-    # Linux only (HISS-21, #328): Playwright's --with-deps installs browser system packages with apt.
+    # Linux only (HISS-21, #328): job runs in the Playwright Linux container image.
+    # Image tag must equal the lockfile Playwright version; scripts/check-playwright-image.mjs enforces.
     runs-on: ubuntu-26.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4
+      options: --user 1001
+    # Job steps resolve browsers under HOME otherwise; image preinstalls to /ms-playwright.
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    timeout-minutes: 15
     steps:
       - *checkout
       - *setup_node
       - *cache_pnpm
       - *pnpm_install
-      - name: Install Chromium, Firefox and WebKit
-        run: pnpm --filter @sveltesentio/shell exec playwright install --with-deps chromium firefox webkit
       # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
       - name: Run end-to-end tests of affected packages
         env:
@@ -297,6 +316,7 @@ jobs:
     if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
     # Linux only (HISS-21, #328): pnpm audit reads the lockfile, which is the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - *checkout
       - *setup_node
@@ -379,6 +399,7 @@ jobs:
     if: github.event_name == 'pull_request'
     # Linux only (HISS-21, #328): compares the exports maps of two revisions, which are the same on every platform.
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -395,6 +416,28 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node scripts/check-docs-drift.mjs
+
+  template-labels:
+    name: Template labels
+    # Linux only (HISS-21, #328): compares issue form text with the label list of the repository.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - *cache_pnpm
+      - *pnpm_install
+      - name: Check that every label an issue form names exists
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/check-template-labels.mjs
 
   ci-gate:
     name: CI Gate
@@ -414,6 +457,7 @@ jobs:
         dependency-scan,
         semgrep,
         docs-drift,
+        template-labels,
       ]
     # Linux only (HISS-21, #328): aggregates the results of the other jobs.
     runs-on: ubuntu-26.04

@@ -17,6 +17,7 @@ ADR-0014), plus `./theme-toggle`, `./theme-customizer`, `./font-preset`,
 
 | Import                                        | What                                                                                                   |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `@sveltesentio/ui/tailwind.css`               | Tailwind v4 `@source` stylesheet for component utility class detection                                 |
 | `@sveltesentio/ui/tokens`                     | oklch semantic tokens (light/dark) + `themeCss()` emitter                                              |
 | `@sveltesentio/ui/presets`                    | `desktop` / `10foot` / `handheld` / `dashboard` presets + `presetCss()`                                |
 | `@sveltesentio/ui/toast`                      | `toastPreset(interfaceType)` → preset-aware `svelte-sonner` `<Toaster>` sizing/position (ADR-0016)     |
@@ -99,6 +100,19 @@ Recommended wiring uses static per-icon imports with `createLucideLoader` passed
 ```bash
 pnpm add @sveltesentio/ui
 ```
+
+## Tailwind v4 setup
+
+Tailwind CSS v4 skips `node_modules` by default during content scanning. Because `@sveltesentio/ui` components carry Tailwind v4 utility classes in their source files (e.g. `bg-black/80` and `top-1/2` in Dialog), importing `tailwindcss` alone will result in those utility classes being omitted from the generated stylesheet, breaking component visuals (e.g. transparent backdrop overlays and uncentered dialog modals).
+
+To ensure Tailwind scans the `@sveltesentio/ui` component sources, import `@sveltesentio/ui/tailwind.css` in your application stylesheet immediately after `@import "tailwindcss";`:
+
+```css
+@import 'tailwindcss';
+@import '@sveltesentio/ui/tailwind.css';
+```
+
+This imported stylesheet registers `@source` directives for the published component sources while excluding story and test files, allowing Tailwind to detect and emit all necessary classes.
 
 See the [monorepo README](../../README.md) and [`docs/`](../../docs/) for design principles and usage.
 

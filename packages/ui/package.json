@@ -11,6 +11,7 @@
 		"@storybook/addon-svelte-csf": "5.1.5",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/testing": "workspace:*",
+		"@tailwindcss/oxide": "^4.3.3",
 		"@testing-library/jest-dom": "^7.0.0",
 		"@testing-library/svelte": "^5.4.2",
 		"@types/jsdom": "^30.0.0",
@@ -97,6 +98,11 @@
 		"./presets": {
 			"import": "./src/presets/index.ts",
 			"types": "./src/presets/index.ts"
+		},
+		"./tailwind.css": {
+			"style": "./src/tailwind.css",
+			"import": "./src/tailwind.css",
+			"default": "./src/tailwind.css"
 		},
 		"./theme-customizer": {
 			"import": "./src/theme/customizer-export.ts",
@@ -196,7 +202,9 @@
 		"test": "vitest run --coverage",
 		"typecheck": "tsc --noEmit -p tsconfig.test.json"
 	},
-	"sideEffects": false,
+	"sideEffects": [
+		"**/*.css"
+	],
 	"type": "module",
 	"version": "0.9.0"
 }

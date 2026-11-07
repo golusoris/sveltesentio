@@ -1,32 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ElkNode } from 'elkjs/lib/elk-api.js';
-import { createElkLayout, type ElkFactory, type ElkLike } from '../src/layout.js';
-
-function fakeElkFactory(): ElkFactory {
-	const elk: ElkLike = {
-		layout(graph: ElkNode): Promise<ElkNode> {
-			let y = 0;
-			const children = (graph.children ?? []).map((c) => {
-				const node: ElkNode = {
-					id: c.id,
-					x: 0,
-					y,
-					width: c.width ?? 0,
-					height: c.height ?? 0,
-				};
-				y += (c.height ?? 0) + 80;
-				return node;
-			});
-			return Promise.resolve({
-				id: graph.id,
-				children,
-				width: 200,
-				height: y,
-			});
-		},
-	};
-	return () => Promise.resolve(elk);
-}
+import { createElkLayout, type ElkFactory } from '../src/layout.js';
+import { fakeElkFactory } from './fake-elk.js';
 
 describe('createElkLayout', () => {
 	it('positions nodes using the injected factory and returns edges unchanged', async () => {

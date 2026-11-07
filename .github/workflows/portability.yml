@@ -5,10 +5,10 @@ name: Platform Neutrality
 
 'on':
   pull_request:
-    branches: [main]
+    branches: [main, 'lts-*']
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [main]
+    branches: [main, 'lts-*']
   merge_group:
   workflow_dispatch:
 
