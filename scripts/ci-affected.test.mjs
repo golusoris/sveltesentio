@@ -482,7 +482,7 @@ describe('ci-affected: runCiAffected and scope detection', () => {
 		assert.deepEqual(parsed.affectedPackages, []);
 		assert.equal(parsed.turboFilter, '');
 		assert.equal(parsed.changedFiles, 1);
-		assert.equal(parsed.prettierFiles, 'README.md');
+		assert.equal(parsed.prettierFiles, '');
 		assert.equal(parsed.hasStories, false);
 		assert.match(cli.githubOutput, /has_code_changes=false/);
 	});

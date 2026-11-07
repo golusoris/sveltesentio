@@ -16,6 +16,12 @@ standards.sublime-project
 .devcontainer/
 .github/rulesets/
 
+# The README carries a praetor-managed governance block between marker comments.
+# The engine audit checks the block byte-exact, but prettier inserts blank lines
+# around HTML comments that the engine does not emit. Until the engine teaches
+# its emitter to match prettier output, the whole file is excluded.
+README.md
+
 # Generated lockfiles and build output
 pnpm-lock.yaml
 **/dist/
@@ -84,9 +90,6 @@ tools/figures/core.mjs
 tools/figures/eslint.figures.mjs
 tools/figures/figures.css
 tools/figures/mkdocs_hook.py
-tools/figures/player/THIRD-PARTY-LICENSES.txt
-tools/figures/player/loader.js
-tools/figures/player/player.js
 tools/figures/serve.mjs
 tools/figures/third_party/interfig/VENDOR.md
 tools/figures/third_party/interfig/upstream/LICENSE

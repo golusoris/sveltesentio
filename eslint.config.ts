@@ -244,11 +244,13 @@ const config: Linter.Config[] = [
 		languageOptions: {
 			parserOptions: { project: false },
 			globals: {
+				AbortSignal: 'readonly',
 				Buffer: 'readonly',
 				TextDecoder: 'readonly',
 				URL: 'readonly',
 				clearTimeout: 'readonly',
 				console: 'readonly',
+				fetch: 'readonly',
 				process: 'readonly',
 				setTimeout: 'readonly',
 			},
