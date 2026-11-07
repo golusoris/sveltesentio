@@ -31,6 +31,7 @@ export const CHANGE_SCOPED = Object.freeze([
 	'build',
 	'stories',
 	'e2e',
+	'visual',
 	'audit',
 ]);
 

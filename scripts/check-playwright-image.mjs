@@ -287,6 +287,13 @@ export function findPlaywrightImageViolations(
 export const REQUIRED_BROWSERS_VAR = 'PLAYWRIGHT_BROWSERS_PATH';
 const TURBO_RUN_REGEX =
 	/(?:^|[\s;&|])(?:(?:pnpm|npx|yarn)\s+(?:exec\s+)?)?turbo\s+run\s+([^\n#;&|]+)/g;
+const TURBO_VALUE_FLAGS = new Set([
+	'--filter',
+	'-F',
+	'--concurrency',
+	'--cache-dir',
+	'--output-logs',
+]);
 
 function listHasVar(list, varName) {
 	return Array.isArray(list) && list.includes(varName);
@@ -304,7 +311,14 @@ export function extractTurboTasks(run) {
 	const tasks = [];
 	let match;
 	while ((match = TURBO_RUN_REGEX.exec(run)) !== null) {
-		for (const tok of match[1].trim().split(/\s+/)) {
+		const toks = match[1].trim().split(/\s+/);
+		for (let i = 0; i < toks.length; i++) {
+			const tok = toks[i];
+			if (tok === '--') break;
+			if (TURBO_VALUE_FLAGS.has(tok)) {
+				i++;
+				continue;
+			}
 			if (!tok.startsWith('-') && !tok.startsWith('$') && /^[a-zA-Z0-9_:-]+$/.test(tok)) {
 				tasks.push(tok);
 			}

@@ -74,6 +74,15 @@ describe('check-playwright-image turbo passthrough checks', () => {
 			assert.deepEqual(extractTurboTasks(cmd), ['typecheck', 'test']);
 		});
 
+		it('skips space-separated values of value-taking flags', () => {
+			const cmd = 'turbo run test:e2e --concurrency 2 --filter ./packages/auth';
+			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
+		});
+
+		it('stops at double-dash separator', () => {
+			assert.deepEqual(extractTurboTasks('turbo run test:e2e -- --reporter=list'), ['test:e2e']);
+		});
+
 		it('returns empty array when command does not invoke turbo run', () => {
 			assert.deepEqual(extractTurboTasks('pnpm test:stories'), []);
 			assert.deepEqual(extractTurboTasks(null), []);
