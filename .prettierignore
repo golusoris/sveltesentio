@@ -20,7 +20,7 @@ standards.sublime-project
 # The engine audit checks the block byte-exact, but prettier inserts blank lines
 # around HTML comments that the engine does not emit. Until the engine teaches
 # its emitter to match prettier output, the whole file is excluded.
-README.md
+/README.md
 
 # Generated lockfiles and build output
 pnpm-lock.yaml
