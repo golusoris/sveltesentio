@@ -120,22 +120,7 @@ pnpm monorepo, 19 `@sveltesentio/*` packages. SvelteKit analog of golusoris/golu
 
 ## HISS in this repository
 
-Harness above = rule text. HISS-03/09: no TypeScript analogue. HISS-11..14: tracked by HISS-20 coverage catalog. Enforced adaptations:
-
-- HISS-01: no circular imports (`pnpm check:cycles`)
-- HISS-02: `AbortSignal` timeout on all I/O (ESLint / review)
-- HISS-04: func <=60 LOC, cyclomatic <=10, component <=100 lines (ESLint `complexity`)
-- HISS-07: no `!`, no floating promises, no empty `catch`; errors via `core/errors` (`@typescript-eslint`)
-- HISS-08: no `eval`/`new Function`; DOMPurify at every `innerHTML` boundary (ESLint / CodeQL)
-- HISS-10: 0 warnings across tsc, ESLint, Prettier; no `any` (exit 1)
-- HISS-15: positive + negative + boundary tests per export (`pnpm check:export-tests`)
-- HISS-17: turn start reads `.workingdir/STATE.md` + `OPEN.md`; turn end `praetorctl state sync .`
-- HISS-18: `scripts/ci-affected.mjs` diff-aware on PR, full otherwise
-- HISS-19: upstream libs = existing code (streamlining rule; review blocker)
-- HISS-20: `.config/hiss/coverage.yaml` replayed both ways (`make hiss-coverage`)
-- HISS-21: `portability.yml` on ubuntu-26.04 + macos-26 + windows-2025; each leg required in `.github/rulesets/main.json` (#328)
-
-`make verify-all` gate: see [Makefile](../../Makefile).
+Harness table above declares every HISS invariant with its adopted check and failure action. TypeScript adaptations: HISS-03/09 have no analogue; HISS-11..14 tracked by HISS-20 coverage catalog. Repository enforcement tools per invariant: harness table "Adopted check" column; `make verify-all` gate: see [Makefile](../../Makefile).
 
 ## Hard rules
 
