@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" width="1200" height="120" role="img" aria-label="sveltesentio — composable SvelteKit framework, opt-in modules, Svelte 5 runes">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="55%" stop-color="#111a35"/>
+      <stop offset="100%" stop-color="#0b1020"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="120" rx="12" fill="url(#bg)"/>
+
+  <g fill="none" stroke-linecap="round">
+    <path d="M800 78 C 860 48, 920 96, 980 70 S 1080 40, 1160 68"
+          stroke="url(#wave)" stroke-width="14"/>
+    <path d="M800 78 C 860 48, 920 96, 980 70 S 1080 40, 1160 68"
+          stroke="url(#accent)" stroke-width="2.5" opacity="0.95"/>
+    <path d="M800 84 C 860 58, 920 102, 980 78 S 1080 50, 1160 76"
+          stroke="#06b6d4" stroke-width="1.6" stroke-dasharray="7 9" opacity="0.6"/>
+  </g>
+
+  <text x="44" y="74" font-family="ui-sans-serif,Segoe UI,Helvetica,Arial,sans-serif"
+        font-size="52" font-weight="700" fill="#e2e8f0" letter-spacing="-1">svelte<tspan fill="url(#accent)">sentio</tspan></text>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14" fill="#94a3b8">
+    <text x="440" y="52">Svelte 5 runes · SvelteKit · TypeScript</text>
+    <text x="440" y="76">Opt-in modules · OWASP ASVS L2 · WCAG 2.2 AA</text>
+  </g>
+</svg>
