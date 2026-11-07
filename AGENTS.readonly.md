@@ -126,17 +126,17 @@ verification gate gate: see [Makefile](Makefile).
 
 ## Hard rules
 
-1. **No public API break** without `Migration:` footer + codemod or manual migration diff. No API-diff gate yet (#288).
-2. **No new transitive dep** without weighing alternatives (`.workingdir/research/svelte-ecosystem-audit.md`).
-3. **Public surface = `src/index.ts` named exports** + documented sub-exports. Apps never import `src/internal/`.
+1. **No public API break** without `Migration:` footer + codemod or manual diff. No gate yet (#288).
+2. **No new transitive dep** without weighing alternatives (`svelte-ecosystem-audit.md`).
+3. **Public surface = `src/index.ts` named exports** + documented sub-exports. Apps never import `src/internal/` (exception requires `D*` row).
 4. **No top-level side effects** in package modules — no `window.`, no DOM reads, no `setInterval` at import.
-5. **All errors via `core/errors`** (RFC 9457). Never throw raw `Error`.
+5. **All errors via `core/errors`** (RFC 9457). Never throw raw `Error` (exception: test helpers; justify in PR).
 6. **All time via `core/clock`.** `Date.now()` / `new Date()` / `performance.now()` banned in package source outside `test/`. ESLint rule enforced.
 7. **No `console.log`** in package source. `console.warn`/`console.error` only. ESLint `no-console`.
 8. **Svelte 5 runes-first.** No `$:`, no `writable()` for server state (use `@sveltesentio/query`), no `export let`. ESLint enforced.
 9. **No `any`.** Use `unknown` + Zod / type guards.
 10. **0 eslint · 0 tsc · 0 audit vulns · axe-clean** on every merge. `eslint-disable` needs justification comment on adjacent line.
-11. **No guessing on major decisions.** Present evidence + >=2 alternatives, open `D*` row in `decisions-needed.md`. Only owner closes to `locked (ADR-N)`.
+11. **No guessing on major decisions.** Evidence + >=2 alternatives, open `D*` row. Only owner closes to `locked (ADR-N)`.
 12. **Strict SvelteKit universe.** Svelte 5 runes-native or framework-agnostic only. No React/Vue/Solid bridges; non-Svelte UI dep = `D*` row.
 
 Full contract: [docs/principles.md](docs/principles.md). Deviations cite subsection in PR.
