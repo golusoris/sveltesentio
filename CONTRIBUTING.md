@@ -18,7 +18,7 @@ same governance surface, same quality bar. Read this document before opening a P
 ## Prerequisites
 
 - **Node 24 LTS** (minimum; see ADR-0021).
-- **pnpm 9** (managed by `packageManager` in [package.json](package.json)).
+- **pnpm 12** (managed by `packageManager` in [package.json](package.json)).
 - **TypeScript 6** (see ADR-0020).
 - **ESM-only** runtime — no CJS (see ADR-0022).
 
@@ -73,7 +73,7 @@ feat(core): add testClock injector
 
 fix(ui): preserve safe-area padding on handheld preset
 
-chore(repo): bump pnpm to 9.14.0
+chore(repo): bump pnpm to 12.14.0
 
 docs(adr): close D172 — paraglide-v2 as i18n default
 

@@ -47,6 +47,6 @@ body:
       label: Environment
       placeholder: |
         - Node: 22.x
-        - pnpm: 10.x
+        - pnpm: 12.x
         - SvelteKit: 2.x
         - Browser (if applicable):
