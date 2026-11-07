@@ -74,6 +74,25 @@ describe('check-playwright-image turbo passthrough checks', () => {
 			assert.deepEqual(extractTurboTasks(cmd), ['typecheck', 'test']);
 		});
 
+		it('skips space-separated values of value-taking flags', () => {
+			const cmd = 'turbo run test:e2e --concurrency 2 --filter auth --env-mode strict';
+			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
+		});
+
+		it('treats --continue as a flag, not a value-taking option', () => {
+			const cmd = 'turbo run test:e2e --continue --env-mode strict';
+			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
+		});
+
+		it('does not consume separator after bare --env-mode', () => {
+			const cmd = 'turbo run test:e2e --env-mode -- --project chromium';
+			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
+		});
+
+		it('stops at double-dash separator', () => {
+			assert.deepEqual(extractTurboTasks('turbo run test:e2e -- reporter list'), ['test:e2e']);
+		});
+
 		it('returns empty array when command does not invoke turbo run', () => {
 			assert.deepEqual(extractTurboTasks('pnpm test:stories'), []);
 			assert.deepEqual(extractTurboTasks(null), []);

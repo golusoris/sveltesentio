@@ -492,6 +492,7 @@ jobs:
         build,
         stories,
         e2e,
+        visual,
         audit,
         secret-scan,
         dependency-scan,
