@@ -11,6 +11,7 @@
 		"@types/node": "^24.13.4",
 		"@vitest/browser": "^5.0.0",
 		"@vitest/browser-playwright": "^5.0.0",
+		"@playwright/test": "1.64.1",
 		"playwright": "^1.63.0",
 		"storybook": "10.6.2",
 		"svelte": "^5.57.0",
@@ -27,6 +28,8 @@
 		"storybook": "storybook dev -p 6006 --no-open",
 		"lint": "eslint .storybook/ vitest.config.ts",
 		"test:stories": "vitest run --project=storybook",
+		"test:visual": "playwright test --config playwright.config.ts",
+		"test:visual:update": "playwright test --config playwright.config.ts --update-snapshots",
 		"typecheck": "tsc --noEmit"
 	},
 	"type": "module",
