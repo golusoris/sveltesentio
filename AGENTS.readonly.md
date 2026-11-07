@@ -113,7 +113,7 @@ Harness table above declares every HISS invariant with its adopted check and fai
 
 1. **No public API break** without `Migration:` footer + codemod or manual diff. No gate yet (#288).
 2. **No new transitive dep** without weighing alternatives (`svelte-ecosystem-audit.md`).
-3. **Public surface = `src/index.ts` named exports** + documented sub-exports. Apps never import `src/internal/` (exception requires `D*` row).
+3. **Public surface = `src/index.ts` named exports** + documented sub-exports. Apps never import `src/internal/` (exception requires a locked `D*` row in `.workingdir/research/decisions-needed.md`).
 4. **No top-level side effects** in package modules — no `window.`, no DOM reads, no `setInterval` at import.
 5. **All errors via `core/errors`** (RFC 9457). Never throw raw `Error` (exception: test helpers; justify in PR).
 6. **All time via `core/clock`.** `Date.now()` / `new Date()` / `performance.now()` banned in package source outside `test/`. ESLint rule enforced.
