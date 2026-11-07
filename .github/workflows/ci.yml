@@ -310,6 +310,46 @@ jobs:
             packages/*/playwright-report/
           retention-days: 7
 
+  visual:
+    name: Visual regression
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_code_changes == 'true' || github.event_name == 'push'
+    # Linux only (HISS-21, #328): baselines are generated in the Playwright Linux container
+    # image so screenshots are platform-stable across developer machines and CI.
+    runs-on: ubuntu-26.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:f76885029244e5a384243a930ff283cef67d90653978ee27a77dd4cff8882fb4
+      options: --user 1001
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    timeout-minutes: 15
+    steps:
+      - *checkout
+      - *setup_node
+      - *cache_pnpm
+      - *pnpm_install
+      - name: Run visual regression tests
+        env:
+          HAS_STORIES: ${{ needs.detect-changes.outputs.has_stories }}
+          ALL_AFFECTED: ${{ needs.detect-changes.outputs.all_affected }}
+          CI_EVENT: ${{ github.event_name }}
+        working-directory: apps/storybook
+        run: |
+          if [ "$CI_EVENT" = "pull_request" ] && [ "$ALL_AFFECTED" != "true" ] && [ "$HAS_STORIES" != "true" ]; then
+            echo "ci-scope: skip (no affected package has stories)"
+            exit 0
+          fi
+          pnpm test:visual
+      - name: Upload visual diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: visual-regression-diffs
+          path: |
+            apps/storybook/test-results/
+            apps/storybook/playwright-report/
+          retention-days: 7
+
   audit:
     name: Security audit
     needs: [detect-changes]
