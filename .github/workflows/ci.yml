@@ -345,7 +345,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-regression-diffs
-          path: apps/storybook/test-results/
+          path: |
+            apps/storybook/test-results/
+            apps/storybook/playwright-report/
           retention-days: 7
 
   audit:

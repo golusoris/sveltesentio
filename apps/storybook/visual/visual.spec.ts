@@ -13,7 +13,7 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 	const res = await request.get('/index.json', { timeout: 10_000 });
 	expect(res.ok()).toBe(true);
 	const index: StoryIndex = await res.json();
-	const storyIds = Object.values(index.entries)
+	const storyIds = Object.values(index.entries ?? {})
 		.filter((entry) => entry.type === 'story')
 		.map((entry) => entry.id)
 		.sort();
@@ -33,8 +33,9 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 				errors.push(`${storyId}: HTTP ${response?.status() ?? 'no response'}`);
 				continue;
 			}
-		} catch {
-			errors.push(`${storyId}: navigation failed`);
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			errors.push(`${storyId}: navigation failed (${msg})`);
 			continue;
 		}
 		await page.waitForTimeout(ANIMATION_SETTLE_MS);
@@ -54,5 +55,9 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 	if (skipped.length > 0) {
 		console.warn(`Skipped ${skipped.length} stories:\n${skipped.join('\n')}`);
 	}
+	expect(
+		skipped,
+		`${skipped.length} stories had invisible #storybook-root:\n${skipped.join('\n')}`,
+	).toHaveLength(0);
 	expect(errors, `${errors.length} stories failed to load:\n${errors.join('\n')}`).toHaveLength(0);
 });
