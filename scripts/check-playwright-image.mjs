@@ -293,14 +293,13 @@ const TURBO_VALUE_FLAGS = new Set([
 	'--concurrency',
 	'--cache-dir',
 	'--output-logs',
-	'--env-mode',
 	'--log-order',
 	'--log-prefix',
 	'--cache',
 	'--cache-workers',
-	'--continue',
 	'--global-deps',
 ]);
+const TURBO_OPTIONAL_VALUE_FLAGS = new Set(['--env-mode']);
 
 function listHasVar(list, varName) {
 	return Array.isArray(list) && list.includes(varName);
@@ -324,6 +323,11 @@ export function extractTurboTasks(run) {
 			if (tok === '--') break;
 			if (TURBO_VALUE_FLAGS.has(tok)) {
 				i++;
+				continue;
+			}
+			if (TURBO_OPTIONAL_VALUE_FLAGS.has(tok)) {
+				const next = toks[i + 1];
+				if (next !== undefined && !next.startsWith('-')) i++;
 				continue;
 			}
 			if (!tok.startsWith('-') && !tok.startsWith('$') && /^[a-zA-Z0-9_:-]+$/.test(tok)) {
