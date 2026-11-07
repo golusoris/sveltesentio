@@ -1,53 +1,23 @@
-<!-- markdownlint-disable MD013 MD033 MD036 MD041 -->
-<div align="center">
+# sveltesentio
 
-  <img src="docs/assets/sveltesentio-readme-banner.svg" alt="sveltesentio — composable SvelteKit framework, opt-in modules, Svelte 5 runes" height="120" />
+<!-- prettier-ignore-start -->
 
-  <!-- README-STANDARD badge block: one group, fixed order (docs/README-STANDARD.md) -->
-  <!-- 1 release/version -->
+<!-- prettier-ignore-end -->
 
-[![Release](https://img.shields.io/badge/Release-Releases-3b82f6?style=for-the-badge&labelColor=111a35)](https://github.com/golusoris/sveltesentio/releases)
-  <!-- 2 CI/build -->
-
-[![CI](https://github.com/golusoris/sveltesentio/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/golusoris/sveltesentio/actions/workflows/ci.yml)
-[![Platform Neutrality](https://github.com/golusoris/sveltesentio/actions/workflows/portability.yml/badge.svg?branch=main&event=push)](https://github.com/golusoris/sveltesentio/actions/workflows/portability.yml)
-[![Documentation Governance](https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg?branch=main&event=push)](https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml)
-  <!-- 3 security/scorecard -->
-
-[![CodeQL](https://github.com/golusoris/sveltesentio/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)](https://github.com/golusoris/sveltesentio/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://img.shields.io/badge/OpenSSF-Scorecard-06b6d4?style=for-the-badge&labelColor=111a35)](https://scorecard.dev/viewer/?uri=github.com/golusoris/sveltesentio)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15664/badge)](https://www.bestpractices.dev/projects/15664)
-[![CodeRabbit](https://img.shields.io/badge/Reviews-CodeRabbit-8b5cf6?style=for-the-badge&logo=coderabbit&logoColor=white&labelColor=111a35)](https://coderabbit.ai)
-  <!-- 4 standards -->
 
-[![HISS-21](https://img.shields.io/badge/Standards-HISS--21-06b6d4?style=for-the-badge&logo=nasa&labelColor=111a35)](AGENTS.md)
-[![Power of 10](https://img.shields.io/badge/NASA_JPL-Power_of_10-3b82f6?style=for-the-badge&logo=nasa&labelColor=111a35)](docs/principles.md)
-[![Conventional Commits](https://img.shields.io/badge/Commits-Conventional-8b5cf6?style=for-the-badge&logo=conventionalcommits&logoColor=white&labelColor=111a35)](CONTRIBUTING.md)
-  <!-- 5 licence -->
+> Composable SvelteKit framework — opt-in modules, Svelte 5 runes, production-grade.
 
-[![License](https://img.shields.io/badge/License-EUPL--1.2_·_CC--BY--SA--4.0_·_MIT-3b82f6?style=for-the-badge&labelColor=111a35)](LICENSE)
-
-**Composable SvelteKit framework — opt-in modules, Svelte 5 runes, production-grade**
-
-_The direct frontend counterpart to [golusoris](https://github.com/golusoris/golusoris)_
-
-</div>
-
+The direct frontend counterpart to [golusoris](https://github.com/golusoris/golusoris).
 Apps install only what they need from `@sveltesentio/*`. Philosophy first, code second.
 
-**[📖 Full documentation](docs/principles.md)** · [Design system & UX principles](docs/ux-principles.md)
-
----
-
-## Get started
+## Packages
 
 Published to npm under the [`@sveltesentio`](https://www.npmjs.com/org/sveltesentio) scope:
 
 ```bash
 pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/ui
 ```
-
-## Packages
 
 | Package                     | npm   | Description                                                                                                                                                                                                                                   |
 | --------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -133,8 +103,8 @@ and modernized NASA JPL Power-of-10 rules.
 | **HISS Audit**   | `standardsctl audit`           | Enforces zero technical debt regression against baseline |
 | **Context Sync** | `standardsctl compile-context` | Transpiles canonical `AGENTS.md` to all AI targets       |
 
-<!-- prettier-ignore-start -->
 <!-- praetor:readme-governance:start -->
+[![HISS Adopted][praetor-hiss-badge]][praetor-hiss-agents]
 [![Documentation Governance][praetor-docs-badge]][praetor-docs-runs]
 
 Praetor manages this repository's declared governance policy. This managed
@@ -153,9 +123,10 @@ generated agent context against `AGENTS.md`.
 private scratch-link policy.
 
 **Debt Baseline**: `.standards-baseline.json` anchors the debt ratchet at
-0 recorded infractions; audit forbids growth.
+2 recorded infractions; audit forbids growth.
 
+[praetor-hiss-badge]: https://img.shields.io/badge/Standards-HISS%20Adopted%20(2%20baselined)-yellow
+[praetor-hiss-agents]: https://github.com/golusoris/sveltesentio/blob/HEAD/AGENTS.md
 [praetor-docs-badge]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg
 [praetor-docs-runs]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml
 <!-- praetor:readme-governance:end -->
-<!-- prettier-ignore-end -->
