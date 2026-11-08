@@ -63,6 +63,11 @@ not checked
 ([plugin order](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/index.ts#L88-L149)),
 and neither are files Vite copies from `publicDir`, which never enter the bundle
 ([source](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/prepareOutDir.ts#L95)).
+The size checked is the file as it stands when the hook runs, so it can differ
+from the file Vite writes: Vite's own `vite:css-post` plugin later strips a
+12-byte `/*$vite$:1*/` marker from each CSS file and drops placeholder chunks
+of CSS-only modules
+([source](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/css.ts#L1203-L1214)).
 A file with no matching key is not checked, so a stale or mistyped key passes
 without notice, and with `bundleBudgetWarnOnly` an over-budget file warns instead
 of failing the build. SvelteKit 3.1.0 names client entries

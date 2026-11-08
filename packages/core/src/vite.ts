@@ -15,6 +15,8 @@ export interface SentioPluginOptions {
 	 * checked; an over-budget file fails the build unless
 	 * {@link bundleBudgetWarnOnly} is set. Files emitted by later plugins (such
 	 * as Vite's `index.html`) and files copied from `publicDir` are not checked.
+	 * Sizes are taken when the hook runs, so a later plugin can still change a
+	 * file (Vite strips a 12-byte marker from CSS files after this check).
 	 */
 	bundleBudget?: BundleBudget;
 	/** When true, over-budget files warn instead of failing the build. */
