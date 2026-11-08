@@ -48,7 +48,16 @@ not interchangeable:
 | `./id`      | `newId` (UUIDv7), `newIdV4`, `isId`, `isIdV4`, `brandId`, `idToTimestamp`.                                                               |
 | `./problem` | `ProblemError`, `parseProblem`, `problemFromDocument`, `problemFromResponse` — RFC 9457 Problem Details.                                 |
 | `./sentio`  | Ambient declaration for the `$sentio` virtual module `sentioPlugin` emits. Add `"@sveltesentio/core/sentio"` to `compilerOptions.types`. |
-| `./vite`    | `sentioPlugin` and `checkBundleBudget` — per-chunk size budgets that fail the build.                                                     |
+| `./vite`    | `sentioPlugin` and `checkBundleBudget` — opt-in per-chunk byte budgets that fail the build when set. See the note below.                 |
+
+`./vite` budgets are opt-in, and no build in this repository sets
+`bundleBudget`, so the §2.9 initial-JS budget in
+[`docs/principles.md`](../../docs/principles.md) is not gated yet
+([#326](https://github.com/golusoris/sveltesentio/issues/326)). A budget key
+must equal an output `fileName` exactly, and the size checked is the raw byte
+length, not the gzipped size §2.9 names ([`src/vite.ts`](src/vite.ts)).
+SvelteKit puts a content hash in client chunk names under `_app/immutable/`, so
+a fixed key cannot follow a client chunk from one build to the next.
 
 ### `./eslint`
 

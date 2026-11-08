@@ -10,7 +10,7 @@
 - **HTTP middleware** — `problemMiddleware()` for `openapi-fetch`; intercepts `application/problem+json` non-2xx responses; throws typed `ProblemError`. `openapi-fetch` = optional peer.
 - **ID utils** — `newId()` (UUIDv7) / `newIdV4()` (nonces) / `isId` / `idToTimestamp` / `brandId<Brand>` over `uuid@^13`. See [ADR-0023](../../docs/adr/0023-uuid-v7-default.md).
 - **CSP helpers** — `createNonce()` / `strictCsp({ nonce })` / `serialiseCsp()` / `nonceSource` / `hashSource` / `SELF` / `NONE` / `STRICT_DYNAMIC`. Strict default ships `script-src 'strict-dynamic' 'nonce-…'`, no `unsafe-*`, `upgrade-insecure-requests`, `frame-ancestors 'none'`.
-- **Vite plugin** — `sentioPlugin({ requiredEnv, verbose, virtualModule, bundleBudget, bundleBudgetWarnOnly })`. Validates required env at `buildStart`. Exposes typed `$sentio` virtual module at `resolveId` / `load`. Enforces per-chunk size budgets at `generateBundle` (§2.9). `bundleBudget` = `{ [fileName]: maxBytes }` map; over-budget chunks throw (or warn when `bundleBudgetWarnOnly`). Budget logic = pure, exported `checkBundleBudget(bundle, budget)`.
+- **Vite plugin** — `sentioPlugin({ requiredEnv, verbose, virtualModule, bundleBudget, bundleBudgetWarnOnly })`. Validates required env at `buildStart`. Exposes typed `$sentio` virtual module at `resolveId` / `load`. Opt-in per-chunk size checks at `generateBundle` via `bundleBudget` = `{ [fileName]: maxBytes }` map (exact `fileName` keys, raw uncompressed bytes); over-budget chunks throw (or warn when `bundleBudgetWarnOnly`); no app/package sets `bundleBudget`; SvelteKit client chunk names hashed (`_app/immutable/[name].[hash].js`) -> fixed key cannot pin them; §2.9 gzipped initial-JS gate open = #326. Budget logic = pure, exported `checkBundleBudget(bundle, budget)`.
 - **ESLint plugin** — `@sveltesentio/core/eslint` exports flat-config plugin (`{ meta, rules: { 'no-direct-time': … } }`) enforcing no-direct-time invariant. See Sub-exports + Invariants.
 
 ## Sub-exports
@@ -64,7 +64,8 @@ Add sub-export entry to `package.json` whenever new module lands — never rely 
 
 - [ ] `testClock({ now })` helper in `@sveltesentio/testing/clock` — package not yet scaffolded. Tracked in `.workingdir/STATE.md`.
 - [x] `@sveltesentio/no-direct-time` ESLint rule — shipped as `@sveltesentio/core/eslint` flat-config plugin (`rules: { 'no-direct-time' }`); register in `eslint.config.js`.
-- [x] Bundle-size gate wired into `sentioPlugin` (`bundleBudget` / `bundleBudgetWarnOnly`; `generateBundle` hook).
+- [x] Bundle-size hook shipped in `sentioPlugin` (`bundleBudget` / `bundleBudgetWarnOnly`; `generateBundle` hook; opt-in, not wired into any build).
+- [ ] §2.9 initial-JS bundle-size gate wired into a build (#326).
 - [x] `$sentio` virtual module typed schema shipped in 0.3.0 — `defineSentioConfig` / `sentioConfigSchema` + `./sentio` ambient-types subpath (`sentio.d.ts`).
 
 ## Common tasks
