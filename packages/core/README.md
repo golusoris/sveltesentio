@@ -54,13 +54,20 @@ not interchangeable:
 `bundleBudget`, so the §2.9 initial-JS budget in
 [`docs/principles.md`](../../docs/principles.md) is not gated yet
 ([#326](https://github.com/golusoris/sveltesentio/issues/326)). In
-[`src/vite.ts`](src/vite.ts), a budget applies to every output file whose
-`fileName` equals a key, chunks and assets alike, and the size checked is the
-raw byte length, not the gzipped size §2.9 names. A file with no matching key
-is not checked, so a stale or mistyped key passes without notice, and with
-`bundleBudgetWarnOnly` an over-budget file warns instead of failing the build.
-SvelteKit 3.1.0 names client entries `_app/immutable/[name].[hash].js` and
-shared chunks `_app/immutable/chunks/[hash].js`
+[`src/vite.ts`](src/vite.ts), the check runs in the plugin's `generateBundle`
+hook and covers each chunk and asset already in the bundle whose `fileName`
+equals a key, and the size checked is the raw byte length, not the gzipped size
+§2.9 names. Files that later plugins emit in their own `generateBundle`, such as
+Vite's `index.html` and, with `build.cssCodeSplit: false`, the CSS bundle, are
+not checked
+([plugin order](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/index.ts#L88-L149)),
+and neither are files Vite copies from `publicDir`, which never enter the bundle
+([source](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/prepareOutDir.ts#L95)).
+A file with no matching key is not checked, so a stale or mistyped key passes
+without notice, and with `bundleBudgetWarnOnly` an over-budget file warns instead
+of failing the build. SvelteKit 3.1.0 names client entries
+`_app/immutable/[name].[hash].js` and shared chunks
+`_app/immutable/chunks/[hash].js`
 ([source](https://github.com/sveltejs/kit/blob/73bf98cabea2ef18e1bfef40be5229a43e79b05c/packages/kit/src/exports/vite/build/index.js#L312-L320)),
 so a fixed key cannot follow either from one build to the next.
 
