@@ -49,4 +49,7 @@ export default defineConfig({
 			allow: ['..', '../..'],
 		},
 	},
+	preview: {
+		port: 4174,
+	},
 });
