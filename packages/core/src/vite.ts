@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite';
 
-/** A budget map: output chunk file name → maximum allowed size in bytes. */
+/** A budget map: output file name (chunk or asset) → maximum allowed size in bytes. */
 export type BundleBudget = Readonly<Record<string, number>>;
 
 export interface SentioPluginOptions {
@@ -8,13 +8,14 @@ export interface SentioPluginOptions {
 	verbose?: boolean;
 	virtualModule?: Readonly<Record<string, unknown>>;
 	/**
-	 * Per-chunk size budgets in raw bytes (not the gzipped §2.9 figure). Keys
-	 * are output `fileName`s (exact match) — e.g. `{ 'entry.js': 150_000 }`. On
-	 * `generateBundle`, any emitted chunk whose byte size exceeds its budget
-	 * fails the build, unless {@link bundleBudgetWarnOnly} is set.
+	 * Per-output-file size budgets in raw bytes (not the gzipped §2.9 figure).
+	 * Keys are output `fileName`s (exact match) — e.g. `{ 'entry.js': 150_000 }`.
+	 * A file with no matching key is not checked. On `generateBundle`, any
+	 * emitted chunk or asset whose byte size exceeds its budget fails the build,
+	 * unless {@link bundleBudgetWarnOnly} is set.
 	 */
 	bundleBudget?: BundleBudget;
-	/** When true, over-budget chunks warn instead of failing the build. */
+	/** When true, over-budget files warn instead of failing the build. */
 	bundleBudgetWarnOnly?: boolean;
 }
 

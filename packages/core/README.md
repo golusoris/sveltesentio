@@ -48,16 +48,21 @@ not interchangeable:
 | `./id`      | `newId` (UUIDv7), `newIdV4`, `isId`, `isIdV4`, `brandId`, `idToTimestamp`.                                                               |
 | `./problem` | `ProblemError`, `parseProblem`, `problemFromDocument`, `problemFromResponse` — RFC 9457 Problem Details.                                 |
 | `./sentio`  | Ambient declaration for the `$sentio` virtual module `sentioPlugin` emits. Add `"@sveltesentio/core/sentio"` to `compilerOptions.types`. |
-| `./vite`    | `sentioPlugin` and `checkBundleBudget` — opt-in per-chunk byte budgets that fail the build when set. See the note below.                 |
+| `./vite`    | `sentioPlugin` and `checkBundleBudget` — opt-in byte budgets per output file. See the note below.                                        |
 
 `./vite` budgets are opt-in, and no build in this repository sets
 `bundleBudget`, so the §2.9 initial-JS budget in
 [`docs/principles.md`](../../docs/principles.md) is not gated yet
-([#326](https://github.com/golusoris/sveltesentio/issues/326)). A budget key
-must equal an output `fileName` exactly, and the size checked is the raw byte
-length, not the gzipped size §2.9 names ([`src/vite.ts`](src/vite.ts)).
-SvelteKit puts a content hash in client chunk names under `_app/immutable/`, so
-a fixed key cannot follow a client chunk from one build to the next.
+([#326](https://github.com/golusoris/sveltesentio/issues/326)). In
+[`src/vite.ts`](src/vite.ts), a budget applies to every output file whose
+`fileName` equals a key, chunks and assets alike, and the size checked is the
+raw byte length, not the gzipped size §2.9 names. A file with no matching key
+is not checked, so a stale or mistyped key passes without notice, and with
+`bundleBudgetWarnOnly` an over-budget file warns instead of failing the build.
+SvelteKit 3.1.0 names client entries `_app/immutable/[name].[hash].js` and
+shared chunks `_app/immutable/chunks/[hash].js`
+([source](https://github.com/sveltejs/kit/blob/73bf98cabea2ef18e1bfef40be5229a43e79b05c/packages/kit/src/exports/vite/build/index.js#L312-L320)),
+so a fixed key cannot follow either from one build to the next.
 
 ### `./eslint`
 
