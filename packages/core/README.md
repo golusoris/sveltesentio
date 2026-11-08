@@ -48,7 +48,33 @@ not interchangeable:
 | `./id`      | `newId` (UUIDv7), `newIdV4`, `isId`, `isIdV4`, `brandId`, `idToTimestamp`.                                                               |
 | `./problem` | `ProblemError`, `parseProblem`, `problemFromDocument`, `problemFromResponse` — RFC 9457 Problem Details.                                 |
 | `./sentio`  | Ambient declaration for the `$sentio` virtual module `sentioPlugin` emits. Add `"@sveltesentio/core/sentio"` to `compilerOptions.types`. |
-| `./vite`    | `sentioPlugin` and `checkBundleBudget` — per-chunk size budgets that fail the build.                                                     |
+| `./vite`    | `sentioPlugin` and `checkBundleBudget` — opt-in byte budgets per output file. See the note below.                                        |
+
+`./vite` budgets are opt-in, and no build in this repository sets
+`bundleBudget`, so the §2.9 initial-JS budget in
+[`docs/principles.md`](../../docs/principles.md) is not gated yet
+([#326](https://github.com/golusoris/sveltesentio/issues/326)). In
+[`src/vite.ts`](src/vite.ts), the check runs in the plugin's `generateBundle`
+hook and covers each chunk and asset already in the bundle whose `fileName`
+equals a key, and the size checked is the raw byte length, not the gzipped size
+§2.9 names. Files that later plugins emit in their own `generateBundle`, such as
+Vite's `index.html` and, with `build.cssCodeSplit: false`, the CSS bundle, are
+not checked
+([plugin order](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/index.ts#L88-L149)),
+and neither are files Vite copies from `publicDir`, which never enter the bundle
+([source](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/prepareOutDir.ts#L95)).
+The size checked is the file as it stands when the hook runs, so it can differ
+from the file Vite writes: Vite's own `vite:css-post` plugin later strips a
+12-byte `/*$vite$:1*/` marker from each CSS file and drops placeholder chunks
+of CSS-only modules
+([source](https://github.com/vitejs/vite/blob/b6c20f6a8126d8561891e5fb9368e8fc9da37538/packages/vite/src/node/plugins/css.ts#L1203-L1214)).
+A file with no matching key is not checked, so a stale or mistyped key passes
+without notice, and with `bundleBudgetWarnOnly` an over-budget file warns instead
+of failing the build. SvelteKit 3.1.0 names client entries
+`_app/immutable/[name].[hash].js` and shared chunks
+`_app/immutable/chunks/[hash].js`
+([source](https://github.com/sveltejs/kit/blob/73bf98cabea2ef18e1bfef40be5229a43e79b05c/packages/kit/src/exports/vite/build/index.js#L312-L320)),
+so a fixed key cannot follow either from one build to the next.
 
 ### `./eslint`
 
