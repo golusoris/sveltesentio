@@ -1,7 +1,7 @@
 # Repository layout
 
 This page holds the annotated directory tree of the sveltesentio workspace. The agent guide
-([AGENTS.md](../../AGENTS.md)) carries a short table of the same layout and points here for the detail.
+([AGENTS.md](../../AGENTS.md)) gives a one-paragraph summary of the same layout and points here for the detail.
 
 Sub-exports such as `ui/toast` are module subpaths of their package, not directories.
 
@@ -20,7 +20,7 @@ sveltesentio/
 ├── .release-please-manifest.json   # per-package published version manifest
 ├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
 │
-├── packages/                       # @sveltesentio/* publishable modules — 19 published; see the package purpose table below
+├── packages/                       # @sveltesentio/* publishable modules — 19 published; purpose of each: `## Packages` in README.md
 │   ├── core/                       # every package follows this shape:
 │   │   ├── src/index.ts            #   the entire public API (named exports only)
 │   │   ├── src/internal/           #   off-limits to consumers
@@ -57,17 +57,17 @@ sveltesentio/
 │   ├── ISSUE_TEMPLATE/             # bug / feature / docs
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
 │   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · peer-floors · release-please · refresh-upstream-docs
-│                                   # scorecard · codeql — see "CI gates" for what each enforces
+│                                   # scorecard · codeql — see AGENTS.md "Upstream docs + CI" for the PR gates
 │
 ├── .devcontainer/
 │   └── devcontainer.json           # Node 24 (ADR-0021), pnpm, zsh + oh-my-zsh, 15 VS Code extensions, ports 5173/4173/6006
 │
 ├── .workingdir/                    # local-only planning state, gitignored (PLAN · STATE · V0.1.0 · BACKLOG)
 │   └── research/                   # per-library audits, app deep-reads, and the D-row decision ledger
-│                                   # (decisions-needed.md is the one to read first — see "When in doubt")
+│                                   # (decisions-needed.md is the one to read first — see AGENTS.md "When in doubt")
 │
 ├── CLAUDE.md                       # compiled from AGENTS.md by `praetorctl compile-context`; never edited by hand
-├── AGENTS.md                       # this file
+├── AGENTS.md                       # canonical agent guide; CLAUDE.md and the other vendor files compile from it
 ├── README.md                       # user-facing pitch + module table
 ├── SECURITY.md                     # coordinated-disclosure process
 ├── LICENSE                         # EUPL-1.2

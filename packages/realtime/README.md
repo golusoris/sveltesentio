@@ -1,6 +1,6 @@
 # @sveltesentio/realtime
 
-> SSE + WebSocket + ConnectRPC transport adapters for SvelteKit
+> SSE + ConnectRPC transport adapters for SvelteKit
 
 Part of the [sveltesentio](https://github.com/golusoris/sveltesentio) composable SvelteKit framework.
 
