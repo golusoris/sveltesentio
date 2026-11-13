@@ -117,6 +117,11 @@ jobs:
           else
             pnpm test --concurrency=2
           fi
+      # HISS-21: the ruleset check runs on every platform leg.
+      - name: Ruleset check
+        run: pnpm check:ruleset
+      - name: Ruleset check tests
+        run: node --test scripts/check-ruleset.test.mjs scripts/check-ruleset-contract.test.mjs scripts/check-ruleset-target.test.mjs
       # HISS-21: the migration codemod check spawns a worker per transform call and builds
       # file URLs, both platform-sensitive; run the check and its tests on every leg.
       - run: pnpm check:migration-codemods

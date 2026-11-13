@@ -27,12 +27,13 @@ export const SHARED_SURFACE_PATTERNS = [
 	/^scripts\//,
 	/^packages\/core\//,
 	/^packages\/testing\//,
+	/^(docs\/)?CODEOWNERS$/,
 	...GATED_DOC_PATTERNS,
 ];
 
 export const DOCS_ONLY_PATTERNS = [
 	/\.md$/,
-	/^docs\//,
+	/^docs\/(?!CODEOWNERS$)/,
 	/^\.workingdir\//,
 	/^LICENSE$/,
 	/^CODE_OF_CONDUCT\.md$/,

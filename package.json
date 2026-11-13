@@ -28,6 +28,7 @@
 		"check:declared-imports": "node scripts/check-declared-imports.mjs",
 		"check:job-timeouts": "node scripts/check-job-timeouts.mjs",
 		"check:platform-legs": "node scripts/check-platform-legs.mjs",
+		"check:ruleset": "node scripts/check-ruleset.mjs",
 		"check:playwright-image": "node scripts/check-playwright-image.mjs",
 		"check:kit-compat": "node scripts/check-kit-compat.mjs",
 		"check:migration-codemods": "node scripts/check-migration-codemods.mjs",
