@@ -74,6 +74,20 @@ describe('ci-affected: analyzeChanges', () => {
 		});
 	});
 
+	it('treats docs/CODEOWNERS as a shared surface', () => {
+		const res = analyzeChanges(['docs/CODEOWNERS'], []);
+		assert.equal(res.allAffected, true);
+		assert.equal(res.hasCodeChanges, true);
+		assert.deepEqual(res.sharedSurfaces, ['docs/CODEOWNERS']);
+	});
+
+	it('keeps ordinary docs paths docs-only', () => {
+		const res = analyzeChanges(['docs/adr/0001.md'], []);
+		assert.equal(res.allAffected, false);
+		assert.equal(res.hasCodeChanges, false);
+		assert.deepEqual(res.sharedSurfaces, []);
+	});
+
 	it('analyzes single package change', () => {
 		const res = analyzeChanges(['packages/ui/src/button.svelte']);
 		assert.deepEqual(res, {
@@ -126,6 +140,7 @@ describe('ci-affected: analyzeChanges', () => {
 			'scripts/ci-affected.mjs',
 			'packages/core/src/index.ts',
 			'packages/testing/src/index.ts',
+			'CODEOWNERS',
 			'docs/migrations/v0.2.md',
 			'tools/migrations/README.md',
 		];
