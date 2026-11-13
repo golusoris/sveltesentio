@@ -122,3 +122,9 @@ jobs:
         run: pnpm check:ruleset
       - name: Ruleset check tests
         run: node --test scripts/check-ruleset.test.mjs scripts/check-ruleset-contract.test.mjs
+      # HISS-21: the migration codemod check spawns a worker per transform call and builds
+      # file URLs, both platform-sensitive; run the check and its tests on every leg.
+      - run: pnpm check:migration-codemods
+      - run: >-
+          node --test scripts/check-migration-codemods.test.mjs
+          scripts/check-migration-codemods-transforms.test.mjs
