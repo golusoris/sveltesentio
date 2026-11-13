@@ -341,9 +341,10 @@ describe('runCheck', () => {
 			[`${CODEMOD}/transform.mjs`]: 'export default () => new Promise(() => {});\n',
 		};
 		assertOne(
-			await findings(files, 50),
+			// 300 ms leaves room for the worker start of the load step on slow CI legs.
+			await findings(files, 300),
 			`${CODEMOD}/fixtures/basic.input.ts`,
-			/timed out after 50ms/,
+			/timed out after 300ms/,
 		);
 	});
 
