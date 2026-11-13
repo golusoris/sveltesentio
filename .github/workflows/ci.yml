@@ -120,6 +120,8 @@ jobs:
       - run: pnpm check:job-timeouts
       - run: pnpm check:platform-legs
       - run: pnpm check:playwright-image
+      # Migration codemods match the guides' frontmatter count and pass their fixtures (scripts/check-migration-codemods.mjs).
+      - run: pnpm check:migration-codemods
       # eslint and prettier are called by name, not through the lint:scripts and format:check
       # package scripts, so the engine's declared-linters audit sees that CI runs them.
       - run: node_modules/.bin/eslint scripts/

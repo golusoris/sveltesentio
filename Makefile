@@ -79,6 +79,7 @@ verify-all:
 	@pnpm check:platform-legs
 	@pnpm check:playwright-image
 	@pnpm check:kit-compat
+	@pnpm check:migration-codemods
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high
 	@$(PRAETORCTL) audit
