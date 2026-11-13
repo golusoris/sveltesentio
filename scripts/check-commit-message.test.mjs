@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { spawnSync } from 'node:child_process';
 import { after, test } from 'node:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { devNull, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -20,13 +20,15 @@ import {
 
 const root = mkdtempSync(join(tmpdir(), 'commit-message-'));
 after(() => rmSync(root, { recursive: true, force: true }));
+const globalConfig = join(root, 'global.gitconfig');
+writeFileSync(globalConfig, '');
 const script = fileURLToPath(new URL('./check-commit-message.mjs', import.meta.url));
 const email = 'person@example.org';
 const signed = `chore: x\n\nSigned-off-by: A Person <${email}>\n`;
 // Preserve both config barriers; inherited Git overrides must never reach a fixture.
 const env = {
 	...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))),
-	GIT_CONFIG_GLOBAL: devNull,
+	GIT_CONFIG_GLOBAL: globalConfig,
 	GIT_CONFIG_NOSYSTEM: '1',
 	GIT_AUTHOR_NAME: 'A Person',
 	GIT_AUTHOR_EMAIL: email,

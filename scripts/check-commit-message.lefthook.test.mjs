@@ -1,17 +1,21 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { devNull, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const config = parse(readFileSync(join(cwd, 'lefthook-local.yml'), 'utf8'), { uniqueKeys: true });
+const root = mkdtempSync(join(tmpdir(), 'commit-message-lefthook-'));
+after(() => rmSync(root, { recursive: true, force: true }));
+const globalConfig = join(root, 'global.gitconfig');
+writeFileSync(globalConfig, '');
 const env = {
 	...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))),
-	GIT_CONFIG_GLOBAL: devNull,
+	GIT_CONFIG_GLOBAL: globalConfig,
 	GIT_CONFIG_NOSYSTEM: '1',
 	GIT_AUTHOR_NAME: 'A Person',
 	GIT_AUTHOR_EMAIL: 'person@example.org',
@@ -24,7 +28,8 @@ test('commit-msg job quotes raw Lefthook argument with a literal heredoc', () =>
 	assert.equal(Object.keys(config['commit-msg'].commands).length, 1);
 	const run = config['commit-msg'].commands['sign-off'].run;
 	assert.match(run, /<<'GIT_ARGUMENT'/);
-	assert.match(run, /\n\{1\}\nGIT_ARGUMENT\n\)\n/);
+	assert.match(run, /^IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'\n\{1\}\nGIT_ARGUMENT\n/);
+	assert.doesNotMatch(run, /\$\(/);
 	assert.match(run, /node scripts\/check-commit-message\.mjs "\$MESSAGE_FILE"/);
 });
 

@@ -33,15 +33,15 @@ pre-commit:
 
 # Sign-offs and leftover conflict comments checked on every commit, including merges.
 # Hook shape: plurano/horistes, commit 5af6eeda, EUPL-1.2 (horistes ADR-0072).
-# Lefthook 2.2.2 substitutes {1} raw; a quoted heredoc preserves shell characters.
+# Lefthook 2.2.2 substitutes {1} raw; a quoted here-document read by `read -r` keeps shell
+# characters as data, and avoids `$( )`, which macOS sh misparses around quotes.
 commit-msg:
   commands:
     sign-off:
       run: |
-        MESSAGE_FILE=$(cat <<'GIT_ARGUMENT'
+        IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'
         {1}
         GIT_ARGUMENT
-        )
         node scripts/check-commit-message.mjs "$MESSAGE_FILE"
 
 pre-push:
