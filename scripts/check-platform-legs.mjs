@@ -316,7 +316,7 @@ function checkLegRulesetConsistency(legNames, rulesetChecks, relRuleset, finding
 	}
 }
 
-async function readDocument(filePath, relPath, kind, parseSource) {
+export async function readDocument(filePath, relPath, kind, parseSource) {
 	let source;
 	try {
 		source = await readFile(filePath, {
