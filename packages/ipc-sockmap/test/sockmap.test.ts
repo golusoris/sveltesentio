@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	CGROUP_V2_MARKER,
@@ -218,5 +221,58 @@ describe('readSockmapStats', () => {
 			readMetrics: () => Promise.resolve({ redirectedBytes: 8192, redirectErrors: 1 }),
 		});
 		expect(stats).toEqual({ activeSockets: 5, redirectedBytes: 8192, redirectErrors: 1 });
+	});
+});
+
+describe('probeSockmap on the real host (portability legs)', () => {
+	let scratchDir = '';
+	let absentPath = '';
+
+	beforeAll(async () => {
+		scratchDir = await mkdtemp(join(tmpdir(), 'sveltesentio-ipc-sockmap-'));
+		absentPath = join(scratchDir, 'sockhash');
+	});
+
+	afterAll(async () => {
+		await rm(scratchDir, { recursive: true, force: true });
+	});
+
+	it('resolves to AF_UNIX when the pinned sockhash is absent', async () => {
+		await expect(probeSockmap({ pinPath: absentPath })).resolves.toMatchObject({
+			available: false,
+			degradeTo: 'af_unix',
+		});
+	});
+
+	it('explains why the real host degrades', async () => {
+		const probe = await probeSockmap({ pinPath: absentPath });
+		expect(probe.available).toBe(false);
+		if (!probe.available) {
+			if (process.platform !== 'linux') {
+				expect(probe.reason).toContain('non-Linux');
+				expect(probe.reason).toContain(process.platform);
+			} else {
+				expect(probe.reason).toMatch(/kernel|cgroup v2|pinned sockhash absent/);
+				if (probe.reason.includes('pinned sockhash absent')) {
+					expect(probe.reason).toContain(absentPath);
+				}
+			}
+		}
+	});
+
+	it('resolves with host defaults whether sockmap is available or degraded', async () => {
+		const pending = probeSockmap();
+		await expect(pending).resolves.toBeDefined();
+		const probe = await pending;
+		if (process.platform !== 'linux') expect(probe.available).toBe(false);
+		if (probe.available) {
+			expect(probe.pinPath).toBe(DEFAULT_PIN_PATH);
+		} else {
+			expect(probe.degradeTo).toBe('af_unix');
+		}
+	});
+
+	it('resolves the absent pin to the AF_UNIX tier', async () => {
+		expect(resolveSockmapTier(await probeSockmap({ pinPath: absentPath }))).toBe('af_unix');
 	});
 });
