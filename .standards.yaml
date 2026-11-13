@@ -60,8 +60,8 @@ exceptions:
       category C, entered 2026-11-12 (entry + 10 days): code-scanning #5 SASTID (Scorecard, medium, anchored to
       no repository file) counts 29 of the last 30 main commits as SAST-checked; the unchecked one is 64f9f1a
       (PR 512 merged with the CodeQL results check red) and leaves the window after 22 more main commits
-      (counted at 53ccb08); prevention is the engine code_scanning ruleset rule (order engine-ruleset-code-scanning-rule-20261108); no
-      dismissal
+      (counted at 53ccb08); planned prevention, not live yet: an engine-rendered code_scanning ruleset rule
+      that requires the CodeQL results check before merge (issue 542); no dismissal
     expires: "2026-11-22"
 register:
   sources:
