@@ -96,6 +96,13 @@ function unsignedForkCommit(cwd) {
 	return unsigned;
 }
 
+/** @param {string} cwd @param {string} name @returns {string} */
+function bareDestination(cwd, name) {
+	const target = join(cwd, `${name}.git`);
+	git(cwd, ['init', '--bare', `--template=${join(cwd, 'empty-template')}`, target]);
+	return target;
+}
+
 /** @param {string} local @param {string} [remote] */
 function pushLine(local, remote = zeros) {
 	return `refs/heads/main ${local} refs/heads/main ${remote}\n`;
@@ -242,6 +249,93 @@ test('commits already reachable from remote-tracking refs are not judged', async
 	assert.equal(await check(cwd, pushLine(head), ['origin', remote]), 0);
 });
 
+test('a push URL apart from the fetch URL drops the tracking exclusion', async (t) => {
+	t.mock.method(console, 'error', () => {});
+	const { cwd, remote } = repository();
+	const root = commit(cwd, 'chore: unsigned root', false);
+	git(cwd, ['push', 'origin', 'main']);
+	git(cwd, ['fetch', 'origin']);
+	const target = bareDestination(cwd, 'target');
+	git(cwd, ['config', 'remote.origin.pushurl', target]);
+	const head = commit(cwd, 'chore: signed child');
+	const exclusion = destinationExclusion('origin', cwd, env);
+	assert.deepEqual(exclusion, []);
+	assert.ok(pushedCommits([{ local: head, remote: '' }], cwd, env, []).includes(root));
+	assert.equal(await check(cwd, pushLine(head), ['origin', target]), 1);
+	git(cwd, ['config', 'remote.origin.pushurl', remote]);
+	assert.deepEqual(destinationExclusion('origin', cwd, env), ['--not', '--remotes=origin']);
+	assert.equal(await check(cwd, pushLine(head), ['origin', remote]), 0);
+});
+
+test('pushInsteadOf and several URLs drop the tracking exclusion', async (t) => {
+	const { cwd, remote } = repository();
+	const target = bareDestination(cwd, 'target');
+	const rewrite = `url.${target}.pushInsteadOf`;
+	await t.test('pushInsteadOf', () => {
+		git(cwd, ['config', rewrite, remote]);
+		assert.deepEqual(destinationExclusion('origin', cwd, env), []);
+	});
+	git(cwd, ['config', '--unset', rewrite]);
+	await t.test('several URLs', () => {
+		git(cwd, ['config', '--add', 'remote.origin.url', target]);
+		assert.deepEqual(destinationExclusion('origin', cwd, env), []);
+	});
+	git(cwd, ['config', '--unset', '--fixed-value', 'remote.origin.url', target]);
+	await t.test('several push URLs', () => {
+		git(cwd, ['config', 'remote.origin.pushurl', remote]);
+		assert.deepEqual(destinationExclusion('origin', cwd, env), ['--not', '--remotes=origin']);
+		git(cwd, ['config', '--add', 'remote.origin.pushurl', target]);
+		assert.deepEqual(destinationExclusion('origin', cwd, env), []);
+	});
+});
+
+test("another remote's refspec writing the destination namespace drops the tracking exclusion", async (t) => {
+	t.mock.method(console, 'error', () => {});
+	const destinations = [
+		'refs/remotes/origin/*',
+		'refs/remotes/*',
+		'refs/*',
+		'refs/remotes/origin/main',
+	];
+	for (let index = 0; index < destinations.length; index++) {
+		const destination = destinations[index];
+		await t.test(destination, async () => {
+			const { cwd, remote } = repository();
+			const unsigned = unsignedForkCommit(cwd);
+			const source = destination.includes('*') ? 'refs/heads/*' : 'refs/heads/main';
+			git(cwd, ['config', '--add', 'remote.fork.fetch', `+${source}:${destination}`]);
+			git(cwd, ['fetch', 'fork']);
+			if (destination === 'refs/remotes/origin/*') {
+				assert.equal(git(cwd, ['rev-parse', 'refs/remotes/origin/main']), unsigned);
+			}
+			const head = commit(cwd, 'chore: signed child');
+			assert.deepEqual(destinationExclusion('origin', cwd, env), []);
+			assert.equal(await check(cwd, pushLine(head), ['origin', remote]), 1);
+		});
+	}
+});
+
+test('no configured fetch refspecs preserve the exclusion', () => {
+	const { cwd } = repository();
+	git(cwd, ['config', '--unset-all', 'remote.origin.fetch']);
+	assert.deepEqual(destinationExclusion('origin', cwd, env), ['--not', '--remotes=origin']);
+});
+
+test('dotted foreign names are checked; non-writing refspecs preserve the exclusion', () => {
+	const { cwd } = repository();
+	git(cwd, ['config', '--add', 'remote.my.dotted.fetch', '^refs/heads/skip']);
+	git(cwd, ['config', '--add', 'remote.my.dotted.fetch', 'refs/heads/main']);
+	git(cwd, ['config', '--add', 'remote.my.dotted.fetch', '+refs/heads/*:refs/remotes/original/*']);
+	assert.deepEqual(destinationExclusion('origin', cwd, env), ['--not', '--remotes=origin']);
+	git(cwd, [
+		'config',
+		'--add',
+		'remote.my.dotted.fetch',
+		'refs/heads/main:refs/remotes/origin/main',
+	]);
+	assert.deepEqual(destinationExclusion('origin', cwd, env), []);
+});
+
 test("commits held only by another remote's tracking refs are judged", async (t) => {
 	t.mock.method(console, 'error', () => {});
 	const { cwd, remote } = repository();
@@ -382,6 +476,19 @@ test(
 		assert.notEqual(forkResult.status, 0);
 		assert.match(forkResult.stderr, /Missing Signed-off-by/);
 		assert.equal(git(forked.remote, ['for-each-ref', '--format=%(refname)']), '');
+		const redirected = repository();
+		commit(redirected.cwd, 'chore: unsigned root', false);
+		git(redirected.cwd, ['push', 'origin', 'main']);
+		git(redirected.cwd, ['fetch', 'origin']);
+		const target = bareDestination(redirected.cwd, 'target');
+		git(redirected.cwd, ['config', 'remote.origin.pushurl', target]);
+		commit(redirected.cwd, 'chore: signed child');
+		const redirectHook = installHook(redirected.cwd, 'pre-push', script);
+		const redirectResult = runGit(redirected.cwd, [...redirectHook, 'push', 'origin', 'main']);
+		assert.ifError(redirectResult.error);
+		assert.notEqual(redirectResult.status, 0);
+		assert.match(redirectResult.stderr, /Missing Signed-off-by/);
+		assert.equal(git(target, ['for-each-ref', '--format=%(refname)']), '');
 		const accepted = repository();
 		const head = commit(accepted.cwd);
 		const signedHook = installHook(accepted.cwd, 'pre-push', script);

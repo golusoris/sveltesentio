@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Pre-push second barrier for check-commit-message.mjs: judge stored messages of every commit
-// the push adds, excluding the destination remote's tracking refs and known remote oids.
-// URL pushes and ambiguous remote names judge everything they send beyond known remote oids.
+// the push adds beyond known remote oids. Exclude destination tracking refs only for an
+// unambiguous remote with one push URL equal to its fetch URL and no other remote's fetch
+// refspec writing its tracking namespace; otherwise judge everything sent beyond known oids.
 // Stored objects are immutable: --cleanup= overrides, editors and message-file rewrites
 // cannot slip # lines or missing sign-offs past this check; every stored # line is a finding.
 import { Buffer } from 'node:buffer';
@@ -78,7 +79,9 @@ export function parsePushLines(text) {
 }
 
 /**
- * Git pre-push supplies a configured remote name or a URL; only exact names can bound history.
+ * Only unambiguous remote names with one push URL equal to their fetch URL can bound history.
+ * No other remote's fetch refspec may write the destination's tracking namespace.
+ * Otherwise judge everything sent beyond known remote oids.
  * --remotes=<name> implies <name>/*, so nested configured names cannot safely bound it.
  * @param {string} remote
  * @param {string} cwd
@@ -92,7 +95,47 @@ export function destinationExclusion(remote, cwd, env) {
 	const ambiguous = names.some(
 		(other) => other.startsWith(`${remote}/`) || remote.startsWith(`${other}/`),
 	);
-	return ambiguous ? [] : ['--not', `--remotes=${remote}`];
+	if (ambiguous) return [];
+	if (!pushMatchesFetch(remote, cwd, env) || foreignTrackingWriter(remote, cwd, env)) return [];
+	return ['--not', `--remotes=${remote}`];
+}
+
+/**
+ * @param {string} remote
+ * @param {string} cwd
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {boolean}
+ */
+export function pushMatchesFetch(remote, cwd, env) {
+	const fetch = (gitOutput(['remote', 'get-url', remote], cwd, env) ?? '').trim();
+	const push = (gitOutput(['remote', 'get-url', '--push', '--all', remote], cwd, env) ?? '')
+		.split('\n')
+		.filter((line) => line.length > 0);
+	return push.length === 1 && push[0] === fetch;
+}
+
+/**
+ * Only the part after a refspec's first ':' writes refs; a spec without ':' (negative ones
+ * included, as git refuses '^src:dst') writes no tracking ref. Unparsed lines count as writers.
+ * @param {string} remote
+ * @param {string} cwd
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {boolean}
+ */
+export function foreignTrackingWriter(remote, cwd, env) {
+	const args = ['config', '--get-regexp', '^remote\\..*\\.fetch$'];
+	const fetches = gitOutput(args, cwd, env, undefined, true) ?? '';
+	const namespace = `refs/remotes/${remote}/`;
+	return fetches.split('\n').some((line) => {
+		const match = /^remote\.(.+)\.fetch (.*)$/.exec(line);
+		if (!match) return line.length > 0;
+		if (match[1] === remote) return false;
+		const spec = match[2];
+		const colon = spec.indexOf(':');
+		if (colon < 0) return false;
+		const prefix = spec.slice(colon + 1).split('*')[0];
+		return prefix.startsWith(namespace) || namespace.startsWith(prefix);
+	});
 }
 
 /**
