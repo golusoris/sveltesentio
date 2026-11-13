@@ -50,8 +50,12 @@ async function tree(/** @type {Record<string, string>} */ files) {
 }
 
 /** Runs the check on `files` and returns its findings. */
-async function findings(/** @type {Record<string, string>} */ files, timeoutMs = 5_000) {
-	return (await runCheck({ root: await tree(files), timeoutMs })).findings;
+async function findings(
+	/** @type {Record<string, string>} */ files,
+	timeoutMs = 5_000,
+	/** @type {number | undefined} */ suiteTimeoutMs = undefined,
+) {
+	return (await runCheck({ root: await tree(files), timeoutMs, suiteTimeoutMs })).findings;
 }
 
 /** Asserts exactly one finding, on `file`, whose message matches `pattern`. */
@@ -168,6 +172,15 @@ describe('runCheck', () => {
 		assert.deepEqual(await findings(files), []);
 	});
 
+	it('passes a forward-slash fixture path relative to the codemod directory', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				"export default (s, p) => (p === 'fixtures/basic.ts' ? s.replaceAll('foo(', 'bar(') : 'path ' + p);\n",
+		};
+		assert.deepEqual(await findings(files), []);
+	});
+
 	it('reports output that differs from the fixture, naming the line', async () => {
 		const files = {
 			...goodTree(),
@@ -280,6 +293,18 @@ describe('runCheck', () => {
 		);
 	});
 
+	it('reports the type of a result that cannot be cloned across workers', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]: 'export default () => () => {};\n',
+		};
+		assertOne(
+			await findings(files),
+			`${CODEMOD}/fixtures/basic.input.ts`,
+			/must return a string, got function/,
+		);
+	});
+
 	it('reports a transform that is not idempotent', async () => {
 		const files = {
 			...goodTree(),
@@ -300,6 +325,16 @@ describe('runCheck', () => {
 		assertOne(await findings(files), `${CODEMOD}/fixtures/basic.output.ts`, /not idempotent/);
 	});
 
+	it('reports non-idempotence hidden by module state from the first call', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				"let first = true;\nexport default (s) => { if (!first) return s; first = false; return s + '// migrated\\n'; };\n",
+			[`${CODEMOD}/fixtures/basic.output.ts`]: 'foo(1);\n// migrated\n',
+		};
+		assertOne(await findings(files), `${CODEMOD}/fixtures/basic.output.ts`, /not idempotent/);
+	});
+
 	it('reports a transform that never settles once the deadline passes', async () => {
 		const files = {
 			...goodTree(),
@@ -310,6 +345,75 @@ describe('runCheck', () => {
 			`${CODEMOD}/fixtures/basic.input.ts`,
 			/timed out after 50ms/,
 		);
+	});
+
+	it('rejects a synchronous call over its deadline and accepts it under the deadline', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				"export default (s) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500); return s.replaceAll('foo(', 'bar('); };\n",
+		};
+		assertOne(
+			await findings(files, 300),
+			`${CODEMOD}/fixtures/basic.input.ts`,
+			/timed out after 300ms/,
+		);
+		assert.deepEqual(await findings(files, 5_000), []);
+	});
+
+	it('terminates a worker with a timer left running', { timeout: 20_000 }, async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				"setInterval(() => {}, 60_000);\nexport default (s) => s.replaceAll('foo(', 'bar(');\n",
+		};
+		assert.deepEqual(await findings(files), []);
+	});
+
+	it('stops a synchronous loop at its deadline', { timeout: 20_000 }, async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]: 'export default () => { for (;;) {} };\n',
+		};
+		assertOne(
+			await findings(files, 300),
+			`${CODEMOD}/fixtures/basic.input.ts`,
+			/timed out after 300ms/,
+		);
+	});
+
+	it('stops an import that never finishes at its deadline', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]: 'await new Promise(() => {});\nexport default (s) => s;\n',
+		};
+		assertOne(
+			await findings(files, 300),
+			`${CODEMOD}/transform.mjs`,
+			/cannot be imported: .*timed out after 300ms/,
+		);
+	});
+
+	it('reports only the suite deadline when it interrupts fixture calls', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				'export default async (s) => { await new Promise((r) => setTimeout(r, 400)); return s; };\n',
+			[`${CODEMOD}/fixtures/basic.output.ts`]: 'foo(1);\n',
+			[`${CODEMOD}/fixtures/second.input.ts`]: 'foo(2);\n',
+			[`${CODEMOD}/fixtures/second.output.ts`]: 'foo(2);\n',
+			[`${CODEMOD}/fixtures/third.input.ts`]: 'foo(3);\n',
+			[`${CODEMOD}/fixtures/third.output.ts`]: 'foo(3);\n',
+		};
+		assertOne(
+			await findings(files, 5_000, 500),
+			'tools/migrations',
+			/suite deadline of 500 ms reached/,
+		);
+	});
+
+	it('passes a good codemod within the suite deadline', async () => {
+		assert.deepEqual(await findings(goodTree(), 5_000, 30_000), []);
 	});
 
 	it('reports a guide with bad frontmatter, without a count finding on top', async () => {

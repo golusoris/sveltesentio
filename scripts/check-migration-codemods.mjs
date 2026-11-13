@@ -15,18 +15,21 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { withTimeout } from './check-template-labels.mjs';
+import { errorMessage, runCodemod } from './codemod-worker.mjs';
 
 const repoRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
 // Upper bounds (HISS-02): entries in docs/migrations/, version directories in
 // tools/migrations/, codemods per version, fixture files per codemod, lines of
-// frontmatter, and the deadlines for file reads and for one codemod call.
+// frontmatter, and the deadlines for file reads, one codemod call, and the suite.
 export const ENTRY_LIMIT = 1_000;
 export const VERSION_LIMIT = 200;
 export const CODEMOD_LIMIT = 100;
 export const FIXTURE_LIMIT = 200;
 export const FRONTMATTER_LINE_LIMIT = 200;
 export const TRANSFORM_TIMEOUT_MS = 30_000;
+// Half of the lint job's timeout-minutes: 10; it also installs and runs other checks.
+export const SUITE_TIMEOUT_MS = 300_000;
 const IO_TIMEOUT_MS = 10_000;
 
 /** A version guide in docs/migrations/, such as v0.2.md. */
@@ -37,13 +40,7 @@ const VERSION_DIR = /^v(\d+\.\d+)$/;
 const FIXTURE = /^([A-Za-z0-9_-]+)\.(input|output)((?:\.[A-Za-z0-9]+)+)$/;
 
 /** @typedef {{ file: string, message: string }} Finding */
-/** @typedef {{ root: string, timeoutMs: number, findings: Finding[] }} Context */
-/** @typedef {(source: string, filePath: string) => unknown} Transform */
-
-/** @param {unknown} error */
-function errorMessage(error) {
-	return error instanceof Error ? error.message : String(error);
-}
+/** @typedef {{ root: string, timeoutMs: number, suite: AbortSignal, findings: Finding[] }} Context */
 
 /** @param {unknown} error */
 function isMissing(error) {
@@ -211,29 +208,34 @@ function compareCounts(ctx, docs, versions) {
 	}
 }
 
-/** The codemod's default export, or `null` after recording why it cannot be run. */
+/** The codemod's transform file path, or `null` after recording why it cannot be run. */
 async function loadTransform(/** @type {Context} */ ctx, /** @type {string} */ dir) {
 	const file = join(dir, 'transform.mjs');
 	const found = await withTimeout(stat(file), IO_TIMEOUT_MS, `stat ${file}`).then(
 		(s) => s.isFile(),
 		() => false,
 	);
+	if (ctx.suite.aborted) return null;
 	if (!found) {
 		note(ctx, file, 'missing: every codemod needs a transform.mjs');
 		return null;
 	}
-	let mod;
-	try {
-		mod = await withTimeout(import(pathToFileURL(file).href), ctx.timeoutMs, `import ${file}`);
-	} catch (error) {
-		note(ctx, file, `cannot be imported: ${errorMessage(error)}`);
+	const result = await runCodemod({
+		transformFile: file,
+		mode: 'load',
+		timeoutMs: ctx.timeoutMs,
+		signal: ctx.suite,
+	});
+	if (!result.ok) {
+		if (result.kind === 'aborted') return null;
+		const message =
+			result.kind === 'export'
+				? 'must default-export a function (source, filePath) => string'
+				: `cannot be imported: ${result.message}`;
+		note(ctx, file, message);
 		return null;
 	}
-	if (typeof mod.default !== 'function') {
-		note(ctx, file, 'must default-export a function (source, filePath) => string');
-		return null;
-	}
-	return /** @type {Transform} */ (mod.default);
+	return file;
 }
 
 /** Fixture pairs complete on both sides; a lone side, or no pair at all, is a finding. */
@@ -254,7 +256,7 @@ function completePairs(ctx, dir, cases) {
 	return pairs;
 }
 
-/** The fixture pairs in a codemod's fixtures/ directory. */
+/** The fixture pairs; `path` is relative to the codemod directory, with forward slashes. */
 async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} */ dir) {
 	const entries = await listDir(ctx, dir, FIXTURE_LIMIT);
 	if (entries === null) {
@@ -278,43 +280,44 @@ async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} *
 			continue;
 		}
 		const key = `${match[1]}${match[3]}`;
-		const pair = cases.get(key) ?? { input: null, output: null, path: join(dir, key) };
+		const pair = cases.get(key) ?? { input: null, output: null, path: `fixtures/${key}` };
 		pair[/** @type {'input' | 'output'} */ (match[2])] = join(dir, entry.name);
 		cases.set(key, pair);
 	}
 	return completePairs(ctx, dir, cases);
 }
 
-/** @param {unknown} value */
-function typeName(value) {
-	if (value === null) return 'null';
-	return Array.isArray(value) ? 'array' : typeof value;
-}
-
 /**
  * Runs the codemod on one text under the deadline. A throw, a rejection, a
- * deadline miss or a non-string result is reported, never thrown.
- * @returns {Promise<{ ok: true, value: string } | { ok: false, message: string }>}
+ * deadline miss or a non-string result is reported, never thrown. A suite abort records no pair finding.
+ * @returns {Promise<{ ok: true, value: string } | { ok: false, message: string | null }>}
  */
-async function applyTransform(ctx, /** @type {Transform} */ transform, source, filePath) {
-	let value;
-	try {
-		const call = Promise.resolve().then(() => transform(source, filePath));
-		value = await withTimeout(call, ctx.timeoutMs, 'codemod');
-	} catch (error) {
-		return { ok: false, message: `codemod failed: ${errorMessage(error)}` };
-	}
-	if (typeof value !== 'string') {
-		return { ok: false, message: `codemod must return a string, got ${typeName(value)}` };
-	}
-	return { ok: true, value };
+async function applyTransform(ctx, /** @type {string} */ transformFile, source, filePath) {
+	const result = await runCodemod({
+		transformFile,
+		mode: 'call',
+		source,
+		filePath,
+		timeoutMs: ctx.timeoutMs,
+		signal: ctx.suite,
+	});
+	if (result.ok) return /** @type {{ ok: true, value: string }} */ (result);
+	if (result.kind === 'aborted') return { ok: false, message: null };
+	return {
+		ok: false,
+		message:
+			result.kind === 'type'
+				? `codemod must return a string, got ${result.message}`
+				: `codemod failed: ${result.message}`,
+	};
 }
 
 /**
  * One fixture pair: the input must turn into the output exactly, and the output must stay as it is.
  * Both runs see the fixture's path without `.input`/`.output` (`fixtures/basic.ts`
  * for `basic.input.ts`), so the transform sees the real extension and cannot pass
- * the second run by reading a different path.
+ * the second run by reading a different path. Each call uses a fresh Worker and
+ * module instance, so module state cannot make the second run pass.
  */
 async function checkPair(
 	ctx,
@@ -325,7 +328,7 @@ async function checkPair(
 	const expected = await readText(pair.output);
 	const actual = await applyTransform(ctx, transform, source, pair.path);
 	if (!actual.ok) {
-		note(ctx, pair.input, actual.message);
+		if (actual.message !== null) note(ctx, pair.input, actual.message);
 		return;
 	}
 	if (actual.value !== expected) {
@@ -335,7 +338,7 @@ async function checkPair(
 	}
 	const again = await applyTransform(ctx, transform, expected, pair.path);
 	if (!again.ok) {
-		note(ctx, pair.output, again.message);
+		if (again.message !== null) note(ctx, pair.output, again.message);
 	} else if (again.value !== expected) {
 		note(ctx, pair.output, 'not idempotent: applying the codemod to its own output changes it');
 	}
@@ -343,9 +346,11 @@ async function checkPair(
 
 /** One codemod directory: its transform, then each of its fixture pairs. */
 async function checkCodemod(/** @type {Context} */ ctx, /** @type {string} */ dir) {
+	if (ctx.suite.aborted) return;
 	const transform = await loadTransform(ctx, dir);
-	if (transform === null) return;
+	if (transform === null || ctx.suite.aborted) return;
 	for (const pair of await readFixturePairs(ctx, join(dir, 'fixtures'))) {
+		if (ctx.suite.aborted) break;
 		await checkPair(ctx, transform, pair);
 	}
 }
@@ -353,21 +358,34 @@ async function checkCodemod(/** @type {Context} */ ctx, /** @type {string} */ di
 /**
  * Every finding for the guides in `root`/docs/migrations/ and the codemods in
  * `root`/tools/migrations/.
- * @param {{ root?: string, timeoutMs?: number }} [options]
+ * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number }} [options]
  * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
  */
-export async function runCheck({ root = repoRoot, timeoutMs = TRANSFORM_TIMEOUT_MS } = {}) {
+export async function runCheck({
+	root = repoRoot,
+	timeoutMs = TRANSFORM_TIMEOUT_MS,
+	suiteTimeoutMs = SUITE_TIMEOUT_MS,
+} = {}) {
 	/** @type {Context} */
-	const ctx = { root, timeoutMs, findings: [] };
+	const ctx = { root, timeoutMs, suite: AbortSignal.timeout(suiteTimeoutMs), findings: [] };
 	const docs = await readVersionDocs(ctx);
 	const versions = await readCodemodVersions(ctx);
 	compareCounts(ctx, docs, versions);
 	let codemods = 0;
 	for (const version of versions.values()) {
+		if (ctx.suite.aborted) break;
 		for (const dir of version.codemods) {
+			if (ctx.suite.aborted) break;
 			await checkCodemod(ctx, dir);
 			codemods++;
 		}
+	}
+	if (ctx.suite.aborted) {
+		note(
+			ctx,
+			join(root, 'tools', 'migrations'),
+			`suite deadline of ${suiteTimeoutMs} ms reached; the remaining codemods and fixtures were not checked`,
+		);
 	}
 	return { guides: docs.size, codemods, findings: ctx.findings };
 }

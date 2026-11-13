@@ -20,7 +20,7 @@ Both files use the same severity legend: `security` · `correctness` · `mainten
 
 ## Conventions
 
-- **Frontmatter** on every per-version file: `from-version`, `to-version`, `release-date`, `breaking-changes` (count), `codemods` (count of runnable codemods under `tools/migrations/v<MAJOR.MINOR>/`). Machine-readable so `release-please` and downstream upgrade tooling can index it.
+- **Frontmatter** on every per-version file: `from-version`, `to-version`, `release-date`, `breaking-changes` (count), `codemods` (count of checked codemods under `tools/migrations/v<MAJOR.MINOR>/`). Machine-readable so `release-please` and downstream upgrade tooling can index it.
 - **Each breaking-change row** cites the dispositive ADR and the migration shape (one-line `pnpm` / grep / codemod instruction; longer recipes live in the ADR).
 - **Codemod recipes** ship as either: (a) shell one-liners (grep + sed / `pnpm`), (b) AST transforms via `jscodeshift` or `ast-grep` rules, or (c) inline before/after Svelte snippets. Pick the lightest tool that does the job; AST transforms only when grep-based rewrites would be unsafe.
 

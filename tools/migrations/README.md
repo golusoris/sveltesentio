@@ -4,6 +4,8 @@ A codemod rewrites downstream code for one breaking change, so an adopter runs i
 
 No codemod ships yet. Every breaking change so far migrated by hand, and [`docs/migrations/v0.2.md`](../../docs/migrations/v0.2.md) declares `codemods: 0`.
 
+How an adopter runs a codemod is open in issue #554 and is decided before the first codemod ships.
+
 ## Layout
 
 ```text
@@ -33,6 +35,8 @@ export default function transform(source, filePath) {
 
 It takes a file's text and path and returns the rewritten text. It must be pure: no file writes, no network, no reading the clock. Any engine fits behind it: a string rewrite, a `jscodeshift` or `ast-grep` transform, or the Svelte compiler's parser. The path lets it pick a parser by extension. The check calls it with the fixture's path minus `.input` or `.output` (`fixtures/basic.ts` for `basic.input.ts`), the same path on both runs.
 
+Each call gets a fresh module instance, so a transform cannot pass the second run by remembering the first.
+
 ## What the check enforces
 
 [`scripts/check-migration-codemods.mjs`](../../scripts/check-migration-codemods.mjs) runs in `make verify-all` and in the CI `lint` job, and fails when:
@@ -44,9 +48,9 @@ It takes a file's text and path and returns the rewritten text. It must be pure:
 - the transform's result for an input differs from its output fixture (the finding names the first differing line);
 - the transform changes its own output fixture on a second run at the same path: a codemod must be safe to run twice;
 - a directory holds more entries than its limit, and then nothing in it is checked: 1,000 entries in `docs/migrations/`, 200 here in `tools/migrations/`, 100 in one version directory, 200 in one `fixtures/`; or a guide's frontmatter does not close within 200 lines;
-- the transform throws, returns something other than a string, or does not settle within 30 seconds.
+- the transform throws, returns something other than a string, or exceeds the 30-second deadline; each transform call runs in a fresh worker thread that the check stops after the result or at the deadline, so a slow synchronous transform or a loop that never returns fails the check and a timer left running cannot hang it.
 
-The deadline bounds a codemod that awaits forever; a synchronous loop that never returns is bounded only by the CI job's `timeout-minutes`.
+The whole run stops after 5 minutes with one finding naming the suite deadline.
 
 Run it locally:
 
