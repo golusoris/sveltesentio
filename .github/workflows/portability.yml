@@ -123,8 +123,9 @@ jobs:
       - run: >-
           node --test scripts/check-migration-codemods.test.mjs
           scripts/check-migration-codemods-transforms.test.mjs
-      # HISS-21: commit-message tests spawn git and sh, both platform-sensitive;
-      # exercise the hook and its quoted message path on every leg.
+      # HISS-21: commit-message and pre-push checks spawn git; hook tests also spawn sh.
+      # Exercise the hook and its quoted message path on every leg.
       - run: >-
           node --test scripts/check-commit-message.test.mjs
           scripts/check-commit-message.lefthook.test.mjs
+          scripts/check-pushed-commits.test.mjs

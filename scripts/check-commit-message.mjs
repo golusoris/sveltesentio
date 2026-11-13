@@ -6,7 +6,8 @@
 // Strip modes remove only the active prefix: last core.commentChar/commentString, auto = '#';
 // # lines survive any other prefix. Scissors truncates at <prefix> + cut text only with
 // an editor. interpret-trailers --no-divider: a body --- is no patch divider here.
-// The hook cannot see --cleanup= overrides; dispatcher read-back supplies the second barrier.
+// --cleanup= overrides are invisible here; check-pushed-commits.mjs re-reads stored commits
+// at pre-push.
 // git commit -s uses git var GIT_COMMITTER_IDENT (GIT_COMMITTER_EMAIL, else user.email).
 // Hook shape and file reader adopted from plurano/horistes (lefthook.yml commit-msg job,
 // tests/test_commit_messages.py, commit 5af6eeda, EUPL-1.2), horistes ADR-0072.
@@ -55,6 +56,7 @@ export function readMessageFile(path) {
 }
 
 /**
+ * Run bounded Git commands for both commit-msg and stored-commit checks.
  * @param {string[]} args
  * @param {string} cwd
  * @param {NodeJS.ProcessEnv} env
@@ -62,7 +64,7 @@ export function readMessageFile(path) {
  * @param {boolean} [allowMissing]
  * @returns {string | undefined}
  */
-function gitOutput(args, cwd, env, input, allowMissing = false) {
+export function gitOutput(args, cwd, env, input, allowMissing = false) {
 	const result = spawnSync('git', args, {
 		cwd,
 		env,
@@ -218,10 +220,21 @@ export function main(argv, { cwd, env }) {
 		for (let index = 0; index < findings.length; index++) console.error(findings[index]);
 		if (findings.length === 0) return 0;
 		console.error('Fix: git commit -s; remove the # lines or let the editor strip them.');
+		printEditorHint(findings, env);
 		return 1;
 	} catch (error) {
 		console.error(`Cannot judge commit message: ${error.message}`);
 		return 2;
+	}
+}
+
+/** @param {string[]} findings @param {NodeJS.ProcessEnv} env */
+function printEditorHint(findings, env) {
+	if (env.GIT_EDITOR === ':' && findings.some((finding) => finding.startsWith('Leftover # line'))) {
+		console.error(
+			'Git sets GIT_EDITOR=: only when it skips the editor; ' +
+				'a script that launches one should set GIT_EDITOR=true.',
+		);
 	}
 }
 

@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { after, test } from 'node:test';
@@ -77,3 +85,27 @@ function assertNoMarker(root) {
 	);
 	assert.equal(existsSync(join(cwd, 'pwned')), false);
 }
+
+test('pre-push job feeds Git stdin to the stored-commit check', () => {
+	const command = config['pre-push'].commands['commit-messages'];
+	assert.equal(command.use_stdin, true);
+	assert.equal(command.run, 'node scripts/check-pushed-commits.mjs');
+	assert.doesNotMatch(command.run, /\{/);
+});
+
+test(
+	'commit-msg heredoc fails closed on a newline path',
+	{ skip: process.platform === 'win32' ? 'Newline not allowed in Windows filenames' : false },
+	() => {
+		const directory = join(root, 'a\nb');
+		mkdirSync(directory);
+		const path = join(directory, 'message.txt');
+		writeFileSync(path, 'chore: x\n\nSigned-off-by: A Person <person@example.org>\n');
+		const run = config['commit-msg'].commands['sign-off'].run.replaceAll('{1}', path);
+		const result = runShell(run);
+		assert.ifError(result.error);
+		assert.equal(result.status, 2, result.stderr);
+		assert.match(result.stderr, /Cannot judge commit message/);
+		assertNoMarker(root);
+	},
+);

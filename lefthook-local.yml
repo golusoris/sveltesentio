@@ -35,6 +35,7 @@ pre-commit:
 # Hook shape: plurano/horistes, commit 5af6eeda, EUPL-1.2 (horistes ADR-0072).
 # Lefthook 2.2.2 substitutes {1} raw; a quoted here-document read by `read -r` keeps shell
 # characters as data, and avoids `$( )`, which macOS sh misparses around quotes.
+# A path line equal to GIT_ARGUMENT ends it early; Git passes .git/COMMIT_EDITMSG or .git/MERGE_MSG.
 commit-msg:
   commands:
     sign-off:
@@ -46,6 +47,11 @@ commit-msg:
 
 pre-push:
   commands:
+    # Second barrier to commit-msg: re-reads stored commits the push adds.
+    # use_stdin hands it Git's ref lines.
+    commit-messages:
+      use_stdin: true
+      run: node scripts/check-pushed-commits.mjs
     verify:
       run: pnpm run ci
     security:

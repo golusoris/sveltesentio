@@ -442,3 +442,27 @@ test('WITH hook conflicted --no-edit merge refuses, including with a sign-off', 
 	assert.doesNotMatch(signedResult.stderr, /Missing Signed-off-by/);
 	assert.equal(git(cwd, ['rev-parse', 'HEAD']), head);
 });
+
+test('main hints GIT_EDITOR=true when the editor-skip marker meets # lines', (t) => {
+	const errors = t.mock.method(console, 'error', () => {});
+	const cwd = repository();
+	const path = messageFile(cwd, `${signed}# Conflicts:\n`);
+	assert.equal(main([path], { cwd, env: { ...env, GIT_EDITOR: ':' } }), 1);
+	assert.match(
+		errors.mock.calls.map((call) => call.arguments.join(' ')).join('\n'),
+		/set GIT_EDITOR=true/,
+	);
+	errors.mock.resetCalls();
+	git(cwd, ['config', 'commit.cleanup', 'strip']);
+	assert.equal(main([path], { cwd, env: { ...env, GIT_EDITOR: 'editor' } }), 0);
+	assert.equal(errors.mock.calls.length, 0);
+	errors.mock.resetCalls();
+	assert.equal(
+		main([messageFile(cwd, 'chore: unsigned\n')], { cwd, env: { ...env, GIT_EDITOR: ':' } }),
+		1,
+	);
+	assert.doesNotMatch(
+		errors.mock.calls.map((call) => call.arguments.join(' ')).join('\n'),
+		/set GIT_EDITOR=true/,
+	);
+});

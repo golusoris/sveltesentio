@@ -69,6 +69,7 @@ Scope is the package name (`core`, `ui`, `query`, …) or `repo` for root change
 Every commit carries `Signed-off-by` with your git email (`git commit -s`).
 The commit-msg hook (`make setup` installs it) refuses missing sign-offs or leftover `#` lines,
 including the `# Conflicts:` block that `git commit --no-edit` keeps after a conflicted merge.
+The pre-push hook re-reads every commit the push adds and refuses the same faults, including ones an editor run with `--cleanup=verbatim` or `--cleanup=whitespace` keeps.
 
 Examples:
 
