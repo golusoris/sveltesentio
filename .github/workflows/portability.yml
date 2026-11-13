@@ -117,3 +117,8 @@ jobs:
           else
             pnpm test --concurrency=2
           fi
+      # HISS-21: the ruleset check runs on every platform leg.
+      - name: Ruleset check
+        run: pnpm check:ruleset
+      - name: Ruleset check tests
+        run: node --test scripts/check-ruleset.test.mjs
