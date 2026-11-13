@@ -264,6 +264,21 @@ const workflowFailures = [
 		validWorkflow.replace(gateResultStep, '      - null'),
 		gateResultFinding,
 	],
+	[
+		'result step skipped by if false',
+		validWorkflow.replace('      - env:', '      - if: false\n        env:'),
+		/result step must not set if/,
+	],
+	[
+		'result step with a success-only if',
+		validWorkflow.replace('      - env:', '      - if: success()\n        env:'),
+		/result step must not set if/,
+	],
+	[
+		'result step with an always if',
+		validWorkflow.replace('      - env:', '      - if: always()\n        env:'),
+		/result step must not set if/,
+	],
 ];
 
 describe('CI Gate workflow contract', () => {

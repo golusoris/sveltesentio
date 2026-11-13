@@ -236,6 +236,9 @@ function checkGateResult(job, findings) {
 		if (!isGateResultStep(steps[i])) continue;
 		found = true;
 		checkGateContinueOnError(steps[i], findings);
+		if (Object.hasOwn(steps[i], 'if')) {
+			findings.push(`${WORKFLOW_PATH}: '${GATE_CONTEXT}' result step must not set if`);
+		}
 	}
 	if (!found) {
 		findings.push(
