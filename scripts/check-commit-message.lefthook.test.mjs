@@ -33,12 +33,47 @@ const env = {
 
 test('commit-msg job quotes raw Lefthook argument with a literal heredoc', () => {
 	assert.ok(config['commit-msg']);
-	assert.equal(Object.keys(config['commit-msg'].commands).length, 1);
-	const run = config['commit-msg'].commands['sign-off'].run;
-	assert.match(run, /<<'GIT_ARGUMENT'/);
-	assert.match(run, /^IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'\n\{1\}\nGIT_ARGUMENT\n/);
-	assert.doesNotMatch(run, /\$\(/);
-	assert.match(run, /node scripts\/check-commit-message\.mjs "\$MESSAGE_FILE"/);
+	assert.equal(Object.keys(config['commit-msg'].commands).length, 2);
+	const names = ['sign-off', 'conventional'];
+	for (let index = 0; index < names.length; index++) {
+		const run = config['commit-msg'].commands[names[index]].run;
+		assert.match(run, /<<'GIT_ARGUMENT'/);
+		assert.match(run, /^IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'\n\{1\}\nGIT_ARGUMENT\n/);
+		assert.doesNotMatch(run, /\$\(/);
+	}
+	assert.match(
+		config['commit-msg'].commands['sign-off'].run,
+		/node scripts\/check-commit-message\.mjs "\$MESSAGE_FILE"/,
+	);
+	assert.match(
+		config['commit-msg'].commands.conventional.run,
+		/pnpm exec commitlint --edit "\$MESSAGE_FILE"\n?$/,
+	);
+});
+
+test('commit-msg conventional job refuses non-conventional subjects', () => {
+	const directory = mkdtempSync(join(root, 'conventional-'));
+	const path = join(directory, 'message.txt');
+	const run = config['commit-msg'].commands.conventional.run.replaceAll('{1}', path);
+	const cases = [
+		['Update stuff', 1, /type-empty/],
+		['wip: thing', 1, /type-enum/],
+		['feat(core): Add a step', 1, /subject-case/],
+		['feat(core): add CI step', 0],
+		["Merge branch 'topic' into main", 0],
+		['fixup! feat(core): add a step', 0],
+	];
+	for (let index = 0; index < cases.length; index++) {
+		const [subject, status, finding] = cases[index];
+		writeFileSync(
+			path,
+			`${subject}\n\n# Conflicts:\n#\tf.txt\n\nSigned-off-by: A Person <person@example.org>\n`,
+		);
+		const result = runShell(run, '', 60_000);
+		assert.ifError(result.error);
+		assert.equal(result.status, status, `${subject}: ${result.stdout}\n${result.stderr}`);
+		if (finding) assert.match(result.stdout, finding);
+	}
 });
 
 test(
@@ -64,14 +99,15 @@ test(
 	},
 );
 
-/** @param {string} run */
-function runShell(run) {
+/** @param {string} run @param {string} [input] @param {number} [timeout] */
+function runShell(run, input = '', timeout = 10_000) {
 	// Execute the actual hook text: the shell is the interface under test.
 	return spawnSync('sh', ['-c', run], {
 		cwd,
 		env,
+		input,
 		encoding: 'utf8',
-		timeout: 10_000,
+		timeout,
 		maxBuffer: 262145,
 	});
 }
@@ -89,8 +125,22 @@ function assertNoMarker(root) {
 test('pre-push job feeds Git stdin to the stored-commit check', () => {
 	const command = config['pre-push'].commands['commit-messages'];
 	assert.equal(command.use_stdin, true);
-	assert.equal(command.run, 'node scripts/check-pushed-commits.mjs');
-	assert.doesNotMatch(command.run, /\{/);
+	assert.match(
+		command.run,
+		/^IFS= read -r PUSH_REMOTE <<'GIT_ARGUMENT'\n\{1\}\nGIT_ARGUMENT\nnode scripts\/check-pushed-commits\.mjs "\$PUSH_REMOTE"\n?$/,
+	);
+	assert.doesNotMatch(command.run, /\$\(/);
+});
+
+test('pre-push heredoc passes a hostile remote name as data', () => {
+	const directory = mkdtempSync(join(root, 'remote-'));
+	assertNoMarker(directory);
+	const remote = 'x\'"$(touch pwned)`touch pwned`';
+	const run = config['pre-push'].commands['commit-messages'].run.replaceAll('{1}', remote);
+	const result = runShell(run);
+	assert.ifError(result.error);
+	assert.equal(result.status, 0, result.stderr);
+	assertNoMarker(directory);
 });
 
 test(

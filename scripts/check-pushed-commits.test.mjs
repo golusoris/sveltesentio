@@ -13,6 +13,7 @@ import {
 	PUSH_INPUT_BYTES,
 	PUSH_LINE_RE,
 	STDIN_TIMEOUT_MS,
+	destinationExclusion,
 	judgeCommits,
 	main,
 	parsePushLines,
@@ -82,6 +83,17 @@ function commit(cwd, message = 'chore: fixture', signOff = true) {
 	if (signOff) args.push('-s');
 	git(cwd, args);
 	return git(cwd, ['rev-parse', 'HEAD']);
+}
+
+/** @param {string} cwd @returns {string} */
+function unsignedForkCommit(cwd) {
+	const fork = join(cwd, 'fork.git');
+	git(cwd, ['init', '--bare', `--template=${join(cwd, 'empty-template')}`, fork]);
+	git(cwd, ['remote', 'add', 'fork', fork]);
+	const unsigned = commit(cwd, 'chore: unsigned fork root', false);
+	git(cwd, ['push', 'fork', 'main']);
+	git(cwd, ['fetch', 'fork']);
+	return unsigned;
 }
 
 /** @param {string} local @param {string} [remote] */
@@ -218,13 +230,53 @@ test('clean signed range of two commits on a new branch passes', async () => {
 });
 
 test('commits already reachable from remote-tracking refs are not judged', async () => {
-	const { cwd } = repository();
+	const { cwd, remote } = repository();
 	const first = commit(cwd, 'chore: unsigned root', false);
 	git(cwd, ['push', 'origin', 'main']);
 	git(cwd, ['fetch', 'origin']);
 	const head = commit(cwd, 'chore: signed child');
-	assert.deepEqual(pushedCommits([{ local: head, remote: '' }], cwd, env), [head]);
-	assert.equal(await check(cwd, pushLine(head, first)), 0);
+	const exclusion = destinationExclusion('origin', cwd, env);
+	assert.deepEqual(pushedCommits([{ local: head, remote: '' }], cwd, env, exclusion), [head]);
+	assert.equal(await check(cwd, pushLine(head, first), ['origin', remote]), 0);
+	// A new branch has no known remote oid: only main's destination argument bounds the root.
+	assert.equal(await check(cwd, pushLine(head), ['origin', remote]), 0);
+});
+
+test("commits held only by another remote's tracking refs are judged", async (t) => {
+	t.mock.method(console, 'error', () => {});
+	const { cwd, remote } = repository();
+	const unsigned = unsignedForkCommit(cwd);
+	const exclusion = destinationExclusion('origin', cwd, env);
+	assert.deepEqual(exclusion, ['--not', '--remotes=origin']);
+	assert.deepEqual(pushedCommits([{ local: unsigned, remote: '' }], cwd, env, exclusion), [
+		unsigned,
+	]);
+	// Red on 331fe01: --not --remotes dropped this commit and check returned 0.
+	assert.equal(await check(cwd, pushLine(unsigned), ['origin', remote]), 1);
+});
+
+test('URL push judges without tracking exclusion', async (t) => {
+	const errors = t.mock.method(console, 'error', () => {});
+	const { cwd, remote } = repository();
+	const first = commit(cwd, 'chore: unsigned root', false);
+	git(cwd, ['push', 'origin', 'main']);
+	git(cwd, ['fetch', 'origin']);
+	const head = commit(cwd, 'chore: signed child');
+	assert.deepEqual(destinationExclusion(remote, cwd, env), []);
+	assert.equal(await check(cwd, pushLine(head), [remote, remote]), 1);
+	const output = errors.mock.calls.map((call) => call.arguments.join(' ')).join('\n');
+	assert.match(output, /No remote-tracking refs of a configured destination/);
+	assert.equal(await check(cwd, pushLine(head, first), [remote, remote]), 0);
+});
+
+test('ambiguous or unknown remote names fall back to strict judging', () => {
+	const { cwd, remote } = repository();
+	git(cwd, ['config', 'remote.a.url', remote]);
+	git(cwd, ['config', 'remote.a/b.url', remote]);
+	assert.deepEqual(destinationExclusion('a', cwd, env), []);
+	assert.deepEqual(destinationExclusion('a/b', cwd, env), []);
+	assert.deepEqual(destinationExclusion('nope', cwd, env), []);
+	assert.deepEqual(destinationExclusion('', cwd, env), []);
 });
 
 test('known remote oid excludes ancestors without a remote-tracking ref', async () => {
@@ -321,6 +373,15 @@ test(
 		assert.notEqual(result.status, 0);
 		assert.match(result.stderr, /Missing Signed-off-by/);
 		assert.equal(git(refused.remote, ['for-each-ref', '--format=%(refname)']), '');
+		const forked = repository();
+		unsignedForkCommit(forked.cwd);
+		commit(forked.cwd, 'chore: signed child');
+		const forkHook = installHook(forked.cwd, 'pre-push', script);
+		const forkResult = runGit(forked.cwd, [...forkHook, 'push', 'origin', 'main']);
+		assert.ifError(forkResult.error);
+		assert.notEqual(forkResult.status, 0);
+		assert.match(forkResult.stderr, /Missing Signed-off-by/);
+		assert.equal(git(forked.remote, ['for-each-ref', '--format=%(refname)']), '');
 		const accepted = repository();
 		const head = commit(accepted.cwd);
 		const signedHook = installHook(accepted.cwd, 'pre-push', script);

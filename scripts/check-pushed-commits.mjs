@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Pre-push second barrier for check-commit-message.mjs: judge stored messages of every commit
-// the push adds, reachable from pushed local oids but not refs/remotes or known remote oids.
+// the push adds, excluding the destination remote's tracking refs and known remote oids.
+// URL pushes and ambiguous remote names judge everything they send beyond known remote oids.
 // Stored objects are immutable: --cleanup= overrides, editors and message-file rewrites
-// after commit-msg cannot slip # lines or missing sign-offs past this check.
-// Every stored # line is a finding, whatever the comment prefix, matching surviving-line checks.
+// cannot slip # lines or missing sign-offs past this check; every stored # line is a finding.
 import { Buffer } from 'node:buffer';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
@@ -78,12 +78,31 @@ export function parsePushLines(text) {
 }
 
 /**
- * @param {{ local: string, remote: string }[]} updates
+ * Git pre-push supplies a configured remote name or a URL; only exact names can bound history.
+ * --remotes=<name> implies <name>/*, so nested configured names cannot safely bound it.
+ * @param {string} remote
  * @param {string} cwd
  * @param {NodeJS.ProcessEnv} env
  * @returns {string[]}
  */
-export function pushedCommits(updates, cwd, env) {
+export function destinationExclusion(remote, cwd, env) {
+	if (!remote) return [];
+	const names = (gitOutput(['remote'], cwd, env) ?? '').split('\n');
+	if (!names.includes(remote)) return [];
+	const ambiguous = names.some(
+		(other) => other.startsWith(`${remote}/`) || remote.startsWith(`${other}/`),
+	);
+	return ambiguous ? [] : ['--not', `--remotes=${remote}`];
+}
+
+/**
+ * @param {{ local: string, remote: string }[]} updates
+ * @param {string} cwd
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string[]} [exclusion]
+ * @returns {string[]}
+ */
+export function pushedCommits(updates, cwd, env, exclusion = []) {
 	if (updates.length === 0) return [];
 	const excludedOids = [];
 	for (let index = 0; index < updates.length; index++) {
@@ -100,14 +119,7 @@ export function pushedCommits(updates, cwd, env) {
 	}
 	const locals = updates.map((update) => update.local);
 	const output = gitOutput(
-		[
-			'rev-list',
-			`--max-count=${MAX_COMMITS + 1}`,
-			...locals,
-			...excludedOids,
-			'--not',
-			'--remotes',
-		],
+		['rev-list', `--max-count=${MAX_COMMITS + 1}`, ...locals, ...excludedOids, ...exclusion],
 		cwd,
 		env,
 	);
@@ -168,9 +180,17 @@ export async function main(argv, { cwd, env, stdin }) {
 			throw new Error('Usage: check-pushed-commits.mjs [remote-name remote-url]');
 		}
 		const updates = parsePushLines(await readInput(stdin));
-		const findings = judgeCommits(pushedCommits(updates, cwd, env), cwd, env);
+		const remote = argv[0] ?? '';
+		const exclusion = destinationExclusion(remote, cwd, env);
+		const findings = judgeCommits(pushedCommits(updates, cwd, env, exclusion), cwd, env);
 		for (let index = 0; index < findings.length; index++) console.error(findings[index]);
 		if (findings.length === 0) return 0;
+		if (exclusion.length === 0) {
+			console.error(
+				'No remote-tracking refs of a configured destination bounded this check; ' +
+					'every commit the push sends was judged.',
+			);
+		}
 		console.error(
 			"Fix: git rebase -i --exec 'git commit --amend --no-edit -s' <base>, " +
 				'or reword the commits; remove the # lines.',

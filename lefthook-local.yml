@@ -44,14 +44,26 @@ commit-msg:
         {1}
         GIT_ARGUMENT
         node scripts/check-commit-message.mjs "$MESSAGE_FILE"
+    # commitlint applies commitlint.config.js to the same file; skips # lines, merge and fixup! subjects.
+    conventional:
+      run: |
+        IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'
+        {1}
+        GIT_ARGUMENT
+        pnpm exec commitlint --edit "$MESSAGE_FILE"
 
 pre-push:
   commands:
     # Second barrier to commit-msg: re-reads stored commits the push adds.
-    # use_stdin hands it Git's ref lines.
+    # use_stdin hands it Git's ref lines; {1} is the destination remote name (or URL),
+    # read like the commit-msg path.
     commit-messages:
       use_stdin: true
-      run: node scripts/check-pushed-commits.mjs
+      run: |
+        IFS= read -r PUSH_REMOTE <<'GIT_ARGUMENT'
+        {1}
+        GIT_ARGUMENT
+        node scripts/check-pushed-commits.mjs "$PUSH_REMOTE"
     verify:
       run: pnpm run ci
     security:
