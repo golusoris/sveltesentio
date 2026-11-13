@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	CGROUP_V2_MARKER,
@@ -222,7 +225,17 @@ describe('readSockmapStats', () => {
 });
 
 describe('probeSockmap on the real host (portability legs)', () => {
-	const absentPath = '/nonexistent/sveltesentio-ipc-sockmap-test/sockhash';
+	let scratchDir = '';
+	let absentPath = '';
+
+	beforeAll(async () => {
+		scratchDir = await mkdtemp(join(tmpdir(), 'sveltesentio-ipc-sockmap-'));
+		absentPath = join(scratchDir, 'sockhash');
+	});
+
+	afterAll(async () => {
+		await rm(scratchDir, { recursive: true, force: true });
+	});
 
 	it('resolves to AF_UNIX when the pinned sockhash is absent', async () => {
 		await expect(probeSockmap({ pinPath: absentPath })).resolves.toMatchObject({
