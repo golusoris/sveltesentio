@@ -66,6 +66,10 @@ short-lived and named `feat/<package>-<slug>`, `fix/<package>-<slug>`, or
 
 Scope is the package name (`core`, `ui`, `query`, …) or `repo` for root changes.
 
+Every commit carries `Signed-off-by` with your git email (`git commit -s`).
+The commit-msg hook (`make setup` installs it) refuses missing sign-offs or leftover `#` lines,
+including the `# Conflicts:` block that `git commit --no-edit` keeps after a conflicted merge.
+
 Examples:
 
 ```text
