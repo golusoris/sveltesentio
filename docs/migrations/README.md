@@ -20,7 +20,7 @@ Both files use the same severity legend: `security` · `correctness` · `mainten
 
 ## Conventions
 
-- **Frontmatter** on every per-version file: `from-version`, `to-version`, `release-date`, `breaking-changes` (count), `codemods` (count). Machine-readable so `release-please` and downstream upgrade tooling can index it.
+- **Frontmatter** on every per-version file: `from-version`, `to-version`, `release-date`, `breaking-changes` (count), `codemods` (count of runnable codemods under `tools/migrations/v<MAJOR.MINOR>/`). Machine-readable so `release-please` and downstream upgrade tooling can index it.
 - **Each breaking-change row** cites the dispositive ADR and the migration shape (one-line `pnpm` / grep / codemod instruction; longer recipes live in the ADR).
 - **Codemod recipes** ship as either: (a) shell one-liners (grep + sed / `pnpm`), (b) AST transforms via `jscodeshift` or `ast-grep` rules, or (c) inline before/after Svelte snippets. Pick the lightest tool that does the job; AST transforms only when grep-based rewrites would be unsafe.
 
@@ -30,7 +30,7 @@ When opening a release-prep PR for `v0.x`:
 
 1. Copy [v0.2.md](v0.2.md) → `vN.md`. Update the frontmatter (`from-version`, `to-version`, `release-date`).
 2. For each merged PR with a `Migration:` commit footer between the previous release tag and `HEAD`, add a row.
-3. Provide the codemod alongside (`tools/migrations/v<N>/`) when the rewrite is mechanical. Reference the file from this doc.
+3. Provide the codemod under `tools/migrations/v<N>/<name>/` when the rewrite is mechanical, following the [codemod contract](../../tools/migrations/README.md): a `transform.mjs` plus input/output fixtures. Set the `codemods` frontmatter count to match; `pnpm check:migration-codemods` fails on a mismatch, a missing fixture, or a codemod whose output differs. Reference the codemod from this doc.
 4. Cross-link the ADR(s) that justify each breaking change.
 5. Update the [Index](#index) above.
 6. Land the migration doc together with the release-please PR — never lag behind the release.
