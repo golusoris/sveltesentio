@@ -51,6 +51,11 @@ const failingTargets = [
 		cannotJudgeFinding,
 	],
 	['exclude a number', withRefs([MAIN_REF], [123]), matchesFinding],
+	[
+		'exclude main below any directory',
+		withRefs([MAIN_REF], ['refs/heads/**/main']),
+		matchesFinding,
+	],
 ];
 
 describe('ruleset main-ref coverage', () => {
@@ -94,6 +99,18 @@ const refPatternCases = [
 	['single star cannot reach past a slash', 'refs/*/main', 'refs/heads/x/main', false],
 	['empty ref fails a non-empty pattern', 'refs/heads/*', '', false],
 	['star-only tail cannot replace a missing prefix', 'refs/tags/**', MAIN_REF, false],
+	['double star element matches zero directories', 'refs/heads/**/main', MAIN_REF, true],
+	[
+		'double star element matches several directories',
+		'refs/heads/**/main',
+		'refs/heads/a/b/main',
+		true,
+	],
+	['double star element keeps the literal tail', 'refs/heads/**/main', 'refs/heads/a/mainx', false],
+	['double star element at the pattern start', '**/main', MAIN_REF, true],
+	['repeated double star elements collapse', 'refs/**/**/main', MAIN_REF, true],
+	['double star after a character is no element', 'refs/heads/x**/main', MAIN_REF, false],
+	['trailing double star element needs a separator', 'refs/heads/**/', MAIN_REF, false],
 ];
 
 describe('refPatternMatches', () => {

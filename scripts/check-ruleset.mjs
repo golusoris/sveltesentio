@@ -31,6 +31,8 @@ export const CODEOWNERS_LINE_LIMIT = 2_000;
 export const USER_OWNER_RE = /^@[a-z\d][a-z\d-]{0,38}$/i;
 export const TEAM_OWNER_RE = /^@[a-z\d][a-z\d-]*\/[a-z\d][\w.-]*$/i;
 export const EMAIL_OWNER_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+/** @type {RegExp} */
+export const BRANCH_NEGATION_RE = /^![\w./*-]{0,255}$/;
 
 function parseOwnerRule(line) {
 	// Preserve escaped spaces; GitHub support for this pattern syntax remains unverified.
@@ -192,7 +194,10 @@ function tokenizeRefPattern(pattern) {
 	const tokens = [];
 	for (let i = 0; i < pattern.length; i++) {
 		const character = pattern[i];
-		if (character === '*' && pattern[i + 1] === '*') {
+		if ((i === 0 || pattern[i - 1] === '/') && pattern.startsWith('**/', i)) {
+			tokens.push('**/');
+			i += 2;
+		} else if (character === '*' && pattern[i + 1] === '*') {
 			tokens.push('**');
 			i++;
 		} else {
@@ -218,6 +223,22 @@ function advanceRefStar(token, ref, reach) {
 }
 
 /**
+ * @param {string} ref
+ * @param {boolean[]} reach
+ * @returns {boolean[]}
+ */
+function advanceRefElements(ref, reach) {
+	const next = new Array(ref.length + 1).fill(false);
+	let inside = false;
+	for (let j = 0; j < ref.length + 1; j++) {
+		const slash = j > 0 && ref[j - 1] === '/';
+		next[j] = reach[j] || (slash && inside);
+		inside = next[j] || (j > 0 && !slash && inside);
+	}
+	return next;
+}
+
+/**
  * @param {string} token
  * @param {string} ref
  * @param {boolean[]} reach
@@ -231,12 +252,24 @@ function advanceRefCharacter(token, ref, reach) {
 	return next;
 }
 
+/**
+ * A whole double-star directory element matches zero or more directories, as Ruby fnmatch
+ * FNM_PATHNAME does. Other double stars may cross slashes: a superset of Ruby's single star,
+ * so an exclude that might match main is reported (fail closed).
+ * @param {string} pattern
+ * @param {string} ref
+ * @returns {boolean}
+ */
 export function refPatternMatches(pattern, ref) {
 	const tokens = tokenizeRefPattern(pattern);
 	let reach = new Array(ref.length + 1).fill(false);
 	reach[0] = true;
 	for (let i = 0; i < tokens.length; i++) {
 		const token = tokens[i];
+		if (token === '**/') {
+			reach = advanceRefElements(ref, reach);
+			continue;
+		}
 		reach =
 			token === '*' || token === '**'
 				? advanceRefStar(token, ref, reach)
@@ -321,13 +354,52 @@ function checkPullRequestTypes(trigger, findings) {
 	}
 }
 
+/**
+ * @param {string} event
+ * @param {string} entry
+ * @param {string[]} findings
+ * @returns {boolean}
+ */
+function negationMatchesMain(event, entry, findings) {
+	if (!BRANCH_NEGATION_RE.test(entry)) {
+		findings.push(
+			`${WORKFLOW_PATH}: on.${event}.branches entry '${entry}' cannot be judged against main`,
+		);
+		return false;
+	}
+	return refPatternMatches(entry.slice(1), 'main');
+}
+
+/**
+ * @param {string} event
+ * @param {unknown[]} branches
+ * @param {string[]} findings
+ * @returns {boolean}
+ */
+function branchesIncludeMain(event, branches, findings) {
+	let included = false;
+	for (let i = 0; i < branches.length; i++) {
+		const entry = branches[i];
+		if (entry === 'main') {
+			included = true;
+		} else if (
+			typeof entry === 'string' &&
+			entry.startsWith('!') &&
+			negationMatchesMain(event, entry, findings)
+		) {
+			included = false;
+		}
+	}
+	return included;
+}
+
 function checkWorkflowTriggers(doc, findings) {
 	const events = ['push', 'pull_request'];
 	for (let i = 0; i < events.length; i++) {
 		const event = events[i];
 		const trigger = doc?.on?.[event];
 		const branches = trigger?.branches;
-		if (!Array.isArray(branches) || !branches.includes('main')) {
+		if (!Array.isArray(branches) || !branchesIncludeMain(event, branches, findings)) {
 			findings.push(`${WORKFLOW_PATH}: on.${event}.branches must include main`);
 		}
 		checkTriggerFilters(event, trigger, findings);

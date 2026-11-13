@@ -321,6 +321,35 @@ const workflowFailures = [
 		validWorkflow.replace('  pull_request:', '  pull_request:\n    types: [opened, reopened]'),
 		/types must include opened, synchronize and reopened/,
 	],
+	[
+		'pull_request main negated after inclusion',
+		validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: [main, '!main']",
+		),
+		/on\.pull_request\.branches must include main/,
+	],
+	[
+		'push main negated by a wildcard',
+		validWorkflow.replace('push:\n    branches: [main]', "push:\n    branches: [main, '!ma*']"),
+		/on\.push\.branches must include main/,
+	],
+	[
+		'pull_request main negated by double star',
+		validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: [main, '!**']",
+		),
+		/on\.pull_request\.branches must include main/,
+	],
+	[
+		'pull_request negation that cannot be judged',
+		validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: [main, '!ma?n']",
+		),
+		/on\.pull_request\.branches entry '!ma\?n' cannot be judged against main/,
+	],
 ];
 
 describe('CI Gate workflow contract', () => {
@@ -391,6 +420,30 @@ describe('CI Gate workflow contract', () => {
 		const workflow = validWorkflow.replace(
 			'  pull_request:',
 			'  pull_request:\n    types: [opened, synchronize, reopened, labeled]',
+		);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('accepts main re-included after a negation', async () => {
+		const workflow = validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: [main, '!main', main]",
+		);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('accepts a negation before main', async () => {
+		const workflow = validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: ['!main', main]",
+		);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('accepts a negation that cannot match main', async () => {
+		const workflow = validWorkflow.replace(
+			'pull_request:\n    branches: [main]',
+			"pull_request:\n    branches: [main, 'releases/**', '!releases/**-alpha']",
 		);
 		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
 	});
