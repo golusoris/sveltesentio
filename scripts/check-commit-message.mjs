@@ -3,11 +3,11 @@
 // Lesson: a conflicted merge committed with --no-edit retained # Conflicts: without a sign-off.
 // Git v2.51.0 builtin/commit.c:run_commit_hook sets GIT_EDITOR=: without an editor;
 // git merge uses the same call. commit-msg runs before cleanup (:1128 vs :1892).
-// sequencer.c:get_cleanup_mode: unset/default strips comments only with an editor;
-// strip always strips; whitespace/verbatim/scissors preserve comments. Scissors truncates
-// at CUT_LINE with an editor. The hook cannot see --cleanup= overrides: dispatcher
-// read-back supplies the second barrier. git commit -s uses git var GIT_COMMITTER_IDENT
-// (GIT_COMMITTER_EMAIL, else user.email; both agree in this repository).
+// Strip modes remove only the active prefix: last core.commentChar/commentString, auto = '#';
+// # lines survive any other prefix. Scissors truncates at <prefix> + cut text only with
+// an editor. interpret-trailers --no-divider: a body --- is no patch divider here.
+// The hook cannot see --cleanup= overrides; dispatcher read-back supplies the second barrier.
+// git commit -s uses git var GIT_COMMITTER_IDENT (GIT_COMMITTER_EMAIL, else user.email).
 // Hook shape and file reader adopted from plurano/horistes (lefthook.yml commit-msg job,
 // tests/test_commit_messages.py, commit 5af6eeda, EUPL-1.2), horistes ADR-0072.
 import { Buffer } from 'node:buffer';
@@ -21,7 +21,15 @@ export const MESSAGE_BYTES = 262144;
 /** @type {number} */
 export const GIT_TIMEOUT_MS = 10_000;
 /** @type {string} */
-export const CUT_LINE = '# ------------------------ >8 ------------------------';
+export const CUT_LINE = cutLine('#');
+
+/**
+ * @param {string} prefix
+ * @returns {string}
+ */
+export function cutLine(prefix) {
+	return `${prefix} ------------------------ >8 ------------------------`;
+}
 
 /**
  * @param {string} path
@@ -81,6 +89,33 @@ export function committerEmail(cwd, env) {
 }
 
 /**
+ * @param {string} cwd
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {string}
+ */
+export function commentPrefix(cwd, env) {
+	const config = gitOutput(
+		['config', '--get-regexp', '^core\\.comment(char|string)$'],
+		cwd,
+		env,
+		undefined,
+		true,
+	);
+	if (config === undefined) return '#';
+	const last =
+		config
+			.split('\n')
+			.filter((line) => line.length > 0)
+			.at(-1) ?? '';
+	const space = last.indexOf(' ');
+	if (space === -1 || space === last.length - 1) {
+		throw new Error('Cannot judge: core.commentChar/commentString has no value');
+	}
+	const value = last.slice(space + 1);
+	return value === 'auto' ? '#' : value;
+}
+
+/**
  * A null entry preserves a malformed sign-off as a finding for the pure judge.
  * @param {string} message
  * @param {string} cwd
@@ -88,7 +123,7 @@ export function committerEmail(cwd, env) {
  * @returns {(string | null)[]}
  */
 export function signOffEmails(message, cwd, env) {
-	const trailers = gitOutput(['interpret-trailers', '--parse'], cwd, env, message);
+	const trailers = gitOutput(['interpret-trailers', '--parse', '--no-divider'], cwd, env, message);
 	return (trailers ?? '')
 		.split('\n')
 		.filter((line) => /^signed-off-by:/i.test(line))
@@ -112,15 +147,28 @@ export function commentsSurvive(env, cleanup) {
 }
 
 /**
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string | undefined} cleanup
+ * @returns {boolean}
+ */
+export function truncatesAtCut(env, cleanup) {
+	return cleanup === 'scissors' && env.GIT_EDITOR !== ':';
+}
+
+/**
  * @param {string} message
+ * @param {boolean} keepComments
+ * @param {string} prefix
+ * @param {boolean} truncate
  * @returns {string[]}
  */
-function commentFindings(message) {
+function commentFindings(message, keepComments, prefix, truncate) {
 	const lines = message.split(/\r?\n/);
 	const numbers = [];
 	for (let index = 0; index < lines.length; index++) {
-		if (lines[index] === CUT_LINE) break;
-		if (lines[index].startsWith('#')) numbers.push(index + 1);
+		if (truncate && lines[index] === cutLine(prefix)) break;
+		const stripped = keepComments === false && lines[index].startsWith(prefix);
+		if (lines[index].startsWith('#') && !stripped) numbers.push(index + 1);
 	}
 	const findings = numbers.slice(0, 5).map((line) => `Leftover # line at line ${line}`);
 	if (numbers.length > 5) findings.push(`and ${numbers.length - 5} more # lines`);
@@ -129,10 +177,14 @@ function commentFindings(message) {
 
 /**
  * @param {string} message
- * @param {{ email: string, signOffs: (string | null)[], commentsSurvive: boolean }} options
+ * @param {{ email: string, signOffs: (string | null)[], commentsSurvive: boolean,
+ *   commentPrefix?: string, truncatesAtCut?: boolean }} options
  * @returns {string[]}
  */
-export function judgeMessage(message, { email, signOffs, commentsSurvive: keepComments }) {
+export function judgeMessage(
+	message,
+	{ email, signOffs, commentsSurvive: keepComments, commentPrefix = '#', truncatesAtCut = false },
+) {
 	const findings = [];
 	if (signOffs.length === 0) findings.push('Missing Signed-off-by trailer');
 	if (signOffs.includes(null)) {
@@ -142,7 +194,7 @@ export function judgeMessage(message, { email, signOffs, commentsSurvive: keepCo
 	if (signOffs.length > 0 && !matches) {
 		findings.push(`Signed-off-by must name the committer email <${email}>`);
 	}
-	if (keepComments) findings.push(...commentFindings(message));
+	findings.push(...commentFindings(message, keepComments, commentPrefix, truncatesAtCut));
 	return findings;
 }
 
@@ -160,6 +212,8 @@ export function main(argv, { cwd, env }) {
 			email: committerEmail(cwd, env),
 			signOffs: signOffEmails(message, cwd, env),
 			commentsSurvive: commentsSurvive(env, cleanup?.trim()),
+			commentPrefix: commentPrefix(cwd, env),
+			truncatesAtCut: truncatesAtCut(env, cleanup?.trim()),
 		});
 		for (let index = 0; index < findings.length; index++) console.error(findings[index]);
 		if (findings.length === 0) return 0;

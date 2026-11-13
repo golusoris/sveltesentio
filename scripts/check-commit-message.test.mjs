@@ -10,12 +10,15 @@ import {
 	CUT_LINE,
 	GIT_TIMEOUT_MS,
 	MESSAGE_BYTES,
+	commentPrefix,
 	commentsSurvive,
 	committerEmail,
+	cutLine,
 	judgeMessage,
 	main,
 	readMessageFile,
 	signOffEmails,
+	truncatesAtCut,
 } from './check-commit-message.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'commit-message-'));
@@ -105,9 +108,14 @@ function installHook(cwd) {
 	return ['-c', `core.hooksPath=${hooks}`];
 }
 
-/** @param {(string | null)[]} signOffs @param {string} [message] @param {boolean} [keep] */
-function judge(signOffs, message = signed, keep = false) {
-	return judgeMessage(message, { email, signOffs, commentsSurvive: keep });
+/**
+ * @param {(string | null)[]} signOffs
+ * @param {string} [message]
+ * @param {boolean} [keep]
+ * @param {{ commentPrefix?: string, truncatesAtCut?: boolean }} [extra]
+ */
+function judge(signOffs, message = signed, keep = false, extra = {}) {
+	return judgeMessage(message, { email, signOffs, commentsSurvive: keep, ...extra });
 }
 
 test('judgeMessage accepts committer, mixed case and one matching co-signature', () => {
@@ -122,12 +130,41 @@ test('judgeMessage refuses missing, mismatched and malformed sign-offs', () => {
 	assert.match(judge([null, email]).join('\n'), /Malformed Signed-off-by/);
 });
 
-test('judgeMessage only refuses surviving # lines before CUT_LINE', () => {
+test('judgeMessage stops at the cut line only when Git truncates there', () => {
 	assert.deepEqual(judge([email], `${signed}# Conflicts:\n`, false), []);
 	assert.match(judge([email], `${signed}# Conflicts:\n`, true)[0], /line 4$/);
-	assert.deepEqual(judge([email], `${signed}${CUT_LINE}\n# discarded\n`, true), []);
-	assert.match(judge([email], `# retained\n${CUT_LINE}\n# discarded`, true)[0], /line 1$/);
+	assert.deepEqual(
+		judge([email], `${signed}${CUT_LINE}\n# discarded\n`, true, { truncatesAtCut: true }),
+		[],
+	);
+	assert.match(
+		judge([email], `# retained\n${CUT_LINE}\n# discarded`, true, { truncatesAtCut: true })[0],
+		/line 1$/,
+	);
 	assert.deepEqual(judge([email], `${signed} # indented\n`, true), []);
+	assert.deepEqual(judge([email], `${signed}${CUT_LINE}\n# discarded\n`, true), [
+		'Leftover # line at line 4',
+		'Leftover # line at line 5',
+	]);
+	const extra = { commentPrefix: ';', truncatesAtCut: true };
+	assert.deepEqual(judge([email], `# kept\n${cutLine(';')}\n# after\n`, true, extra), [
+		'Leftover # line at line 1',
+	]);
+	assert.deepEqual(judge([email], `${CUT_LINE}\n# after\n`, true, extra), [
+		'Leftover # line at line 1',
+		'Leftover # line at line 2',
+	]);
+});
+
+test('judgeMessage refuses # lines that a non-# comment prefix keeps', () => {
+	assert.deepEqual(judge([email], `${signed}# Conflicts:\n`, false, { commentPrefix: '#' }), []);
+	assert.deepEqual(judge([email], `${signed}# Conflicts:\n`, false, { commentPrefix: ';' }), [
+		'Leftover # line at line 4',
+	]);
+	assert.deepEqual(
+		judge([email], `${signed}#! stripped\n# Conflicts:\n`, false, { commentPrefix: '#!' }),
+		['Leftover # line at line 5'],
+	);
 });
 
 test('judgeMessage reports five # lines and the remaining count', () => {
@@ -165,6 +202,39 @@ test('commentsSurvive requires exactly : and refuses unknown cleanup', () => {
 	assert.equal(commentsSurvive({}, undefined), false);
 	assert.equal(commentsSurvive({ GIT_EDITOR: ': ' }, undefined), false);
 	assert.throws(() => commentsSurvive({}, 'unknown'), /unknown commit.cleanup/);
+});
+
+const truncationCases = [
+	['scissors', 'editor', true],
+	['scissors', ':', false],
+	['whitespace', 'editor', false],
+	[undefined, 'editor', false],
+	['strip', 'editor', false],
+];
+for (let index = 0; index < truncationCases.length; index++) {
+	const [cleanup, editor, expected] = truncationCases[index];
+	test(`truncatesAtCut: cleanup=${cleanup}, GIT_EDITOR=${editor}`, () => {
+		assert.equal(truncatesAtCut({ GIT_EDITOR: editor }, cleanup), expected);
+	});
+}
+
+test('commentPrefix reads the last comment key and maps auto to #', () => {
+	const cwd = repository();
+	assert.equal(commentPrefix(cwd, env), '#');
+	git(cwd, ['config', 'core.commentChar', ';']);
+	assert.equal(commentPrefix(cwd, env), ';');
+	git(cwd, ['config', '--add', 'core.commentString', '%']);
+	assert.equal(commentPrefix(cwd, env), '%');
+	const reverse = repository();
+	git(reverse, ['config', 'core.commentString', '%']);
+	git(reverse, ['config', 'core.commentChar', ';']);
+	assert.equal(commentPrefix(reverse, env), ';');
+	const auto = repository();
+	git(auto, ['config', 'core.commentChar', 'auto']);
+	assert.equal(commentPrefix(auto, env), '#');
+	const empty = repository();
+	git(empty, ['config', 'core.commentChar', '']);
+	assert.throws(() => commentPrefix(empty, env), /Cannot judge/);
 });
 
 test('readMessageFile accepts empty and exactly MESSAGE_BYTES, refuses one extra byte', () => {
@@ -206,6 +276,14 @@ test('git identity and trailer parser use committer, mixed-case keys and strict 
 	assert.equal(committerEmail(cwd, { ...env, GIT_AUTHOR_EMAIL: 'author@example.org' }), email);
 	const message = 'chore: x\n\nsIgNeD-oFf-By: A Person <PERSON@EXAMPLE.ORG>\n';
 	assert.deepEqual(signOffEmails(message, cwd, env), ['PERSON@EXAMPLE.ORG']);
+	assert.deepEqual(
+		signOffEmails(
+			'chore: x\n\nbody\n\n---\n\nmore\n\nSigned-off-by: A Person <person@example.org>\n',
+			cwd,
+			env,
+		),
+		['person@example.org'],
+	);
 	assert.deepEqual(signOffEmails('chore: x\n\nSigned-off-by: not-an-ident\n', cwd, env), [null]);
 	assert.deepEqual(signOffEmails('chore: x\n\nSigned-off-by: <person@example.org>\n', cwd, env), [
 		null,
@@ -266,6 +344,59 @@ test('planted unsigned commit lands WITHOUT hook; judge refuses its actual log t
 	const message = git(cwd, ['log', '-1', '--format=%B']);
 	assert.doesNotMatch(message, /Signed-off-by:/i);
 	assert.equal(main([messageFile(cwd, message)], { cwd, env }), 1);
+});
+
+test('planted signed commit with a --- body lands; main accepts it', (t) => {
+	t.mock.method(console, 'error', () => {});
+	const cwd = repository();
+	const file = messageFile(cwd, 'chore: x\n\nbody\n\n---\n\nmore\n');
+	git(cwd, ['commit', '--allow-empty', '-s', '-F', file]);
+	const message = git(cwd, ['log', '-1', '--format=%B']);
+	assert.equal(main([messageFile(cwd, message)], { cwd, env: { ...env, GIT_EDITOR: ':' } }), 0);
+});
+
+test('planted commentChar ; strip commit keeps # lines; main refuses it', (t) => {
+	t.mock.method(console, 'error', () => {});
+	const cwd = repository();
+	git(cwd, ['config', 'core.commentChar', ';']);
+	git(cwd, ['config', 'commit.cleanup', 'strip']);
+	const file = messageFile(
+		cwd,
+		'chore: x\n\n# Conflicts:\n#\tf.txt\n\nSigned-off-by: A Person <person@example.org>\n',
+	);
+	git(cwd, ['commit', '--allow-empty', '-F', file]);
+	const message = git(cwd, ['log', '-1', '--format=%B']);
+	assert.match(message, /^# Conflicts:/m);
+	assert.equal(main([messageFile(cwd, message)], { cwd, env: { ...env, GIT_EDITOR: ':' } }), 1);
+});
+
+test('planted scissors commit without an editor keeps the cut; main refuses it', (t) => {
+	const errors = t.mock.method(console, 'error', () => {});
+	const cwd = repository();
+	git(cwd, ['config', 'commit.cleanup', 'scissors']);
+	const file = messageFile(
+		cwd,
+		`chore: y\n\nSigned-off-by: A Person <person@example.org>\n${CUT_LINE}\n# Conflicts:\n`,
+	);
+	git(cwd, ['commit', '--allow-empty', '-F', file]);
+	const message = git(cwd, ['log', '-1', '--format=%B']);
+	assert.ok(message.split('\n').includes(CUT_LINE));
+	assert.match(message, /^Signed-off-by: A Person <person@example\.org>$/m);
+	const path = messageFile(cwd, message);
+	assert.equal(main([path], { cwd, env: { ...env, GIT_EDITOR: ':' } }), 1);
+	const kept = errors.mock.calls.map((call) => call.arguments.join(' ')).join('\n');
+	assert.match(kept, /Leftover # line at line 4/);
+	assert.doesNotMatch(kept, /Missing Signed-off-by/);
+	errors.mock.resetCalls();
+	assert.equal(main([path], { cwd, env: { ...env, GIT_EDITOR: 'editor' } }), 0);
+	// With an editor Git truncates at the cut, so a sign-off below it never reaches the commit.
+	const below = messageFile(
+		cwd,
+		`chore: y\n\n${CUT_LINE}\n# Conflicts:\n\nSigned-off-by: A Person <person@example.org>\n`,
+	);
+	errors.mock.resetCalls();
+	assert.equal(main([below], { cwd, env: { ...env, GIT_EDITOR: 'editor' } }), 1);
+	assert.equal(errors.mock.calls[0].arguments[0], 'Missing Signed-off-by trailer');
 });
 
 test('planted conflicted --no-edit merge lands WITHOUT hook and retains # lines', (t) => {
