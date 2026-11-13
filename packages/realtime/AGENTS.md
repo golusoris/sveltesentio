@@ -1,6 +1,6 @@
 # @sveltesentio/realtime — AGENTS.md
 
-> SSE + ConnectRPC streaming + WebSocket (Yjs) transports, each separate hook. No unified "realtime" abstraction. Phase 8 per `.workingdir/PLAN.md`.
+> SSE + ConnectRPC streaming, each separate hook. No unified "realtime" abstraction. Yjs WS lives in `@sveltesentio/collab` (ADR-0039). Phase 8 per `.workingdir/PLAN.md`.
 
 ## Scope
 

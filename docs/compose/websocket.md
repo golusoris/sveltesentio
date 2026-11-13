@@ -71,7 +71,7 @@ API. Drop-in replacement once you've decided you need the polish.
 ## `useWebSocket()` shape
 
 ```ts
-// @sveltesentio/realtime/ws (opt-in module per ADR-0038)
+// src/lib/realtime/ws.ts: app-local; ADR-0038 keeps partysocket out of @sveltesentio/realtime
 import PartySocket from 'partysocket';
 
 export interface UseWebSocketOptions<TIn, TOut> {
@@ -112,7 +112,7 @@ Two design points:
 
 ```svelte
 <script lang="ts">
-  import { useWebSocket } from '@sveltesentio/realtime/ws';
+  import { useWebSocket } from '#lib/realtime/ws.js';
   import { z } from 'zod';
 
   const Inbound = z.discriminatedUnion('type', [
