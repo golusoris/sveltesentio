@@ -1,10 +1,12 @@
 // Tests for scripts/check-migration-codemods.mjs: the frontmatter reader, and
 // whole runs on throwaway trees that hold migration guides and codemods.
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 import { afterEach, describe, it, mock } from 'node:test';
 import {
 	CODEMOD_LIMIT,
@@ -19,6 +21,7 @@ import {
 } from './check-migration-codemods.mjs';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const execFileAsync = promisify(execFile);
 
 /** @param {number} count */
 const guide = (count) =>
@@ -368,7 +371,20 @@ describe('runCheck', () => {
 			[`${CODEMOD}/transform.mjs`]:
 				"setInterval(() => {}, 60_000);\nexport default (s) => s.replaceAll('foo(', 'bar(');\n",
 		};
-		assert.deepEqual(await findings(files), []);
+		const root = await tree(files);
+		const driver = join(root, 'check.mjs');
+		const checker = pathToFileURL(join(repoRoot, 'scripts/check-migration-codemods.mjs')).href;
+		await writeFile(
+			driver,
+			`import { runCheck } from ${JSON.stringify(checker)};\n` +
+				'const { findings } = await runCheck({ root: process.argv[2] });\n' +
+				'console.log(JSON.stringify(findings));\n',
+		);
+		const { stdout } = await execFileAsync(process.execPath, [driver, root], {
+			timeout: 15_000,
+			killSignal: 'SIGKILL',
+		});
+		assert.equal(stdout.trim(), '[]');
 	});
 
 	it('stops a synchronous loop at its deadline', { timeout: 20_000 }, async () => {
@@ -415,6 +431,20 @@ describe('runCheck', () => {
 
 	it('passes a good codemod within the suite deadline', async () => {
 		assert.deepEqual(await findings(goodTree(), 5_000, 30_000), []);
+	});
+
+	it('reports only the suite deadline when aborted before discovery', async () => {
+		const root = await tree(goodTree());
+		const result = await runCheck({ root, signal: AbortSignal.abort() });
+		assertOne(result.findings, 'tools/migrations', /suite deadline of \d+ ms reached/);
+		assert.equal(result.codemods, 0);
+	});
+
+	it('skips count mismatches when aborted before discovery', async () => {
+		const root = await tree({ ...goodTree(), 'docs/migrations/v0.9.md': guide(2) });
+		const result = await runCheck({ root, signal: AbortSignal.abort() });
+		assertOne(result.findings, 'tools/migrations', /suite deadline of \d+ ms reached/);
+		assert.equal(result.codemods, 0);
 	});
 
 	it('reports a guide with bad frontmatter, without a count finding on top', async () => {

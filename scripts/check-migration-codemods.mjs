@@ -29,6 +29,8 @@ export const FIXTURE_LIMIT = 200;
 export const FRONTMATTER_LINE_LIMIT = 200;
 export const TRANSFORM_TIMEOUT_MS = 30_000;
 // Half of the lint job's timeout-minutes: 10; it also installs and runs other checks.
+// An in-flight readdir cannot be cancelled: the run ends at most one IO_TIMEOUT_MS
+// past the suite deadline.
 export const SUITE_TIMEOUT_MS = 300_000;
 const IO_TIMEOUT_MS = 10_000;
 
@@ -56,9 +58,13 @@ function note(
 	ctx.findings.push({ file: relative(ctx.root, path).split(sep).join('/'), message });
 }
 
-/** @param {string} path */
-function readText(path) {
-	return readFile(path, { encoding: 'utf8', signal: AbortSignal.timeout(IO_TIMEOUT_MS) });
+/** @param {string} path @param {AbortSignal} [signal] */
+function readText(path, signal) {
+	const deadline = AbortSignal.timeout(IO_TIMEOUT_MS);
+	return readFile(path, {
+		encoding: 'utf8',
+		signal: signal ? AbortSignal.any([deadline, signal]) : deadline,
+	});
 }
 
 /** @param {unknown} doc @returns {{ count: number } | { error: string }} */
@@ -122,6 +128,7 @@ async function listDir(
 	/** @type {string} */ dir,
 	/** @type {number} */ limit,
 ) {
+	if (ctx.suite.aborted) return null;
 	let entries;
 	try {
 		entries = await withTimeout(
@@ -130,10 +137,11 @@ async function listDir(
 			`readdir ${dir}`,
 		);
 	} catch (error) {
-		if (isMissing(error)) return null;
+		if (ctx.suite.aborted || isMissing(error)) return null;
 		note(ctx, dir, `cannot be listed: ${errorMessage(error)}`);
 		return [];
 	}
+	if (ctx.suite.aborted) return null;
 	if (entries.length > limit) {
 		note(
 			ctx,
@@ -151,10 +159,11 @@ async function readVersionDocs(/** @type {Context} */ ctx) {
 	/** @type {Map<string, { path: string, count: number | null }>} */
 	const docs = new Map();
 	for (const entry of (await listDir(ctx, dir, ENTRY_LIMIT)) ?? []) {
+		if (ctx.suite.aborted) break;
 		const match = VERSION_DOC.exec(entry.name);
 		if (!entry.isFile() || !match) continue;
 		const path = join(dir, entry.name);
-		const result = readCodemodCount(await readText(path));
+		const result = readCodemodCount(await readText(path, ctx.suite));
 		if ('error' in result) note(ctx, path, result.error);
 		docs.set(match[1], { path, count: 'count' in result ? result.count : null });
 	}
@@ -167,6 +176,7 @@ async function readCodemodVersions(/** @type {Context} */ ctx) {
 	/** @type {Map<string, { path: string, codemods: string[] }>} */
 	const versions = new Map();
 	for (const entry of (await listDir(ctx, dir, VERSION_LIMIT)) ?? []) {
+		if (ctx.suite.aborted) break;
 		if (!entry.isDirectory()) continue;
 		const path = join(dir, entry.name);
 		const match = VERSION_DIR.exec(entry.name);
@@ -259,6 +269,7 @@ function completePairs(ctx, dir, cases) {
 /** The fixture pairs; `path` is relative to the codemod directory, with forward slashes. */
 async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} */ dir) {
 	const entries = await listDir(ctx, dir, FIXTURE_LIMIT);
+	if (ctx.suite.aborted) return [];
 	if (entries === null) {
 		note(
 			ctx,
@@ -324,8 +335,8 @@ async function checkPair(
 	transform,
 	/** @type {{ input: string, output: string, path: string }} */ pair,
 ) {
-	const source = await readText(pair.input);
-	const expected = await readText(pair.output);
+	const source = await readText(pair.input, ctx.suite);
+	const expected = await readText(pair.output, ctx.suite);
 	const actual = await applyTransform(ctx, transform, source, pair.path);
 	if (!actual.ok) {
 		if (actual.message !== null) note(ctx, pair.input, actual.message);
@@ -355,22 +366,8 @@ async function checkCodemod(/** @type {Context} */ ctx, /** @type {string} */ di
 	}
 }
 
-/**
- * Every finding for the guides in `root`/docs/migrations/ and the codemods in
- * `root`/tools/migrations/.
- * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number }} [options]
- * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
- */
-export async function runCheck({
-	root = repoRoot,
-	timeoutMs = TRANSFORM_TIMEOUT_MS,
-	suiteTimeoutMs = SUITE_TIMEOUT_MS,
-} = {}) {
-	/** @type {Context} */
-	const ctx = { root, timeoutMs, suite: AbortSignal.timeout(suiteTimeoutMs), findings: [] };
-	const docs = await readVersionDocs(ctx);
-	const versions = await readCodemodVersions(ctx);
-	compareCounts(ctx, docs, versions);
+/** Checks discovered codemods until the suite deadline, returning the number checked. */
+async function checkVersions(/** @type {Context} */ ctx, versions) {
 	let codemods = 0;
 	for (const version of versions.values()) {
 		if (ctx.suite.aborted) break;
@@ -378,6 +375,44 @@ export async function runCheck({
 			if (ctx.suite.aborted) break;
 			await checkCodemod(ctx, dir);
 			codemods++;
+		}
+	}
+	return codemods;
+}
+
+/**
+ * Every finding for the guides in `root`/docs/migrations/ and the codemods in
+ * `root`/tools/migrations/.
+ * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number,
+ * signal?: AbortSignal }} [options]
+ * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
+ */
+export async function runCheck({
+	root = repoRoot,
+	timeoutMs = TRANSFORM_TIMEOUT_MS,
+	suiteTimeoutMs = SUITE_TIMEOUT_MS,
+	signal,
+} = {}) {
+	const suite = AbortSignal.timeout(suiteTimeoutMs);
+	/** @type {Context} */
+	const ctx = {
+		root,
+		timeoutMs,
+		suite: signal ? AbortSignal.any([suite, signal]) : suite,
+		findings: [],
+	};
+	let docs = new Map();
+	let codemods = 0;
+	try {
+		docs = await readVersionDocs(ctx);
+		const versions = await readCodemodVersions(ctx);
+		if (!ctx.suite.aborted) {
+			compareCounts(ctx, docs, versions);
+			codemods = await checkVersions(ctx, versions);
+		}
+	} catch (error) {
+		if (!ctx.suite.aborted) {
+			throw new Error(`migration codemod check failed: ${errorMessage(error)}`, { cause: error });
 		}
 	}
 	if (ctx.suite.aborted) {

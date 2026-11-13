@@ -50,7 +50,7 @@ Each call gets a fresh module instance, so a transform cannot pass the second ru
 - a directory holds more entries than its limit, and then nothing in it is checked: 1,000 entries in `docs/migrations/`, 200 here in `tools/migrations/`, 100 in one version directory, 200 in one `fixtures/`; or a guide's frontmatter does not close within 200 lines;
 - the transform throws, returns something other than a string, or exceeds the 30-second deadline; each transform call runs in a fresh worker thread that the check stops after the result or at the deadline, so a slow synchronous transform or a loop that never returns fails the check and a timer left running cannot hang it.
 
-The whole run stops after 5 minutes with one finding naming the suite deadline.
+The whole run, including discovery, has a 5-minute deadline with one finding naming it; the run ends at most one 10-second file-system call past that deadline.
 
 Run it locally:
 
