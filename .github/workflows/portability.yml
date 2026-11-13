@@ -121,4 +121,4 @@ jobs:
       - name: Ruleset check
         run: pnpm check:ruleset
       - name: Ruleset check tests
-        run: node --test scripts/check-ruleset.test.mjs
+        run: node --test scripts/check-ruleset.test.mjs scripts/check-ruleset-contract.test.mjs
