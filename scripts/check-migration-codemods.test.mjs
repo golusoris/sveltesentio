@@ -8,6 +8,10 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, it, mock } from 'node:test';
 import {
 	CODEMOD_LIMIT,
+	ENTRY_LIMIT,
+	FIXTURE_LIMIT,
+	FRONTMATTER_LINE_LIMIT,
+	VERSION_LIMIT,
 	firstDifferentLine,
 	main,
 	readCodemodCount,
@@ -80,6 +84,17 @@ describe('readCodemodCount', () => {
 		assert.match(readCodemodCount('---\ncodemods: 1\n').error ?? '', /no closing ---/);
 	});
 
+	it(`reads ${FRONTMATTER_LINE_LIMIT} frontmatter lines, and refuses one more`, () => {
+		const lines = ['codemods: 1'];
+		for (let i = 0; i < FRONTMATTER_LINE_LIMIT - 1; i++) {
+			lines.push(`k${i}: x`);
+		}
+		assert.deepEqual(readCodemodCount(`---\n${lines.join('\n')}\n---\n`), { count: 1 });
+
+		lines.push('extra: x');
+		assert.match(readCodemodCount(`---\n${lines.join('\n')}\n---\n`).error ?? '', /no closing ---/);
+	});
+
 	it('refuses frontmatter that is not valid YAML, or not a mapping', () => {
 		assert.match(readCodemodCount('---\ncodemods: [1\n---\n').error ?? '', /not valid YAML/);
 		assert.match(
@@ -139,6 +154,17 @@ describe('runCheck', () => {
 			[`${CODEMOD}/fixtures/runes.input.svelte.ts`]: 'foo(2);\n',
 			[`${CODEMOD}/fixtures/runes.output.svelte.ts`]: 'bar(2);\n',
 		};
+		assert.deepEqual(await findings(files), []);
+	});
+
+	it('passes the same virtual path with the real multi-part extension on both runs', async () => {
+		const files = /** @type {Record<string, string>} */ (goodTree());
+		delete files[`${CODEMOD}/fixtures/basic.input.ts`];
+		delete files[`${CODEMOD}/fixtures/basic.output.ts`];
+		files[`${CODEMOD}/transform.mjs`] =
+			"import { basename } from 'node:path';\nexport default (s, p) => (basename(p) === 'basic.svelte.ts' ? s.replaceAll('foo(', 'bar(') : 'path ' + p);\n";
+		files[`${CODEMOD}/fixtures/basic.input.svelte.ts`] = 'foo(1);\n';
+		files[`${CODEMOD}/fixtures/basic.output.svelte.ts`] = 'bar(1);\n';
 		assert.deepEqual(await findings(files), []);
 	});
 
@@ -264,6 +290,16 @@ describe('runCheck', () => {
 		assertOne(await findings(files), `${CODEMOD}/fixtures/basic.output.ts`, /not idempotent/);
 	});
 
+	it('reports a transform that hides non-idempotence behind the output fixture path', async () => {
+		const files = {
+			...goodTree(),
+			[`${CODEMOD}/transform.mjs`]:
+				"export default (s, p) => p.endsWith('.output.ts') ? s : s + '// migrated\\n';\n",
+			[`${CODEMOD}/fixtures/basic.output.ts`]: 'foo(1);\n// migrated\n',
+		};
+		assertOne(await findings(files), `${CODEMOD}/fixtures/basic.output.ts`, /not idempotent/);
+	});
+
 	it('reports a transform that never settles once the deadline passes', async () => {
 		const files = {
 			...goodTree(),
@@ -283,6 +319,65 @@ describe('runCheck', () => {
 		assertOne(await findings(negative), 'docs/migrations/v0.9.md', /got -1/);
 		const word = { ...goodTree(), 'docs/migrations/v0.9.md': "---\ncodemods: 'two'\n---\n" };
 		assertOne(await findings(word), 'docs/migrations/v0.9.md', /got "two"/);
+	});
+
+	it(`checks ${ENTRY_LIMIT} migration entries, and refuses one more`, async () => {
+		/** @type {Record<string, string>} */
+		const files = { 'docs/migrations/v0.9.md': guide(0) };
+		for (let i = 0; i < ENTRY_LIMIT - 1; i++) {
+			files[`docs/migrations/n${i}.md`] = '# notes\n';
+		}
+		assert.deepEqual(await findings(files), []);
+
+		files['docs/migrations/extra.md'] = '# notes\n';
+		const got = await findings(files);
+		assert.ok(
+			got.some(
+				(f) => f.file === 'docs/migrations' && /more than the limit of 1000/.test(f.message),
+			),
+			JSON.stringify(got),
+		);
+	});
+
+	it(`checks ${VERSION_LIMIT} version directories, and refuses one more`, async () => {
+		/** @type {Record<string, string>} */
+		const files = {};
+		for (let i = 0; i < VERSION_LIMIT; i++) {
+			files[`tools/migrations/v1.${i}/README.md`] = '# codemods\n';
+			files[`docs/migrations/v1.${i}.md`] = guide(0);
+		}
+		assert.deepEqual(await findings(files), []);
+
+		files[`tools/migrations/v1.${VERSION_LIMIT}/README.md`] = '# codemods\n';
+		files[`docs/migrations/v1.${VERSION_LIMIT}.md`] = guide(0);
+		const got = await findings(files);
+		assert.ok(
+			got.some(
+				(f) => f.file === 'tools/migrations' && /more than the limit of 200/.test(f.message),
+			),
+			JSON.stringify(got),
+		);
+	});
+
+	it(`checks ${FIXTURE_LIMIT} fixture files, and refuses one more`, async () => {
+		const files = /** @type {Record<string, string>} */ (goodTree());
+		files[`${CODEMOD}/transform.mjs`] = 'export default (s) => s;\n';
+		delete files[`${CODEMOD}/fixtures/basic.input.ts`];
+		delete files[`${CODEMOD}/fixtures/basic.output.ts`];
+		for (let i = 0; i < FIXTURE_LIMIT / 2; i++) {
+			files[`${CODEMOD}/fixtures/c${i}.input.txt`] = 'x\n';
+			files[`${CODEMOD}/fixtures/c${i}.output.txt`] = 'x\n';
+		}
+		assert.deepEqual(await findings(files), []);
+
+		files[`${CODEMOD}/fixtures/extra.input.txt`] = 'x\n';
+		const got = await findings(files);
+		assert.ok(
+			got.some(
+				(f) => f.file === `${CODEMOD}/fixtures` && /more than the limit of 200/.test(f.message),
+			),
+			JSON.stringify(got),
+		);
 	});
 
 	it(`checks ${CODEMOD_LIMIT} codemods in one version, and refuses one more`, async () => {

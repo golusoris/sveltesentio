@@ -265,7 +265,7 @@ async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} *
 		);
 		return [];
 	}
-	/** @type {Map<string, { input: string | null, output: string | null }>} */
+	/** @type {Map<string, { input: string | null, output: string | null, path: string }>} */
 	const cases = new Map();
 	for (const entry of entries) {
 		const match = FIXTURE.exec(entry.name);
@@ -278,7 +278,7 @@ async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} *
 			continue;
 		}
 		const key = `${match[1]}${match[3]}`;
-		const pair = cases.get(key) ?? { input: null, output: null };
+		const pair = cases.get(key) ?? { input: null, output: null, path: join(dir, key) };
 		pair[/** @type {'input' | 'output'} */ (match[2])] = join(dir, entry.name);
 		cases.set(key, pair);
 	}
@@ -310,11 +310,20 @@ async function applyTransform(ctx, /** @type {Transform} */ transform, source, f
 	return { ok: true, value };
 }
 
-/** One fixture pair: the input must turn into the output exactly, and the output must stay as it is. */
-async function checkPair(ctx, transform, /** @type {{ input: string, output: string }} */ pair) {
+/**
+ * One fixture pair: the input must turn into the output exactly, and the output must stay as it is.
+ * Both runs see the fixture's path without `.input`/`.output` (`fixtures/basic.ts`
+ * for `basic.input.ts`), so the transform sees the real extension and cannot pass
+ * the second run by reading a different path.
+ */
+async function checkPair(
+	ctx,
+	transform,
+	/** @type {{ input: string, output: string, path: string }} */ pair,
+) {
 	const source = await readText(pair.input);
 	const expected = await readText(pair.output);
-	const actual = await applyTransform(ctx, transform, source, pair.input);
+	const actual = await applyTransform(ctx, transform, source, pair.path);
 	if (!actual.ok) {
 		note(ctx, pair.input, actual.message);
 		return;
@@ -324,7 +333,7 @@ async function checkPair(ctx, transform, /** @type {{ input: string, output: str
 		note(ctx, pair.output, `codemod output differs from this fixture at line ${line}`);
 		return;
 	}
-	const again = await applyTransform(ctx, transform, expected, pair.output);
+	const again = await applyTransform(ctx, transform, expected, pair.path);
 	if (!again.ok) {
 		note(ctx, pair.output, again.message);
 	} else if (again.value !== expected) {

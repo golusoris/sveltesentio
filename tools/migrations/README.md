@@ -18,6 +18,8 @@ tools/migrations/
 
 `<ext>` is the extension of the files the codemod rewrites, and may have several parts: `basic.input.ts` pairs with `basic.output.ts`, `runes.input.svelte.ts` with `runes.output.svelte.ts`.
 
+`<case>` contains letters, digits, `_` and `-`; each part of `<ext>` contains letters and digits. A dotted case name such as `optional.chain.input.ts` is not a fixture name; the check reports it.
+
 ## The transform
 
 `transform.mjs` default-exports one function:
@@ -29,7 +31,7 @@ export default function transform(source, filePath) {
 }
 ```
 
-It takes a file's text and path and returns the rewritten text. It must be pure: no file writes, no network, no reading the clock. Any engine fits behind it: a string rewrite, a `jscodeshift` or `ast-grep` transform, or the Svelte compiler's parser. The path lets it pick a parser by extension.
+It takes a file's text and path and returns the rewritten text. It must be pure: no file writes, no network, no reading the clock. Any engine fits behind it: a string rewrite, a `jscodeshift` or `ast-grep` transform, or the Svelte compiler's parser. The path lets it pick a parser by extension. The check calls it with the fixture's path minus `.input` or `.output` (`fixtures/basic.ts` for `basic.input.ts`), the same path on both runs.
 
 ## What the check enforces
 
@@ -40,7 +42,8 @@ It takes a file's text and path and returns the rewritten text. It must be pure:
 - a codemod has no `transform.mjs`, or it does not default-export a function;
 - `fixtures/` holds no complete `<case>.input<ext>` and `<case>.output<ext>` pair, a file lacks its partner, or a file there is not named as a fixture;
 - the transform's result for an input differs from its output fixture (the finding names the first differing line);
-- the transform changes its own output fixture: a codemod must be safe to run twice;
+- the transform changes its own output fixture on a second run at the same path: a codemod must be safe to run twice;
+- a directory holds more entries than its limit, and then nothing in it is checked: 1,000 entries in `docs/migrations/`, 200 here in `tools/migrations/`, 100 in one version directory, 200 in one `fixtures/`; or a guide's frontmatter does not close within 200 lines;
 - the transform throws, returns something other than a string, or does not settle within 30 seconds.
 
 The deadline bounds a codemod that awaits forever; a synchronous loop that never returns is bounded only by the CI job's `timeout-minutes`.
