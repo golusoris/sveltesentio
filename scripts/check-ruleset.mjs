@@ -265,15 +265,15 @@ export function refPatternMatches(pattern, ref) {
 	let reach = new Array(ref.length + 1).fill(false);
 	reach[0] = true;
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i];
-		if (token === '**/') {
+		const part = tokens[i];
+		if (part === '**/') {
 			reach = advanceRefElements(ref, reach);
 			continue;
 		}
 		reach =
-			token === '*' || token === '**'
-				? advanceRefStar(token, ref, reach)
-				: advanceRefCharacter(token, ref, reach);
+			part === '*' || part === '**'
+				? advanceRefStar(part, ref, reach)
+				: advanceRefCharacter(part, ref, reach);
 	}
 	return reach[ref.length];
 }
