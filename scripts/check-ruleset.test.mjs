@@ -8,6 +8,7 @@ import { IO_TIMEOUT_MS } from './check-platform-legs.mjs';
 import {
 	ADMIN_ROLE_ID,
 	BYPASS_MODES,
+	CATCH_ALL_PATTERNS,
 	CODEOWNERS_CANDIDATES,
 	CODEOWNERS_LINE_LIMIT,
 	GATE_CONTEXT,
@@ -224,6 +225,24 @@ describe('CODEOWNERS maintainer boundaries', () => {
 		});
 	}
 
+	it('rejects all three review requirements after an owner-less catch-all', async () => {
+		const root = await fixture({
+			ruleset: makeRuleset({
+				review: {
+					required_approving_review_count: 1,
+					require_code_owner_review: true,
+					require_last_push_approval: true,
+				},
+			}),
+			owners: { '.github/CODEOWNERS': '* @org/team\n*\n/docs/ @owner' },
+		});
+		const { findings } = await checkRuleset(root);
+		assert.equal(findings.length, 3);
+		assert.match(findings[0], /required_approving_review_count/);
+		assert.match(findings[1], /require_code_owner_review/);
+		assert.match(findings[2], /require_last_push_approval/);
+	});
+
 	it('treats missing CODEOWNERS as a sole maintainer', async () => {
 		const root = await fixture({
 			ruleset: makeRuleset({ review: { required_approving_review_count: 1 } }),
@@ -308,6 +327,31 @@ describe('invalid ruleset input', () => {
 		assert.equal(findings.length, 1);
 		assert.match(findings[0], /^\.github\/rulesets\/main.json: cannot read file/);
 	});
+});
+
+const catchAllCases = [
+	['owner-less reset before a narrower owner', '* @org/team\n*\n/docs/ @owner', ['@owner'], []],
+	['star reset with an owner', '* @org/team\n* @owner', ['@owner'], []],
+	['double-star reset with an owner', '* @org/team\n** @owner', ['@owner'], []],
+	['narrower team preserves earlier user', '* @a\n/docs/ @org/team', ['@a'], ['@org/team']],
+	['owner-less reset after a narrower team', '/docs/ @org/team\n*', [], []],
+	['reset after a wildcard extension pattern', '*.js @org/team\n* @owner', ['@owner'], []],
+];
+
+describe('parseCodeowners catch-all precedence', () => {
+	it('exports only the supported catch-all patterns', () => {
+		assert.deepEqual(CATCH_ALL_PATTERNS, ['*', '**']);
+	});
+
+	for (let i = 0; i < catchAllCases.length; i++) {
+		const [name, source, users, others] = catchAllCases[i];
+		it(name, () => {
+			const parsed = parseCodeowners(source);
+			assert.deepEqual([...parsed.users], users);
+			assert.deepEqual([...parsed.others], others);
+			assert.equal(parsed.error, null);
+		});
+	}
 });
 
 describe('parseCodeowners token rules', () => {

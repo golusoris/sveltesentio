@@ -14,11 +14,16 @@ const RULESET_PATH = '.github/rulesets/main.json';
 export const ADMIN_ROLE_ID = 5;
 export const BYPASS_MODES = ['always', 'pull_request'];
 export const GATE_CONTEXT = 'CI Gate';
+export const CATCH_ALL_PATTERNS = ['*', '**'];
 export const CODEOWNERS_CANDIDATES = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS'];
 export const CODEOWNERS_LINE_LIMIT = 2_000;
 
 function addOwners(line, users, others) {
 	const tokens = line.trim().split(/\s+/);
+	if (CATCH_ALL_PATTERNS.includes(tokens[0])) {
+		users.clear();
+		others.clear();
+	}
 	for (let i = 1; i < tokens.length; i++) {
 		const owner = tokens[i];
 		if (owner.startsWith('#')) break;
@@ -30,6 +35,7 @@ function addOwners(line, users, others) {
 	}
 }
 
+/** Catch-all lines reset owners because GitHub applies the last matching pattern. */
 export function parseCodeowners(source) {
 	const users = new Set();
 	const others = new Set();
