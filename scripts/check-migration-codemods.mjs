@@ -9,7 +9,7 @@
 // wrongly. The contract checked here is written down in tools/migrations/README.md.
 //
 // `make verify-all` and the CI lint job run it; `pnpm test:scripts` runs the
-// tests in check-migration-codemods.test.mjs.
+// tests in check-migration-codemods.test.mjs and check-migration-codemods-transforms.test.mjs.
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
