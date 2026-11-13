@@ -43,6 +43,8 @@ const FIXTURE = /^([A-Za-z0-9_-]+)\.(input|output)((?:\.[A-Za-z0-9]+)+)$/;
 
 /** @typedef {{ file: string, message: string }} Finding */
 /** @typedef {{ root: string, timeoutMs: number, suite: AbortSignal, findings: Finding[] }} Context */
+/** @typedef {Map<string, { path: string, count: number | null }>} VersionDocs */
+/** @typedef {Map<string, { path: string, codemods: string[] }>} CodemodVersions */
 
 /** @param {unknown} error */
 function isMissing(error) {
@@ -156,7 +158,7 @@ async function listDir(
 /** Each version guide in docs/migrations/ with the count it declares (`null` when unreadable). */
 async function readVersionDocs(/** @type {Context} */ ctx) {
 	const dir = join(ctx.root, 'docs', 'migrations');
-	/** @type {Map<string, { path: string, count: number | null }>} */
+	/** @type {VersionDocs} */
 	const docs = new Map();
 	for (const entry of (await listDir(ctx, dir, ENTRY_LIMIT)) ?? []) {
 		if (ctx.suite.aborted) break;
@@ -173,7 +175,7 @@ async function readVersionDocs(/** @type {Context} */ ctx) {
 /** Each version directory in tools/migrations/ with the codemod directories it holds. */
 async function readCodemodVersions(/** @type {Context} */ ctx) {
 	const dir = join(ctx.root, 'tools', 'migrations');
-	/** @type {Map<string, { path: string, codemods: string[] }>} */
+	/** @type {CodemodVersions} */
 	const versions = new Map();
 	for (const entry of (await listDir(ctx, dir, VERSION_LIMIT)) ?? []) {
 		if (ctx.suite.aborted) break;
@@ -195,8 +197,15 @@ async function readCodemodVersions(/** @type {Context} */ ctx) {
 	return versions;
 }
 
-/** Each guide's declared count against the codemods shipped for its version, both ways. */
-function compareCounts(ctx, docs, versions) {
+/**
+ * Each guide's declared count against the codemods shipped for its version, both ways.
+ * Records nothing after a suite abort, because the maps may be partial.
+ * @param {Context} ctx
+ * @param {VersionDocs} docs
+ * @param {CodemodVersions} versions
+ */
+export function compareCounts(ctx, docs, versions) {
+	if (ctx.suite.aborted) return;
 	for (const [version, doc] of docs) {
 		const have = versions.get(version)?.codemods.length ?? 0;
 		if (doc.count !== null && doc.count !== have) {
@@ -367,7 +376,7 @@ async function checkCodemod(/** @type {Context} */ ctx, /** @type {string} */ di
 }
 
 /** Checks discovered codemods until the suite deadline, returning the number checked. */
-async function checkVersions(/** @type {Context} */ ctx, versions) {
+async function checkVersions(/** @type {Context} */ ctx, /** @type {CodemodVersions} */ versions) {
 	let codemods = 0;
 	for (const version of versions.values()) {
 		if (ctx.suite.aborted) break;
@@ -406,8 +415,8 @@ export async function runCheck({
 	try {
 		docs = await readVersionDocs(ctx);
 		const versions = await readCodemodVersions(ctx);
+		compareCounts(ctx, docs, versions);
 		if (!ctx.suite.aborted) {
-			compareCounts(ctx, docs, versions);
 			codemods = await checkVersions(ctx, versions);
 		}
 	} catch (error) {

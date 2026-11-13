@@ -13,7 +13,9 @@ import {
 	ENTRY_LIMIT,
 	FIXTURE_LIMIT,
 	FRONTMATTER_LINE_LIMIT,
+	TRANSFORM_TIMEOUT_MS,
 	VERSION_LIMIT,
+	compareCounts,
 	firstDifferentLine,
 	main,
 	readCodemodCount,
@@ -127,6 +129,55 @@ describe('firstDifferentLine', () => {
 
 	it('counts a missing trailing line as a difference', () => {
 		assert.equal(firstDifferentLine('a\nb', 'a\nb\nc'), 3);
+	});
+});
+
+describe('compareCounts', () => {
+	const root = repoRoot;
+	// AbortSignal.any over no signals never aborts: a live suite signal without a timer.
+	const live = AbortSignal.any([]);
+
+	it('reports a guide whose declared count exceeds the discovered codemods', () => {
+		const suite = live;
+		const ctx = { root, timeoutMs: TRANSFORM_TIMEOUT_MS, suite, findings: [] };
+		const docs = new Map([['0.9', { path: join(root, 'docs/migrations/v0.9.md'), count: 2 }]]);
+		compareCounts(ctx, docs, new Map());
+		assertOne(
+			ctx.findings,
+			'docs/migrations/v0.9.md',
+			/declares codemods: 2, tools\/migrations\/v0\.9\/ has 0/,
+		);
+	});
+
+	it('records nothing after a suite abort with partial discovery maps', () => {
+		const suite = AbortSignal.abort();
+		const ctx = { root, timeoutMs: TRANSFORM_TIMEOUT_MS, suite, findings: [] };
+		const docs = new Map([['0.9', { path: join(root, 'docs/migrations/v0.9.md'), count: 2 }]]);
+		compareCounts(ctx, docs, new Map());
+		assert.deepEqual(ctx.findings, []);
+	});
+
+	it('passes when the guide count matches the discovered codemods', () => {
+		const suite = live;
+		const ctx = { root, timeoutMs: TRANSFORM_TIMEOUT_MS, suite, findings: [] };
+		const docs = new Map([['0.9', { path: join(root, 'docs/migrations/v0.9.md'), count: 1 }]]);
+		const path = join(root, 'tools/migrations/v0.9');
+		const versions = new Map([['0.9', { path, codemods: [join(path, 'rename-foo')] }]]);
+		compareCounts(ctx, docs, versions);
+		assert.deepEqual(ctx.findings, []);
+	});
+
+	it('reports discovered codemods without a migration guide', () => {
+		const suite = live;
+		const ctx = { root, timeoutMs: TRANSFORM_TIMEOUT_MS, suite, findings: [] };
+		const path = join(root, 'tools/migrations/v0.9');
+		const versions = new Map([['0.9', { path, codemods: [join(path, 'rename-foo')] }]]);
+		compareCounts(ctx, new Map(), versions);
+		assertOne(
+			ctx.findings,
+			'tools/migrations/v0.9',
+			/no migration guide docs\/migrations\/v0\.9\.md declares these codemods/,
+		);
 	});
 });
 
