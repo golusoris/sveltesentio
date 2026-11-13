@@ -12,6 +12,8 @@ import {
 import {
 	CODEOWNERS_LINE_LIMIT,
 	EMAIL_OWNER_RE,
+	GATE_NEEDS_EXPR,
+	GATE_RESULT_RUN,
 	GITHUB_ACTIONS_APP_ID,
 	TEAM_OWNER_RE,
 	USER_OWNER_RE,
@@ -172,6 +174,13 @@ describe('per-pattern code-owner reviews', () => {
 	});
 });
 
+const gateResultStep = [
+	'      - env:',
+	'          NEEDS: ${{ toJSON(needs) }}',
+	'        run: node scripts/ci-gate.mjs',
+].join('\n');
+const gateResultFinding = /job must run node scripts\/ci-gate\.mjs with NEEDS:/;
+
 const workflowFailures = [
 	[
 		'renamed gate',
@@ -207,6 +216,54 @@ const workflowFailures = [
 	],
 	['unparsable YAML', 'on: [', /unparsable YAML/],
 	['missing workflow', null, /cannot read file/],
+	[
+		'gate that only echoes',
+		validWorkflow.replace(gateResultStep, '      - run: echo gate'),
+		gateResultFinding,
+	],
+	[
+		'result step without NEEDS',
+		validWorkflow.replace(gateResultStep, '      - run: node scripts/ci-gate.mjs'),
+		gateResultFinding,
+	],
+	[
+		'NEEDS from another expression',
+		validWorkflow.replace('${{ toJSON(needs) }}', '${{ toJSON(needs.lint) }}'),
+		gateResultFinding,
+	],
+	[
+		'result step running another script',
+		validWorkflow.replace('node scripts/ci-gate.mjs', 'node scripts/other.mjs'),
+		gateResultFinding,
+	],
+	[
+		'continue-on-error on the gate job',
+		validWorkflow.replace('    name: CI Gate', '    name: CI Gate\n    continue-on-error: true'),
+		/job must not set continue-on-error/,
+	],
+	[
+		'continue-on-error on the result step',
+		validWorkflow.replace('      - env:', '      - continue-on-error: true\n        env:'),
+		/job must not set continue-on-error/,
+	],
+	[
+		'continue-on-error as an expression',
+		validWorkflow.replace(
+			'    name: CI Gate',
+			'    name: CI Gate\n    continue-on-error: ${{ true }}',
+		),
+		/job must not set continue-on-error/,
+	],
+	[
+		'non-array gate steps',
+		validWorkflow.replace(`    steps:\n${gateResultStep}`, '    steps: {}'),
+		gateResultFinding,
+	],
+	[
+		'non-object result step',
+		validWorkflow.replace(gateResultStep, '      - null'),
+		gateResultFinding,
+	],
 ];
 
 describe('CI Gate workflow contract', () => {
@@ -236,6 +293,41 @@ describe('CI Gate workflow contract', () => {
 			source: JSON.stringify(makeRuleset(), null, 2).replaceAll('\n', '\r\n'),
 		});
 		assert.deepEqual(await checkRuleset(root), { findings: [] });
+	});
+
+	it('accepts continue-on-error: false on the job and result step', async () => {
+		const workflow = validWorkflow
+			.replace('    name: CI Gate', '    name: CI Gate\n    continue-on-error: false')
+			.replace('      - env:', '      - continue-on-error: false\n        env:');
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('accepts a block-scalar result command with a trailing newline', async () => {
+		const workflow = validWorkflow.replace(
+			'        run: node scripts/ci-gate.mjs',
+			'        run: |\n          node scripts/ci-gate.mjs\n',
+		);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('accepts extra env keys and earlier checkout steps', async () => {
+		const workflow = validWorkflow
+			.replace(
+				'      - env:',
+				'      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n' +
+					'      - env:',
+			)
+			.replace(
+				'          NEEDS: ${{ toJSON(needs) }}',
+				'          NEEDS: ${{ toJSON(needs) }}\n' +
+					'          EVENT_NAME: ${{ github.event_name }}',
+			);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
+	});
+
+	it('exports the exact gate result command and needs expression', () => {
+		assert.equal(GATE_RESULT_RUN, 'node scripts/ci-gate.mjs');
+		assert.equal(GATE_NEEDS_EXPR, '${{ toJSON(needs) }}');
 	});
 });
 

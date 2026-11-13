@@ -22,7 +22,9 @@ export const validWorkflow = [
 	'    needs: [lint]',
 	'    runs-on: ubuntu-26.04',
 	'    steps:',
-	'      - run: echo gate',
+	'      - env:',
+	'          NEEDS: ${{ toJSON(needs) }}',
+	'        run: node scripts/ci-gate.mjs',
 ].join('\n');
 let tempRoot;
 

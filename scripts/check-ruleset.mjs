@@ -2,7 +2,8 @@
 // Fails if main's ruleset requires a sole maintainer to approve their own PR,
 // omits an admin bypass, disables enforcement, or does not require CI Gate.
 // Checks that the workflow publishes CI Gate for main, always aggregates every
-// other job, and uses GitHub Actions when the required check pins an integration.
+// other job, decides through scripts/ci-gate.mjs on toJSON(needs), and uses GitHub
+// Actions when the required check pins an integration.
 // Guards the solo-maintainer fix in 8c2704d against regeneration by adopt's
 // team-oriented template, which can otherwise make the default branch unmergeable.
 import { readFile } from 'node:fs/promises';
@@ -18,6 +19,8 @@ const WORKFLOW_PATH = '.github/workflows/ci.yml';
 export const ADMIN_ROLE_ID = 5;
 export const BYPASS_MODES = ['always', 'pull_request'];
 export const GATE_CONTEXT = 'CI Gate';
+export const GATE_RESULT_RUN = 'node scripts/ci-gate.mjs';
+export const GATE_NEEDS_EXPR = '${{ toJSON(needs) }}';
 export const GITHUB_ACTIONS_APP_ID = 15368;
 export const CATCH_ALL_PATTERNS = ['*', '**'];
 export const CODEOWNERS_CANDIDATES = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS'];
@@ -208,7 +211,42 @@ function checkWorkflowTriggers(doc, findings) {
 	}
 }
 
+function isGateResultStep(step) {
+	return (
+		step !== null &&
+		typeof step === 'object' &&
+		!Array.isArray(step) &&
+		typeof step.run === 'string' &&
+		step.run.trim() === GATE_RESULT_RUN &&
+		step.env?.NEEDS === GATE_NEEDS_EXPR
+	);
+}
+
+function checkGateContinueOnError(target, findings) {
+	if (target['continue-on-error'] !== undefined && target['continue-on-error'] !== false) {
+		findings.push(`${WORKFLOW_PATH}: '${GATE_CONTEXT}' job must not set continue-on-error`);
+	}
+}
+
+function checkGateResult(job, findings) {
+	checkGateContinueOnError(job, findings);
+	const steps = Array.isArray(job.steps) ? job.steps : [];
+	let found = false;
+	for (let i = 0; i < steps.length; i++) {
+		if (!isGateResultStep(steps[i])) continue;
+		found = true;
+		checkGateContinueOnError(steps[i], findings);
+	}
+	if (!found) {
+		findings.push(
+			`${WORKFLOW_PATH}: '${GATE_CONTEXT}' job must run ${GATE_RESULT_RUN} ` +
+				`with NEEDS: ${GATE_NEEDS_EXPR}`,
+		);
+	}
+}
+
 function checkGateJob(id, job, jobIds, findings) {
+	checkGateResult(job, findings);
 	if (job.if !== 'always()' && job.if !== '${{ always() }}') {
 		findings.push(`${WORKFLOW_PATH}: '${GATE_CONTEXT}' job if must be always()`);
 	}
