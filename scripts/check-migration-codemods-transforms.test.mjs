@@ -20,6 +20,7 @@ import {
 } from './check-migration-codemods.fixtures.mjs';
 
 const execFileAsync = promisify(execFile);
+const SLOW_STEP_MS = 2_000;
 
 afterEach(cleanup);
 
@@ -89,26 +90,32 @@ describe('runCheck', () => {
 			[`${CODEMOD}/transform.mjs`]: 'export default () => new Promise(() => {});\n',
 		};
 		assertOne(
-			// 300 ms leaves room for the worker start of the load step on slow CI legs.
-			await findings(files, 300),
+			// Load (Worker start + import) shares deadline; 300 ms failed on macOS run 43442486492.
+			await findings(files, SLOW_STEP_MS),
 			`${CODEMOD}/fixtures/basic.input.ts`,
-			/timed out after 300ms/,
+			new RegExp(`timed out after ${SLOW_STEP_MS}ms`),
 		);
 	});
 
-	it('rejects a synchronous call over its deadline and accepts it under the deadline', async () => {
-		const files = {
-			...goodTree(),
-			[`${CODEMOD}/transform.mjs`]:
-				"export default (s) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_500); return s.replaceAll('foo(', 'bar('); };\n",
-		};
-		assertOne(
-			await findings(files, 300),
-			`${CODEMOD}/fixtures/basic.input.ts`,
-			/timed out after 300ms/,
-		);
-		assert.deepEqual(await findings(files, 5_000), []);
-	});
+	it(
+		'rejects a synchronous call over its deadline and accepts it under the deadline',
+		{ timeout: 30_000 },
+		async () => {
+			const files = {
+				...goodTree(),
+				[`${CODEMOD}/transform.mjs`]:
+					'export default (s) => { ' +
+					'Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3_000); ' +
+					"return s.replaceAll('foo(', 'bar('); };\n",
+			};
+			assertOne(
+				await findings(files, SLOW_STEP_MS),
+				`${CODEMOD}/fixtures/basic.input.ts`,
+				new RegExp(`timed out after ${SLOW_STEP_MS}ms`),
+			);
+			assert.deepEqual(await findings(files, 10_000), []);
+		},
+	);
 
 	it('terminates a worker with a timer left running', { timeout: 20_000 }, async () => {
 		const files = {
@@ -138,9 +145,9 @@ describe('runCheck', () => {
 			[`${CODEMOD}/transform.mjs`]: 'export default () => { for (;;) {} };\n',
 		};
 		assertOne(
-			await findings(files, 300),
+			await findings(files, SLOW_STEP_MS),
 			`${CODEMOD}/fixtures/basic.input.ts`,
-			/timed out after 300ms/,
+			new RegExp(`timed out after ${SLOW_STEP_MS}ms`),
 		);
 	});
 
