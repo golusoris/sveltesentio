@@ -24,6 +24,7 @@ export const validWorkflow = [
 	'    steps:',
 	'      - env:',
 	'          NEEDS: ${{ toJSON(needs) }}',
+	'          EVENT_NAME: ${{ github.event_name }}',
 	'        run: node scripts/ci-gate.mjs',
 ].join('\n');
 let tempRoot;
@@ -55,6 +56,8 @@ export function makeRuleset({ review = {}, ...overrides } = {}) {
 				parameters: { required_status_checks: [{ context: 'CI Gate' }] },
 			},
 		],
+		target: 'branch',
+		conditions: { ref_name: { include: ['refs/heads/main'], exclude: [] } },
 		...overrides,
 	};
 }

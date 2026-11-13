@@ -12,6 +12,7 @@ import {
 import {
 	CODEOWNERS_LINE_LIMIT,
 	EMAIL_OWNER_RE,
+	GATE_EVENT_EXPR,
 	GATE_NEEDS_EXPR,
 	GATE_RESULT_RUN,
 	GITHUB_ACTIONS_APP_ID,
@@ -177,6 +178,7 @@ describe('per-pattern code-owner reviews', () => {
 const gateResultStep = [
 	'      - env:',
 	'          NEEDS: ${{ toJSON(needs) }}',
+	'          EVENT_NAME: ${{ github.event_name }}',
 	'        run: node scripts/ci-gate.mjs',
 ].join('\n');
 const gateResultFinding = /job must run node scripts\/ci-gate\.mjs with NEEDS:/;
@@ -279,6 +281,46 @@ const workflowFailures = [
 		validWorkflow.replace('      - env:', '      - if: always()\n        env:'),
 		/result step must not set if/,
 	],
+	[
+		'result step without EVENT_NAME',
+		validWorkflow.replace('          EVENT_NAME: ${{ github.event_name }}\n', ''),
+		gateResultFinding,
+	],
+	[
+		'result step with a wrong EVENT_NAME',
+		validWorkflow.replace('${{ github.event_name }}', '${{ github.event.action }}'),
+		gateResultFinding,
+	],
+	[
+		'push paths filter',
+		validWorkflow.replace('  push:', "  push:\n    paths: ['src/**']"),
+		/can skip the workflow and leave 'CI Gate' pending/,
+	],
+	[
+		'push paths-ignore filter',
+		validWorkflow.replace('  push:', "  push:\n    paths-ignore: ['src/**']"),
+		/can skip the workflow and leave 'CI Gate' pending/,
+	],
+	[
+		'pull_request paths filter',
+		validWorkflow.replace('  pull_request:', "  pull_request:\n    paths: ['src/**']"),
+		/can skip the workflow and leave 'CI Gate' pending/,
+	],
+	[
+		'pull_request paths-ignore filter',
+		validWorkflow.replace('  pull_request:', "  pull_request:\n    paths-ignore: ['src/**']"),
+		/can skip the workflow and leave 'CI Gate' pending/,
+	],
+	[
+		'pull_request branches-ignore',
+		validWorkflow.replace('  pull_request:', '  pull_request:\n    branches-ignore: [other]'),
+		/can skip the workflow and leave 'CI Gate' pending/,
+	],
+	[
+		'pull_request types without synchronize',
+		validWorkflow.replace('  pull_request:', '  pull_request:\n    types: [opened, reopened]'),
+		/types must include opened, synchronize and reopened/,
+	],
 ];
 
 describe('CI Gate workflow contract', () => {
@@ -334,8 +376,7 @@ describe('CI Gate workflow contract', () => {
 			)
 			.replace(
 				'          NEEDS: ${{ toJSON(needs) }}',
-				'          NEEDS: ${{ toJSON(needs) }}\n' +
-					'          EVENT_NAME: ${{ github.event_name }}',
+				'          NEEDS: ${{ toJSON(needs) }}\n          EXTRA: value',
 			);
 		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
 	});
@@ -343,6 +384,15 @@ describe('CI Gate workflow contract', () => {
 	it('exports the exact gate result command and needs expression', () => {
 		assert.equal(GATE_RESULT_RUN, 'node scripts/ci-gate.mjs');
 		assert.equal(GATE_NEEDS_EXPR, '${{ toJSON(needs) }}');
+		assert.equal(GATE_EVENT_EXPR, '${{ github.event_name }}');
+	});
+
+	it('accepts pull_request types holding opened, synchronize and reopened', async () => {
+		const workflow = validWorkflow.replace(
+			'  pull_request:',
+			'  pull_request:\n    types: [opened, synchronize, reopened, labeled]',
+		);
+		assert.deepEqual(await checkRuleset(await fixture({ workflow })), { findings: [] });
 	});
 });
 

@@ -21,6 +21,9 @@ export const BYPASS_MODES = ['always', 'pull_request'];
 export const GATE_CONTEXT = 'CI Gate';
 export const GATE_RESULT_RUN = 'node scripts/ci-gate.mjs';
 export const GATE_NEEDS_EXPR = '${{ toJSON(needs) }}';
+export const GATE_EVENT_EXPR = '${{ github.event_name }}';
+export const MAIN_REF = 'refs/heads/main';
+export const MAIN_INCLUDES = ['refs/heads/main', '~DEFAULT_BRANCH', '~ALL'];
 export const GITHUB_ACTIONS_APP_ID = 15368;
 export const CATCH_ALL_PATTERNS = ['*', '**'];
 export const CODEOWNERS_CANDIDATES = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS'];
@@ -181,6 +184,58 @@ function checkEnforcement(doc, findings) {
 	}
 }
 
+export function refPatternMatches(pattern, ref) {
+	let source = '^';
+	for (let i = 0; i < pattern.length; i++) {
+		const character = pattern[i];
+		if (character === '*' && pattern[i + 1] === '*') {
+			source += '.*';
+			i++;
+		} else if (character === '*') {
+			source += '[^/]*';
+		} else if (character === '?') {
+			source += '[^/]';
+		} else {
+			source += character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		}
+	}
+	return new RegExp(`${source}$`).test(ref);
+}
+
+function canJudgeRefPattern(pattern) {
+	return pattern.length <= 255 && pattern.startsWith('refs/') && !/[[\]{}\\!]/.test(pattern);
+}
+
+function checkMainExclude(entry, findings) {
+	if (typeof entry !== 'string' || MAIN_INCLUDES.slice(1).includes(entry)) {
+		findings.push(`${RULESET_PATH}: exclude entry '${entry}' matches ${MAIN_REF}`);
+	} else if (!canJudgeRefPattern(entry)) {
+		findings.push(`${RULESET_PATH}: exclude entry '${entry}' cannot be judged against ${MAIN_REF}`);
+	} else if (refPatternMatches(entry, MAIN_REF)) {
+		findings.push(`${RULESET_PATH}: exclude entry '${entry}' matches ${MAIN_REF}`);
+	}
+}
+
+function checkTargetsMain(doc, findings) {
+	if (Object.hasOwn(doc, 'target') && doc.target !== 'branch') {
+		findings.push(`${RULESET_PATH}: target is '${doc.target}', not branch`);
+	}
+	const refs = doc.conditions?.ref_name;
+	if (!Array.isArray(refs?.include) || !refs.include.some((ref) => MAIN_INCLUDES.includes(ref))) {
+		findings.push(
+			`${RULESET_PATH}: conditions.ref_name.include must name ` +
+				'refs/heads/main, ~DEFAULT_BRANCH or ~ALL',
+		);
+	}
+	if (refs && Object.hasOwn(refs, 'exclude')) {
+		if (!Array.isArray(refs.exclude)) {
+			findings.push(`${RULESET_PATH}: conditions.ref_name.exclude must be an array`);
+			return;
+		}
+		for (let i = 0; i < refs.exclude.length; i++) checkMainExclude(refs.exclude[i], findings);
+	}
+}
+
 function checkIntegration(check, findings) {
 	if (check?.context !== GATE_CONTEXT || check.integration_id === undefined) return;
 	if (check.integration_id !== GITHUB_ACTIONS_APP_ID) {
@@ -200,14 +255,40 @@ function checkGateIntegrations(rules, findings) {
 	}
 }
 
+function checkTriggerFilters(event, trigger, findings) {
+	const filters = ['paths', 'paths-ignore', 'branches-ignore'];
+	for (let i = 0; i < filters.length; i++) {
+		const key = filters[i];
+		if (trigger && Object.hasOwn(trigger, key)) {
+			findings.push(
+				`${WORKFLOW_PATH}: on.${event}.${key} can skip the workflow ` +
+					`and leave '${GATE_CONTEXT}' pending`,
+			);
+		}
+	}
+}
+
+function checkPullRequestTypes(trigger, findings) {
+	if (!trigger || !Object.hasOwn(trigger, 'types')) return;
+	const required = ['opened', 'synchronize', 'reopened'];
+	if (!Array.isArray(trigger.types) || !required.every((type) => trigger.types.includes(type))) {
+		findings.push(
+			`${WORKFLOW_PATH}: on.pull_request.types must include opened, synchronize and reopened`,
+		);
+	}
+}
+
 function checkWorkflowTriggers(doc, findings) {
 	const events = ['push', 'pull_request'];
 	for (let i = 0; i < events.length; i++) {
 		const event = events[i];
-		const branches = doc?.on?.[event]?.branches;
+		const trigger = doc?.on?.[event];
+		const branches = trigger?.branches;
 		if (!Array.isArray(branches) || !branches.includes('main')) {
 			findings.push(`${WORKFLOW_PATH}: on.${event}.branches must include main`);
 		}
+		checkTriggerFilters(event, trigger, findings);
+		if (event === 'pull_request') checkPullRequestTypes(trigger, findings);
 	}
 }
 
@@ -218,7 +299,8 @@ function isGateResultStep(step) {
 		!Array.isArray(step) &&
 		typeof step.run === 'string' &&
 		step.run.trim() === GATE_RESULT_RUN &&
-		step.env?.NEEDS === GATE_NEEDS_EXPR
+		step.env?.NEEDS === GATE_NEEDS_EXPR &&
+		step.env?.EVENT_NAME === GATE_EVENT_EXPR
 	);
 }
 
@@ -243,7 +325,7 @@ function checkGateResult(job, findings) {
 	if (!found) {
 		findings.push(
 			`${WORKFLOW_PATH}: '${GATE_CONTEXT}' job must run ${GATE_RESULT_RUN} ` +
-				`with NEEDS: ${GATE_NEEDS_EXPR}`,
+				`with NEEDS: ${GATE_NEEDS_EXPR} and EVENT_NAME: ${GATE_EVENT_EXPR}`,
 		);
 	}
 }
@@ -298,6 +380,7 @@ export async function checkRuleset(rootDir = defaultRoot) {
 	checkSoloReviews(doc.rules, owners, findings);
 	checkBypass(doc, findings);
 	checkEnforcement(doc, findings);
+	checkTargetsMain(doc, findings);
 	checkGateIntegrations(doc.rules, findings);
 	if (!doc.rules.some(requiresGate)) {
 		findings.push(

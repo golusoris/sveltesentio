@@ -53,7 +53,11 @@ describe('check-ruleset positive cases', () => {
 		const root = await fixture({
 			owners: { '.github/CODEOWNERS': '* @lusoris' },
 			ruleset: {
+				conditions: {
+					ref_name: { exclude: [], include: ['refs/heads/main', 'refs/heads/lts-*'] },
+				},
 				enforcement: 'active',
+				target: 'branch',
 				rules: [
 					{
 						type: 'pull_request',
