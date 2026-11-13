@@ -1,5 +1,6 @@
 // Ruleset main-ref coverage and bounded fnmatch conversion.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { after, before, describe, it } from 'node:test';
 import { createTempRoot, fixture, makeRuleset, removeTempRoot } from './check-ruleset.fixtures.mjs';
 import { MAIN_INCLUDES, MAIN_REF, checkRuleset, refPatternMatches } from './check-ruleset.mjs';
@@ -84,6 +85,15 @@ const refPatternCases = [
 	['dot remains literal', 'refs/heads/m.in', MAIN_REF, false],
 	['question mark matches one character', 'refs/heads/ma?n', MAIN_REF, true],
 	['pattern must match the whole ref', 'refs/heads/mai', MAIN_REF, false],
+	['question mark does not match a slash', 'refs/heads/ma?n', 'refs/heads/ma/n', false],
+	['double star in the middle matches a segment', 'refs/**/main', MAIN_REF, true],
+	['double star matches zero characters', 'refs/heads/main**', MAIN_REF, true],
+	['single star matches zero characters', 'refs/heads/main*', MAIN_REF, true],
+	['single star then literal needs a later match', 'refs/heads/*n', MAIN_REF, true],
+	['single star then literal fails without it', 'refs/heads/*x', MAIN_REF, false],
+	['single star cannot reach past a slash', 'refs/*/main', 'refs/heads/x/main', false],
+	['empty ref fails a non-empty pattern', 'refs/heads/*', '', false],
+	['star-only tail cannot replace a missing prefix', 'refs/tags/**', MAIN_REF, false],
 ];
 
 describe('refPatternMatches', () => {
@@ -93,4 +103,9 @@ describe('refPatternMatches', () => {
 			assert.equal(refPatternMatches(pattern, ref), expected);
 		});
 	}
+
+	it('refPatternMatches builds no regular expression from ruleset data', () => {
+		const source = readFileSync(new URL('./check-ruleset.mjs', import.meta.url), 'utf8');
+		assert.doesNotMatch(source, /new RegExp\(/);
+	});
 });

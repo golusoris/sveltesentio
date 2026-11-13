@@ -184,22 +184,65 @@ function checkEnforcement(doc, findings) {
 	}
 }
 
-export function refPatternMatches(pattern, ref) {
-	let source = '^';
+/**
+ * @param {string} pattern
+ * @returns {string[]}
+ */
+function tokenizeRefPattern(pattern) {
+	const tokens = [];
 	for (let i = 0; i < pattern.length; i++) {
 		const character = pattern[i];
 		if (character === '*' && pattern[i + 1] === '*') {
-			source += '.*';
+			tokens.push('**');
 			i++;
-		} else if (character === '*') {
-			source += '[^/]*';
-		} else if (character === '?') {
-			source += '[^/]';
 		} else {
-			source += character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			tokens.push(character);
 		}
 	}
-	return new RegExp(`${source}$`).test(ref);
+	return tokens;
+}
+
+/**
+ * @param {string} token
+ * @param {string} ref
+ * @param {boolean[]} reach
+ * @returns {boolean[]}
+ */
+function advanceRefStar(token, ref, reach) {
+	const next = new Array(ref.length + 1).fill(false);
+	const allowsSlash = token === '**';
+	for (let j = 0; j < ref.length + 1; j++) {
+		next[j] = reach[j] || (j > 0 && next[j - 1] && (allowsSlash || ref[j - 1] !== '/'));
+	}
+	return next;
+}
+
+/**
+ * @param {string} token
+ * @param {string} ref
+ * @param {boolean[]} reach
+ * @returns {boolean[]}
+ */
+function advanceRefCharacter(token, ref, reach) {
+	const next = new Array(ref.length + 1).fill(false);
+	for (let j = 0; j < ref.length + 1; j++) {
+		next[j] = j > 0 && reach[j - 1] && (token === '?' ? ref[j - 1] !== '/' : ref[j - 1] === token);
+	}
+	return next;
+}
+
+export function refPatternMatches(pattern, ref) {
+	const tokens = tokenizeRefPattern(pattern);
+	let reach = new Array(ref.length + 1).fill(false);
+	reach[0] = true;
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i];
+		reach =
+			token === '*' || token === '**'
+				? advanceRefStar(token, ref, reach)
+				: advanceRefCharacter(token, ref, reach);
+	}
+	return reach[ref.length];
 }
 
 function canJudgeRefPattern(pattern) {
