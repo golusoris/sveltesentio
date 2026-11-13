@@ -112,7 +112,7 @@ Two design points:
 
 ```svelte
 <script lang="ts">
-  import { useWebSocket } from '$lib/realtime/ws';
+  import { useWebSocket } from '#lib/realtime/ws.js';
   import { z } from 'zod';
 
   const Inbound = z.discriminatedUnion('type', [
