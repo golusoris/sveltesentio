@@ -34,12 +34,35 @@ exceptions:
     path: .github/workflows/release-please.yml
     reason: "Category A, interval stated by the expiry (entered 2026-10-13, re-reviewed 2026-10-19, #280 still open): the release job attests provenance in the job that builds and publishes, which is SLSA Build Level 2, and no step signs with cosign; the manifest declares Level 3 and cosign (#280)"
     expires: "2027-01-09"
-  # category C, entered 2026-11-06 (entry + 10 days): Dependabot alerts 145 146 148 149 stay open, not dismissed
+  # category C, entered 2026-11-13 (entry + 10 days; renews the 2026-11-06 entry after a fresh registry check):
+  # Dependabot alerts 145 146 148 149 stay open, not dismissed
   - rule: "backlog.caps.forge_alerts"
     tool: "backlog"
     reason: >-
-      category C, entered 2026-11-06 (entry + 10 days): no in-range fix upstream. #145 #146 deepmerge 4.3.1 GHSA-gcqx-w48m-w2h4 (low, no patched release) through @sveltejs/vite-plugin-svelte and @rollup/plugin-node-resolve, build tooling, plus tools/compose-lib-fixture/kit3/package-lock.json; #149 minimatch 10.2.6 GHSA-g3hv-75wg-m249 (medium, fixed in 11.0.1) through eslint 10 @eslint/config-array ^10.2.4, lint tooling; #148 glob 11.1.0 GHSA-3g3m-2fjr-6pw4 (medium, fixed in 14.0.2) through workbox-build 7.4.1 glob ^11.0.1 under vite-plugin-pwa, build time only; each parent still declares the vulnerable major in its latest release
-    expires: "2026-11-16"
+      category C, entered 2026-11-13 (entry + 10 days): no in-range fix upstream, rechecked against the npm registry on 2026-11-13. #145 #146 deepmerge 4.3.1 GHSA-gcqx-w48m-w2h4 (low, no patched release; 4.3.1 is the latest) through @sveltejs/vite-plugin-svelte and @rollup/plugin-node-resolve, build tooling, plus tools/compose-lib-fixture/kit3/package-lock.json; #149 minimatch 10.2.6 GHSA-g3hv-75wg-m249 (medium, fixed in 11.0.1, no 10.x backport) through eslint 10.14.0 @eslint/config-array 0.23.5 ^10.2.4, lint tooling; #148 glob 11.1.0 GHSA-3g3m-2fjr-6pw4 (medium, fixed in 14.0.2) through workbox-build 7.4.1 glob ^11.0.1 under vite-plugin-pwa 2.0.0, build time only; each parent still declares the vulnerable major in its latest release
+    expires: "2026-11-23"
+  # category C, entered 2026-11-12 (entry + 10 days): code-scanning alerts 940 and 5 stay open, not dismissed.
+  # backlog.caps.forge_alerts refuses path and glob, so the file goes in the reason; the fingerprint
+  # (alert number, zero-padded) only keeps the two entries from repeating the entry above.
+  - rule: "backlog.caps.forge_alerts"
+    tool: "backlog"
+    fingerprint: "00000940"
+    reason: >-
+      category C, entered 2026-11-12 (entry + 10 days): code-scanning #940 js/file-system-race (high) in
+      tools/figures/astro.mjs, an engine-rendered managed asset; the bounded-read fix is engine draft
+      cordanaLLM/praetor 1845 and lands here through the next re-adoption after that engine release; no local
+      patch, no dismissal
+    expires: "2026-11-22"
+  - rule: "backlog.caps.forge_alerts"
+    tool: "backlog"
+    fingerprint: "00000005"
+    reason: >-
+      category C, entered 2026-11-12 (entry + 10 days): code-scanning #5 SASTID (Scorecard, medium, anchored to
+      no repository file) counts 29 of the last 30 main commits as SAST-checked; the unchecked one is 64f9f1a
+      (PR 512 merged with the CodeQL results check red) and leaves the window after 22 more main commits
+      (counted at 53ccb08); planned prevention, not live yet: an engine-rendered code_scanning ruleset rule
+      that requires the CodeQL results check before merge (issue 542); no dismissal
+    expires: "2026-11-22"
 register:
   sources:
     expected: 13
@@ -56,3 +79,6 @@ register:
         kind: message
         format: json
         selector: invariants.*
+release:
+  e2e:
+    since: 9dfcfcd25386c200b8fbdc719284195aed742e63

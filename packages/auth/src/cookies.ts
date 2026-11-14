@@ -48,7 +48,7 @@ export function csrfCookieOptions(init: CsrfCookieOptionsInit = {}): CookieOptio
 
 export function loginNonceCookieOptions(maxAge = FIVE_MINUTES): CookieOptions {
 	return {
-		path: '/login',
+		path: '/',
 		httpOnly: true,
 		secure: true,
 		sameSite: 'lax',

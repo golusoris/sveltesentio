@@ -75,7 +75,13 @@ verify-all:
 	@pnpm check:export-tests
 	@pnpm check:publint
 	@pnpm check:svelte
+	@pnpm check:job-timeouts
+	@pnpm check:platform-legs
+	@pnpm check:ruleset
+	@pnpm check:playwright-image
 	@pnpm check:kit-compat
+	@pnpm check:migration-codemods
+	@pnpm check:renovate-config
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high
 	@$(PRAETORCTL) audit

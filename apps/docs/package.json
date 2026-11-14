@@ -1,8 +1,9 @@
 {
-	"description": "Private SvelteKit documentation site \u2014 prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
+	"description": "Private SvelteKit documentation site — prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
 	"devDependencies": {
-		"@sveltejs/adapter-static": "^4.0.0",
-		"@sveltejs/kit": "3.1.0",
+		"@playwright/test": "1.64.1",
+		"@sveltejs/adapter-static": "^4.0.1",
+		"@sveltejs/kit": "3.1.1",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@types/node": "^24.13.4",
 		"mdsvex": "^0.12.8",
@@ -18,7 +19,8 @@
 		"dev": "vite dev",
 		"preview": "vite preview",
 		"lint": "svelte-kit sync && eslint src/",
-		"test": "node ../../scripts/node-test.mjs \"mdsvex/*.test.js\""
+		"test": "node ../../scripts/node-test.mjs \"mdsvex/*.test.js\"",
+		"test:e2e": "playwright test"
 	},
 	"type": "module",
 	"version": "0.0.0",

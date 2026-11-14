@@ -20,6 +20,7 @@ jobs:
     # rebuilt outside the release-please job (#430) arrived unformatted.
     if: github.ref == 'refs/heads/release-please--branches--main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     concurrency:
       group: release-pr-format
       cancel-in-progress: true
@@ -89,6 +90,7 @@ jobs:
     # published. A push run is on main by its trigger.
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     permissions:
       contents: write # create releases + tags, upload attestations
       pull-requests: write # open/update the "chore: release main" PR

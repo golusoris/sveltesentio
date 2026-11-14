@@ -31,8 +31,39 @@ pre-commit:
       run: pnpm exec eslint --fix {staged_files}
       stage_fixed: true
 
+# Sign-offs and leftover conflict comments checked on every commit, including merges.
+# Hook shape: plurano/horistes, commit 5af6eeda, EUPL-1.2 (horistes ADR-0072).
+# Lefthook 2.2.2 substitutes {1} raw; a quoted here-document read by `read -r` keeps shell
+# characters as data, and avoids `$( )`, which macOS sh misparses around quotes.
+# A path line equal to GIT_ARGUMENT ends it early; Git passes .git/COMMIT_EDITMSG or .git/MERGE_MSG.
+commit-msg:
+  commands:
+    sign-off:
+      run: |
+        IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'
+        {1}
+        GIT_ARGUMENT
+        node scripts/check-commit-message.mjs "$MESSAGE_FILE"
+    # commitlint applies commitlint.config.js to the same file; skips # lines, merge and fixup! subjects.
+    conventional:
+      run: |
+        IFS= read -r MESSAGE_FILE <<'GIT_ARGUMENT'
+        {1}
+        GIT_ARGUMENT
+        pnpm exec commitlint --edit "$MESSAGE_FILE"
+
 pre-push:
   commands:
+    # Second barrier to commit-msg: re-reads stored commits the push adds.
+    # use_stdin hands it Git's ref lines; {1} is the destination remote name (or URL),
+    # read like the commit-msg path.
+    commit-messages:
+      use_stdin: true
+      run: |
+        IFS= read -r PUSH_REMOTE <<'GIT_ARGUMENT'
+        {1}
+        GIT_ARGUMENT
+        node scripts/check-pushed-commits.mjs "$PUSH_REMOTE"
     verify:
       run: pnpm run ci
     security:

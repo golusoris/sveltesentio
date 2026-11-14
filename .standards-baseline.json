@@ -1,8 +1,25 @@
 {
   "version": 1,
-  "generated_at": "2026-09-15T20:28:05Z",
-  "repository": "",
-  "commit_sha": "",
-  "total_infractions": 0,
-  "infractions": []
+  "generated_at": "2026-11-07T09:11:47Z",
+  "repository": "golusoris/sveltesentio",
+  "commit_sha": "9dfcfcd25386c200b8fbdc719284195aed742e63",
+  "total_infractions": 2,
+  "increase_rationale": "adoption baseline",
+  "infractions": [
+    {
+      "rule_id": "RELEASE-TEST-LEVEL",
+      "file_path": ".standards.yaml",
+      "line_number": 1,
+      "message": "missing release test level e2e for profile web-package: no tracked file matches paths [e2e/** tests/e2e/** test/e2e/** **/*_e2e_test.go **/*.e2e.ts **/*.e2e.js playwright/** cypress/**]",
+      "anchor": "level:web-package:e2e",
+      "fingerprint": ".standards.yaml:RELEASE-TEST-LEVEL:level:web-package:e2e#1"
+    },
+    {
+      "rule_id": "HISS-11",
+      "file_path": "scripts/check-playwright-image.test.mjs",
+      "line_number": 209,
+      "message": "mcr.microsoft.com/playwright:v1.64.1-resolute",
+      "fingerprint": "scripts/check-playwright-image.test.mjs:HISS-11:image:mcr.microsoft.com/playwright:v1.64.1-resolute"
+    }
+  ]
 }

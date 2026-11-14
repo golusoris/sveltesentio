@@ -1,6 +1,6 @@
 name: Feature Request
 description: Propose a new module or capability for sveltesentio
-labels: ['enhancement', 'triage']
+labels: ['enhancement']
 assignees: ['lusoris']
 body:
   - type: input

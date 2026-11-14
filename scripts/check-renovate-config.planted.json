@@ -1,0 +1,10 @@
+{
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"description": "Planted case for scripts/check-renovate-config.mjs: the rule that made Renovate refuse renovate.json from 2026-10-22 (issue 447). The pinned validator must refuse it, or the check cannot catch that regression.",
+	"packageRules": [
+		{
+			"matchUpdateTypes": ["vulnerability"],
+			"labels": ["security"]
+		}
+	]
+}

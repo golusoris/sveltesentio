@@ -5,10 +5,10 @@ name: Platform Neutrality
 
 'on':
   pull_request:
-    branches: [main]
+    branches: [main, 'lts-*']
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [main]
+    branches: [main, 'lts-*']
   merge_group:
   workflow_dispatch:
 
@@ -117,3 +117,20 @@ jobs:
           else
             pnpm test --concurrency=2
           fi
+      # HISS-21: the ruleset check runs on every platform leg.
+      - name: Ruleset check
+        run: pnpm check:ruleset
+      - name: Ruleset check tests
+        run: node --test scripts/check-ruleset.test.mjs scripts/check-ruleset-contract.test.mjs scripts/check-ruleset-target.test.mjs
+      # HISS-21: the migration codemod check spawns a worker per transform call and builds
+      # file URLs, both platform-sensitive; run the check and its tests on every leg.
+      - run: pnpm check:migration-codemods
+      - run: >-
+          node --test scripts/check-migration-codemods.test.mjs
+          scripts/check-migration-codemods-transforms.test.mjs
+      # HISS-21: commit-message and pre-push checks spawn git; hook tests also spawn sh.
+      # Exercise the hook and its quoted message path on every leg.
+      - run: >-
+          node --test scripts/check-commit-message.test.mjs
+          scripts/check-commit-message.lefthook.test.mjs
+          scripts/check-pushed-commits.test.mjs

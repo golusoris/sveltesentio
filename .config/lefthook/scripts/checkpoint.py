@@ -78,6 +78,7 @@ class CheckpointError(Exception):
 
 
 def _run(argv, root, *, allowed=(0,), network=False, timeout=None, index=None):
+    """Run a bounded command with repository selection isolated from the caller."""
     env = dict(os.environ)
     for key in (
         "GIT_DIR",
@@ -107,6 +108,7 @@ def _run(argv, root, *, allowed=(0,), network=False, timeout=None, index=None):
 
 
 def _git(root, *args, **kwargs):
+    """Run Git through the checkpoint command boundary."""
     return _run(["git", *args], root, **kwargs)
 
 
@@ -124,6 +126,7 @@ POLICY_FILE = "checkpoint.json"
 
 
 def _policy_bytes(root):
+    """Read the optional checkpoint policy using the platform's confined reader."""
     if DESCRIPTOR_RELATIVE:
         return _policy_bytes_relative(root)
     return _policy_bytes_checked(root)
@@ -217,6 +220,7 @@ def _read_inspected(descriptor, inspected):
 
 
 def _read_policy(stream):
+    """Read a regular policy file within the configured byte limit."""
     info = os.fstat(stream.fileno())
     if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_OUTPUT:
         raise CheckpointError(
@@ -229,6 +233,7 @@ def _read_policy(stream):
 
 
 def _config(root):
+    """Load and validate the checkpoint policy, disabling an absent policy."""
     try:
         raw = _policy_bytes(root)
         if raw is None:
@@ -265,6 +270,7 @@ OPTIONAL_CONFIG_FIELDS = frozenset(
 
 
 def _validate_config(value, pairs):
+    """Reject duplicate keys and malformed checkpoint policy fields."""
     if any(len(dict(items)) != len(items) for items in pairs):
         raise CheckpointError("checkpoint configuration contains duplicate keys")
     if (
@@ -289,6 +295,7 @@ def _validate_config(value, pairs):
 
 
 def _validate_thresholds_and_refs(value):
+    """Validate checkpoint thresholds and nonempty remote references."""
     if (
         type(value["commit_after_minutes"]) is not int
         or not 1 <= value["commit_after_minutes"] <= 1440
@@ -307,6 +314,7 @@ def _validate_thresholds_and_refs(value):
 
 
 def _validate_repository(repo, prefixes):
+    """Validate the forge repository name and allowed branch prefixes."""
     if (
         not isinstance(repo, str)
         or repo.count("/") != 1
@@ -329,6 +337,7 @@ def _validate_repository(repo, prefixes):
 
 
 def _validate_review_policy(value):
+    """Validate review booleans, required check names and their bounds."""
     for key in ("enforce_batch_scope", "require_checks"):
         if key in value and type(value[key]) is not bool:
             raise CheckpointError("checkpoint boolean fields must be booleans")
@@ -362,10 +371,12 @@ def _validate_review_policy(value):
 
 
 def _paths(raw):
+    """Decode nonempty paths from Git's NUL-separated output."""
     return {os.fsdecode(item) for item in raw.split(b"\0") if item}
 
 
 def _public(path):
+    """Report whether a path belongs to the public checkpoint batch."""
     return path not in (
         ".standards-receipt.json",
         ".workingdir",
@@ -377,10 +388,12 @@ NAME_ONLY = ("--name-only", "-z", "--no-renames")
 
 
 def _diff_names(root, *options, timeout=None):
+    """Read changed paths with external diff and text conversion disabled."""
     return _paths(_git(root, "diff", *WORKTREE_DIFF, *options, timeout=timeout))
 
 
 def _worktree(root, timeout=None):
+    """Collect tracked and untracked public worktree changes."""
     tracked = _diff_names(root, *NAME_ONLY, "--", timeout=timeout)
     untracked = _paths(
         _git(
@@ -570,7 +583,13 @@ def _pull_request_argv(cfg, branch=None):
     argv = ["gh", "pr", "list", "--repo", cfg["repository"], "--state", "all"]
     if branch:
         argv.extend(("--head", branch))
-    return [*argv, "--limit", "200", "--json", "headRefName,state"]
+    return [
+        *argv,
+        "--limit",
+        "200",
+        "--json",
+        "headRefName,state,headRefOid,baseRefName",
+    ]
 
 
 def _pull_request_rows(raw, kind):
@@ -582,10 +601,19 @@ def _pull_request_rows(raw, kind):
         not isinstance(row, dict)
         or not isinstance(row.get("headRefName"), str)
         or row.get("state") not in {"OPEN", "CLOSED", "MERGED"}
+        or not isinstance(row.get("headRefOid", ""), str)
+        or not isinstance(row.get("baseRefName", ""), str)
         for row in rows
     ):
         raise CheckpointError(f"pull request {kind} is malformed")
     return rows
+
+
+def _row_marks(row):
+    """A row's state; a merged row also names the head it carried and the base it landed on."""
+    if row["state"] != "MERGED":
+        return {row["state"]}
+    return {"MERGED", ("MERGED", row.get("headRefOid", ""), row.get("baseRefName", ""))}
 
 
 def _list_pull_requests(root, cfg, deadline):
@@ -606,7 +634,7 @@ def _list_pull_requests(root, cfg, deadline):
             rows = _pull_request_rows(raw, "listing")
             states = {}
             for row in rows:
-                states.setdefault(row["headRefName"], set()).add(row["state"])
+                states.setdefault(row["headRefName"], set()).update(_row_marks(row))
             return states, ""
         except (CheckpointError, ValueError, TypeError) as error:
             last_error = str(error)
@@ -628,7 +656,9 @@ def _probe_one_pull_request(root, cfg, branch):
         timeout=PULL_REQUEST_TIMEOUT,
     )
     rows = _pull_request_rows(raw, "probe")
-    return {row["state"] for row in rows if row["headRefName"] == branch}
+    return set().union(
+        *(_row_marks(row) for row in rows if row["headRefName"] == branch)
+    )
 
 
 def _probe_pull_requests(root, cfg, branches, states, deadline):
@@ -786,14 +816,15 @@ def _public_change_reason(path):
         return [str(error)]
 
 
-def _content_in_base(path, cfg):
+def _content_in_base(path, cfg, base=None):
     """Whether the worktree's net change since its merge base is already in the remote base.
 
     A branch that landed through a squash or a train has neither a remote copy of its commits
     nor a pull request of its own head, yet nothing of it is unfinished. Its reversed patch then
-    applies to the base. Read-only: the index lives in a temporary folder outside the repository.
+    applies to the base: the configured one, or the base a merged pull request names. Read-only:
+    the index lives in a temporary folder outside the repository.
     """
-    remote, base = cfg.get("remote") or "origin", cfg.get("base") or "main"
+    remote, base = cfg.get("remote") or "origin", base or cfg.get("base") or "main"
     base_ref = f"refs/remotes/{remote}/{base}"
     if not _remote_ref_exists(path, base_ref):
         return False
@@ -826,43 +857,75 @@ def _landed(path, cfg):
         return False
 
 
+def _landed_by_pull_request(path, cfg, marks):
+    """Whether a merged pull request carried this HEAD, or put its change into the PR's base.
+
+    Pull requests land on more bases than the configured one (an operations repository lands on
+    its role branch), and that base may since have changed the same lines, so no reversed patch
+    applies. A base name outside REF_NAME never reaches git. Fails closed like _landed.
+    """
+    merged = [mark[1:] for mark in marks if isinstance(mark, tuple)]
+    if not merged:
+        return False
+    try:
+        head = _git(path, "rev-parse", "HEAD", timeout=WORKTREE_COMMAND_TIMEOUT)
+        if head.decode().strip() in {oid for oid, _base in merged}:
+            return True
+        return any(
+            REF_NAME.fullmatch(base)
+            and ".." not in base
+            and "//" not in base
+            and _content_in_base(path, cfg, base)
+            for _oid, base in merged
+        )
+    except (CheckpointError, ValueError, OSError):
+        return False
+
+
 def _worktree_unpublished_count(path):
     """Count HEAD commits unreachable from every remote, using the canonical criterion."""
     return _rev_list_count(path, "--remotes")
 
 
 def _worktree_pr_needed(path, cfg, reasons):
-    """Check unpublished commits and base ahead; append reasons and return needs_pr."""
+    """Check unpublished commits and base ahead; append reasons and return the PR check kind.
+
+    "pushed": the branch is pushed and ahead of base, so it needs an open or merged pull
+    request. "landed": its commits are on no remote and nothing else is unfinished, so a merged
+    pull request of its head may show it landed (_landed_by_pull_request). "": no PR check.
+    """
     try:
         count = _worktree_unpublished_count(path)
     except (CheckpointError, ValueError, OSError) as error:
         reasons.append(f"commit state not verified ({error})")
-        return False
+        return ""
+    enabled = bool(cfg.get("enabled") and cfg.get("repository"))
     if count:
+        kind = "landed" if enabled and not reasons else ""
         reasons.append(f"{count} commit(s) not on any remote")
-        return False
-    if not cfg.get("enabled") or not cfg.get("repository"):
-        return False
+        return kind
+    if not enabled:
+        return ""
     try:
-        return _worktree_base_ahead(path, cfg)
+        return "pushed" if _worktree_base_ahead(path, cfg) else ""
     except (CheckpointError, ValueError, OSError) as error:
         reasons.append(f"pull request state not verified ({error})")
-        return False
+        return ""
 
 
 def _judge_worktree(root, cfg, entry, path, deadline):
-    """Return one worktree's unfinished reasons and whether its PR needs checking."""
+    """Return one worktree's unfinished reasons and the kind of PR check it needs."""
     if time.monotonic() >= deadline:
         return (
             entry,
             ["pull request state not verified (worktree check budget exhausted)"],
-            False,
+            "",
         )
     reasons = _public_change_reason(path)
     if entry.get("gate_reason"):
         reasons.append(entry["gate_reason"])
     if not reasons and _landed(path, cfg):
-        return entry, [], False
+        return entry, [], ""
     needs_pr = _worktree_pr_needed(path, cfg, reasons)
     return entry, reasons, needs_pr
 
@@ -877,6 +940,7 @@ def _ordered_map(fn, items):
     results, errors, lock, cursor = [None] * len(items), [], threading.Lock(), [0]
 
     def work():
+        """Process claimed items until the bounded queue is exhausted."""
         for _ in range(len(items)):
             with lock:
                 index, cursor[0] = cursor[0], cursor[0] + 1
@@ -902,15 +966,43 @@ def _ordered_map(fn, items):
 
 
 def _judge_worktree_candidates(root, cfg, candidates, deadline):
-    """Separate unfinished records from branches requiring bounded PR state reads."""
+    """Separate unfinished records from branches requiring bounded PR state reads.
+
+    Pushed candidates come first, so landed ones never take the three explicit-head probes a
+    pushed branch outside the listing needs; a detached HEAD names no branch to look up.
+    """
     jobs = [(cfg, entry, path, deadline) for entry, path in candidates]
     results = _ordered_map(lambda job: _judge_worktree(root, *job), jobs)
     records = [(entry, reasons) for entry, reasons, _ in results]
     pr_candidates = []
     for entry, _reasons, needs_pr in results:
-        if needs_pr:
-            pr_candidates.append((entry, _reasons))
+        if needs_pr == "pushed" or (needs_pr == "landed" and entry.get("branch")):
+            pr_candidates.append((entry, _reasons, needs_pr))
+    pr_candidates.sort(key=lambda item: item[2] != "pushed")
     return records, pr_candidates
+
+
+def _apply_pull_request_states(cfg, pr_candidates, states):
+    """Judge each candidate by its branch's PR states; return the unverified pushed count.
+
+    A landed candidate keeps its unpublished-commit reason unless a merged pull request shows
+    it landed; a failed lookup leaves that reason as it is.
+    """
+    pushed = [item for item in pr_candidates if item[2] == "pushed"]
+    if states is None:
+        return len(pushed)
+    for entry, reasons, kind in pr_candidates:
+        state = states.get(entry["branch"])
+        if kind == "landed":
+            if state and _landed_by_pull_request(Path(entry["path"]), cfg, state):
+                reasons.clear()
+        elif state is None or "UNVERIFIED" in state:
+            reasons.append("pull request state not verified")
+        elif not state.intersection({"OPEN", "MERGED"}):
+            reasons.append(
+                "pushed branch ahead of base has no open or merged pull request"
+            )
+    return 0
 
 
 def _git_common_dir(root):
@@ -941,18 +1033,7 @@ def _unfinished_worktree_records(root, cfg):
     states, skipped = _pull_request_states(
         root, cfg, [item[0]["branch"] for item in pr_candidates], deadline
     )
-    unverified_pushed = 0
-    if states is None:
-        unverified_pushed = len(pr_candidates)
-    else:
-        for entry, reasons in pr_candidates:
-            state = states.get(entry["branch"])
-            if state is None or "UNVERIFIED" in state:
-                reasons.append("pull request state not verified")
-            elif not state.intersection({"OPEN", "MERGED"}):
-                reasons.append(
-                    "pushed branch ahead of base has no open or merged pull request"
-                )
+    unverified_pushed = _apply_pull_request_states(cfg, pr_candidates, states)
     unfinished = [(entry, reasons) for entry, reasons in records if reasons]
     if owned is None:
         for _entry, reasons in unfinished:
@@ -994,6 +1075,7 @@ def _add_unfinished_worktrees(root, cfg, result):
 
 
 def _branch(root, timeout=None):
+    """Read the current branch, returning an empty name on detached HEAD."""
     return (
         _run(
             ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
@@ -1007,10 +1089,12 @@ def _branch(root, timeout=None):
 
 
 def _remote_url(root, remote):
+    """Read the configured URL of the selected Git remote."""
     return _git(root, "remote", "get-url", remote).decode().strip()
 
 
 def _ssh_transport_disabled(url):
+    """Recognize an explicitly disabled SSH transport."""
     if not (url.startswith("git@") or urlsplit(url).scheme == "ssh"):
         return False
     # A plain split, not shlex: the adopted bundle runs under the owner overlay's Python, which has
@@ -1020,6 +1104,7 @@ def _ssh_transport_disabled(url):
 
 
 def _push_transport_disabled(root, cfg):
+    """Determine whether the selected remote's push transport is disabled."""
     try:
         url = _remote_url(root, cfg["remote"])
     except CheckpointError:
@@ -1041,6 +1126,7 @@ def _push_transport_disabled(root, cfg):
 
 
 def _forge_token_absent():
+    """Determine whether the job lacks explicit forge authentication configuration."""
     if os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
         return False
     config = os.environ.get("GH_CONFIG_DIR")
@@ -1048,6 +1134,7 @@ def _forge_token_absent():
 
 
 def _detached_job_deferral(root, cfg):
+    """Explain deferral when a detached job cannot publish its checkpoint."""
     label = os.environ.get("PRAETOR_DETACHED_JOB")
     if (
         not label
@@ -1062,6 +1149,7 @@ def _detached_job_deferral(root, cfg):
 
 
 def _validate_remote(url, repository):
+    """Require the remote URL to identify the configured repository."""
     owner, name = repository.split("/", 1)
     path = f"/{owner}/{name}"
     if url.startswith("git@github.com:"):
@@ -1085,6 +1173,7 @@ def _validate_remote(url, repository):
 
 
 def _remote_refs(root, cfg, branch):
+    """Read the remote branch and base object IDs within observation bounds."""
     branch_ref = f"refs/heads/{branch}"
     base_ref = f"refs/heads/{cfg['base']}"
     lines = (
@@ -1116,6 +1205,7 @@ def _remote_refs(root, cfg, branch):
 
 
 def _branch_publication(root, head, remote_oid):
+    """Classify whether the remote branch contains the local checkpoint head."""
     if remote_oid == head:
         return "pushed", []
     if not remote_oid:
@@ -1150,6 +1240,7 @@ def _branch_publication(root, head, remote_oid):
 
 
 def _publication(root, cfg, branch, head, observation=None):
+    """Observe remote references and the branch's pull request publication state."""
     _validate_remote(_remote_url(root, cfg["remote"]), cfg["repository"])
     refs, branch_ref, base_ref = _remote_refs(root, cfg, branch)
     base_oid = refs.get(base_ref)
@@ -1179,6 +1270,7 @@ def _publication(root, cfg, branch, head, observation=None):
 
 
 def _open_pull_requests(root, cfg, branch):
+    """Read the bounded set of open pull requests for the checkpoint branch."""
     fields = "number,url,isDraft,headRefOid,headRefName,baseRefName"
     if cfg.get("require_checks", False):
         fields += ",statusCheckRollup"
@@ -1194,6 +1286,7 @@ def _open_pull_requests(root, cfg, branch):
 
 
 def _pull_request(root, cfg, branch, head, observation=None):
+    """Classify the branch's open pull request and required follow-up actions."""
     repo = cfg["repository"]
     prs = _open_pull_requests(root, cfg, branch)
     if not isinstance(prs, list) or len(prs) > 1:
@@ -1219,6 +1312,7 @@ def _pull_request(root, cfg, branch, head, observation=None):
 
 
 def _check_run_state(check):
+    """Validate a hosted check run and normalize its conclusion."""
     status, conclusion = check.get("status"), check.get("conclusion")
     if not isinstance(status, str) or (
         conclusion is not None and not isinstance(conclusion, str)
@@ -1245,6 +1339,7 @@ def _check_run_state(check):
 
 
 def _check_observation(check):
+    """Normalize a hosted check run or status context into a named state."""
     if not isinstance(check, dict):
         raise CheckpointError("hosted check must be an object")
     if check.get("__typename") == "CheckRun":
@@ -1388,6 +1483,7 @@ def _draft_gate_checks(root, cfg, pr, checks):
 
 
 def _review_state(checks, required, draft_gates=frozenset()):
+    """Classify required check coverage, including deliberate draft gate refusals."""
     if not isinstance(checks, list) or len(checks) >= MAX_CHECKS:
         raise CheckpointError(
             "hosted check coverage is invalid or reaches its observation bound"
@@ -1417,6 +1513,7 @@ def _review_state(checks, required, draft_gates=frozenset()):
 
 
 def _review_checks(root, pr, cfg, result):
+    """Record required check observations and return pending review actions."""
     if not cfg.get("require_checks", False):
         return []
     checks = pr.get("statusCheckRollup")
@@ -1453,6 +1550,7 @@ def _review_checks(root, pr, cfg, result):
 
 
 def _empty_result(include_paths):
+    """Create the checkpoint result with optional path observations."""
     result = {
         "schema_version": 1,
         "enabled": False,
@@ -1473,6 +1571,7 @@ def _empty_result(include_paths):
 
 
 def _observe_worktree(root, cfg, event, include_paths, result, *, require_branch=True):
+    """Record the branch, head and public changes and determine commit actions."""
     result["enabled"] = True
     result["review_status"] = (
         "not_observed" if cfg.get("require_checks", False) else "not_requested"
@@ -1496,6 +1595,7 @@ def _observe_worktree(root, cfg, event, include_paths, result, *, require_branch
 
 
 def _verified_head(root):
+    """Read HEAD and reject a malformed Git object ID."""
     head = (
         _git(root, "rev-parse", "--verify", "--quiet", "HEAD", allowed=(0, 1))
         .decode()
@@ -1507,6 +1607,7 @@ def _verified_head(root):
 
 
 def _commit_due(root, cfg, event, head, public):
+    """Determine whether age, file count or the stop event requires a commit."""
     age = (
         time.time()
         - int(_git(root, "show", "-s", "--format=%ct", "HEAD").decode().strip())
@@ -1521,6 +1622,7 @@ def _commit_due(root, cfg, event, head, public):
 
 
 def _require_checkpoint_branch(branch, cfg):
+    """Refuse checkpoint commits on protected or disallowed branches."""
     if not branch:
         raise CheckpointError("checkpoint due on detached HEAD")
     allowed = any(branch.startswith(prefix) for prefix in cfg["branch_prefixes"])
@@ -1529,6 +1631,7 @@ def _require_checkpoint_branch(branch, cfg):
 
 
 def _observe_publication(root, cfg, event, result):
+    """Record publication actions for an eligible stop checkpoint."""
     if event != "stop" or not cfg["publish"] or not result["head"]:
         return
     branch = result["branch"]
@@ -1547,6 +1650,7 @@ def _observe_publication(root, cfg, event, result):
 
 
 def _observe_base(root, cfg, result):
+    """Observe whether the checkpoint head matches the configured remote base."""
     _validate_remote(_remote_url(root, cfg["remote"]), cfg["repository"])
     refs, _, base_ref = _remote_refs(root, cfg, cfg["base"])
     if base_ref not in refs:
@@ -1572,6 +1676,7 @@ def _observe_base(root, cfg, result):
 
 
 def _validate_stability(root, head, public, result):
+    """Refuse observations whose branch, head or public changes moved mid-check."""
     if (
         _branch(root) != result["branch"]
         or _git(root, "rev-parse", "--verify", "--quiet", "HEAD", allowed=(0, 1))
@@ -1613,6 +1718,7 @@ def _inspect_enabled_checkpoint(root, cfg, event, include_paths, result):
 
 
 def inspect_checkpoint(root: Path, event: str, include_paths: bool = False) -> dict:
+    """Inspect checkpoint obligations and return bounded structured diagnostics."""
     result = _empty_result(include_paths)
     if event not in {"tool", "stop"}:
         result.update(error="event must be tool or stop", publication_status="error")
@@ -1653,6 +1759,7 @@ def _prepare_native_session(args):
 
 
 def main(argv=None):
+    """Parse checkpoint arguments and emit the requested session or checkpoint result."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--event", choices=("tool", "stop"), required=True)
     parser.add_argument("--root", type=Path, default=Path("."))

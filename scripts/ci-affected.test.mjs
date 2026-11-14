@@ -7,6 +7,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
 	DOCS_ONLY_PATTERNS,
+	GATED_DOC_PATTERNS,
 	PACKAGE_DIRECTORY_MAP,
 	SHARED_SURFACE_PATTERNS,
 	analyzeChanges,
@@ -73,6 +74,20 @@ describe('ci-affected: analyzeChanges', () => {
 		});
 	});
 
+	it('treats docs/CODEOWNERS as a shared surface', () => {
+		const res = analyzeChanges(['docs/CODEOWNERS'], []);
+		assert.equal(res.allAffected, true);
+		assert.equal(res.hasCodeChanges, true);
+		assert.deepEqual(res.sharedSurfaces, ['docs/CODEOWNERS']);
+	});
+
+	it('keeps ordinary docs paths docs-only', () => {
+		const res = analyzeChanges(['docs/adr/0001.md'], []);
+		assert.equal(res.allAffected, false);
+		assert.equal(res.hasCodeChanges, false);
+		assert.deepEqual(res.sharedSurfaces, []);
+	});
+
 	it('analyzes single package change', () => {
 		const res = analyzeChanges(['packages/ui/src/button.svelte']);
 		assert.deepEqual(res, {
@@ -125,6 +140,9 @@ describe('ci-affected: analyzeChanges', () => {
 			'scripts/ci-affected.mjs',
 			'packages/core/src/index.ts',
 			'packages/testing/src/index.ts',
+			'CODEOWNERS',
+			'docs/migrations/v0.2.md',
+			'tools/migrations/README.md',
 		];
 
 		assert.equal(testFiles.length, SHARED_SURFACE_PATTERNS.length);
@@ -135,6 +153,30 @@ describe('ci-affected: analyzeChanges', () => {
 			const res = analyzeChanges([file]);
 			assert.equal(res.allAffected, true);
 			assert.deepEqual(res.sharedSurfaces, [file]);
+		}
+	});
+
+	it('runs the lint job for migration guides and codemods, which a docs-only change would skip', () => {
+		for (const file of ['docs/migrations/v0.2.md', 'tools/migrations/README.md']) {
+			assert.ok(
+				GATED_DOC_PATTERNS.some((p) => p.test(file)),
+				file,
+			);
+			const res = analyzeChanges([file], []);
+			assert.equal(res.allAffected, true, file);
+			assert.equal(res.hasCodeChanges, true, file);
+		}
+		const mixed = analyzeChanges(['tools/migrations/README.md', 'README.md'], []);
+		assert.equal(mixed.allAffected, true);
+		assert.deepEqual(mixed.sharedSurfaces, ['tools/migrations/README.md']);
+		// Guides the check does not read stay docs-only.
+		for (const file of [
+			'docs/migrations/README.md',
+			'docs/migrations/kit-2-to-3.md',
+			'docs/migrations/downstream-antipatterns-v0.1.md',
+		]) {
+			const res = analyzeChanges([file], []);
+			assert.equal(res.hasCodeChanges, false, file);
 		}
 	});
 
@@ -482,7 +524,7 @@ describe('ci-affected: runCiAffected and scope detection', () => {
 		assert.deepEqual(parsed.affectedPackages, []);
 		assert.equal(parsed.turboFilter, '');
 		assert.equal(parsed.changedFiles, 1);
-		assert.equal(parsed.prettierFiles, 'README.md');
+		assert.equal(parsed.prettierFiles, '');
 		assert.equal(parsed.hasStories, false);
 		assert.match(cli.githubOutput, /has_code_changes=false/);
 	});

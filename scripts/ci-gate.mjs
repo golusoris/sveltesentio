@@ -31,6 +31,7 @@ export const CHANGE_SCOPED = Object.freeze([
 	'build',
 	'stories',
 	'e2e',
+	'visual',
 	'audit',
 ]);
 
@@ -44,6 +45,8 @@ export const MUST_SUCCEED = Object.freeze([
 	'secret-scan',
 	'dependency-scan',
 	'semgrep',
+	'renovate-config',
+	'template-labels',
 ]);
 
 /** Every need the gate knows, in the order the lists above name them. */

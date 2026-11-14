@@ -1,0 +1,11 @@
+/*
+ * @sveltesentio/ui Tailwind v4 source registration.
+ *
+ * Instructs the Tailwind v4 scanner to scan published @sveltesentio/ui component
+ * source files for utility classes (e.g. bg-black/80, top-1/2 in Dialog).
+ *
+ * Paths resolve relative to this stylesheet directory (packages/ui/src).
+ */
+@source ".";
+@source not "./**/*.stories.*";
+@source not "./**/*.{test,spec}.*";

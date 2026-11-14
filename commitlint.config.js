@@ -7,7 +7,6 @@ export default {
 			'always',
 			['feat', 'fix', 'chore', 'docs', 'refactor', 'test', 'perf', 'build', 'ci', 'revert'],
 		],
-		'subject-case': [2, 'always', 'lower-case'],
 		'header-max-length': [2, 'always', 100],
 	},
 };

@@ -42,6 +42,13 @@
     },
     {
       "parameters": {
+        "review_draft_pull_requests": true,
+        "review_on_push": true
+      },
+      "type": "copilot_code_review"
+    },
+    {
+      "parameters": {
         "required_status_checks": [
           {
             "context": "CI Gate"
@@ -53,10 +60,16 @@
             "context": "Detect Changes"
           },
           {
+            "context": "Renovate configuration"
+          },
+          {
             "context": "Secret scan (gitleaks)"
           },
           {
             "context": "Custom SAST (semgrep)"
+          },
+          {
+            "context": "Template labels"
           },
           {
             "context": "CodeQL analysis"

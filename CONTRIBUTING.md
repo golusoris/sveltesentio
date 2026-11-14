@@ -18,7 +18,7 @@ same governance surface, same quality bar. Read this document before opening a P
 ## Prerequisites
 
 - **Node 24 LTS** (minimum; see ADR-0021).
-- **pnpm 9** (managed by `packageManager` in [package.json](package.json)).
+- **pnpm 12** (managed by `packageManager` in [package.json](package.json)).
 - **TypeScript 6** (see ADR-0020).
 - **ESM-only** runtime — no CJS (see ADR-0022).
 
@@ -66,6 +66,11 @@ short-lived and named `feat/<package>-<slug>`, `fix/<package>-<slug>`, or
 
 Scope is the package name (`core`, `ui`, `query`, …) or `repo` for root changes.
 
+Every commit carries `Signed-off-by` with your git email (`git commit -s`).
+The commit-msg hook (`make setup` installs it) also runs commitlint on the message and refuses missing sign-offs or leftover `#` lines,
+including the `# Conflicts:` block that `git commit --no-edit` keeps after a conflicted merge.
+The pre-push hook re-reads every commit the push adds that the destination remote's tracking refs do not hold yet and refuses the same sign-off and `#` faults, including ones an editor run with `--cleanup=verbatim` or `--cleanup=whitespace` keeps.
+
 Examples:
 
 ```text
@@ -73,7 +78,7 @@ feat(core): add testClock injector
 
 fix(ui): preserve safe-area padding on handheld preset
 
-chore(repo): bump pnpm to 9.14.0
+chore(repo): bump pnpm to 12.14.0
 
 docs(adr): close D172 — paraglide-v2 as i18n default
 

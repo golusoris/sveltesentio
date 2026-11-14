@@ -6,6 +6,7 @@
 	"postUpdateOptions": ["pnpmDedupe"],
 	"vulnerabilityAlerts": {
 		"enabled": true,
+		"groupName": null,
 		"labels": ["security"],
 		"minimumReleaseAge": null,
 		"schedule": ["at any time"],
@@ -17,13 +18,6 @@
 		"groupName": "lockfile maintenance"
 	},
 	"packageRules": [
-		{
-			"matchUpdateTypes": ["vulnerability"],
-			"groupName": null,
-			"minimumReleaseAge": null,
-			"schedule": ["at any time"],
-			"labels": ["security"]
-		},
 		{
 			"matchPackageNames": ["undici"],
 			"allowedVersions": "<8",
@@ -62,6 +56,7 @@
 				"@vitest/**",
 				"@playwright/**",
 				"playwright",
+				"mcr.microsoft.com/playwright",
 				"@testing-library/**",
 				"@axe-core/**",
 				"jsdom"
@@ -96,9 +91,6 @@
 				"tools/figures/third_party/interfig/upstream/src/svg.ts",
 				"tools/figures/third_party/interfig/upstream/src/geometry.ts",
 				"tools/figures/third_party/interfig/upstream/src/model.ts",
-				"tools/figures/player/loader.js",
-				"tools/figures/player/player.js",
-				"tools/figures/player/THIRD-PARTY-LICENSES.txt",
 				"tools/figures/figures.css",
 				"tools/figures/mkdocs_hook.py",
 				"tools/figures/astro.mjs",
@@ -111,6 +103,41 @@
 				".config/reuse/requirements.txt"
 			],
 			"enabled": false
+		},
+		{
+			"description": "praetor-managed engine: updates arrive in one coordinated adoption pull request",
+			"matchPackageNames": [
+				"github.com/cordanaLLM/praetor",
+				"github.com/cordanaLLM/praetor/**",
+				"github.com/cordanaLLM/praetor/cmd/standardsctl",
+				"cordanaLLM/praetor",
+				"cordanaLLM/praetor/**"
+			],
+			"enabled": false
+		}
+	],
+	"customManagers": [
+		{
+			"currentValueTemplate": "HEAD",
+			"customType": "regex",
+			"datasourceTemplate": "git-refs",
+			"depNameTemplate": "praetor-workflow-engine-pin",
+			"description": "praetor workflow engine commit pin: track the engine default branch",
+			"managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+			"matchStrings": [
+				"(?m)^[\\t ]*(PRAETOR_COMMIT)[\\t ]*[:=][\\t ]*[\"']?(?<currentDigest>[0-9a-f]{40})[\"']?[\\t ]*(#[^\\r\\n]*)?\\r?$",
+				"(?m)^[\\t ]*(PRAETOR_REF)[\\t ]*[:=][\\t ]*[\"']?(?<currentDigest>[0-9a-fA-F]{7,40})[\"']?[\\t ]*(#[^\\r\\n]*)?\\r?$"
+			],
+			"packageNameTemplate": "https://github.com/cordanaLLM/praetor"
+		},
+		{
+			"customType": "regex",
+			"datasourceTemplate": "docker",
+			"description": "Renovate image scripts/check-renovate-config.mjs validates this file with: tag and digest",
+			"managerFilePatterns": ["/^scripts/check-renovate-config\\.mjs$/"],
+			"matchStrings": [
+				"'(?<depName>ghcr\\.io/renovatebot/renovate):(?<currentValue>\\d+\\.\\d+\\.\\d+)@(?<currentDigest>sha256:[0-9a-f]{64})'"
+			]
 		}
 	]
 }

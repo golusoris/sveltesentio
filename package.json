@@ -26,7 +26,13 @@
 		"format:check": "prettier --check .",
 		"check:cycles": "node scripts/check-import-cycles.mjs",
 		"check:declared-imports": "node scripts/check-declared-imports.mjs",
+		"check:job-timeouts": "node scripts/check-job-timeouts.mjs",
+		"check:platform-legs": "node scripts/check-platform-legs.mjs",
+		"check:ruleset": "node scripts/check-ruleset.mjs",
+		"check:playwright-image": "node scripts/check-playwright-image.mjs",
 		"check:kit-compat": "node scripts/check-kit-compat.mjs",
+		"check:migration-codemods": "node scripts/check-migration-codemods.mjs",
+		"check:renovate-config": "node scripts/check-renovate-config.mjs",
 		"lint:scripts": "eslint scripts/",
 		"test:scripts": "node scripts/node-test.mjs \"scripts/*.test.mjs\""
 	},
@@ -55,7 +61,8 @@
 		"svelte-eslint-parser": "^1.8.1",
 		"turbo": "^2.10.12",
 		"typescript": "^6.0.3",
-		"web-vitals": "^6.2.3"
+		"web-vitals": "^6.2.3",
+		"yaml": "2.9.1"
 	},
 	"lint-staged": {
 		"*.{ts,svelte,js}": [
@@ -68,7 +75,7 @@
 	},
 	"engines": {
 		"node": ">=24",
-		"pnpm": ">=10"
+		"pnpm": ">=12"
 	},
 	"packageManager": "pnpm@12.14.0"
 }

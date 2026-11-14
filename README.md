@@ -1,40 +1,49 @@
-# sveltesentio
+<!-- markdownlint-disable MD013 MD033 MD036 MD041 -->
+<div align="center">
+  <img src="docs/assets/sveltesentio-readme-banner.svg" alt="sveltesentio — composable SvelteKit framework, opt-in modules, Svelte 5 runes" height="120" />
+</div>
 
-<!-- prettier-ignore-start -->
-<!-- praetor:readme-governance:start -->
-[![HISS Adopted][praetor-hiss-badge]][praetor-hiss-agents]
-[![Documentation Governance][praetor-docs-badge]][praetor-docs-runs]
+<!-- README-STANDARD badge block: one group, fixed order (docs/README-STANDARD.md) -->
+<!-- 1 release/version -->
 
-Praetor manages this repository's declared governance policy. This managed
-block records adoption state; it is not a verification certificate.
+<p align="center">
+  <a href="https://github.com/golusoris/sveltesentio/releases"><img src="https://img.shields.io/badge/Release-Releases-3b82f6?style=for-the-badge&labelColor=111a35" alt="Release" /></a>
+</p>
 
-**Verification**: `make verify-all` runs the repository's configured
-verification cascade.
+<!-- 2 CI/build -->
 
-**HISS Audit**: `praetorctl audit` enforces policy, generated-surface
-integrity, and the debt ratchet.
+<p align="center">
+  <a href="https://github.com/golusoris/sveltesentio/actions/workflows/ci.yml"><img src="https://github.com/golusoris/sveltesentio/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI" /></a>
+  <a href="https://github.com/golusoris/sveltesentio/actions/workflows/portability.yml"><img src="https://github.com/golusoris/sveltesentio/actions/workflows/portability.yml/badge.svg?branch=main&event=push" alt="Platform Neutrality" /></a>
+  <a href="https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml"><img src="https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg?branch=main&event=push" alt="Documentation Governance" /></a>
+</p>
 
-**Context Sync**: `praetorctl compile-context --verify` verifies every
-generated agent context against `AGENTS.md`.
+<!-- 3 security/scorecard -->
 
-**Documentation**: `make docs-lint` enforces locked Markdown style and the
-private scratch-link policy.
+<p align="center">
+  <a href="https://github.com/golusoris/sveltesentio/actions/workflows/codeql.yml"><img src="https://github.com/golusoris/sveltesentio/actions/workflows/codeql.yml/badge.svg?branch=main&event=push" alt="CodeQL" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/golusoris/sveltesentio"><img src="https://img.shields.io/badge/OpenSSF-Scorecard-06b6d4?style=for-the-badge&labelColor=111a35" alt="OpenSSF Scorecard" /></a>
+  <a href="https://www.bestpractices.dev/projects/15664"><img src="https://www.bestpractices.dev/projects/15664/badge" alt="OpenSSF Best Practices" /></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/badge/Reviews-CodeRabbit-8b5cf6?style=for-the-badge&logo=coderabbit&logoColor=white&labelColor=111a35" alt="CodeRabbit" /></a>
+</p>
 
-**Debt Baseline**: `.standards-baseline.json` anchors the debt ratchet at
-0 recorded infractions; audit forbids growth.
+<!-- 4 standards -->
 
-[praetor-hiss-badge]: https://img.shields.io/badge/Standards-HISS%20Adopted-blue
-[praetor-hiss-agents]: https://github.com/golusoris/sveltesentio/blob/HEAD/AGENTS.md
-[praetor-docs-badge]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg
-[praetor-docs-runs]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml
-<!-- praetor:readme-governance:end -->
-<!-- prettier-ignore-end -->
+<p align="center">
+  <a href="AGENTS.md"><img src="https://img.shields.io/badge/Standards-HISS--21-06b6d4?style=for-the-badge&logo=nasa&labelColor=111a35" alt="HISS-21" /></a>
+  <a href="docs/principles.md"><img src="https://img.shields.io/badge/NASA_JPL-Power_of_10-3b82f6?style=for-the-badge&logo=nasa&labelColor=111a35" alt="Power of 10" /></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Commits-Conventional-8b5cf6?style=for-the-badge&logo=conventionalcommits&logoColor=white&labelColor=111a35" alt="Conventional Commits" /></a>
+</p>
 
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15664/badge)](https://www.bestpractices.dev/projects/15664)
+<!-- 5 licence -->
 
-> Composable SvelteKit framework — opt-in modules, Svelte 5 runes, production-grade.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-EUPL--1.2-3b82f6?style=for-the-badge&labelColor=111a35" alt="License" /></a>
+</p>
 
-The direct frontend counterpart to [golusoris](https://github.com/golusoris/golusoris).
+<p align="center"><strong>Composable SvelteKit framework — opt-in modules, Svelte 5 runes</strong></p>
+<p align="center"><em>The direct frontend counterpart to <a href="https://github.com/golusoris/golusoris">golusoris</a></em></p>
+
 Apps install only what they need from `@sveltesentio/*`. Philosophy first, code second.
 
 ## Packages
@@ -74,7 +83,7 @@ pnpm add @sveltesentio/core @sveltesentio/query @sveltesentio/api @sveltesentio/
 - **Interface types**: desktop, 10-foot, handheld, dashboard (see [ADR-0047](docs/adr/0047-per-interface-presets.md))
 - **Standards**: WCAG 2.2 AA, OWASP ASVS L2, SLSA Build Level 2 (Level 3 is open, [#280](https://github.com/golusoris/sveltesentio/issues/280)), EU AI Act Art. 12, Svelte 5 runes-first
 
-See [`docs/principles.md`](docs/principles.md) and [`docs/ux-principles.md`](docs/ux-principles.md).
+See [`docs/principles.md`](docs/principles.md) and [`docs/ux-principles.md`](docs/ux-principles.md). [Support & discussions](https://github.com/golusoris/sveltesentio/discussions).
 
 ## Development
 
@@ -84,7 +93,7 @@ make dev     # turbo dev (all packages watch)
 make ci      # lint + typecheck + test + build
 ```
 
-Requires Node 24+ (see [ADR-0021](docs/adr/0021-node-24-floor.md)) and pnpm 10+.
+Requires Node 24+ (see [ADR-0021](docs/adr/0021-node-24-floor.md)) and pnpm 12+.
 
 ## License
 
@@ -120,11 +129,39 @@ The packages were published under MIT up to and including the releases below. Th
 
 ## Standards & Governance
 
-This repository conforms to High-Integrity Systems Standards (HISS-16)
+This repository conforms to High-Integrity Systems Standards (HISS-21)
 and modernized NASA JPL Power-of-10 rules.
 
 | Gate             | Command                        | Description                                              |
 | :--------------- | :----------------------------- | :------------------------------------------------------- |
 | **Verification** | `make verify-all`              | Runs full audit, test suite, and context integrity check |
-| **HISS Audit**   | `standardsctl audit`           | Enforces zero technical debt regression against baseline |
-| **Context Sync** | `standardsctl compile-context` | Transpiles canonical `AGENTS.md` to all AI targets       |
+| **HISS Audit**   | `praetorctl audit`             | Enforces zero technical debt regression against baseline |
+| **Context Sync** | `praetorctl compile-context`   | Transpiles canonical `AGENTS.md` to all AI targets       |
+
+<!-- praetor:readme-governance:start -->
+[![HISS Adopted][praetor-hiss-badge]][praetor-hiss-agents]
+[![Documentation Governance][praetor-docs-badge]][praetor-docs-runs]
+
+Praetor manages this repository's declared governance policy. This managed
+block records adoption state; it is not a verification certificate.
+
+**Verification**: `make verify-all` runs the repository's configured
+verification cascade.
+
+**HISS Audit**: `praetorctl audit` enforces policy, generated-surface
+integrity, and the debt ratchet.
+
+**Context Sync**: `praetorctl compile-context --verify` verifies every
+generated agent context against `AGENTS.md`.
+
+**Documentation**: `make docs-lint` enforces locked Markdown style and the
+private scratch-link policy.
+
+**Debt Baseline**: `.standards-baseline.json` anchors the debt ratchet at
+2 recorded infractions; audit forbids growth.
+
+[praetor-hiss-badge]: https://img.shields.io/badge/Standards-HISS%20Adopted%20(2%20baselined)-yellow
+[praetor-hiss-agents]: https://github.com/golusoris/sveltesentio/blob/HEAD/AGENTS.md
+[praetor-docs-badge]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml/badge.svg
+[praetor-docs-runs]: https://github.com/golusoris/sveltesentio/actions/workflows/praetor-docs.yml
+<!-- praetor:readme-governance:end -->

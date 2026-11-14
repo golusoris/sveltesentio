@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const TURBO_ROOT_PREFIX = '$TURBO_ROOT$/';
 
+// Files that match DOCS_ONLY_PATTERNS but feed a check in the lint job, so a change to
+// them alone must still run it: a version guide's `codemods` count and the codemods
+// with their fixtures (a `.md` fixture or the contract README would otherwise skip).
+// check-migration-codemods.mjs reads them.
+export const GATED_DOC_PATTERNS = [/^docs\/migrations\/v\d+\.\d+\.md$/, /^tools\/migrations\//];
+
 export const SHARED_SURFACE_PATTERNS = [
 	/^package\.json$/,
 	/^pnpm-lock\.yaml$/,
@@ -21,11 +27,13 @@ export const SHARED_SURFACE_PATTERNS = [
 	/^scripts\//,
 	/^packages\/core\//,
 	/^packages\/testing\//,
+	/^(docs\/)?CODEOWNERS$/,
+	...GATED_DOC_PATTERNS,
 ];
 
 export const DOCS_ONLY_PATTERNS = [
 	/\.md$/,
-	/^docs\//,
+	/^docs\/(?!CODEOWNERS$)/,
 	/^\.workingdir\//,
 	/^LICENSE$/,
 	/^CODE_OF_CONDUCT\.md$/,
@@ -212,8 +220,10 @@ export function analyzeChanges(changedFiles, readers) {
 	);
 
 	const readerPackages = findReaderPackages(normalizedFiles, readers ?? loadRootReaders());
-	const isDocsOnly = normalizedFiles.every((file) =>
-		DOCS_ONLY_PATTERNS.some((pattern) => pattern.test(file)),
+	const isDocsOnly = normalizedFiles.every(
+		(file) =>
+			DOCS_ONLY_PATTERNS.some((pattern) => pattern.test(file)) &&
+			!GATED_DOC_PATTERNS.some((pattern) => pattern.test(file)),
 	);
 	if (isDocsOnly) {
 		return selectPackages([], readerPackages);
