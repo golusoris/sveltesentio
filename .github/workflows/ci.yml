@@ -437,6 +437,26 @@ jobs:
       - name: Scan every tracked JavaScript and TypeScript file
         run: bash scripts/semgrep-scan.sh
 
+  # Renovate refuses a configuration it cannot validate only on its own server,
+  # where nothing in this repository sees it (issue 447). Unconditional, so a
+  # pull request that touches renovate.json alone is checked too.
+  renovate-config:
+    name: Renovate configuration
+    # Linux only (HISS-21, #328): validates renovate.json, which is the same on every platform.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      # Runs renovate-config-validator from the Renovate image the script pins by
+      # digest, offline, and requires it to accept renovate.json and refuse the
+      # planted rule. CI=true makes a missing container runtime fail, not skip.
+      - run: node scripts/check-renovate-config.mjs
+
   docs-drift:
     name: Docs drift
     if: github.event_name == 'pull_request'
@@ -500,6 +520,7 @@ jobs:
         secret-scan,
         dependency-scan,
         semgrep,
+        renovate-config,
         docs-drift,
         template-labels,
       ]

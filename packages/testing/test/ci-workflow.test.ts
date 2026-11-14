@@ -128,6 +128,7 @@ interface RenovatePackageRule {
 interface RenovateConfig {
 	vulnerabilityAlerts?: {
 		enabled?: boolean;
+		groupName?: string | null;
 		minimumReleaseAge?: string | null;
 		schedule?: string[];
 	};
@@ -154,14 +155,23 @@ describe('Renovate Configuration (renovate.json)', () => {
 		expect(config.vulnerabilityAlerts?.schedule).toEqual(['at any time']);
 	});
 
+	// Renovate turns each vulnerability fix into a package rule carrying
+	// `force: { ...vulnerabilityAlerts }`, which overrides the grouping rules, so
+	// the guarantee lives in vulnerabilityAlerts. `vulnerability` is not an
+	// update type Renovate accepts: a package rule matching it made Renovate
+	// refuse the whole file from 2026-10-22 (issue 447).
 	it('guarantees vulnerability updates are never grouped into batch PRs', () => {
 		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
-		const vulnRule = config.packageRules?.find((r) =>
+		expect(config.vulnerabilityAlerts?.groupName).toBeNull();
+		expect(config.vulnerabilityAlerts?.minimumReleaseAge).toBeNull();
+	});
+
+	it('keeps no package rule on the update type Renovate refuses', () => {
+		const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as RenovateConfig;
+		const refused = config.packageRules?.filter((r) =>
 			r.matchUpdateTypes?.includes('vulnerability'),
 		);
-		expect(vulnRule).toBeDefined();
-		expect(vulnRule?.groupName).toBeNull();
-		expect(vulnRule?.minimumReleaseAge).toBeNull();
+		expect(refused).toEqual([]);
 	});
 
 	it('preserves undici allowedVersions cap for jsdom 29 compatibility', () => {

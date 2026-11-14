@@ -81,6 +81,7 @@ verify-all:
 	@pnpm check:playwright-image
 	@pnpm check:kit-compat
 	@pnpm check:migration-codemods
+	@pnpm check:renovate-config
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high
 	@$(PRAETORCTL) audit

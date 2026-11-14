@@ -6,6 +6,7 @@
 	"postUpdateOptions": ["pnpmDedupe"],
 	"vulnerabilityAlerts": {
 		"enabled": true,
+		"groupName": null,
 		"labels": ["security"],
 		"minimumReleaseAge": null,
 		"schedule": ["at any time"],
@@ -17,13 +18,6 @@
 		"groupName": "lockfile maintenance"
 	},
 	"packageRules": [
-		{
-			"matchUpdateTypes": ["vulnerability"],
-			"groupName": null,
-			"minimumReleaseAge": null,
-			"schedule": ["at any time"],
-			"labels": ["security"]
-		},
 		{
 			"matchPackageNames": ["undici"],
 			"allowedVersions": "<8",
@@ -135,6 +129,15 @@
 				"(?m)^[\\t ]*(PRAETOR_REF)[\\t ]*[:=][\\t ]*[\"']?(?<currentDigest>[0-9a-fA-F]{7,40})[\"']?[\\t ]*(#[^\\r\\n]*)?\\r?$"
 			],
 			"packageNameTemplate": "https://github.com/cordanaLLM/praetor"
+		},
+		{
+			"customType": "regex",
+			"datasourceTemplate": "docker",
+			"description": "Renovate image scripts/check-renovate-config.mjs validates this file with: tag and digest",
+			"managerFilePatterns": ["/^scripts/check-renovate-config\\.mjs$/"],
+			"matchStrings": [
+				"'(?<depName>ghcr\\.io/renovatebot/renovate):(?<currentValue>\\d+\\.\\d+\\.\\d+)@(?<currentDigest>sha256:[0-9a-f]{64})'"
+			]
 		}
 	]
 }
