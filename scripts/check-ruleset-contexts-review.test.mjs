@@ -1,4 +1,4 @@
-// Review cases E1-E6: required contexts judged through the whole checker.
+// Review cases E1-E7: required contexts judged through the whole checker.
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -94,6 +94,7 @@ function reusableFixture() {
 	return {
 		'.github/workflows/caller.yml': namedWorkflow('Reusable', 'pull_request', {
 			uses: './.github/workflows/callee.yml',
+			'runs-on': undefined,
 		}),
 		'.github/workflows/callee.yml': JSON.stringify({
 			on: 'workflow_call',
@@ -144,22 +145,66 @@ for (const excluded of [false, true]) {
 	});
 }
 
-for (const [label, job] of [
-	['constant false', { if: false }],
-	['missing runner', { 'runs-on': undefined }],
+/** Spell the refusal of a job outside GitHub's two job forms. */
+function invalidJob(file, id) {
+	return (
+		`.github/workflows/${file}: job '${id}' needs either runs-on or a reusable uses, ` +
+		'not both or neither, so GitHub refuses the workflow; its jobs were not matched'
+	);
+}
+
+it('E5 accepts a skipped publisher with a constant-false condition', async () => {
+	const root = await fixture({
+		ruleset: requiring('Build'),
+		workflows: {
+			'.github/workflows/build.yml': namedWorkflow('Build', 'pull_request', { if: false }),
+		},
+	});
+	assert.deepEqual(await checkRuleset(root), { findings: [] });
+});
+
+it('E5 rejects a publisher without a runner', async () => {
+	const root = await fixture({
+		ruleset: requiring('Build'),
+		workflows: {
+			'.github/workflows/build.yml': namedWorkflow('Build', 'pull_request', {
+				'runs-on': undefined,
+			}),
+		},
+	});
+	assert.deepEqual(await checkRuleset(root), {
+		findings: [invalidJob('build.yml', 'check'), unpublished('Build')],
+	});
+});
+
+for (const [label, sibling, refused] of [
+	['without a runner', { name: 'Broken' }, true],
+	[
+		'with both a runner and a reusable call',
+		{ uses: './.github/workflows/x.yml', 'runs-on': 'ubuntu-26.04' },
+		true,
+	],
+	['with a reusable call only', { uses: './.github/workflows/x.yml' }, false],
 ]) {
-	it(`E5 rejects a publisher with ${label}`, async () => {
+	it(`E7 judges a valid publisher beside a sibling job ${label}`, async () => {
+		const workflow = JSON.stringify({
+			on: 'pull_request',
+			jobs: { check: { name: 'Build', 'runs-on': 'ubuntu-26.04' }, broken: sibling },
+		});
 		const root = await fixture({
 			ruleset: requiring('Build'),
-			workflows: {
-				'.github/workflows/build.yml': namedWorkflow('Build', 'pull_request', job),
-			},
+			workflows: { '.github/workflows/build.yml': workflow },
 		});
-		assert.deepEqual(await checkRuleset(root), { findings: [unpublished('Build')] });
+		const findings = refused ? [invalidJob('build.yml', 'broken'), unpublished('Build')] : [];
+		assert.deepEqual(await checkRuleset(root), { findings });
 	});
 }
 
-for (const trigger of [{ branches: ['*'] }, { 'branches-ignore': ['release/*'] }]) {
+for (const trigger of [
+	{ branches: ['*'] },
+	{ branches: ['**/main'] },
+	{ 'branches-ignore': ['release/*'] },
+]) {
 	it(`E6 accepts main covered by ${JSON.stringify(trigger)}`, async () => {
 		const root = await fixture({
 			ruleset: requiring('Build'),

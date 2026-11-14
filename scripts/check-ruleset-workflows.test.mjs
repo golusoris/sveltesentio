@@ -76,17 +76,55 @@ const ignoreMain = filterFinding(
 	"branches-ignore can skip the workflow and leave 'Fixture' pending",
 );
 
-for (const pattern of ['*', '**', 'main', 'ma*', 'm?ain', 'mai+n', 'ma[a-z]n', 'm[a-z0-9]in']) {
+for (const pattern of [
+	'*',
+	'**',
+	'**/main',
+	'**/ma*',
+	'main',
+	'ma*',
+	'm?ain',
+	'mai+n',
+	'ma[a-z]n',
+	'm[a-z0-9]in',
+]) {
 	it(`G1 matches main with ${pattern}`, () => {
 		assert.equal(filterPatternMatches(pattern, 'main'), true);
 	});
 }
 
-for (const pattern of ['feature/*', 'mainline', 'main\\*', 'master', '*/main']) {
+for (const pattern of [
+	'feature/*',
+	'mainline',
+	'main\\*',
+	'master',
+	'*/main',
+	'**/ain',
+	'x/**/main',
+]) {
 	it(`G2 does not match main with ${pattern}`, () => {
 		assert.equal(filterPatternMatches(pattern, 'main'), false);
 	});
 }
+
+it('G1 lets a double star and slash match zero or more leading path components', () => {
+	for (const [pattern, subject] of [
+		['**/main', 'a/b/main'],
+		['a/**/b', 'a/b'],
+		['a/**/b', 'a/x/y/b'],
+		['**/?main', 'main'],
+		['**/?main', '/main'],
+	]) {
+		assert.equal(filterPatternMatches(pattern, subject), true, `${pattern} ${subject}`);
+	}
+	for (const [pattern, subject] of [
+		['**/main', 'notmain'],
+		['a/**/b', 'ab'],
+		['a/**/b', 'a/xb'],
+	]) {
+		assert.equal(filterPatternMatches(pattern, subject), false, `${pattern} ${subject}`);
+	}
+});
 
 it('G2 distinguishes slash-crossing double stars from single stars', () => {
 	assert.equal(filterPatternMatches('*', 'release/1'), false);
@@ -216,8 +254,18 @@ it('J1 requires a non-null runner for ordinary jobs', () => {
 });
 
 for (const condition of [false, 'false', '${{ false }}', ' ${{  false }} ']) {
-	it(`J2 refuses constant-false condition ${JSON.stringify(condition)}`, () => {
-		assert.deepEqual(publishedJobNames('build', runnable({ if: condition })), []);
+	it(`J2 keeps a skipped job with constant-false condition ${JSON.stringify(condition)}`, () => {
+		assert.deepEqual(publishedJobNames('build', runnable({ if: condition })), ['Build']);
+	});
+
+	it(`J2 refuses a matrix job with constant-false condition ${JSON.stringify(condition)}`, () => {
+		const job = runnable({
+			name: 'Test (${{ matrix.os }})',
+			if: condition,
+			strategy: { matrix: { os: ['linux'] } },
+		});
+		assert.deepEqual(publishedJobNames('test', job), []);
+		assert.deepEqual(publishedJobNames('test', { ...job, if: 'always()' }), ['Test (linux)']);
 	});
 }
 
@@ -274,8 +322,6 @@ const invalidReusableCalls = [
 	['remote call', { uses: 'owner/repo/.github/workflows/x.yml@v1' }, {}],
 	['JSON workflow call', { uses: './.github/workflows/callee.json' }, {}],
 	['nested callee call', {}, { jobs: { nested: { uses: './.github/workflows/x.yml' } } }],
-	['callee without runner', {}, { jobs: { build: { name: 'Build' } } }],
-	['callee with false condition', {}, { jobs: { build: runnable({ if: false }) } }],
 ];
 
 for (const [label, caller, callee] of invalidReusableCalls) {
@@ -284,6 +330,28 @@ for (const [label, caller, callee] of invalidReusableCalls) {
 		assert.deepEqual(findings, []);
 		const publisher = publishers.find(({ relPath }) => relPath.endsWith('/caller.yml'));
 		assert.deepEqual([...publisher.names], []);
+	});
+}
+
+it('R2 keeps a callee job skipped by a constant-false condition', async () => {
+	const workflows = reusableWorkflows({}, { jobs: { build: runnable({ if: false }) } });
+	const { publishers, findings } = await publishersFor(workflows);
+	assert.deepEqual(findings, []);
+	assert.deepEqual([...publishers[0].names], ['Reusable / Build']);
+});
+
+for (const [label, build] of [
+	['without runner', { name: 'Build' }],
+	['with a runner and a reusable call', runnable({ uses: './.github/workflows/x.yml' })],
+]) {
+	it(`R2 refuses a callee whose job is ${label}`, async () => {
+		const workflows = reusableWorkflows({}, { jobs: { build, lint: runnable({ name: 'Lint' }) } });
+		const { publishers, findings } = await publishersFor(workflows);
+		assert.deepEqual(findings, [
+			".github/workflows/callee.yml: job 'build' needs either runs-on or a reusable uses, " +
+				'not both or neither, so GitHub refuses the workflow; its jobs were not matched',
+		]);
+		assert.deepEqual([...publishers[0].names], []);
 	});
 }
 

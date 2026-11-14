@@ -189,21 +189,29 @@ function literalJobNames(id, job) {
 	return typeof job.name === 'string' && !job.name.includes('${{') ? [job.name] : [];
 }
 
-/** Reject only statically false conditions; ordinary conditional jobs still report success. */
+/**
+ * Detect a statically false condition. A skipped job still reports Success under its own name,
+ * but GitHub skips a matrix job before expanding it and a skipped caller never starts its callee.
+ */
 function isConstantFalse(job) {
 	return job.if === false || (typeof job.if === 'string' && CONSTANT_FALSE_RE.test(job.if));
 }
 
+/** Require a runner value that is present and not null. */
+function hasRunner(job) {
+	return Object.hasOwn(job, 'runs-on') && job['runs-on'] !== undefined && job['runs-on'] !== null;
+}
+
+/** Accept GitHub's two job forms only: a runner job, or a reusable call without a runner. */
+function hasValidJobShape(job) {
+	if (!isMapping(job)) return false;
+	if (!Object.hasOwn(job, 'uses')) return hasRunner(job);
+	return typeof job.uses === 'string' && !Object.hasOwn(job, 'runs-on');
+}
+
 /** Require an ordinary job's runner without accepting absent or null runner values. */
 function isRunnableJob(job) {
-	return (
-		isMapping(job) &&
-		!Object.hasOwn(job, 'uses') &&
-		Object.hasOwn(job, 'runs-on') &&
-		job['runs-on'] !== undefined &&
-		job['runs-on'] !== null &&
-		!isConstantFalse(job)
-	);
+	return isMapping(job) && !Object.hasOwn(job, 'uses') && hasRunner(job);
 }
 
 /** Resolve runnable literal jobs and bounded matrices, excluding reusable calls. */
@@ -212,16 +220,22 @@ export function publishedJobNames(id, job) {
 	const name = job.name;
 	const matrix = job.strategy?.matrix;
 	if (matrix === undefined) return literalJobNames(id, job);
+	if (isConstantFalse(job)) return [];
 	if (typeof name !== 'string' || !name.includes('${{')) return [];
 	if (name.replace(MATRIX_EXPRESSION_RE, '').includes('${{')) return [];
 	return matrixCombinations(matrix).flatMap((entry) => expandMatrixName(name, entry));
 }
 
+/** Accept a local, literally named, unconditional caller without a matrix. */
+function isResolvableCaller(job) {
+	if (typeof job.uses !== 'string' || !LOCAL_WORKFLOW_RE.test(job.uses)) return false;
+	if (typeof job.name !== 'string' || job.name.includes('${{')) return false;
+	return !isConstantFalse(job) && !(job.strategy && Object.hasOwn(job.strategy, 'matrix'));
+}
+
 /** Resolve one local reusable call against the already-read allow-list, without nesting. */
 function reusableJobNames(job, documents) {
-	if (typeof job.uses !== 'string' || !LOCAL_WORKFLOW_RE.test(job.uses)) return [];
-	if (typeof job.name !== 'string' || job.name.includes('${{')) return [];
-	if (job.strategy && Object.hasOwn(job.strategy, 'matrix')) return [];
+	if (!isResolvableCaller(job)) return [];
 	const callee = documents.get(job.uses.slice(2));
 	if (!callee || !hasEvent(callee.doc?.on, 'workflow_call')) return [];
 	return callee.jobs.flatMap(([id, target]) =>
@@ -231,7 +245,7 @@ function reusableJobNames(job, documents) {
 
 /** Choose ordinary job or single-level reusable resolution without a recursive call graph. */
 function workflowJobNames(id, job, documents) {
-	if (!isMapping(job) || isConstantFalse(job)) return [];
+	if (!isMapping(job)) return [];
 	return Object.hasOwn(job, 'uses') ? reusableJobNames(job, documents) : publishedJobNames(id, job);
 }
 
@@ -273,6 +287,17 @@ function contextJobs(doc, relPath, findings) {
 	return [];
 }
 
+/** Drop every job of a file GitHub refuses for one job outside both job forms. */
+function validContextJobs(jobs, relPath, findings) {
+	const invalid = jobs.find(([, job]) => !hasValidJobShape(job));
+	if (invalid === undefined) return jobs;
+	findings.push(
+		`${relPath}: job '${invalid[0]}' needs either runs-on or a reusable uses, not both or ` +
+			'neither, so GitHub refuses the workflow; its jobs were not matched',
+	);
+	return [];
+}
+
 /** Read each listed workflow once and retain parsed documents for local reusable calls. */
 async function readContextDocuments(rootDir, files, findings) {
 	const documents = new Map();
@@ -283,7 +308,7 @@ async function readContextDocuments(rootDir, files, findings) {
 			findings.push(result.error);
 			continue;
 		}
-		const jobs = contextJobs(result.doc, relPath, findings);
+		const jobs = validContextJobs(contextJobs(result.doc, relPath, findings), relPath, findings);
 		documents.set(relPath, { doc: result.doc, jobs });
 	}
 	return documents;
@@ -353,11 +378,20 @@ function filterToken(pattern, index) {
 		if (index + 1 === pattern.length) return null;
 		return { token: { kind: 'literal', value: pattern[index + 1] }, end: index + 1 };
 	}
-	if (value === '*') {
-		const double = pattern[index + 1] === '*';
-		return { token: { kind: double ? '**' : '*' }, end: index + Number(double) };
-	}
+	if (value === '*') return starToken(pattern, index);
 	return { token: { kind: 'literal', value }, end: index };
+}
+
+/**
+ * Parse a star, a double star, or a double star with its slash; an unquantified slash after a
+ * double star may match zero path components.
+ */
+function starToken(pattern, index) {
+	if (pattern[index + 1] !== '*') return { token: { kind: '*' }, end: index };
+	const slash = pattern[index + 2] === '/' && !['?', '+'].includes(pattern[index + 3]);
+	return slash
+		? { token: { kind: '**/' }, end: index + 2 }
+		: { token: { kind: '**' }, end: index + 1 };
 }
 
 /** Tokenize a bounded pattern, attaching quantifiers only to unquantified literals/classes. */
@@ -390,6 +424,24 @@ function advanceFilterStar(token, subject, reach) {
 	return next;
 }
 
+/** Advance a double star with its slash as zero components, or any characters and one slash. */
+function advanceFilterComponents(subject, reach) {
+	const next = new Array(subject.length + 1).fill(false);
+	let seen = false;
+	for (let i = 0; i <= subject.length; i++) {
+		next[i] = reach[i] || (seen && subject[i - 1] === '/');
+		seen ||= reach[i];
+	}
+	return next;
+}
+
+/** Choose the reach update for one token. */
+function advanceFilterToken(token, subject, reach) {
+	if (token.kind === '**/') return advanceFilterComponents(subject, reach);
+	if (token.kind === '*' || token.kind === '**') return advanceFilterStar(token, subject, reach);
+	return advanceFilterCharacter(token, subject, reach);
+}
+
 /** Compare one subject character with a literal or class token. */
 function filterCharacterMatches(token, character) {
 	return token.kind === 'class' ? token.characters.has(character) : token.value === character;
@@ -416,10 +468,7 @@ export function filterPatternMatches(pattern, subject) {
 	let reach = new Array(subject.length + 1).fill(false);
 	reach[0] = true;
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i];
-		reach = ['*', '**'].includes(token.kind)
-			? advanceFilterStar(token, subject, reach)
-			: advanceFilterCharacter(token, subject, reach);
+		reach = advanceFilterToken(tokens[i], subject, reach);
 	}
 	return reach[subject.length];
 }

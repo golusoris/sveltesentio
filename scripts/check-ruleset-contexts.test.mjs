@@ -194,6 +194,7 @@ it('N7 rejects the bare name of a reusable workflow call', async () => {
 		workflows: {
 			'.github/workflows/caller.yml': namedWorkflow('Reusable', 'pull_request', {
 				uses: './.github/workflows/callee.yml',
+				'runs-on': undefined,
 			}),
 		},
 	});
@@ -382,6 +383,7 @@ const ignoreFilters = [
 	['paths-ignore', 'other', true],
 	['branches-ignore', 'main', true],
 	['branches-ignore', 'other', false],
+	['branches-ignore', '**/main', true],
 ];
 
 for (const [filter, entry, skips] of ignoreFilters) {
