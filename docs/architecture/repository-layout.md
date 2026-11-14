@@ -58,6 +58,8 @@ sveltesentio/
 │   ├── PULL_REQUEST_TEMPLATE.md    # requires Migration: footer when `!`
 │   └── workflows/                  # ci · ci-sveltekit (reusable) + its self-test · peer-floors · release-please · refresh-upstream-docs
 │                                   # scorecard · codeql — see AGENTS.md "Upstream docs + CI" for the PR gates
+│                                   # pnpm check:workflows lints them with the actionlint image
+│                                   # scripts/check-workflows.mjs pins by digest
 │
 ├── .devcontainer/
 │   └── devcontainer.json           # Node 24 (ADR-0021), pnpm, zsh + oh-my-zsh, 15 VS Code extensions, ports 5173/4173/6006

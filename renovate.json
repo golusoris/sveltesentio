@@ -138,6 +138,15 @@
 			"matchStrings": [
 				"'(?<depName>ghcr\\.io/renovatebot/renovate):(?<currentValue>\\d+\\.\\d+\\.\\d+)@(?<currentDigest>sha256:[0-9a-f]{64})'"
 			]
+		},
+		{
+			"customType": "regex",
+			"datasourceTemplate": "docker",
+			"description": "actionlint image scripts/check-workflows.mjs lints workflows with: tag and digest",
+			"managerFilePatterns": ["/^scripts/check-workflows\\.mjs$/"],
+			"matchStrings": [
+				"'(?<depName>docker\\.io/rhysd/actionlint):(?<currentValue>\\d+\\.\\d+\\.\\d+)@(?<currentDigest>sha256:[0-9a-f]{64})'"
+			]
 		}
 	]
 }

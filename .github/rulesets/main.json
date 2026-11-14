@@ -72,6 +72,9 @@
             "context": "Template labels"
           },
           {
+            "context": "Workflow lint (actionlint)"
+          },
+          {
             "context": "CodeQL analysis"
           },
           {
