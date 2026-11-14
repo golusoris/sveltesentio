@@ -33,6 +33,7 @@
 		"check:kit-compat": "node scripts/check-kit-compat.mjs",
 		"check:migration-codemods": "node scripts/check-migration-codemods.mjs",
 		"check:renovate-config": "node scripts/check-renovate-config.mjs",
+		"check:workflows": "node scripts/check-workflows.mjs",
 		"lint:scripts": "eslint scripts/",
 		"test:scripts": "node scripts/node-test.mjs \"scripts/*.test.mjs\""
 	},

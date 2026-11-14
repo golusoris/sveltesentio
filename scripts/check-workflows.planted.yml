@@ -1,0 +1,21 @@
+# Planted for check-workflows.mjs; outside .github/workflows so GitHub never runs it.
+# stepless plants a job without steps; unquoted plants shellcheck SC2086;
+# orphan plants a needs entry naming a job that does not exist.
+name: Planted workflow errors
+on: pull_request
+permissions: {}
+jobs:
+  stepless:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+  unquoted:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - run: echo $UNQUOTED
+  orphan:
+    needs: [absent]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - run: echo orphan

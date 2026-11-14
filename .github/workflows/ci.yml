@@ -459,6 +459,26 @@ jobs:
       # planted rule. CI=true makes a missing container runtime fail, not skip.
       - run: node scripts/check-renovate-config.mjs
 
+  # In PR 567 a review bot, not a check, found jobs without steps. Unconditional,
+  # so every workflow change is checked even when Detect Changes reports no
+  # application code changes.
+  workflow-lint:
+    name: Workflow lint (actionlint)
+    # Linux only (HISS-21, #328): lints workflow files, which are the same on every platform.
+    runs-on: ubuntu-26.04
+    # Covers WORST_CASE_MS in scripts/check-workflows.mjs (940 s) plus 120 s
+    # for checkout and setup-node; scripts/check-workflows.test.mjs checks this.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      # CI=true makes a missing container runtime fail, not skip.
+      - run: node scripts/check-workflows.mjs
+
   docs-drift:
     name: Docs drift
     if: github.event_name == 'pull_request'
@@ -523,6 +543,7 @@ jobs:
         dependency-scan,
         semgrep,
         renovate-config,
+        workflow-lint,
         docs-drift,
         template-labels,
       ]

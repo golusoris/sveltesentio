@@ -46,6 +46,7 @@ export const MUST_SUCCEED = Object.freeze([
 	'dependency-scan',
 	'semgrep',
 	'renovate-config',
+	'workflow-lint',
 	'template-labels',
 ]);
 
