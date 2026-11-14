@@ -2,10 +2,9 @@
 
 ## [0.10.1](https://github.com/golusoris/sveltesentio/compare/auth-v0.10.0...auth-v0.10.1) (2026-11-14)
 
-
 ### Bug Fixes
 
-* **auth:** set the login nonce cookie path to / so browsers accept it ([#506](https://github.com/golusoris/sveltesentio/issues/506)) ([fd3bcc1](https://github.com/golusoris/sveltesentio/commit/fd3bcc10afe71b040d4a44dd013602f1eab0a36e))
+- **auth:** set the login nonce cookie path to / so browsers accept it ([#506](https://github.com/golusoris/sveltesentio/issues/506)) ([fd3bcc1](https://github.com/golusoris/sveltesentio/commit/fd3bcc10afe71b040d4a44dd013602f1eab0a36e))
 
 ## [0.10.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.9.1...auth-v0.10.0) (2026-10-25)
 

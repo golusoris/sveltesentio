@@ -2,10 +2,9 @@
 
 ## [0.4.3](https://github.com/golusoris/sveltesentio/compare/testing-v0.4.2...testing-v0.4.3) (2026-11-14)
 
-
 ### Bug Fixes
 
-* **deps:** drop the package rule Renovate refuses, and validate renovate.json ([#560](https://github.com/golusoris/sveltesentio/issues/560)) ([743fe07](https://github.com/golusoris/sveltesentio/commit/743fe07a75a7494fee423763b3e29a8835b69111))
+- **deps:** drop the package rule Renovate refuses, and validate renovate.json ([#560](https://github.com/golusoris/sveltesentio/issues/560)) ([743fe07](https://github.com/golusoris/sveltesentio/commit/743fe07a75a7494fee423763b3e29a8835b69111))
 
 ## [0.4.2](https://github.com/golusoris/sveltesentio/compare/testing-v0.4.1...testing-v0.4.2) (2026-10-25)
 
