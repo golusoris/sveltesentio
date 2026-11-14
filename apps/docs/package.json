@@ -2,8 +2,8 @@
 	"description": "Private SvelteKit documentation site — prerenders the repo's principles, ADRs, compliance + compose docs and indexes the @sveltesentio/* packages. Static showcase artifact, not a published package.",
 	"devDependencies": {
 		"@playwright/test": "1.64.1",
-		"@sveltejs/adapter-static": "^4.0.0",
-		"@sveltejs/kit": "3.1.0",
+		"@sveltejs/adapter-static": "^4.0.1",
+		"@sveltejs/kit": "3.1.1",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@types/node": "^24.13.4",
 		"mdsvex": "^0.12.8",
