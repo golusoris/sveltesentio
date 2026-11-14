@@ -4,17 +4,23 @@
 // Checks that the workflow publishes CI Gate for main, always aggregates every
 // other job, decides through scripts/ci-gate.mjs on toJSON(needs), and uses GitHub
 // Actions when the required check pins an integration.
+// Every other required context must name a pull_request workflow job, guarding 6fa7595.
 // Guards the solo-maintainer fix in 8c2704d against regeneration by adopt's
 // team-oriented template, which can otherwise make the default branch unmergeable.
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { IO_TIMEOUT_MS, readDocument } from './check-platform-legs.mjs';
+import { withTimeout } from './check-template-labels.mjs';
 
 const defaultRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const RULESET_PATH = '.github/rulesets/main.json';
 const WORKFLOW_PATH = '.github/workflows/ci.yml';
+const WORKFLOW_DIR = '.github/workflows';
+const WORKFLOW_LIMIT = 100;
+const MATRIX_LIMIT = 256;
+const MATRIX_EXPRESSION_RE = /\$\{\{\s*matrix\.([A-Za-z_][\w-]*)\s*\}\}/g;
 
 export const ADMIN_ROLE_ID = 5;
 export const BYPASS_MODES = ['always', 'pull_request'];
@@ -331,25 +337,30 @@ function checkGateIntegrations(rules, findings) {
 	}
 }
 
-function checkTriggerFilters(event, trigger, findings) {
+function checkTriggerFilters(
+	event,
+	trigger,
+	findings,
+	relPath = WORKFLOW_PATH,
+	context = GATE_CONTEXT,
+) {
 	const filters = ['paths', 'paths-ignore', 'branches-ignore'];
 	for (let i = 0; i < filters.length; i++) {
 		const key = filters[i];
 		if (trigger && Object.hasOwn(trigger, key)) {
 			findings.push(
-				`${WORKFLOW_PATH}: on.${event}.${key} can skip the workflow ` +
-					`and leave '${GATE_CONTEXT}' pending`,
+				`${relPath}: on.${event}.${key} can skip the workflow and leave '${context}' pending`,
 			);
 		}
 	}
 }
 
-function checkPullRequestTypes(trigger, findings) {
+function checkPullRequestTypes(trigger, findings, relPath = WORKFLOW_PATH) {
 	if (!trigger || !Object.hasOwn(trigger, 'types')) return;
 	const required = ['opened', 'synchronize', 'reopened'];
 	if (!Array.isArray(trigger.types) || !required.every((type) => trigger.types.includes(type))) {
 		findings.push(
-			`${WORKFLOW_PATH}: on.pull_request.types must include opened, synchronize and reopened`,
+			`${relPath}: on.pull_request.types must include opened, synchronize and reopened`,
 		);
 	}
 }
@@ -358,12 +369,13 @@ function checkPullRequestTypes(trigger, findings) {
  * @param {string} event
  * @param {string} entry
  * @param {string[]} findings
+ * @param {string} [relPath]
  * @returns {boolean}
  */
-function negationMatchesMain(event, entry, findings) {
+function negationMatchesMain(event, entry, findings, relPath = WORKFLOW_PATH) {
 	if (!BRANCH_NEGATION_RE.test(entry)) {
 		findings.push(
-			`${WORKFLOW_PATH}: on.${event}.branches entry '${entry}' cannot be judged against main`,
+			`${relPath}: on.${event}.branches entry '${entry}' cannot be judged against main`,
 		);
 		return false;
 	}
@@ -374,9 +386,10 @@ function negationMatchesMain(event, entry, findings) {
  * @param {string} event
  * @param {unknown[]} branches
  * @param {string[]} findings
+ * @param {string} [relPath]
  * @returns {boolean}
  */
-function branchesIncludeMain(event, branches, findings) {
+function branchesIncludeMain(event, branches, findings, relPath = WORKFLOW_PATH) {
 	let included = false;
 	for (let i = 0; i < branches.length; i++) {
 		const entry = branches[i];
@@ -385,7 +398,7 @@ function branchesIncludeMain(event, branches, findings) {
 		} else if (
 			typeof entry === 'string' &&
 			entry.startsWith('!') &&
-			negationMatchesMain(event, entry, findings)
+			negationMatchesMain(event, entry, findings, relPath)
 		) {
 			included = false;
 		}
@@ -482,6 +495,173 @@ async function checkGateWorkflow(rootDir, findings) {
 	}
 }
 
+/** Recognize YAML mappings, excluding null and sequences. */
+function isMapping(value) {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Only pull_request events can publish contexts for this check. */
+function publishesPullRequest(doc) {
+	const trigger = doc?.on;
+	if (typeof trigger === 'string') return trigger === 'pull_request';
+	if (Array.isArray(trigger)) return trigger.includes('pull_request');
+	return isMapping(trigger) && Object.hasOwn(trigger, 'pull_request');
+}
+
+/** Accept only literal scalar values for a single-axis matrix. */
+function isMatrixScalar(value) {
+	return ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+/** Expand only bounded include-only or single-axis matrices. */
+function matrixCombinations(matrix) {
+	if (!isMapping(matrix)) return [];
+	const keys = Object.keys(matrix);
+	if (keys.length !== 1) return [];
+	const key = keys[0];
+	const values = matrix[key];
+	if (!Array.isArray(values) || values.length > MATRIX_LIMIT) return [];
+	if (key === 'include') return values.every(isMapping) ? values : [];
+	if (key === 'exclude' || !values.every(isMatrixScalar)) return [];
+	return values.map((value) => ({ [key]: value }));
+}
+
+/** Substitute matrix keys only when the combination supplies every referenced key. */
+function expandMatrixName(name, combination) {
+	let missing = false;
+	const expanded = name.replace(MATRIX_EXPRESSION_RE, (_, key) => {
+		if (!Object.hasOwn(combination, key)) {
+			missing = true;
+			return '';
+		}
+		return String(combination[key]);
+	});
+	return missing ? [] : [expanded];
+}
+
+/** Resolve a non-matrix job's literal name, defaulting only absent names to the job id. */
+function literalJobNames(id, job) {
+	if (!Object.hasOwn(job, 'name')) return [id];
+	return typeof job.name === 'string' && !job.name.includes('${{') ? [job.name] : [];
+}
+
+/** Resolve literal job names and supported matrices; reusable calls publish different names. */
+function publishedJobNames(id, job) {
+	if (!isMapping(job) || Object.hasOwn(job, 'uses')) return [];
+	const name = job.name;
+	const matrix = job.strategy?.matrix;
+	if (matrix === undefined) return literalJobNames(id, job);
+	if (typeof name !== 'string' || !name.includes('${{')) return [];
+	if (name.replace(MATRIX_EXPRESSION_RE, '').includes('${{')) return [];
+	return matrixCombinations(matrix).flatMap((entry) => expandMatrixName(name, entry));
+}
+
+/** List workflow files once, bounding directory I/O and refusing oversized inputs. */
+async function listContextWorkflows(rootDir, findings) {
+	let entries;
+	try {
+		entries = await withTimeout(
+			readdir(join(rootDir, WORKFLOW_DIR), { withFileTypes: true }),
+			IO_TIMEOUT_MS,
+			`readdir ${WORKFLOW_DIR}`,
+		);
+	} catch (error) {
+		if (error.code === 'ENOENT') return [];
+		findings.push(`${WORKFLOW_DIR}: cannot list workflows (${error.message})`);
+		return null;
+	}
+	if (entries.length > WORKFLOW_LIMIT) {
+		findings.push(
+			`${WORKFLOW_DIR}: holds ${entries.length} entries, more than the limit of ` +
+				`${WORKFLOW_LIMIT}; required status checks were not matched`,
+		);
+		return null;
+	}
+	return entries
+		.filter((entry) => entry.isFile() && /\.ya?ml$/.test(entry.name))
+		.map((entry) => `${WORKFLOW_DIR}/${entry.name}`)
+		.sort();
+}
+
+/** Read at most WORKFLOW_LIMIT files and retain pull_request job-name publishers. */
+async function readContextWorkflows(rootDir, findings) {
+	const files = await listContextWorkflows(rootDir, findings);
+	if (files === null) return null;
+	const publishers = [];
+	for (let i = 0; i < files.length; i++) {
+		const relPath = files[i];
+		const result = await readDocument(join(rootDir, relPath), relPath, 'YAML', parse);
+		if (result.error) {
+			findings.push(result.error);
+			continue;
+		}
+		if (!publishesPullRequest(result.doc)) continue;
+		const jobs = isMapping(result.doc?.jobs) ? Object.entries(result.doc.jobs) : [];
+		const names = new Set(jobs.flatMap(([id, job]) => publishedJobNames(id, job)));
+		publishers.push({ relPath, doc: result.doc, names });
+	}
+	return publishers;
+}
+
+/** Explain why a publishing workflow can leave this required context pending on main. */
+function contextTriggerFindings({ doc, relPath }, context) {
+	const trigger = isMapping(doc.on) ? doc.on.pull_request : null;
+	const findings = [];
+	if (isMapping(trigger) && Object.hasOwn(trigger, 'branches')) {
+		const branches = trigger.branches;
+		if (
+			!Array.isArray(branches) ||
+			!branchesIncludeMain('pull_request', branches, findings, relPath)
+		) {
+			findings.push(`${relPath}: on.pull_request.branches must include main`);
+		}
+	}
+	checkPullRequestTypes(trigger, findings, relPath);
+	const reasons = findings.map((finding) => `${finding} for required status check '${context}'`);
+	checkTriggerFilters('pull_request', trigger, reasons, relPath, context);
+	return reasons;
+}
+
+/** Match one required context, accepting any publisher whose trigger always covers main. */
+function checkContextPublisher(check, publishers, findings) {
+	const context = check.context;
+	if (check.integration_id !== undefined && check.integration_id !== GITHUB_ACTIONS_APP_ID) {
+		findings.push(
+			`${RULESET_PATH}: required status check '${context}' is pinned to integration ` +
+				`${check.integration_id}; only GitHub Actions contexts can be matched ` +
+				'against workflow jobs',
+		);
+		return;
+	}
+	const matching = publishers.filter(({ names }) => names.has(context));
+	if (matching.length === 0) {
+		findings.push(
+			`${RULESET_PATH}: required status check '${context}' is not published by any job ` +
+				'of a pull_request workflow in .github/workflows, ' +
+				'so it never reports and main cannot merge',
+		);
+		return;
+	}
+	const reasons = matching.map((publisher) => contextTriggerFindings(publisher, context));
+	if (reasons.some((items) => items.length === 0)) return;
+	findings.push(...reasons.flat());
+}
+
+/** Check every non-gate required context without changing gate-only diagnostics. */
+async function checkRequiredContexts(rootDir, rules, findings) {
+	const checks = rules
+		.filter((rule) => rule?.type === 'required_status_checks')
+		.flatMap((rule) => {
+			const entries = rule.parameters?.required_status_checks;
+			return Array.isArray(entries) ? entries : [];
+		})
+		.filter((check) => typeof check?.context === 'string' && check.context !== GATE_CONTEXT);
+	if (checks.length === 0) return;
+	const publishers = await readContextWorkflows(rootDir, findings);
+	if (publishers === null) return;
+	checks.forEach((check) => checkContextPublisher(check, publishers, findings));
+}
+
 export async function checkRuleset(rootDir = defaultRoot) {
 	const findings = [];
 	const result = await readDocument(join(rootDir, RULESET_PATH), RULESET_PATH, 'JSON', JSON.parse);
@@ -504,6 +684,7 @@ export async function checkRuleset(rootDir = defaultRoot) {
 		);
 	}
 	await checkGateWorkflow(rootDir, findings);
+	await checkRequiredContexts(rootDir, doc.rules, findings);
 	return { findings };
 }
 

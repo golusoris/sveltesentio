@@ -9,6 +9,7 @@ import {
 	fixture,
 	makeRuleset,
 	ownRoot,
+	publishing,
 	removeTempRoot,
 } from './check-ruleset.fixtures.mjs';
 import {
@@ -52,6 +53,7 @@ describe('check-ruleset positive cases', () => {
 	it('rejects the planted pre-8c2704d regression with four findings', async () => {
 		const root = await fixture({
 			owners: { '.github/CODEOWNERS': '* @lusoris' },
+			workflows: publishing('Detect Changes', 'CodeQL analysis'),
 			ruleset: {
 				conditions: {
 					ref_name: { exclude: [], include: ['refs/heads/main', 'refs/heads/lts-*'] },
@@ -166,7 +168,8 @@ describe('admin bypass and CI Gate', () => {
 	it('rejects checks that omit the pipeline aggregator', async () => {
 		const ruleset = makeRuleset();
 		ruleset.rules[1].parameters.required_status_checks = [{ context: 'Detect Changes' }];
-		const { findings } = await checkRuleset(await fixture({ ruleset }));
+		const workflows = publishing('Detect Changes');
+		const { findings } = await checkRuleset(await fixture({ ruleset, workflows }));
 		assert.equal(findings.length, 1);
 		assert.match(findings[0], /^\.github\/rulesets\/main.json: missing 'CI Gate'/);
 		assert.match(findings[0], /aggregator that reports whether the whole pipeline passed/);

@@ -76,14 +76,21 @@ export async function fixture({
 	source = JSON.stringify(ruleset),
 	owners = { '.github/CODEOWNERS': '* @owner' },
 	workflow = validWorkflow,
+	workflows = {},
 } = {}) {
 	const root = await mkdtemp(join(tempRoot, 'case-'));
 	if (source !== null) await writeFixtureFile(root, '.github/rulesets/main.json', source);
 	if (workflow !== null) await writeFixtureFile(root, '.github/workflows/ci.yml', workflow);
-	const entries = Object.entries(owners);
+	const entries = Object.entries({ ...owners, ...workflows });
 	for (let i = 0; i < entries.length; i++) {
 		const [path, content] = entries[i];
 		await writeFixtureFile(root, path, content);
 	}
 	return root;
+}
+
+/** One pull_request workflow whose literal job names publish each given context. */
+export function publishing(...contexts) {
+	const jobs = Object.fromEntries(contexts.map((name, i) => [`publish-${i}`, { name }]));
+	return { '.github/workflows/publishers.yml': JSON.stringify({ on: 'pull_request', jobs }) };
 }
