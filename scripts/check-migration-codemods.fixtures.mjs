@@ -46,6 +46,23 @@ export async function findings(
 	return (await runCheck({ root: await tree(files), timeoutMs, suiteTimeoutMs })).findings;
 }
 
+/** @typedef {{ mode: 'load' | 'call', transformFile: string, filePath?: string }} RunnerStep */
+
+/**
+ * Answers in place of codemod-worker's runCodemod so limit tests never wait on imports.
+ * @returns {{ run: import('./check-migration-codemods.mjs').Runner, steps: RunnerStep[] }}
+ */
+export function stubRunner() {
+	/** @type {RunnerStep[]} */
+	const steps = [];
+	/** @type {import('./check-migration-codemods.mjs').Runner} */
+	const run = async ({ mode, transformFile, filePath, source = '' }) => {
+		steps.push({ mode, transformFile, filePath });
+		return mode === 'load' ? { ok: true } : { ok: true, value: source };
+	};
+	return { run, steps };
+}
+
 /** Asserts exactly one finding, on `file`, whose message matches `pattern`. */
 export function assertOne(/** @type {{ file: string, message: string }[]} */ got, file, pattern) {
 	assert.equal(got.length, 1, JSON.stringify(got, null, 2));

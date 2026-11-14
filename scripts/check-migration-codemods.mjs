@@ -15,7 +15,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { withTimeout } from './check-template-labels.mjs';
-import { errorMessage, runCodemod } from './codemod-worker.mjs';
+import { errorMessage, runCodemod, typeName } from './codemod-worker.mjs';
 
 const repoRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -42,7 +42,14 @@ const VERSION_DIR = /^v(\d+\.\d+)$/;
 const FIXTURE = /^([A-Za-z0-9_-]+)\.(input|output)((?:\.[A-Za-z0-9]+)+)$/;
 
 /** @typedef {{ file: string, message: string }} Finding */
-/** @typedef {{ root: string, timeoutMs: number, suite: AbortSignal, findings: Finding[] }} Context */
+/**
+ * @typedef {(options: import('./codemod-worker.mjs').CodemodOptions) =>
+ * Promise<import('./codemod-worker.mjs').CodemodResult>} Runner
+ */
+/**
+ * @typedef {{ root: string, timeoutMs: number, suite: AbortSignal,
+ * findings: Finding[], run: Runner }} Context
+ */
 /** @typedef {Map<string, { path: string, count: number | null }>} VersionDocs */
 /** @typedef {Map<string, { path: string, codemods: string[] }>} CodemodVersions */
 
@@ -239,7 +246,7 @@ async function loadTransform(/** @type {Context} */ ctx, /** @type {string} */ d
 		note(ctx, file, 'missing: every codemod needs a transform.mjs');
 		return null;
 	}
-	const result = await runCodemod({
+	const result = await ctx.run({
 		transformFile: file,
 		mode: 'load',
 		timeoutMs: ctx.timeoutMs,
@@ -313,7 +320,7 @@ async function readFixturePairs(/** @type {Context} */ ctx, /** @type {string} *
  * @returns {Promise<{ ok: true, value: string } | { ok: false, message: string | null }>}
  */
 async function applyTransform(ctx, /** @type {string} */ transformFile, source, filePath) {
-	const result = await runCodemod({
+	const result = await ctx.run({
 		transformFile,
 		mode: 'call',
 		source,
@@ -321,7 +328,11 @@ async function applyTransform(ctx, /** @type {string} */ transformFile, source, 
 		timeoutMs: ctx.timeoutMs,
 		signal: ctx.suite,
 	});
-	if (result.ok) return /** @type {{ ok: true, value: string }} */ (result);
+	if (result.ok) {
+		const value = 'value' in result ? result.value : undefined;
+		if (typeof value === 'string') return { ok: true, value };
+		return { ok: false, message: `codemod must return a string, got ${typeName(value)}` };
+	}
 	if (result.kind === 'aborted') return { ok: false, message: null };
 	return {
 		ok: false,
@@ -392,8 +403,11 @@ async function checkVersions(/** @type {Context} */ ctx, /** @type {CodemodVersi
 /**
  * Every finding for the guides in `root`/docs/migrations/ and the codemods in
  * `root`/tools/migrations/.
+ * `run` takes the place of the Worker that imports and calls each transform; tests of the
+ * discovery limits pass a stub so their result does not wait on Worker start or import
+ * (the per-step deadline stays on the real runner).
  * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number,
- * signal?: AbortSignal }} [options]
+ * signal?: AbortSignal, run?: Runner }} [options]
  * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
  */
 export async function runCheck({
@@ -401,12 +415,14 @@ export async function runCheck({
 	timeoutMs = TRANSFORM_TIMEOUT_MS,
 	suiteTimeoutMs = SUITE_TIMEOUT_MS,
 	signal,
+	run = runCodemod,
 } = {}) {
 	const suite = AbortSignal.timeout(suiteTimeoutMs);
 	/** @type {Context} */
 	const ctx = {
 		root,
 		timeoutMs,
+		run,
 		suite: signal ? AbortSignal.any([suite, signal]) : suite,
 		findings: [],
 	};

@@ -25,6 +25,7 @@ import {
 	goodTree,
 	guide,
 	repoRoot,
+	stubRunner,
 	tree,
 } from './check-migration-codemods.fixtures.mjs';
 
@@ -341,16 +342,23 @@ describe('runCheck', () => {
 			files[`${CODEMOD}/fixtures/c${i}.input.txt`] = 'x\n';
 			files[`${CODEMOD}/fixtures/c${i}.output.txt`] = 'x\n';
 		}
-		assert.deepEqual(await findings(files), []);
+		const { run, steps } = stubRunner();
+		const result = await runCheck({ root: await tree(files), run });
+		assert.deepEqual(result.findings, []);
+		assert.equal(steps.filter((step) => step.mode === 'load').length, 1);
+		assert.equal(steps.filter((step) => step.mode === 'call').length, FIXTURE_LIMIT);
 
 		files[`${CODEMOD}/fixtures/extra.input.txt`] = 'x\n';
-		const got = await findings(files);
+		const { run: overRun, steps: overSteps } = stubRunner();
+		const { findings: got } = await runCheck({ root: await tree(files), run: overRun });
 		assert.ok(
 			got.some(
 				(f) => f.file === `${CODEMOD}/fixtures` && /more than the limit of 200/.test(f.message),
 			),
 			JSON.stringify(got),
 		);
+		assert.equal(overSteps.filter((step) => step.mode === 'load').length, 1);
+		assert.equal(overSteps.filter((step) => step.mode === 'call').length, 0);
 	});
 
 	it(`checks ${CODEMOD_LIMIT} codemods in one version, and refuses one more`, async () => {
@@ -361,17 +369,35 @@ describe('runCheck', () => {
 			files[`tools/migrations/v0.9/c${i}/fixtures/a.input.txt`] = 'x\n';
 			files[`tools/migrations/v0.9/c${i}/fixtures/a.output.txt`] = 'x\n';
 		}
-		assert.deepEqual(await findings(files), []);
+		const { run, steps } = stubRunner();
+		const result = await runCheck({ root: await tree(files), run });
+		assert.deepEqual(result.findings, []);
+		assert.equal(result.codemods, CODEMOD_LIMIT);
+		const loads = steps.filter((step) => step.mode === 'load');
+		assert.equal(loads.length, CODEMOD_LIMIT);
+		assert.equal(new Set(loads.map((step) => step.transformFile)).size, CODEMOD_LIMIT);
+		assert.equal(steps.filter((step) => step.mode === 'call').length, 2 * CODEMOD_LIMIT);
 
 		files['docs/migrations/v0.9.md'] = guide(CODEMOD_LIMIT + 1);
 		files[`tools/migrations/v0.9/extra/transform.mjs`] = 'export default (s) => s;\n';
-		const got = await findings(files);
+		const { run: overRun, steps: overSteps } = stubRunner();
+		const { findings: got } = await runCheck({ root: await tree(files), run: overRun });
 		assert.ok(
 			got.some(
 				(f) => f.file === 'tools/migrations/v0.9' && /more than the limit of 100/.test(f.message),
 			),
 			JSON.stringify(got),
 		);
+		assert.equal(overSteps.length, 0);
+	});
+
+	it('reports a call step that succeeds without a value, and does not reject', async () => {
+		const { run: stub, steps } = stubRunner();
+		/** @type {import('./check-migration-codemods.mjs').Runner} */
+		const run = async (options) => (options.mode === 'call' ? { ok: true } : stub(options));
+		const { findings: got } = await runCheck({ root: await tree(goodTree()), run });
+		assertOne(got, `${CODEMOD}/fixtures/basic.input.ts`, /must return a string, got undefined/);
+		assert.equal(steps.length, 1);
 	});
 });
 
