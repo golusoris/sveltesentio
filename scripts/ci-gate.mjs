@@ -45,6 +45,7 @@ export const MUST_SUCCEED = Object.freeze([
 	'secret-scan',
 	'dependency-scan',
 	'semgrep',
+	'renovate-config',
 	'template-labels',
 ]);
 

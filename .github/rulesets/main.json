@@ -60,6 +60,9 @@
             "context": "Detect Changes"
           },
           {
+            "context": "Renovate configuration"
+          },
+          {
             "context": "Secret scan (gitleaks)"
           },
           {

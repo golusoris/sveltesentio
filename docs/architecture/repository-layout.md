@@ -18,7 +18,7 @@ sveltesentio/
 ├── vitest.shared.ts                # shared Vitest projects, runes plugin, v8 coverage for packages
 ├── release-please-config.json      # release-please per-package versioning
 ├── .release-please-manifest.json   # per-package published version manifest
-├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42)
+├── renovate.json                   # Renovate dependency updates (Dependency Dashboard issue #42); `pnpm check:renovate-config` validates it with the Renovate image scripts/check-renovate-config.mjs pins by digest
 │
 ├── packages/                       # @sveltesentio/* publishable modules — 19 published; purpose of each: `## Packages` in README.md
 │   ├── core/                       # every package follows this shape:
