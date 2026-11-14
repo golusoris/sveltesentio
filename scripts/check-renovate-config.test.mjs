@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'yaml';
 import {
 	ACCEPTED_MESSAGE,
 	CONFIG_FILE,
@@ -12,6 +13,7 @@ import {
 	PROBE_TIMEOUT_MS,
 	RE2_FALLBACK_MESSAGE,
 	RENOVATE_IMAGE,
+	WORST_CASE_MS,
 	ensureImage,
 	excerpt,
 	findRuntime,
@@ -81,14 +83,20 @@ describe('the pinned image', () => {
 
 	it('is matched by exactly one renovate.json customManagers entry', () => {
 		const config = JSON.parse(readFileSync(join(root, 'renovate.json'), 'utf8'));
+		const FILE_PATTERN = /^scripts\/check-renovate-config\.mjs$/;
+		const MATCH_STRING =
+			/'(?<depName>ghcr\.io\/renovatebot\/renovate):(?<currentValue>\d+\.\d+\.\d+)@(?<currentDigest>sha256:[0-9a-f]{64})'/g;
+		// Regex literals escape slash delimiters; Renovate's strings need no delimiters escaped.
+		const filePattern = `/${FILE_PATTERN.source.replaceAll('\\/', '/')}/`;
+		const matchString = MATCH_STRING.source.replaceAll('\\/', '/');
 		const script = readFileSync(join(root, 'scripts/check-renovate-config.mjs'), 'utf8');
 		const managers = config.customManagers.filter((manager) =>
-			manager.managerFilePatterns.some((pattern) =>
-				new RegExp(pattern.slice(1, -1)).test('scripts/check-renovate-config.mjs'),
-			),
+			manager.managerFilePatterns.includes(filePattern),
 		);
 		assert.equal(managers.length, 1);
-		const hits = [...script.matchAll(new RegExp(managers[0].matchStrings[0], 'g'))];
+		assert.equal(managers[0].matchStrings[0], matchString);
+		assert.ok(FILE_PATTERN.test('scripts/check-renovate-config.mjs'));
+		const hits = [...script.matchAll(MATCH_STRING)];
 		assert.equal(hits.length, 1);
 		assert.equal(
 			`${hits[0].groups.depName}:${hits[0].groups.currentValue}@${hits[0].groups.currentDigest}`,
@@ -116,6 +124,14 @@ describe('excerpt', () => {
 	});
 });
 
+describe('CI timeout', () => {
+	it('covers all child deadlines plus checkout and setup-node', () => {
+		const workflow = parse(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8'));
+		const minutes = workflow.jobs['renovate-config']['timeout-minutes'];
+		assert.ok(WORST_CASE_MS + 120_000 <= minutes * 60_000);
+	});
+});
+
 describe('stopProblem', () => {
 	it('is null for a process that exited on its own', () => {
 		assert.equal(stopProblem('x', FAILED), null);
@@ -135,15 +151,18 @@ describe('findRuntime', () => {
 		const { calls, runner } = stubRunner({ 'docker version': OK });
 		assert.equal(findRuntime(runner), 'docker');
 		assert.equal(calls.length, 1);
+		assert.deepEqual(calls[0].args, ['version', '--format', '{{.Server.Version}}']);
 		assert.ok(calls[0].options.timeout > 0);
 	});
 
 	it('falls through to Podman when Docker does not answer', () => {
-		const { runner } = stubRunner({
+		const { calls, runner } = stubRunner({
 			'docker version': { error: new Error('spawn docker ENOENT') },
 			'podman version': OK,
 		});
 		assert.equal(findRuntime(runner), 'podman');
+		assert.deepEqual(calls[0].args, ['version', '--format', '{{.Server.Version}}']);
+		assert.deepEqual(calls[1].args, ['version', '--format', '{{.Server.Version}}']);
 	});
 
 	it('is null when neither answers', () => {
@@ -171,6 +190,7 @@ describe('validatorArgs', () => {
 			'none',
 		]);
 		assert.ok(args.includes('--read-only'));
+		assert.equal(args[args.indexOf('--mount') + 1], mountArgument('/src/repo'));
 		assert.equal(args[args.indexOf('--entrypoint') + 1], 'renovate-config-validator');
 		assert.deepEqual(args.slice(-4), [RENOVATE_IMAGE, '--strict', '--no-global', CONFIG_FILE]);
 	});
@@ -189,6 +209,7 @@ describe('ensureImage', () => {
 		const { calls, runner } = stubRunner({ 'docker image': OK });
 		assert.deepEqual(ensureImage('docker', runner), []);
 		assert.equal(calls.length, 1);
+		assert.deepEqual(calls[0].args, ['image', 'inspect', '--format', '{{.Id}}', RENOVATE_IMAGE]);
 	});
 
 	it('pulls an absent image', () => {
@@ -285,8 +306,10 @@ describe('main', () => {
 			.filter((call) => call.args[0] === 'run')
 			.map((call) => call.args[call.args.indexOf('--name') + 1]);
 		assert.equal(new Set(names).size, 2);
+		const prefix = `renovate-config-check-${process.pid}-`;
 		for (const name of names) {
-			assert.match(name, new RegExp(`^renovate-config-check-${process.pid}-[0-9a-f]{8}$`));
+			assert.ok(name.startsWith(prefix));
+			assert.match(name.slice(prefix.length), /^[0-9a-f]{8}$/);
 		}
 	});
 
@@ -314,6 +337,21 @@ describe('main', () => {
 
 	it('fails in CI when no runtime answers', () => {
 		assert.equal(main('/src/repo', stubRunner({}).runner, { CI: 'true' }), 1);
+	});
+});
+
+describe('main relative repository paths', () => {
+	it('resolves a relative repository path before mounting it', () => {
+		const { calls, runner } = stubRunner({
+			'docker version': OK,
+			'docker image': OK,
+			'docker run': byFile,
+		});
+		assert.equal(main('.', runner, {}), 0);
+		const mounts = calls
+			.filter((call) => call.args[0] === 'run')
+			.map((call) => call.args[call.args.indexOf('--mount') + 1]);
+		assert.deepEqual(mounts, [mountArgument(resolve('.')), mountArgument(resolve('.'))]);
 	});
 });
 
@@ -393,7 +431,9 @@ describe('main stopped validator cleanup', () => {
 			assert.equal(main('/src/repo', runner, {}), 1);
 			const index = calls.findIndex((call) => call.args[0] === 'run');
 			const name = calls[index].args[calls[index].args.indexOf('--name') + 1];
-			assert.match(name, new RegExp(`^renovate-config-check-${process.pid}-[0-9a-f]{8}$`));
+			const prefix = `renovate-config-check-${process.pid}-`;
+			assert.ok(name.startsWith(prefix));
+			assert.match(name.slice(prefix.length), /^[0-9a-f]{8}$/);
 			assert.deepEqual(calls[index + 1], {
 				file: 'docker',
 				args: ['rm', '--force', name],

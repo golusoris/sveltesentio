@@ -30,7 +30,7 @@
 // this check.
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
@@ -51,6 +51,15 @@ export const PROBE_TIMEOUT_MS = 20_000,
 	VALIDATE_TIMEOUT_MS = 120_000,
 	OUTPUT_LIMIT_BYTES = 16 * 1024 * 1024,
 	EXCERPT_LINES = 40;
+
+/**
+ * Every child deadline one run can reach: a probe per runtime, the image inspect, the pull, and
+ * two validations with their cleanup. The CI job's timeout-minutes must cover it.
+ */
+export const WORST_CASE_MS =
+	(RUNTIMES.length + 1) * PROBE_TIMEOUT_MS +
+	PULL_TIMEOUT_MS +
+	2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS);
 
 /** Runs one child process with a deadline; output is stdout and stderr joined. */
 export function run(file, args, { timeout }) {
@@ -86,8 +95,10 @@ export function stopProblem(label, result) {
 /** The first container runtime whose engine answers, or null when none does. */
 export function findRuntime(runner = run) {
 	for (const runtime of RUNTIMES) {
-		const format = runtime === 'docker' ? '{{.Server.Version}}' : '{{.Version}}';
-		const result = runner(runtime, ['version', '--format', format], { timeout: PROBE_TIMEOUT_MS });
+		// Server requires the engine to answer, rather than only the runtime client.
+		const result = runner(runtime, ['version', '--format', '{{.Server.Version}}'], {
+			timeout: PROBE_TIMEOUT_MS,
+		});
 		if (stopProblem(runtime, result) === null && result.status === 0) return runtime;
 	}
 	return null;
@@ -230,7 +241,7 @@ function checkRepository(rootDir, runner, env) {
 
 /** Returns the exit code: 0 when renovate.json validates and the planted rule is refused. */
 export function main(rootDir = root, runner = run, env = process.env) {
-	const outcome = checkRepository(rootDir, runner, env);
+	const outcome = checkRepository(resolve(rootDir), runner, env);
 	for (const problem of outcome.problems) console.error(`FAIL: ${problem}`);
 	if (outcome.problems.length > 0) return 1;
 	if (outcome.skipped) {

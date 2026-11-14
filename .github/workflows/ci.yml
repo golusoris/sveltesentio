@@ -444,7 +444,9 @@ jobs:
     name: Renovate configuration
     # Linux only (HISS-21, #328): validates renovate.json, which is the same on every platform.
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    # Covers WORST_CASE_MS in scripts/check-renovate-config.mjs (940 s: two runtime probes, the image
+    # inspect and pull, two validations with cleanup) plus 120 s for checkout and setup-node; its test checks this.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
