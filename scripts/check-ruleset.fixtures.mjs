@@ -89,10 +89,16 @@ export async function fixture({
 	return root;
 }
 
+/** One step, the least GitHub accepts in a runner job. */
+export const jobSteps = [{ run: 'echo ok' }];
+
 /** One pull_request workflow whose literal job names publish each given context. */
 export function publishing(...contexts) {
 	const jobs = Object.fromEntries(
-		contexts.map((name, i) => [`publish-${i}`, { name, 'runs-on': 'ubuntu-26.04' }]),
+		contexts.map((name, i) => [
+			`publish-${i}`,
+			{ name, 'runs-on': 'ubuntu-26.04', steps: jobSteps },
+		]),
 	);
 	return { '.github/workflows/publishers.yml': JSON.stringify({ on: 'pull_request', jobs }) };
 }
@@ -106,12 +112,12 @@ export function requiring(...contexts) {
 	return ruleset;
 }
 
-/** Serialize a workflow with one named job and an explicit trigger shape. */
+/** Serialize one named job, a one-step runner job or a reusable call when `job` sets uses. */
 export function namedWorkflow(name, trigger = 'pull_request', job = {}) {
-	return JSON.stringify({
-		on: trigger,
-		jobs: { check: { name, 'runs-on': 'ubuntu-26.04', ...job } },
-	});
+	const base = Object.hasOwn(job, 'uses')
+		? { name }
+		: { name, 'runs-on': 'ubuntu-26.04', steps: jobSteps };
+	return JSON.stringify({ on: trigger, jobs: { check: { ...base, ...job } } });
 }
 
 /** Spell the public diagnostic independently of the checker implementation. */

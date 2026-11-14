@@ -1,7 +1,7 @@
 // Workflow publisher expansion, filter semantics, and bounded discovery regressions.
 import assert from 'node:assert/strict';
 import { after, before, it } from 'node:test';
-import { createTempRoot, fixture, removeTempRoot } from './check-ruleset.fixtures.mjs';
+import { createTempRoot, fixture, jobSteps, removeTempRoot } from './check-ruleset.fixtures.mjs';
 import {
 	contextTriggerFindings,
 	filterPatternMatches,
@@ -14,9 +14,9 @@ import {
 before(createTempRoot);
 after(removeTempRoot);
 
-/** Supply the runner required by an ordinary job, with explicit overrides applied last. */
+/** Supply the runner and step required by an ordinary job, with explicit overrides applied last. */
 function runnable(job = {}) {
-	return { name: 'Build', 'runs-on': 'ubuntu-26.04', ...job };
+	return { name: 'Build', 'runs-on': 'ubuntu-26.04', steps: jobSteps, ...job };
 }
 
 /** Compare combinations independently of key order and expansion order. */

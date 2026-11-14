@@ -1,4 +1,4 @@
-// Review cases E1-E7: required contexts judged through the whole checker.
+// Review cases E1-E8: required contexts judged through the whole checker.
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -7,6 +7,7 @@ import { IO_TIMEOUT_MS } from './check-platform-legs.mjs';
 import {
 	createTempRoot,
 	fixture,
+	jobSteps,
 	makeRuleset,
 	namedWorkflow,
 	publishing,
@@ -99,10 +100,11 @@ function reusableFixture() {
 		'.github/workflows/callee.yml': JSON.stringify({
 			on: 'workflow_call',
 			jobs: {
-				build: { name: 'Build', 'runs-on': 'ubuntu-26.04' },
+				build: { name: 'Build', 'runs-on': 'ubuntu-26.04', steps: jobSteps },
 				lint: {
 					name: 'Lint (${{ matrix.os }})',
 					'runs-on': 'ubuntu-26.04',
+					steps: jobSteps,
 					strategy: { matrix: { os: ['linux', 'windows'] } },
 				},
 			},
@@ -145,12 +147,17 @@ for (const excluded of [false, true]) {
 	});
 }
 
+/** Spell the refusal of a job whose form GitHub refuses, naming the problem. */
+function refusedJob(file, id, problem) {
+	return (
+		`.github/workflows/${file}: job '${id}' ${problem}, so GitHub refuses the workflow; ` +
+		'its jobs were not matched'
+	);
+}
+
 /** Spell the refusal of a job outside GitHub's two job forms. */
 function invalidJob(file, id) {
-	return (
-		`.github/workflows/${file}: job '${id}' needs either runs-on or a reusable uses, ` +
-		'not both or neither, so GitHub refuses the workflow; its jobs were not matched'
-	);
+	return refusedJob(file, id, 'needs either runs-on or a reusable uses, not both or neither');
 }
 
 it('E5 accepts a skipped publisher with a constant-false condition', async () => {
@@ -179,7 +186,7 @@ it('E5 rejects a publisher without a runner', async () => {
 
 const callee = JSON.stringify({
 	on: { workflow_call: {} },
-	jobs: { run: { 'runs-on': 'ubuntu-26.04', steps: [] } },
+	jobs: { run: { 'runs-on': 'ubuntu-26.04', steps: jobSteps } },
 });
 
 for (const [label, sibling, refused] of [
@@ -194,7 +201,10 @@ for (const [label, sibling, refused] of [
 	it(`E7 judges a valid publisher beside a sibling job ${label}`, async () => {
 		const workflow = JSON.stringify({
 			on: 'pull_request',
-			jobs: { check: { name: 'Build', 'runs-on': 'ubuntu-26.04' }, broken: sibling },
+			jobs: {
+				check: { name: 'Build', 'runs-on': 'ubuntu-26.04', steps: jobSteps },
+				broken: sibling,
+			},
 		});
 		const root = await fixture({
 			ruleset: requiring('Build', 'Reuse / run'),
@@ -206,6 +216,71 @@ for (const [label, sibling, refused] of [
 		assert.deepEqual(await checkRuleset(root), { findings });
 	});
 }
+
+const NO_STEPS = 'runs on a runner but defines no steps';
+
+for (const [label, steps] of [
+	['no steps key', undefined],
+	['null steps', null],
+	['an empty step list', []],
+	['a step mapping instead of a list', { run: 'echo ok' }],
+]) {
+	it(`E8 refuses a runner job with ${label}`, async () => {
+		const root = await fixture({
+			ruleset: requiring('Build'),
+			workflows: {
+				'.github/workflows/build.yml': namedWorkflow('Build', 'pull_request', { steps }),
+			},
+		});
+		assert.deepEqual(await checkRuleset(root), {
+			findings: [refusedJob('build.yml', 'check', NO_STEPS), unpublished('Build')],
+		});
+	});
+}
+
+it('E8 accepts a runner job with exactly one step', async () => {
+	const root = await fixture({
+		ruleset: requiring('Build'),
+		workflows: { '.github/workflows/build.yml': namedWorkflow('Build') },
+	});
+	assert.deepEqual(await checkRuleset(root), { findings: [] });
+});
+
+it('E8 refuses a callee runner job without steps, leaving its caller context unpublished', async () => {
+	const stepless = JSON.stringify({
+		on: { workflow_call: {} },
+		jobs: { run: { 'runs-on': 'ubuntu-26.04', steps: [] } },
+	});
+	const root = await fixture({
+		ruleset: requiring('Reuse / run'),
+		workflows: {
+			'.github/workflows/build.yml': namedWorkflow('Reuse', 'pull_request', {
+				uses: './.github/workflows/x.yml',
+			}),
+			'.github/workflows/x.yml': stepless,
+		},
+	});
+	assert.deepEqual(await checkRuleset(root), {
+		findings: [refusedJob('x.yml', 'run', NO_STEPS), unpublished('Reuse / run')],
+	});
+});
+
+it('E8 refuses a reusable call that also defines steps', async () => {
+	const root = await fixture({
+		ruleset: requiring('Reuse / run'),
+		workflows: {
+			'.github/workflows/build.yml': namedWorkflow('Reuse', 'pull_request', {
+				uses: './.github/workflows/x.yml',
+				steps: jobSteps,
+			}),
+			'.github/workflows/x.yml': callee,
+		},
+	});
+	const problem = 'calls a reusable workflow but also defines steps';
+	assert.deepEqual(await checkRuleset(root), {
+		findings: [refusedJob('build.yml', 'check', problem), unpublished('Reuse / run')],
+	});
+});
 
 for (const trigger of [
 	{ branches: ['*'] },

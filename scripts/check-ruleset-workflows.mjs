@@ -209,6 +209,20 @@ function hasValidJobShape(job) {
 	return typeof job.uses === 'string' && !Object.hasOwn(job, 'runs-on');
 }
 
+/** Require a step list with at least one entry; GitHub converts absent steps to an empty list. */
+function hasSteps(job) {
+	return Array.isArray(job.steps) && job.steps.length > 0;
+}
+
+/** Name why GitHub refuses a job's form, or return null for an accepted runner job or call. */
+function jobShapeProblem(job) {
+	if (!hasValidJobShape(job)) return 'needs either runs-on or a reusable uses, not both or neither';
+	if (Object.hasOwn(job, 'uses')) {
+		return Object.hasOwn(job, 'steps') ? 'calls a reusable workflow but also defines steps' : null;
+	}
+	return hasSteps(job) ? null : 'runs on a runner but defines no steps';
+}
+
 /** Require an ordinary job's runner without accepting absent or null runner values. */
 function isRunnableJob(job) {
 	return isMapping(job) && !Object.hasOwn(job, 'uses') && hasRunner(job);
@@ -287,15 +301,18 @@ function contextJobs(doc, relPath, findings) {
 	return [];
 }
 
-/** Drop every job of a file GitHub refuses for one job outside both job forms. */
+/** Drop every job of a file GitHub refuses because one job's form or steps are invalid. */
 function validContextJobs(jobs, relPath, findings) {
-	const invalid = jobs.find(([, job]) => !hasValidJobShape(job));
-	if (invalid === undefined) return jobs;
-	findings.push(
-		`${relPath}: job '${invalid[0]}' needs either runs-on or a reusable uses, not both or ` +
-			'neither, so GitHub refuses the workflow; its jobs were not matched',
-	);
-	return [];
+	for (let i = 0; i < jobs.length; i++) {
+		const problem = jobShapeProblem(jobs[i][1]);
+		if (problem === null) continue;
+		findings.push(
+			`${relPath}: job '${jobs[i][0]}' ${problem}, so GitHub refuses the workflow; ` +
+				'its jobs were not matched',
+		);
+		return [];
+	}
+	return jobs;
 }
 
 /** Read each listed workflow once and retain parsed documents for local reusable calls. */

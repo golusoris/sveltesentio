@@ -64,7 +64,7 @@ it('P2 accepts literals, job ids, both matrix shapes, and unfiltered base branch
 		validWorkflow
 			.replace('  lint:\n', '  lint:\n    name: Lint\n')
 			.replace('needs: [lint]', 'needs: [lint, lint-by-id]') +
-		'\n  lint-by-id:\n    runs-on: ubuntu-26.04';
+		'\n  lint-by-id:\n    runs-on: ubuntu-26.04\n    steps:\n      - run: echo lint';
 	const root = await fixture({
 		workflow,
 		ruleset: requiring(
