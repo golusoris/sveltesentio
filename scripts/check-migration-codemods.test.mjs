@@ -390,6 +390,15 @@ describe('runCheck', () => {
 		);
 		assert.equal(overSteps.length, 0);
 	});
+
+	it('reports a call step that succeeds without a value, and does not reject', async () => {
+		const { run: stub, steps } = stubRunner();
+		/** @type {import('./check-migration-codemods.mjs').Runner} */
+		const run = async (options) => (options.mode === 'call' ? { ok: true } : stub(options));
+		const { findings: got } = await runCheck({ root: await tree(goodTree()), run });
+		assertOne(got, `${CODEMOD}/fixtures/basic.input.ts`, /must return a string, got undefined/);
+		assert.equal(steps.length, 1);
+	});
 });
 
 describe('main', () => {

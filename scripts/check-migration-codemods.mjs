@@ -15,7 +15,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { withTimeout } from './check-template-labels.mjs';
-import { errorMessage, runCodemod } from './codemod-worker.mjs';
+import { errorMessage, runCodemod, typeName } from './codemod-worker.mjs';
 
 const repoRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -328,7 +328,11 @@ async function applyTransform(ctx, /** @type {string} */ transformFile, source, 
 		timeoutMs: ctx.timeoutMs,
 		signal: ctx.suite,
 	});
-	if (result.ok) return /** @type {{ ok: true, value: string }} */ (result);
+	if (result.ok) {
+		const value = 'value' in result ? result.value : undefined;
+		if (typeof value === 'string') return { ok: true, value };
+		return { ok: false, message: `codemod must return a string, got ${typeName(value)}` };
+	}
 	if (result.kind === 'aborted') return { ok: false, message: null };
 	return {
 		ok: false,
