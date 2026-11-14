@@ -91,6 +91,8 @@ export async function fixture({
 
 /** One pull_request workflow whose literal job names publish each given context. */
 export function publishing(...contexts) {
-	const jobs = Object.fromEntries(contexts.map((name, i) => [`publish-${i}`, { name }]));
+	const jobs = Object.fromEntries(
+		contexts.map((name, i) => [`publish-${i}`, { name, 'runs-on': 'ubuntu-26.04' }]),
+	);
 	return { '.github/workflows/publishers.yml': JSON.stringify({ on: 'pull_request', jobs }) };
 }
