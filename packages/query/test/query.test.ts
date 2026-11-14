@@ -57,6 +57,32 @@ describe('createSentioQuery — accessor-options shape (svelte-query v6)', () =>
 	});
 });
 
+describe('createSentioQuery — QueryFunctionContext (issue #488)', () => {
+	it('passes the context through so the abort signal reaches queryFn', async () => {
+		const controller = new AbortController();
+		const queryFn = vi.fn(({ signal }: { signal: AbortSignal }) => {
+			expect(signal).toBe(controller.signal);
+			return Promise.resolve(1);
+		});
+		createSentioQuery<number>({ queryKey: ['plan'], queryFn });
+
+		const opts = accessorFromCall<{
+			queryFn: (context: { signal: AbortSignal }) => Promise<number>;
+		}>(sq.createQuery)();
+
+		await opts.queryFn({ signal: controller.signal });
+		expect(queryFn).toHaveBeenCalledOnce();
+	});
+
+	it('rejects a queryFn whose return type does not match TData', () => {
+		createSentioQuery<number>({
+			queryKey: ['bad'],
+			// @ts-expect-error — Promise<string> is not assignable to QueryFunction<number>
+			queryFn: () => Promise.resolve('not a number'),
+		});
+	});
+});
+
 describe('createSentioQuery — reactive (accessor) options form (issue #176)', () => {
 	it('accepts a function form and re-reads it on every accessor invocation', () => {
 		let sortBy = 'added';

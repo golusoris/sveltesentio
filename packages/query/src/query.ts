@@ -2,6 +2,7 @@ import {
 	createQuery,
 	useQueryClient,
 	type CreateQueryOptions,
+	type QueryFunction,
 	type QueryKey,
 } from '@tanstack/svelte-query';
 import type { ProblemError } from '@sveltesentio/core';
@@ -13,8 +14,11 @@ export interface SentioQueryOptions<TData, TKey extends QueryKey = QueryKey> ext
 	'queryFn'
 > {
 	queryKey: TKey;
-	/** Resolver — typically wraps an openapi-fetch-shaped client. Throws `ProblemError` on failure. */
-	queryFn: () => Promise<TData>;
+	/**
+	 * Resolver - receives TanStack's `QueryFunctionContext` (`signal`, `queryKey`, `meta`).
+	 * Typically wraps an openapi-fetch-shaped client and throws `ProblemError` on failure.
+	 */
+	queryFn: QueryFunction<TData, TKey>;
 }
 
 /**
