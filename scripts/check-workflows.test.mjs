@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -10,16 +11,22 @@ import { MUST_SUCCEED } from './ci-gate.mjs';
 import {
 	ACTIONLINT_IMAGE,
 	LINT_TIMEOUT_MS,
+	MAX_WORKFLOWS,
 	PLANTED_FILE,
 	PLANTED_MARKERS,
 	WORST_CASE_MS,
 	judgeLint,
 	linterArgs,
 	main,
+	workflowFiles,
 } from './check-workflows.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const IDS = { uid: 1000, gid: 100 };
+// Independent literals: changing the module constants must not change these fixtures.
+const CONFIG_ARGS = ['-config-file', '.github/actionlint.yaml'];
+const LIST = () => ['codeql.yaml', 'README.md', 'ci.yml'];
+const LISTED = ['.github/workflows/ci.yml', '.github/workflows/codeql.yaml'];
 const OK = { status: 0, signal: null, error: undefined, output: '' };
 const FAILED = { ...OK, status: 1, output: 'no such image' };
 // Independent literals: weakening PLANTED_MARKERS must not weaken these fixtures.
@@ -62,11 +69,11 @@ function lintRunner(planted = PLANTED_REFUSED, repository = OK) {
 describe('workflow lint: positive', () => {
 	it('P1 lints the planted file first, then all workflows, with explicit user IDs', () => {
 		const { calls, runner } = lintRunner();
-		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS), 0);
+		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS, LIST), 0);
 		const runs = calls.filter((call) => call.args[0] === 'run');
 		assert.equal(runs.length, 2);
-		assert.equal(runs[0].args.at(-1), PLANTED_FILE);
-		assert.equal(runs[1].args.at(-1), '-oneline');
+		assert.deepEqual(runs[0].args.slice(-3), [...CONFIG_ARGS, PLANTED_FILE]);
+		assert.deepEqual(runs[1].args.slice(-4), [...CONFIG_ARGS, ...LISTED]);
 		assert.ok(!runs[1].args.includes(PLANTED_FILE));
 		for (const call of runs) {
 			const userIndex = call.args.indexOf('--user');
@@ -110,13 +117,14 @@ describe('workflow lint: positive', () => {
 			ACTIONLINT_IMAGE,
 			'-no-color',
 			'-oneline',
+			...CONFIG_ARGS,
 		];
 		const user = ['--user', '1000:100'];
 		assert.deepEqual(linterArgs('/src/repo', 'workflow-test', [PLANTED_FILE], user), [
 			...base,
 			PLANTED_FILE,
 		]);
-		assert.deepEqual(linterArgs('/src/repo', 'workflow-test', [], user), base);
+		assert.deepEqual(linterArgs('/src/repo', 'workflow-test', LISTED, user), [...base, ...LISTED]);
 	});
 
 	it('P3 maps Docker and Podman identities and supports platforms without IDs', () => {
@@ -162,7 +170,12 @@ describe('workflow lint: positive', () => {
 		assert.ok(WORST_CASE_MS + 120_000 <= job['timeout-minutes'] * 60_000);
 		assert.equal(job['runs-on'], 'ubuntu-26.04');
 		assert.ok(!Object.hasOwn(job, 'if'));
-		assert.ok(job.steps.some((step) => step.run === 'node scripts/check-workflows.mjs'));
+		assert.ok(!Object.hasOwn(job, 'continue-on-error'));
+		const lintSteps = job.steps.filter((step) => step.run === 'node scripts/check-workflows.mjs');
+		assert.equal(lintSteps.length, 1);
+		// A step condition or continue-on-error would let the job pass without a lint.
+		assert.ok(!Object.hasOwn(lintSteps[0], 'if'));
+		assert.ok(!Object.hasOwn(lintSteps[0], 'continue-on-error'));
 		assert.ok(workflow.jobs['ci-gate'].needs.includes('workflow-lint'));
 		assert.ok(MUST_SUCCEED.includes('workflow-lint'));
 		const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -188,6 +201,23 @@ describe('workflow lint: positive', () => {
 		assert.deepEqual(calls[0].args, ['image', 'inspect', '--format', '{{.Id}}', ACTIONLINT_IMAGE]);
 	});
 
+	it('P8 passes every workflow file of this repository and its configuration', (t) => {
+		t.mock.method(console, 'log', () => {});
+		const expected = readdirSync(join(root, '.github/workflows'))
+			.filter((name) => /\.ya?ml$/i.test(name))
+			.sort()
+			.map((name) => `.github/workflows/${name}`);
+		assert.ok(expected.length > 1);
+		const { calls, runner } = lintRunner();
+		assert.equal(main(root, runner, { CI: 'true' }, IDS), 0);
+		const repository = calls.filter((call) => call.args[0] === 'run')[1];
+		const configAt = repository.args.indexOf('-config-file');
+		assert.deepEqual(repository.args.slice(configAt, configAt + 2), CONFIG_ARGS);
+		assert.deepEqual(repository.args.slice(configAt + 2), expected);
+		const config = parse(readFileSync(join(root, CONFIG_ARGS[1]), 'utf8'));
+		assert.ok(config['self-hosted-runner'].labels.includes('ubuntu-26.04'));
+	});
+
 	it('P7 pulls the absent actionlint image quietly', () => {
 		const { calls, runner } = stubRunner({ 'docker pull': OK });
 		assert.deepEqual(ensureImage('docker', ACTIONLINT_IMAGE, runner), []);
@@ -205,7 +235,7 @@ describe('workflow lint: negative', () => {
 		assert.ok(problems[0].includes(SHELLCHECK_MARKER));
 		assert.ok(problems[0].includes(NEEDS_MARKER));
 		assert.match(problems[0], /would not catch the regression/);
-		assert.equal(main('/src/repo', lintRunner(OK).runner, { CI: 'true' }, IDS), 1);
+		assert.equal(main('/src/repo', lintRunner(OK).runner, { CI: 'true' }, IDS, LIST), 1);
 	});
 
 	it('N2 fails when the planted run lacks only shellcheck', (t) => {
@@ -216,7 +246,7 @@ describe('workflow lint: negative', () => {
 		assert.ok(problems[0].split('\n')[0].includes(SHELLCHECK_MARKER));
 		assert.ok(!problems[0].split('\n')[0].includes(STEPS_MARKER));
 		assert.ok(!problems[0].split('\n')[0].includes(NEEDS_MARKER));
-		assert.equal(main('/src/repo', lintRunner(withoutShellcheck).runner, {}, IDS), 1);
+		assert.equal(main('/src/repo', lintRunner(withoutShellcheck).runner, {}, IDS, LIST), 1);
 	});
 
 	it('N2 fails when the planted run lacks only the job-needs finding', (t) => {
@@ -226,7 +256,7 @@ describe('workflow lint: negative', () => {
 		assert.equal(problems.length, 1);
 		assert.ok(problems[0].split('\n')[0].includes(NEEDS_MARKER));
 		assert.ok(!problems[0].split('\n')[0].includes(SHELLCHECK_MARKER));
-		assert.equal(main('/src/repo', lintRunner(withoutNeeds).runner, {}, IDS), 1);
+		assert.equal(main('/src/repo', lintRunner(withoutNeeds).runner, {}, IDS, LIST), 1);
 	});
 
 	it('N3 reports workflow problems with their output and fails main', (t) => {
@@ -236,7 +266,7 @@ describe('workflow lint: negative', () => {
 		assert.equal(problems.length, 1);
 		assert.match(problems[0], /actionlint reports problems in \.github\/workflows \(exit 1\)/);
 		assert.ok(problems[0].endsWith(result.output));
-		assert.equal(main('/src/repo', lintRunner(PLANTED_REFUSED, result).runner, {}, IDS), 1);
+		assert.equal(main('/src/repo', lintRunner(PLANTED_REFUSED, result).runner, {}, IDS, LIST), 1);
 	});
 
 	it('N4 fails without a runtime in CI and skips with a reason locally', (t) => {
@@ -245,8 +275,8 @@ describe('workflow lint: negative', () => {
 		t.mock.method(console, 'error', (message) => errors.push(message));
 		t.mock.method(console, 'warn', (message) => warnings.push(message));
 		const { calls, runner } = stubRunner({});
-		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS), 1);
-		assert.equal(main('/src/repo', runner, {}, IDS), 0);
+		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS, LIST), 1);
+		assert.equal(main('/src/repo', runner, {}, IDS, LIST), 0);
 		assert.deepEqual(errors, [
 			'FAIL: neither docker nor podman answers, so the pinned actionlint image cannot run',
 		]);
@@ -264,7 +294,7 @@ describe('workflow lint: negative', () => {
 		const errors = [];
 		t.mock.method(console, 'error', (message) => errors.push(message));
 		const { calls, runner } = stubRunner({ 'docker version': OK });
-		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS), 1);
+		assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS, LIST), 1);
 		assert.equal(errors.length, 1);
 		assert.match(errors[0], /^FAIL: docker pull .* exited 1\nno such image$/);
 		assert.deepEqual(
@@ -286,7 +316,7 @@ describe('workflow lint: negative', () => {
 				'docker run': (args) => (args.at(-1) === PLANTED_FILE ? PLANTED_REFUSED : result),
 				'docker rm': OK,
 			});
-			assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS), 1);
+			assert.equal(main('/src/repo', runner, { CI: 'true' }, IDS, LIST), 1);
 			assert.equal(errors.length, 1);
 			assert.match(errors[0], diagnostic);
 			const runs = calls.filter((call) => call.args[0] === 'run');
@@ -299,6 +329,35 @@ describe('workflow lint: negative', () => {
 			});
 		});
 	}
+
+	it('N7 fails before any runtime call, even locally, when no workflow is listed', (t) => {
+		const errors = [];
+		t.mock.method(console, 'error', (message) => errors.push(message));
+		const { calls, runner } = lintRunner();
+		assert.equal(
+			main('/src/repo', runner, {}, IDS, () => ['README.md', 'ci.yml.bak']),
+			1,
+		);
+		assert.deepEqual(errors, [
+			'FAIL: .github/workflows holds no .yml or .yaml file, so nothing would be linted',
+		]);
+		assert.equal(calls.length, 0);
+	});
+
+	it('N8 reports a checkout without .github/workflows instead of linting nothing', (t) => {
+		const errors = [];
+		t.mock.method(console, 'error', (message) => errors.push(message));
+		const empty = mkdtempSync(join(tmpdir(), 'workflow-lint-'));
+		try {
+			const { calls, runner } = lintRunner();
+			assert.equal(main(empty, runner, { CI: 'true' }, IDS), 1);
+			assert.equal(errors.length, 1);
+			assert.match(errors[0], /^FAIL: cannot list \.github\/workflows: ENOENT/);
+			assert.equal(calls.length, 0);
+		} finally {
+			rmSync(empty, { recursive: true, force: true });
+		}
+	});
 });
 
 describe('workflow lint: boundary', () => {
@@ -329,6 +388,41 @@ describe('workflow lint: boundary', () => {
 		const kept = problems[0].split('\n').slice(1);
 		assert.equal(kept.length, EXCERPT_LINES);
 		assert.deepEqual(kept, lines.slice(1));
+	});
+
+	it('B5 lists exactly MAX_WORKFLOWS entries and refuses one more', () => {
+		assert.equal(MAX_WORKFLOWS, 256);
+		const names = (count) => Array.from({ length: count }, (_, index) => `w${index}.yml`);
+		const atLimit = workflowFiles('/src/repo', () => names(256));
+		assert.deepEqual(atLimit.problems, []);
+		assert.equal(atLimit.files.length, 256);
+		assert.deepEqual(
+			workflowFiles('/src/repo', () => names(257)),
+			{
+				problems: ['.github/workflows holds 257 entries, more than MAX_WORKFLOWS (256)'],
+			},
+		);
+	});
+
+	it('B6 keeps .yml and .yaml names in any case, sorted, and nothing else', () => {
+		const listed = workflowFiles('/src/repo', () => [
+			'z.yaml',
+			'README.md',
+			'a.yml',
+			'b.yml.bak',
+			'c.YML',
+			'yml',
+			'm.Yaml',
+		]);
+		assert.deepEqual(listed, {
+			problems: [],
+			files: [
+				'.github/workflows/a.yml',
+				'.github/workflows/c.YML',
+				'.github/workflows/m.Yaml',
+				'.github/workflows/z.yaml',
+			],
+		});
 	});
 
 	it('B4 preserves the Renovate ensureImage wrapper image and signature', () => {

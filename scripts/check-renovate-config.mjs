@@ -44,9 +44,13 @@ import {
 	stopProblem,
 } from './container-check.mjs';
 
+// Every name this module exported before the helpers moved stays exported.
 export {
 	EXCERPT_LINES,
+	OUTPUT_LIMIT_BYTES,
 	PROBE_TIMEOUT_MS,
+	PULL_TIMEOUT_MS,
+	RUNTIMES,
 	excerpt,
 	findRuntime,
 	mountArgument,

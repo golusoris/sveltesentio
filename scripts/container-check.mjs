@@ -108,7 +108,12 @@ export function currentIds() {
 	return { uid: process.getuid(), gid: process.getgid() };
 }
 
-/** Runtime arguments allowing the container to read an owner-only checkout. */
+/**
+ * Runtime arguments allowing the container to read an owner-only checkout.
+ * Podman's keep-id maps the caller's IDs and also runs the process as them,
+ * overriding the image's USER: under podman 6.2.0 `id` in the actionlint image
+ * prints uid=1000 with keep-id and uid=405(guest) without it.
+ */
 export function userArgs(runtime, ids = currentIds()) {
 	if (ids === null) return [];
 	return runtime === 'docker' ? ['--user', `${ids.uid}:${ids.gid}`] : ['--userns=keep-id'];

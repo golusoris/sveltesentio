@@ -5,6 +5,11 @@
 // workflow for missing steps, a shellcheck finding and a needs entry naming no job.
 // Missing shellcheck or a silently weakened linter therefore fails closed.
 //
+// The check lists .github/workflows itself and names each file and the
+// configuration to actionlint. Without a .git directory, actionlint finds no
+// project: a run without arguments exits 3, and named files lose the
+// configuration's runner labels.
+//
 // The image is pinned by digest; Renovate updates it through the customManagers
 // entry matching this file. Docker is tried first, then Podman. Without either,
 // CI=true fails; elsewhere the check prints SKIP with a reason. Containers run
@@ -12,6 +17,7 @@
 //
 // `pnpm check:workflows` runs this check; `pnpm test:scripts` runs its unit tests.
 import { randomUUID } from 'node:crypto';
+import { readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
@@ -40,6 +46,10 @@ export const PLANTED_MARKERS = Object.freeze([
 	'[job-needs]',
 ]);
 export const LINT_TIMEOUT_MS = 120_000;
+export const WORKFLOW_DIR = '.github/workflows';
+export const CONFIG_FILE = '.github/actionlint.yaml';
+/** Entries one listing of WORKFLOW_DIR may hold (HISS-02). */
+export const MAX_WORKFLOWS = 256;
 
 /** Every child deadline, including two lint runs with cleanup; CI adds setup time. */
 export const WORST_CASE_MS =
@@ -47,7 +57,37 @@ export const WORST_CASE_MS =
 	PULL_TIMEOUT_MS +
 	2 * (LINT_TIMEOUT_MS + PROBE_TIMEOUT_MS);
 
-/** Runtime arguments for the planted file or every workflow when files is empty. */
+/**
+ * Every .yml or .yaml name directly in WORKFLOW_DIR, sorted. The extension match
+ * ignores case, so a file GitHub might read is linted rather than skipped.
+ */
+export function workflowFiles(rootDir, list = readdirSync) {
+	let names;
+	try {
+		names = list(join(rootDir, WORKFLOW_DIR));
+	} catch (error) {
+		return { problems: [`cannot list ${WORKFLOW_DIR}: ${error.message}`] };
+	}
+	if (names.length > MAX_WORKFLOWS) {
+		return {
+			problems: [
+				`${WORKFLOW_DIR} holds ${names.length} entries, more than MAX_WORKFLOWS (${MAX_WORKFLOWS})`,
+			],
+		};
+	}
+	const files = names
+		.filter((name) => /\.ya?ml$/i.test(name))
+		.sort()
+		.map((name) => `${WORKFLOW_DIR}/${name}`);
+	if (files.length === 0) {
+		return {
+			problems: [`${WORKFLOW_DIR} holds no .yml or .yaml file, so nothing would be linted`],
+		};
+	}
+	return { problems: [], files };
+}
+
+/** Runtime arguments linting the named files with the repository configuration. */
 export function linterArgs(rootDir, name, files, user) {
 	return [
 		'run',
@@ -71,6 +111,8 @@ export function linterArgs(rootDir, name, files, user) {
 		ACTIONLINT_IMAGE,
 		'-no-color',
 		'-oneline',
+		'-config-file',
+		CONFIG_FILE,
 		...files,
 	];
 }
@@ -101,8 +143,10 @@ export function judgeLint(label, expectClean, result) {
 	return [`${label}: ${reason}\n${excerpt(result.output)}`];
 }
 
-/** Finds the runtime, prepares its image and lints the planted file before the repository. */
-function checkRepository(rootDir, runner, env, ids) {
+/** Lists the workflows, finds the runtime, prepares its image and lints the planted file first. */
+function checkRepository(rootDir, runner, env, ids, list) {
+	const listed = workflowFiles(rootDir, list);
+	if (listed.problems.length > 0) return { problems: listed.problems };
 	const runtime = findRuntime(runner);
 	if (runtime === null) {
 		const reason = `neither ${RUNTIMES.join(' nor ')} answers, so the pinned actionlint image cannot run`;
@@ -113,22 +157,28 @@ function checkRepository(rootDir, runner, env, ids) {
 	// Exactly two runs bound the fan-out and total deadline (HISS-02).
 	for (const [files, expectClean] of [
 		[[PLANTED_FILE], false],
-		[[], true],
+		[listed.files, true],
 	]) {
 		const name = `workflow-lint-check-${process.pid}-${randomUUID().slice(0, 8)}`;
-		const label = `actionlint ${files[0] ?? '.github/workflows'}`;
+		const label = `actionlint ${expectClean ? WORKFLOW_DIR : PLANTED_FILE}`;
 		const result = runner(runtime, linterArgs(rootDir, name, files, userArgs(runtime, ids)), {
 			timeout: LINT_TIMEOUT_MS,
 		});
 		problems.push(...judgeLint(label, expectClean, result));
 		problems.push(...removeStopped(runtime, name, label, result, runner));
 	}
-	return { problems, runtime };
+	return { problems, runtime, linted: listed.files.length };
 }
 
 /** Returns 0 only for clean workflows and refused planted diagnostics, or a stated local skip. */
-export function main(rootDir = root, runner = run, env = process.env, ids = currentIds()) {
-	const outcome = checkRepository(resolve(rootDir), runner, env, ids);
+export function main(
+	rootDir = root,
+	runner = run,
+	env = process.env,
+	ids = currentIds(),
+	list = readdirSync,
+) {
+	const outcome = checkRepository(resolve(rootDir), runner, env, ids, list);
 	for (const problem of outcome.problems) console.error(`FAIL: ${problem}`);
 	if (outcome.problems.length > 0) return 1;
 	if (outcome.skipped) {
@@ -137,7 +187,7 @@ export function main(rootDir = root, runner = run, env = process.env, ids = curr
 	}
 	console.log(
 		`OK: ${ACTIONLINT_IMAGE.split('@')[0]} (${outcome.runtime}) finds no problem in ` +
-			`.github/workflows and refuses the planted workflow in ${PLANTED_FILE}.`,
+			`${outcome.linted} files in ${WORKFLOW_DIR} and refuses the planted workflow in ${PLANTED_FILE}.`,
 	);
 	return 0;
 }
