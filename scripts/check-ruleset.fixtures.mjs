@@ -76,14 +76,55 @@ export async function fixture({
 	source = JSON.stringify(ruleset),
 	owners = { '.github/CODEOWNERS': '* @owner' },
 	workflow = validWorkflow,
+	workflows = {},
 } = {}) {
 	const root = await mkdtemp(join(tempRoot, 'case-'));
 	if (source !== null) await writeFixtureFile(root, '.github/rulesets/main.json', source);
 	if (workflow !== null) await writeFixtureFile(root, '.github/workflows/ci.yml', workflow);
-	const entries = Object.entries(owners);
+	const entries = Object.entries({ ...owners, ...workflows });
 	for (let i = 0; i < entries.length; i++) {
 		const [path, content] = entries[i];
 		await writeFixtureFile(root, path, content);
 	}
 	return root;
+}
+
+/** One step, the least GitHub accepts in a runner job. */
+export const jobSteps = [{ run: 'echo ok' }];
+
+/** One pull_request workflow whose literal job names publish each given context. */
+export function publishing(...contexts) {
+	const jobs = Object.fromEntries(
+		contexts.map((name, i) => [
+			`publish-${i}`,
+			{ name, 'runs-on': 'ubuntu-26.04', steps: jobSteps },
+		]),
+	);
+	return { '.github/workflows/publishers.yml': JSON.stringify({ on: 'pull_request', jobs }) };
+}
+
+/** Add required contexts while preserving the default CI Gate contract. */
+export function requiring(...contexts) {
+	const ruleset = makeRuleset();
+	ruleset.rules[1].parameters.required_status_checks.push(
+		...contexts.map((context) => ({ context })),
+	);
+	return ruleset;
+}
+
+/** Serialize one named job, a one-step runner job or a reusable call when `job` sets uses. */
+export function namedWorkflow(name, trigger = 'pull_request', job = {}) {
+	const base = Object.hasOwn(job, 'uses')
+		? { name }
+		: { name, 'runs-on': 'ubuntu-26.04', steps: jobSteps };
+	return JSON.stringify({ on: trigger, jobs: { check: { ...base, ...job } } });
+}
+
+/** Spell the public diagnostic independently of the checker implementation. */
+export function unpublished(context) {
+	return (
+		`.github/rulesets/main.json: required status check '${context}' is not published ` +
+		'by any job of a pull_request workflow in .github/workflows, ' +
+		'so it never reports and main cannot merge'
+	);
 }

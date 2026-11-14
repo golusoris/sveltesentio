@@ -4,6 +4,7 @@
 // Checks that the workflow publishes CI Gate for main, always aggregates every
 // other job, decides through scripts/ci-gate.mjs on toJSON(needs), and uses GitHub
 // Actions when the required check pins an integration.
+// check-ruleset-workflows.mjs resolves other pull_request job names, guarding 6fa7595.
 // Guards the solo-maintainer fix in 8c2704d against regeneration by adopt's
 // team-oriented template, which can otherwise make the default branch unmergeable.
 import { readFile } from 'node:fs/promises';
@@ -11,10 +12,17 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 import { IO_TIMEOUT_MS, readDocument } from './check-platform-legs.mjs';
+import {
+	checkPullRequestTypes,
+	checkTriggerFilters,
+	contextTriggerFindings,
+	readContextWorkflows,
+} from './check-ruleset-workflows.mjs';
 
 const defaultRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const RULESET_PATH = '.github/rulesets/main.json';
 const WORKFLOW_PATH = '.github/workflows/ci.yml';
+const CONTEXT_LIMIT = 100;
 
 export const ADMIN_ROLE_ID = 5;
 export const BYPASS_MODES = ['always', 'pull_request'];
@@ -331,29 +339,6 @@ function checkGateIntegrations(rules, findings) {
 	}
 }
 
-function checkTriggerFilters(event, trigger, findings) {
-	const filters = ['paths', 'paths-ignore', 'branches-ignore'];
-	for (let i = 0; i < filters.length; i++) {
-		const key = filters[i];
-		if (trigger && Object.hasOwn(trigger, key)) {
-			findings.push(
-				`${WORKFLOW_PATH}: on.${event}.${key} can skip the workflow ` +
-					`and leave '${GATE_CONTEXT}' pending`,
-			);
-		}
-	}
-}
-
-function checkPullRequestTypes(trigger, findings) {
-	if (!trigger || !Object.hasOwn(trigger, 'types')) return;
-	const required = ['opened', 'synchronize', 'reopened'];
-	if (!Array.isArray(trigger.types) || !required.every((type) => trigger.types.includes(type))) {
-		findings.push(
-			`${WORKFLOW_PATH}: on.pull_request.types must include opened, synchronize and reopened`,
-		);
-	}
-}
-
 /**
  * @param {string} event
  * @param {string} entry
@@ -402,8 +387,8 @@ function checkWorkflowTriggers(doc, findings) {
 		if (!Array.isArray(branches) || !branchesIncludeMain(event, branches, findings)) {
 			findings.push(`${WORKFLOW_PATH}: on.${event}.branches must include main`);
 		}
-		checkTriggerFilters(event, trigger, findings);
-		if (event === 'pull_request') checkPullRequestTypes(trigger, findings);
+		checkTriggerFilters(event, trigger, findings, WORKFLOW_PATH, GATE_CONTEXT);
+		if (event === 'pull_request') checkPullRequestTypes(trigger, findings, WORKFLOW_PATH);
 	}
 }
 
@@ -482,6 +467,77 @@ async function checkGateWorkflow(rootDir, findings) {
 	}
 }
 
+/** Match one required context, accepting any publisher whose trigger always covers main. */
+function checkContextPublisher(check, publishers, findings) {
+	const context = check.context;
+	if (check.integration_id !== undefined && check.integration_id !== GITHUB_ACTIONS_APP_ID) {
+		findings.push(
+			`${RULESET_PATH}: required status check '${context}' is pinned to integration ` +
+				`${check.integration_id}; only GitHub Actions contexts can be matched ` +
+				'against workflow jobs',
+		);
+		return;
+	}
+	const matching = publishers.filter(({ names }) => names.has(context));
+	if (matching.length === 0) {
+		findings.push(
+			`${RULESET_PATH}: required status check '${context}' is not published by any job ` +
+				'of a pull_request workflow in .github/workflows, ' +
+				'so it never reports and main cannot merge',
+		);
+		return;
+	}
+	const reasons = matching.map((publisher) => contextTriggerFindings(publisher, context));
+	if (reasons.some((items) => items.length === 0)) return;
+	findings.push(...reasons.flat());
+}
+
+/** Collect bounded non-gate contexts without traversing oversized check arrays. */
+function requiredContexts(rules) {
+	const checks = [];
+	let total = 0;
+	let oversized = false;
+	for (let i = 0; i < rules.length; i++) {
+		if (rules[i]?.type !== 'required_status_checks') continue;
+		const entries = rules[i].parameters?.required_status_checks;
+		if (!Array.isArray(entries)) continue;
+		total += entries.length;
+		if (entries.length > CONTEXT_LIMIT) {
+			oversized = true;
+			continue;
+		}
+		appendRequiredContexts(entries, checks);
+	}
+	return { checks, total, oversized };
+}
+
+/** Keep at most the limit plus one sentinel context across all bounded rule arrays. */
+function appendRequiredContexts(entries, checks) {
+	for (let i = 0; i < entries.length; i++) {
+		const check = entries[i];
+		if (typeof check?.context !== 'string' || check.context === GATE_CONTEXT) continue;
+		if (checks.length <= CONTEXT_LIMIT) checks.push(check);
+	}
+}
+
+/** Check every non-gate required context without changing gate-only diagnostics. */
+async function checkRequiredContexts(rootDir, rules, findings) {
+	const { checks, total, oversized } = requiredContexts(rules);
+	if (oversized || checks.length > CONTEXT_LIMIT) {
+		findings.push(
+			`${RULESET_PATH}: requires ${total} status checks, more than the limit of ` +
+				`${CONTEXT_LIMIT}; required status checks were not matched`,
+		);
+		return;
+	}
+	if (checks.length === 0) return;
+	const publishers = await readContextWorkflows(rootDir, findings);
+	if (publishers === null) return;
+	for (let i = 0; i < checks.length; i++) {
+		checkContextPublisher(checks[i], publishers, findings);
+	}
+}
+
 export async function checkRuleset(rootDir = defaultRoot) {
 	const findings = [];
 	const result = await readDocument(join(rootDir, RULESET_PATH), RULESET_PATH, 'JSON', JSON.parse);
@@ -504,6 +560,7 @@ export async function checkRuleset(rootDir = defaultRoot) {
 		);
 	}
 	await checkGateWorkflow(rootDir, findings);
+	await checkRequiredContexts(rootDir, doc.rules, findings);
 	return { findings };
 }
 
