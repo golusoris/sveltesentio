@@ -96,13 +96,20 @@ async function sampleCheckpoints(
 	return records;
 }
 
-async function runSoakRequest(index: number, failure?: Error): Promise<RequestRun> {
+// A rejecting request never returns its samples, so `sink` keeps every request's
+// samples by index for the caller to check after the rejection.
+async function runSoakRequest(
+	index: number,
+	failure?: Error,
+	sink?: Map<number, CheckpointSample[]>,
+): Promise<RequestRun> {
 	const ownClock = distinctClock(index);
 	const expectedMs = ownClock.now().getTime();
 	const turns = (index % MAX_YIELD_TURNS) + 1;
 	let records: CheckpointSample[] = [];
 	const locals = await invokeWithClock(ownClock, async () => {
 		records = await sampleCheckpoints(ownClock, turns);
+		sink?.set(index, records);
 		if (failure !== undefined) {
 			throw failure;
 		}
@@ -111,21 +118,26 @@ async function runSoakRequest(index: number, failure?: Error): Promise<RequestRu
 	return { index, ownClock, expectedMs, locals, records };
 }
 
+function assertCleanRecords(records: CheckpointSample[] | undefined, expectedMs: number): void {
+	expect(records).toHaveLength(CHECKPOINTS);
+	for (let c = 0; c < CHECKPOINTS; c += 1) {
+		expect(records?.[c]).toEqual({ sameIdentity: true, timeMs: expectedMs });
+	}
+}
+
 function assertCleanRun(run: RequestRun | undefined, expectedIndex: number): void {
 	expect(run).toBeDefined();
 	if (run === undefined) return;
 	expect(run.index).toBe(expectedIndex);
 	expect(run.locals.clock).toBe(run.ownClock);
-	expect(run.records).toHaveLength(CHECKPOINTS);
-	for (let c = 0; c < CHECKPOINTS; c += 1) {
-		expect(run.records[c]).toEqual({ sameIdentity: true, timeMs: run.expectedMs });
-	}
+	assertCleanRecords(run.records, run.expectedMs);
 }
 
 function assertSettledOutcome(
 	outcome: PromiseSettledResult<RequestRun> | undefined,
 	index: number,
 	expectedError: Error | undefined,
+	samples: Map<number, CheckpointSample[]>,
 ): void {
 	expect(outcome).toBeDefined();
 	if (outcome === undefined) return;
@@ -135,6 +147,8 @@ function assertSettledOutcome(
 			const reason: unknown = outcome.reason;
 			expect(reason).toBe(expectedError);
 		}
+		// The request saw its own clock at every checkpoint before it threw.
+		assertCleanRecords(samples.get(index), BASE_MS + index * STEP_SECOND_MS);
 		return;
 	}
 	expect(outcome.status).toBe('fulfilled');
@@ -167,22 +181,24 @@ describe('withClock soak — concurrent server requests (positive)', () => {
 });
 
 describe('withClock soak — rejecting concurrent requests (negative)', () => {
-	it('isolates fulfilled siblings when half reject (negative)', async () => {
+	it('isolates rejecting requests and their fulfilled siblings when half reject (negative)', async () => {
 		const errors = new Map<number, Error>();
+		const samples = new Map<number, CheckpointSample[]>();
 		const tasks: Promise<RequestRun>[] = [];
 		for (let i = 0; i < REQUESTS; i += 1) {
 			if (i % 2 === 1) {
 				const err = new Error(`soak-reject-${i}`);
 				errors.set(i, err);
-				tasks.push(runSoakRequest(i, err));
+				tasks.push(runSoakRequest(i, err, samples));
 			} else {
-				tasks.push(runSoakRequest(i));
+				tasks.push(runSoakRequest(i, undefined, samples));
 			}
 		}
 		const settled = await Promise.allSettled(tasks);
 		expect(settled).toHaveLength(REQUESTS);
+		expect(samples.size).toBe(REQUESTS);
 		for (let i = 0; i < REQUESTS; i += 1) {
-			assertSettledOutcome(settled[i], i, errors.get(i));
+			assertSettledOutcome(settled[i], i, errors.get(i), samples);
 		}
 		expect(getClock()).toBe(systemClock);
 	});
