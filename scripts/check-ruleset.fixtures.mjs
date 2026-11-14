@@ -96,3 +96,29 @@ export function publishing(...contexts) {
 	);
 	return { '.github/workflows/publishers.yml': JSON.stringify({ on: 'pull_request', jobs }) };
 }
+
+/** Add required contexts while preserving the default CI Gate contract. */
+export function requiring(...contexts) {
+	const ruleset = makeRuleset();
+	ruleset.rules[1].parameters.required_status_checks.push(
+		...contexts.map((context) => ({ context })),
+	);
+	return ruleset;
+}
+
+/** Serialize a workflow with one named job and an explicit trigger shape. */
+export function namedWorkflow(name, trigger = 'pull_request', job = {}) {
+	return JSON.stringify({
+		on: trigger,
+		jobs: { check: { name, 'runs-on': 'ubuntu-26.04', ...job } },
+	});
+}
+
+/** Spell the public diagnostic independently of the checker implementation. */
+export function unpublished(context) {
+	return (
+		`.github/rulesets/main.json: required status check '${context}' is not published ` +
+		'by any job of a pull_request workflow in .github/workflows, ' +
+		'so it never reports and main cannot merge'
+	);
+}
