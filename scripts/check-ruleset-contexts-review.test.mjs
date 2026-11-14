@@ -177,14 +177,19 @@ it('E5 rejects a publisher without a runner', async () => {
 	});
 });
 
+const callee = JSON.stringify({
+	on: { workflow_call: {} },
+	jobs: { run: { 'runs-on': 'ubuntu-26.04', steps: [] } },
+});
+
 for (const [label, sibling, refused] of [
 	['without a runner', { name: 'Broken' }, true],
 	[
 		'with both a runner and a reusable call',
-		{ uses: './.github/workflows/x.yml', 'runs-on': 'ubuntu-26.04' },
+		{ name: 'Reuse', uses: './.github/workflows/x.yml', 'runs-on': 'ubuntu-26.04' },
 		true,
 	],
-	['with a reusable call only', { uses: './.github/workflows/x.yml' }, false],
+	['with a reusable call only', { name: 'Reuse', uses: './.github/workflows/x.yml' }, false],
 ]) {
 	it(`E7 judges a valid publisher beside a sibling job ${label}`, async () => {
 		const workflow = JSON.stringify({
@@ -192,10 +197,12 @@ for (const [label, sibling, refused] of [
 			jobs: { check: { name: 'Build', 'runs-on': 'ubuntu-26.04' }, broken: sibling },
 		});
 		const root = await fixture({
-			ruleset: requiring('Build'),
-			workflows: { '.github/workflows/build.yml': workflow },
+			ruleset: requiring('Build', 'Reuse / run'),
+			workflows: { '.github/workflows/build.yml': workflow, '.github/workflows/x.yml': callee },
 		});
-		const findings = refused ? [invalidJob('build.yml', 'broken'), unpublished('Build')] : [];
+		const findings = refused
+			? [invalidJob('build.yml', 'broken'), unpublished('Build'), unpublished('Reuse / run')]
+			: [];
 		assert.deepEqual(await checkRuleset(root), { findings });
 	});
 }
