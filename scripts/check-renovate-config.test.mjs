@@ -9,6 +9,7 @@ import {
 	EXCERPT_LINES,
 	PLANTED_FILE,
 	PLANTED_MESSAGE,
+	PROBE_TIMEOUT_MS,
 	RE2_FALLBACK_MESSAGE,
 	RENOVATE_IMAGE,
 	ensureImage,
@@ -17,6 +18,8 @@ import {
 	judgeValidation,
 	main,
 	mountArgument,
+	removeStopped,
+	run,
 	stopProblem,
 	validatorArgs,
 } from './check-renovate-config.mjs';
@@ -29,6 +32,12 @@ const ACCEPTED = { ...OK, output: `${ACCEPTED_MESSAGE} against 1 file(s)` };
 const PLANTED_REFUSED = {
 	...FAILED,
 	output: `"message": "${PLANTED_MESSAGE}: matchUpdateTypes had invalid values"`,
+};
+const TIMED_OUT = {
+	...OK,
+	status: null,
+	signal: 'SIGKILL',
+	error: Object.assign(new Error('spawnSync docker ETIMEDOUT'), { code: 'ETIMEDOUT' }),
 };
 
 /** A stub runner answering each call by its runtime and first argument. */
@@ -43,6 +52,24 @@ function stubRunner(answers) {
 }
 
 const byFile = (args) => (args.at(-1) === CONFIG_FILE ? ACCEPTED : PLANTED_REFUSED);
+
+describe('run', () => {
+	it('bounds a child that ignores SIGTERM with SIGKILL', () => {
+		const started = process.hrtime.bigint();
+		const result = run(
+			process.execPath,
+			[
+				'-e',
+				'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000); setTimeout(() => process.exit(0), 5000);',
+			],
+			{ timeout: 500 },
+		);
+		const elapsed = Number(process.hrtime.bigint() - started) / 1_000_000;
+		assert.ok(elapsed < 3000, `child took ${elapsed} ms despite a 500 ms deadline`);
+		assert.equal(result.signal, 'SIGKILL');
+		assert.equal(result.error?.code, 'ETIMEDOUT');
+	});
+});
 
 describe('the pinned image', () => {
 	it('names a release tag and a sha256 digest', () => {
@@ -137,7 +164,7 @@ describe('mountArgument', () => {
 
 describe('validatorArgs', () => {
 	it('runs the pinned image offline and read-only on one file', () => {
-		const args = validatorArgs('/src/repo', CONFIG_FILE);
+		const args = validatorArgs('/src/repo', CONFIG_FILE, 'validator-test');
 		assert.equal(args[0], 'run');
 		assert.deepEqual(args.slice(args.indexOf('--network'), args.indexOf('--network') + 2), [
 			'--network',
@@ -146,6 +173,14 @@ describe('validatorArgs', () => {
 		assert.ok(args.includes('--read-only'));
 		assert.equal(args[args.indexOf('--entrypoint') + 1], 'renovate-config-validator');
 		assert.deepEqual(args.slice(-4), [RENOVATE_IMAGE, '--strict', '--no-global', CONFIG_FILE]);
+	});
+
+	it('puts the supplied container name before the image', () => {
+		const args = validatorArgs('/src/repo', CONFIG_FILE, 'validator-test');
+		const index = args.indexOf('--name');
+		assert.ok(index > 0);
+		assert.equal(args[index + 1], 'validator-test');
+		assert.ok(index + 1 < args.indexOf(RENOVATE_IMAGE));
 	});
 });
 
@@ -166,6 +201,20 @@ describe('ensureImage', () => {
 		const problems = ensureImage('podman', stubRunner({}).runner);
 		assert.equal(problems.length, 1);
 		assert.match(problems[0], /^podman pull ghcr\.io\/renovatebot\/renovate:.* exited 1/);
+	});
+
+	it('pulls when inspecting the image timed out', () => {
+		const { calls, runner } = stubRunner({ 'docker image': TIMED_OUT, 'docker pull': OK });
+		assert.deepEqual(ensureImage('docker', runner), []);
+		assert.equal(calls.length, 2);
+		assert.deepEqual(calls[1].args, ['pull', '--quiet', RENOVATE_IMAGE]);
+	});
+
+	it('reports a pull stopped by a signal', () => {
+		const { runner } = stubRunner({ 'podman pull': { ...OK, status: null, signal: 'SIGKILL' } });
+		const problems = ensureImage('podman', runner);
+		assert.equal(problems.length, 1);
+		assert.match(problems[0], /^podman pull .* was stopped by SIGKILL before it finished$/);
 	});
 });
 
@@ -231,6 +280,14 @@ describe('main', () => {
 			.filter((call) => call.args[0] === 'run')
 			.map((call) => call.args.at(-1));
 		assert.deepEqual(validated, [CONFIG_FILE, PLANTED_FILE]);
+		assert.equal(calls.filter((call) => call.args[0] === 'rm').length, 0);
+		const names = calls
+			.filter((call) => call.args[0] === 'run')
+			.map((call) => call.args[call.args.indexOf('--name') + 1]);
+		assert.equal(new Set(names).size, 2);
+		for (const name of names) {
+			assert.match(name, new RegExp(`^renovate-config-check-${process.pid}-[0-9a-f]{8}$`));
+		}
 	});
 
 	it('returns 1 when the validator accepts the planted rule', () => {
@@ -257,5 +314,127 @@ describe('main', () => {
 
 	it('fails in CI when no runtime answers', () => {
 		assert.equal(main('/src/repo', stubRunner({}).runner, { CI: 'true' }), 1);
+	});
+});
+
+describe('removeStopped', () => {
+	it('leaves normally exited validators to --rm, including nonzero exits', () => {
+		const { calls, runner } = stubRunner({});
+		for (const result of [OK, FAILED]) {
+			assert.deepEqual(removeStopped('docker', 'validator-test', CONFIG_FILE, result, runner), []);
+		}
+		assert.equal(calls.length, 0);
+	});
+
+	for (const [label, result] of [
+		['timeout', TIMED_OUT],
+		['signal', { ...OK, status: null, signal: 'SIGTERM' }],
+		['spawn error', { ...OK, status: null, error: new Error('spawn docker ENOENT') }],
+		['ENOBUFS', { ...OK, status: null, error: new Error('spawnSync docker ENOBUFS') }],
+	]) {
+		it(`removes a validator after ${label}`, () => {
+			const { calls, runner } = stubRunner({ 'podman rm': OK });
+			assert.deepEqual(removeStopped('podman', 'validator-test', CONFIG_FILE, result, runner), []);
+			assert.deepEqual(calls, [
+				{
+					file: 'podman',
+					args: ['rm', '--force', 'validator-test'],
+					options: { timeout: PROBE_TIMEOUT_MS },
+				},
+			]);
+		});
+	}
+
+	for (const [label, removal, expected] of [
+		['timeout', TIMED_OUT, /did not run: spawnSync docker ETIMEDOUT/],
+		['signal', { ...OK, status: null, signal: 'SIGKILL' }, /stopped by SIGKILL/],
+		[
+			'spawn error',
+			{ ...OK, error: new Error('spawn docker ENOENT') },
+			/did not run: spawn docker ENOENT/,
+		],
+	]) {
+		it(`reports removal ${label} with container and file context`, () => {
+			const { runner } = stubRunner({ 'docker rm': removal });
+			const problems = removeStopped('docker', 'validator-test', CONFIG_FILE, TIMED_OUT, runner);
+			assert.equal(problems.length, 1);
+			const prefix = `could not remove container validator-test after ${CONFIG_FILE} stopped: `;
+			assert.ok(problems[0].startsWith(prefix));
+			assert.match(problems[0], expected);
+		});
+	}
+});
+
+describe('main stopped validator cleanup', () => {
+	for (const [label, removal, extraProblem] of [
+		['successful removal', OK, false],
+		['Docker missing container', { ...FAILED, output: 'No such container: validator-test' }, false],
+		['Podman missing container', { ...FAILED, output: 'validator-test: no such container' }, false],
+		[
+			'Docker removal already in progress',
+			{
+				...FAILED,
+				output:
+					'Error response from daemon: removal of container validator-test is already in progress',
+			},
+			false,
+		],
+		['failed removal', { ...FAILED, output: 'removal denied' }, true],
+	]) {
+		it(`removes the timed-out container immediately: ${label}`, (t) => {
+			const errors = [];
+			t.mock.method(console, 'error', (message) => errors.push(message));
+			const { calls, runner } = stubRunner({
+				'docker version': OK,
+				'docker image': OK,
+				'docker run': (args) => (args.at(-1) === CONFIG_FILE ? TIMED_OUT : PLANTED_REFUSED),
+				'docker rm': removal,
+			});
+			assert.equal(main('/src/repo', runner, {}), 1);
+			const index = calls.findIndex((call) => call.args[0] === 'run');
+			const name = calls[index].args[calls[index].args.indexOf('--name') + 1];
+			assert.match(name, new RegExp(`^renovate-config-check-${process.pid}-[0-9a-f]{8}$`));
+			assert.deepEqual(calls[index + 1], {
+				file: 'docker',
+				args: ['rm', '--force', name],
+				options: { timeout: PROBE_TIMEOUT_MS },
+			});
+			assert.equal(calls.filter((call) => call.args[0] === 'rm').length, 1);
+			assert.equal(errors.length, extraProblem ? 2 : 1);
+			assert.match(errors[0], /ETIMEDOUT/);
+			if (extraProblem) {
+				assert.equal(
+					errors[1],
+					`FAIL: could not remove container ${name} after ${CONFIG_FILE} stopped: exit 1\nremoval denied`,
+				);
+			}
+		});
+	}
+});
+
+describe('validation failure boundaries', () => {
+	it('fails nonzero exit even with the success line', () => {
+		assert.equal(judgeValidation(CONFIG_FILE, true, { ...ACCEPTED, status: 1 }).length, 1);
+	});
+
+	it('fails a spawn error even with the planted diagnostic', () => {
+		const problems = judgeValidation(PLANTED_FILE, false, {
+			...PLANTED_REFUSED,
+			error: new Error('spawnSync docker ENOBUFS'),
+		});
+		assert.equal(problems.length, 1);
+		assert.match(problems[0], /did not run: spawnSync docker ENOBUFS/);
+	});
+
+	it('returns 1 without running a validator when the image step fails', () => {
+		const { calls, runner } = stubRunner({
+			'docker version': OK,
+			'docker pull': { ...OK, status: null, signal: 'SIGKILL' },
+		});
+		assert.equal(main('/src/repo', runner, {}), 1);
+		assert.deepEqual(
+			calls.map((call) => call.args[0]),
+			['version', 'image', 'pull'],
+		);
 	});
 });

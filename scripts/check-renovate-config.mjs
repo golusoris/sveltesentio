@@ -29,6 +29,7 @@
 // `pnpm test:scripts` runs the unit tests; `pnpm check:renovate-config` runs
 // this check.
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -56,6 +57,8 @@ export function run(file, args, { timeout }) {
 	const result = spawnSync(file, args, {
 		env: { ...process.env, NO_COLOR: '1' },
 		timeout,
+		// SIGTERM can be ignored; the deadline must bound the child (HISS-02).
+		killSignal: 'SIGKILL',
 		encoding: 'utf8',
 		maxBuffer: OUTPUT_LIMIT_BYTES,
 		windowsHide: true,
@@ -103,10 +106,12 @@ export function mountArgument(rootDir) {
 }
 
 /** The runtime arguments that validate one repository-relative file. */
-export function validatorArgs(rootDir, file) {
+export function validatorArgs(rootDir, file, name) {
 	return [
 		'run',
 		'--rm',
+		'--name',
+		name,
 		'--network',
 		'none',
 		'--read-only',
@@ -178,6 +183,29 @@ export function judgeValidation(file, expectAccepted, result) {
 	return problems;
 }
 
+/**
+ * Answers from `rm --force` meaning the container is gone or `--rm` is already removing it:
+ * Docker "No such container: x", Podman "x: no such container", and Docker
+ * "removal of container x is already in progress" when the container exited at the deadline.
+ */
+const CONTAINER_GONE = /no such container|removal of container .* is already in progress/i;
+
+/**
+ * Removes a stopped validator's container, which can outlive its runtime client.
+ * A deadline that strikes before the runtime has created the container can still leave it in
+ * the Created state, with no process running; that needs a create slower than VALIDATE_TIMEOUT_MS.
+ */
+export function removeStopped(runtime, name, file, result, runner = run) {
+	if (stopProblem(file, result) === null) return [];
+	const removal = runner(runtime, ['rm', '--force', name], { timeout: PROBE_TIMEOUT_MS });
+	const stopped = stopProblem(`${runtime} rm --force ${name}`, removal);
+	if ((stopped === null && removal.status === 0) || CONTAINER_GONE.test(removal.output)) {
+		return [];
+	}
+	const reason = stopped ?? `exit ${removal.status}\n${excerpt(removal.output)}`;
+	return [`could not remove container ${name} after ${file} stopped: ${reason}`];
+}
+
 function checkRepository(rootDir, runner, env) {
 	const runtime = findRuntime(runner);
 	if (runtime === null) {
@@ -190,8 +218,12 @@ function checkRepository(rootDir, runner, env) {
 		[CONFIG_FILE, true],
 		[PLANTED_FILE, false],
 	]) {
-		const result = runner(runtime, validatorArgs(rootDir, file), { timeout: VALIDATE_TIMEOUT_MS });
+		const name = `renovate-config-check-${process.pid}-${randomUUID().slice(0, 8)}`;
+		const result = runner(runtime, validatorArgs(rootDir, file, name), {
+			timeout: VALIDATE_TIMEOUT_MS,
+		});
 		problems.push(...judgeValidation(file, expectAccepted, result));
+		problems.push(...removeStopped(runtime, name, file, result, runner));
 	}
 	return { problems, runtime };
 }
