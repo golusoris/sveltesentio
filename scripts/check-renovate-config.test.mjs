@@ -25,6 +25,7 @@ import {
 	stopProblem,
 	validatorArgs,
 } from './check-renovate-config.mjs';
+import * as renovateCheck from './check-renovate-config.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -476,5 +477,41 @@ describe('validation failure boundaries', () => {
 			calls.map((call) => call.args[0]),
 			['version', 'image', 'pull'],
 		);
+	});
+});
+
+describe('module exports', () => {
+	it('keeps every name exported before the container helpers moved to container-check.mjs', () => {
+		// Independent literal: the export list of this module on main before the move.
+		const before = [
+			'ACCEPTED_MESSAGE',
+			'CONFIG_FILE',
+			'EXCERPT_LINES',
+			'OUTPUT_LIMIT_BYTES',
+			'PLANTED_FILE',
+			'PLANTED_MESSAGE',
+			'PROBE_TIMEOUT_MS',
+			'PULL_TIMEOUT_MS',
+			'RE2_FALLBACK_MESSAGE',
+			'RENOVATE_IMAGE',
+			'RUNTIMES',
+			'VALIDATE_TIMEOUT_MS',
+			'WORST_CASE_MS',
+			'ensureImage',
+			'excerpt',
+			'findRuntime',
+			'judgeValidation',
+			'main',
+			'mountArgument',
+			'removeStopped',
+			'run',
+			'stopProblem',
+			'validatorArgs',
+		];
+		const missing = before.filter((name) => !Object.hasOwn(renovateCheck, name));
+		assert.deepEqual(missing, []);
+		assert.deepEqual(renovateCheck.RUNTIMES, ['docker', 'podman']);
+		assert.equal(renovateCheck.PULL_TIMEOUT_MS, 600_000);
+		assert.equal(renovateCheck.OUTPUT_LIMIT_BYTES, 16 * 1024 * 1024);
 	});
 });
