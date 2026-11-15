@@ -20,7 +20,7 @@ const KNOWN_WIDE_SLUGS = [
 ] as const;
 /** Upper bound for the page walk (HISS-02); the sidebar lists the whole registry, 197 pages today. */
 const MAX_READER_PAGES = 400;
-/** Deadline for the whole page walk; 197 pages at five widths took 37 s locally beside eight other workers. */
+/** Deadline for the whole page walk; 197 pages at five widths took 20 s locally with four workers. */
 const PAGE_WALK_TIMEOUT_MS = 240_000;
 /** Page with many code blocks, a leading callout and Svelte markup inside code fences. */
 const CODE_SLUG = 'compose/progressive-enhancement';
@@ -90,21 +90,24 @@ function deltaEOK(one: Oklab, two: Oklab): number {
  */
 async function calloutColours(callout: Locator): Promise<{ border: Oklab; backgrounds: Oklab[] }> {
 	const colours = await callout.evaluate((element, maxDepth) => {
+		// Test instrumentation: an unstyled probe resolves each colour, then always leaves the page.
 		const probe = document.createElement('span');
 		document.body.append(probe);
-		const toOklab = (color: string): string => {
-			probe.style.color = `oklab(from ${color} l a b / alpha)`;
-			return getComputedStyle(probe).color;
-		};
-		const backgrounds: string[] = [];
-		let node: Element | null = element.parentElement;
-		for (let depth = 0; node !== null && depth < maxDepth; depth += 1) {
-			backgrounds.push(toOklab(getComputedStyle(node).backgroundColor));
-			node = node.parentElement;
+		try {
+			const toOklab = (color: string): string => {
+				probe.style.color = `oklab(from ${color} l a b / alpha)`;
+				return getComputedStyle(probe).color;
+			};
+			const backgrounds: string[] = [];
+			let node: Element | null = element.parentElement;
+			for (let depth = 0; node !== null && depth < maxDepth; depth += 1) {
+				backgrounds.push(toOklab(getComputedStyle(node).backgroundColor));
+				node = node.parentElement;
+			}
+			return { border: toOklab(getComputedStyle(element).borderLeftColor), backgrounds };
+		} finally {
+			probe.remove();
 		}
-		const border = toOklab(getComputedStyle(element).borderLeftColor);
-		probe.remove();
-		return { border, backgrounds };
 	}, MAX_BACKGROUND_DEPTH);
 	return { border: parseOklab(colours.border), backgrounds: colours.backgrounds.map(parseOklab) };
 }
@@ -127,24 +130,32 @@ async function readerSlugs(page: Page): Promise<string[]> {
 }
 
 /**
- * Runs in the page: sideways overflow of the document, and whether the article and its first
- * heading are drawn, not transparent, with a non-empty box whose left and right edges sit inside
- * the viewport.
+ * Runs in the page: whether each element is drawn. It must not be hidden or transparent
+ * (`checkVisibility` also reads the opacity of every ancestor, CSSOM View §6), its box must be
+ * non-empty with both edges inside the viewport, and the topmost element at the centre of its box
+ * must be inside it, which fails when `clip-path` or an overlay hides it.
  */
-function readerLayout(subpixel: number): { overflow: number; article: boolean; heading: boolean } {
-	const shown = (element: Element | null | undefined): boolean => {
-		if (!element?.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
-			return false;
+function drawnInPage(elements: Element[], subpixel: number): boolean[] {
+	const inside = (element: Element): boolean => {
+		if (!element.checkVisibility({ visibilityProperty: true, opacityProperty: true })) return false;
 		const rect = element.getBoundingClientRect();
-		const inside = rect.left >= -subpixel && rect.right <= window.innerWidth + subpixel;
-		return rect.width > 0 && rect.height > 0 && inside;
+		const edges = rect.left >= -subpixel && rect.right <= window.innerWidth + subpixel;
+		return rect.width > 0 && rect.height > 0 && edges;
 	};
-	const article = document.querySelector('article.prose');
-	return {
-		overflow: document.documentElement.scrollWidth - window.innerWidth,
-		article: shown(article),
-		heading: shown(article?.querySelector('h1')),
+	// Scrolls only vertically, so horizontal edges and the document width stay as measured.
+	const onTop = (element: Element): boolean => {
+		const before = element.getBoundingClientRect();
+		const centre = window.scrollY + before.top + before.height / 2;
+		window.scrollTo({ top: centre - window.innerHeight / 2, behavior: 'instant' });
+		const rect = element.getBoundingClientRect();
+		const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+		return hit !== null && element.contains(hit);
 	};
+	return elements.map((element) => inside(element) && onTop(element));
+}
+
+async function drawn(locator: Locator): Promise<boolean[]> {
+	return locator.evaluateAll(drawnInPage, SUBPIXEL);
 }
 
 /** Loads one reader page once, then lists each width where it scrolls sideways or hides its text. */
@@ -153,11 +164,14 @@ async function reflowFailures(page: Page, slug: string): Promise<string[]> {
 	const failures: string[] = [];
 	for (const width of REFLOW_WIDTHS) {
 		await page.setViewportSize({ width, height: VIEW_HEIGHT });
-		const layout = await page.evaluate(readerLayout, SUBPIXEL);
-		if (layout.overflow > 0)
-			failures.push(`/docs/${slug} at ${width} px: ${layout.overflow} px wider`);
-		if (!layout.article) failures.push(`/docs/${slug} at ${width} px: article not shown`);
-		if (!layout.heading) failures.push(`/docs/${slug} at ${width} px: heading not shown`);
+		const overflow = await page.evaluate(
+			() => document.documentElement.scrollWidth - window.innerWidth,
+		);
+		const [article = false] = await drawn(page.locator('article.prose'));
+		const [heading = false] = await drawn(page.locator('article.prose h1').first());
+		if (overflow > 0) failures.push(`/docs/${slug} at ${width} px: ${overflow} px wider`);
+		if (!article) failures.push(`/docs/${slug} at ${width} px: article not drawn`);
+		if (!heading) failures.push(`/docs/${slug} at ${width} px: heading not drawn`);
 	}
 	return failures;
 }
@@ -172,7 +186,8 @@ test.describe('apps/docs reader code blocks (C15-2)', () => {
 		expect(total).toBeGreaterThanOrEqual(1);
 		await expect(page.locator('article.prose pre > code')).toHaveCount(total);
 
-		await expect(blocks.first()).toBeVisible();
+		const hidden = (await drawn(blocks)).flatMap((shown, index) => (shown ? [] : [index]));
+		expect(hidden, 'every code block is drawn').toEqual([]);
 		// The UA stylesheet already gives <code> a bare `monospace`; assert the docs stack on
 		// every block, so a rule that only reaches a later block still fails.
 		const styles = await blocks.evaluateAll((nodes) =>
@@ -194,12 +209,11 @@ test.describe('apps/docs reader code blocks (C15-2)', () => {
 		await page.setViewportSize({ width: MIN_WIDTH, height: VIEW_HEIGHT });
 		await openDoc(page, CODE_SLUG);
 
-		const blocks = await page.locator('article.prose pre').evaluateAll((nodes) =>
+		const pre = page.locator('article.prose pre');
+		const blocks = await pre.evaluateAll((nodes) =>
 			nodes.map((node) => ({
 				scrolls: node.scrollWidth > node.clientWidth,
 				overflowX: getComputedStyle(node).overflowX,
-				left: node.getBoundingClientRect().left,
-				right: node.getBoundingClientRect().right,
 			})),
 		);
 		expect(blocks.length).toBeGreaterThanOrEqual(1);
@@ -208,10 +222,8 @@ test.describe('apps/docs reader code blocks (C15-2)', () => {
 		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of
 		// scrolling, so every block, overflowing or not, must scroll on its own.
 		expect(blocks.filter((block) => block.overflowX !== 'auto')).toEqual([]);
-		const outside = blocks.filter(
-			(block) => block.left < -SUBPIXEL || block.right > MIN_WIDTH + SUBPIXEL,
-		);
-		expect(outside, 'every code block sits inside the 320 px viewport').toEqual([]);
+		const outside = (await drawn(pre)).flatMap((shown, index) => (shown ? [] : [index]));
+		expect(outside, 'every code block is drawn inside the 320 px viewport').toEqual([]);
 	});
 });
 
