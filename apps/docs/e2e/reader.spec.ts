@@ -23,6 +23,11 @@ const CODE_SLUG = 'compose/progressive-enhancement';
 const SUBPIXEL = 0.5;
 /** Explicit deadline for each navigation and poll (HISS-02); the local preview answers in well under 1 s. */
 const NAV_TIMEOUT_MS = 15_000;
+/**
+ * A computed colour with zero alpha, in legacy `rgba(..., 0)` or modern `... / 0)` form. Only
+ * the rgba form is matched by its last comma, so an opaque `rgb(r, g, 0)` does not count.
+ */
+const ZERO_ALPHA = /^transparent$|^rgba\(.*,\s*0\)$|\/\s*0\)$/;
 
 function docLink(page: Page, slug: string): Locator {
 	return page.locator(`aside.sidebar a[href$="/docs/${slug}"]`);
@@ -78,6 +83,8 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		await expect(callout).not.toBeEmpty();
 		expect(await styleOf(callout, 'border-left-style')).toBe('solid');
 		expect(await styleOf(callout, 'border-left-width')).toBe('4px');
+		// A solid 4 px border in a transparent colour still passes the two checks above.
+		expect(await styleOf(callout, 'border-left-color')).not.toMatch(ZERO_ALPHA);
 
 		const box = await boxOf(callout);
 		const article = await boxOf(page.locator('article.prose'));
@@ -99,8 +106,13 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		const firstTitle = (await heading.textContent()) ?? '';
 		expect(firstTitle).not.toBe('');
 
-		await docLink(page, CODE_SLUG).click();
-		await expect(page).toHaveURL((url) => url.pathname.endsWith(`/docs/${CODE_SLUG}`));
+		await docLink(page, CODE_SLUG).click({ timeout: NAV_TIMEOUT_MS });
+		await expect(page).toHaveURL((url) => url.pathname.endsWith(`/docs/${CODE_SLUG}`), {
+			timeout: NAV_TIMEOUT_MS,
+		});
+		// not.toHaveText alone also passes when the destination renders no heading at all.
+		await expect(heading).toBeVisible({ timeout: NAV_TIMEOUT_MS });
+		await expect(heading).toHaveText(/\S/);
 		await expect(heading).not.toHaveText(firstTitle);
 		await expect(current).toHaveCount(1);
 		await expect(docLink(page, CODE_SLUG)).toHaveAttribute('aria-current', 'page');

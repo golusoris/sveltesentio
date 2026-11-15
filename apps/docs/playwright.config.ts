@@ -11,6 +11,8 @@ export default defineConfig({
 	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
 	use: {
 		baseURL: BASE_URL,
+		// Playwright records no trace by default; keep one for the CI retry of a failing test.
+		trace: 'on-first-retry',
 	},
 	projects: [
 		{
