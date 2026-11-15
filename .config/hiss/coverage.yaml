@@ -225,14 +225,21 @@ rules:
           The every-file block also refuses `node:vm`, which runs a source
           string none of the three rules sees: `no-restricted-imports` on `vm`
           and `node:vm`; `no-restricted-syntax` on the `vm` specifier as a
-          string, or a template without expressions, in `import()` or in any
-          call (`require`, `process.getBuiltinModule`), and on each `vm` member
-          that takes source text (`runIn*Context`, `compileFunction`, `Script`,
-          `SourceTextModule`) named in a call or `new`, read with a dot or a
-          literal key, destructured, or passed as a literal argument
-          (`Reflect.get`). A member key computed at run time is not seen.
-          `gap/vm-source-string.ts` holds the shape. Measured free: zero
-          violations in every linted file.
+          string, or a template without expressions, bare or under up to two
+          `as`, `satisfies`, `!` or angle-bracket assertions, in `import()` or
+          in any call (`require`, `process.getBuiltinModule`); on each `vm`
+          member that takes source text and runs or compiles it
+          (`runIn*Context`, `compileFunction`, `SourceTextModule`) named in a
+          call or `new`, read with a dot or a static key, destructured by name
+          or static key, or passed as a static argument (`Reflect.get`); and on
+          `Script` where it is constructed by that name (`new Script`,
+          `new x.Script`, `new x['Script']`) or reached through a `Reflect`
+          call (`Reflect.get(vm, 'Script')`, `Reflect.construct(vm.Script,
+          ...)`), so a word `Script` in a title, a prop or a matcher is not
+          reported. Not seen: a specifier or key held in a variable or computed
+          at run time, and a `Script` read or destructured and then constructed
+          under another name. `gap/vm-source-string.ts` holds the first shape.
+          Measured free: zero violations in every linted file.
         rationale: >-
           Dynamic execution is reported in all three of its forms, including
           `setTimeout` on a string, and so is an unsanitised HTML sink:
@@ -260,8 +267,9 @@ rules:
 
           It stays partial because a key or value that is not statically knowable
           stays unresolved: a parameter, or a `let` written again between its
-          initialiser and the sink, and for `node:vm` a member key computed at
-          run time. That is deliberate rather than pending.
+          initialiser and the sink, and for `node:vm` a specifier or member key
+          held in a variable or computed at run time, or a `Script` constructed
+          under another name. That is deliberate rather than pending.
           Guessing safe would hide an injection; guessing unsafe would report
           every computed property assignment in the tree and train people to
           disable the rule. `dynamic-sink-key.ts` holds that shape.

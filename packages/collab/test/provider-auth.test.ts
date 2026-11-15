@@ -697,6 +697,37 @@ describe('bindProviderAuth — refused dial events, part 7', () => {
 	});
 });
 
+describe('bindProviderAuth — refused dial events, part 8', () => {
+	it('passes listener options through: an aborted signal adds nothing, capture is matched on removal', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			const aborted = vi.fn();
+			const captured = vi.fn();
+			const kept = vi.fn();
+			socket.addEventListener('close', aborted, { signal: AbortSignal.abort() });
+			socket.addEventListener('close', captured, { capture: true });
+			socket.removeEventListener('close', captured, { capture: true });
+			// `EventTarget` matches a removal on its capture flag, so this one stays.
+			socket.addEventListener('close', kept, { capture: true });
+			socket.removeEventListener('close', kept);
+			await Promise.resolve();
+			expect(aborted).not.toHaveBeenCalled();
+			expect(captured).not.toHaveBeenCalled();
+			expect(kept).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: auth token resolver threw; dial refused:', 'Error'],
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
 describe('bindProviderAuth — refusal logs, part 1', () => {
 	it('logs only the name of a resolver error', async () => {
 		const provider = new FakeProvider();
@@ -2321,6 +2352,44 @@ describe('connectProvider — teardown', () => {
 		const destroySpy = vi.spyOn(provider, 'destroy');
 		expect(disconnect).toThrow(TypeError);
 		expect(destroySpy).toHaveBeenCalledTimes(1);
+		expect(provider.shouldConnect).toBe(false);
+		// The binding was closed before the throw, so a later connect() sends no token.
+		const errors = withErrors(() => {
+			provider.connect();
+		});
+		expect(NoopSocket.last).toBeNull();
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider disconnected by connectProvider; dial refused, provider stopped until connect() is called',
+			],
+		]);
+	});
+
+	it('refuses with the teardown when the resolver disconnects and the binding slot read then throws', () => {
+		const slotKey = Symbol.for('@sveltesentio/collab/activeBinding@1');
+		let connected: ConnectedProvider | undefined;
+		const auth = (): string => {
+			if (connected === undefined) throw new Error('resolver ran before connectProvider returned');
+			connected.disconnect();
+			// A getter on the slot throws when the binding checks, after the token, that it is active.
+			Object.defineProperty(connected.provider, slotKey, {
+				get: (): never => {
+					throw new TypeError('trap');
+				},
+			});
+			return 'tok';
+		};
+		connected = connectNoop({ auth, connect: false });
+		const { provider } = connected;
+		const errors = withErrors(() => {
+			provider.connect();
+		});
+		expect(NoopSocket.last).toBeNull();
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider disconnected by connectProvider; dial refused, provider stopped until connect() is called',
+			],
+		]);
 		expect(provider.shouldConnect).toBe(false);
 	});
 });

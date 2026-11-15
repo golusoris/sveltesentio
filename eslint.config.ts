@@ -25,10 +25,75 @@ const SANCTIONED_TIME_READS = [
 	'packages/ai/src/server.ts',
 ];
 
-// The `node:vm` members that take source text (Node 26 `vm` API), as an esquery
-// regular expression for the HISS-08 block below.
+// The `node:vm` specifier and the `vm` members that take source text (Node 26 `vm`
+// API), as esquery regular expressions for the HISS-08 block below. `Script` is an
+// everyday word, so it has its own expression and fewer places it is matched.
+const VM_SPECIFIER = '/^(node:)?vm$/';
 const VM_SOURCE_MEMBERS =
-	'/^(runInContext|runInNewContext|runInThisContext|compileFunction|Script|SourceTextModule)$/';
+	'/^(runInContext|runInNewContext|runInThisContext|compileFunction|SourceTextModule)$/';
+const VM_SCRIPT = '/^Script$/';
+const TS_ASSERTIONS = [
+	'TSAsExpression',
+	'TSSatisfiesExpression',
+	'TSNonNullExpression',
+	'TSTypeAssertion',
+];
+
+/**
+ * An esquery compound for a string known without running the code, whose value
+ * matches `pattern`: a literal or a template without expressions, bare or under
+ * one or two TypeScript assertions (`as`, `satisfies`, `!`, `<T>`).
+ */
+function staticString(pattern: string): string {
+	const assertion = `:matches(${TS_ASSERTIONS.join(', ')})`;
+	const value = (at: string): string[] => [
+		`[${at}type="Literal"][${at}value=${pattern}]`,
+		`[${at}type="TemplateLiteral"][${at}expressions.length=0][${at}quasis.0.value.cooked=${pattern}]`,
+	];
+	const forms = [
+		...value(''),
+		...value('expression.').map((form) => `${assertion}${form}`),
+		...value('expression.expression.').map(
+			(form) => `${assertion}[expression.type=/^(${TS_ASSERTIONS.join('|')})$/]${form}`,
+		),
+	];
+	return `:matches(${forms.join(', ')})`;
+}
+
+const VM_IMPORT = 'HISS-08: node:vm runs source strings.';
+const VM_MEMBER = 'HISS-08: a node:vm member runs or compiles a source string.';
+const REFLECT_CALL = 'CallExpression[callee.object.name="Reflect"]';
+
+// HISS-08 `no-restricted-syntax` entries for `node:vm`; the block below says what
+// they refuse and what they do not see.
+const vmSyntax = [
+	[`ImportExpression > ${staticString(VM_SPECIFIER)}.source`, VM_IMPORT],
+	[`CallExpression > ${staticString(VM_SPECIFIER)}.arguments`, VM_IMPORT],
+	[`:matches(CallExpression, NewExpression)[callee.name=${VM_SOURCE_MEMBERS}]`, VM_MEMBER],
+	[`MemberExpression[computed=false][property.name=${VM_SOURCE_MEMBERS}]`, VM_MEMBER],
+	[`MemberExpression[computed=true] > ${staticString(VM_SOURCE_MEMBERS)}.property`, VM_MEMBER],
+	[`ObjectPattern > Property[computed=false][key.name=${VM_SOURCE_MEMBERS}]`, VM_MEMBER],
+	[`ObjectPattern > Property > ${staticString(VM_SOURCE_MEMBERS)}.key`, VM_MEMBER],
+	[`CallExpression > ${staticString(VM_SOURCE_MEMBERS)}.arguments`, VM_MEMBER],
+	[`NewExpression[callee.name=${VM_SCRIPT}]`, VM_MEMBER],
+	[
+		`NewExpression > MemberExpression.callee[computed=false][property.name=${VM_SCRIPT}]`,
+		VM_MEMBER,
+	],
+	[
+		`NewExpression > MemberExpression.callee[computed=true] > ${staticString(VM_SCRIPT)}.property`,
+		VM_MEMBER,
+	],
+	[`${REFLECT_CALL} > ${staticString(VM_SCRIPT)}.arguments`, VM_MEMBER],
+	[
+		`${REFLECT_CALL} > MemberExpression.arguments[computed=false][property.name=${VM_SCRIPT}]`,
+		VM_MEMBER,
+	],
+	[
+		`${REFLECT_CALL} > MemberExpression.arguments[computed=true] > ${staticString(VM_SCRIPT)}.property`,
+		VM_MEMBER,
+	],
+].map(([selector, message]) => ({ selector, message }));
 
 const testPackageConfigs: Linter.Config[] = readdirSync(resolve(import.meta.dirname, 'packages'), {
 	withFileTypes: true,
@@ -196,13 +261,19 @@ const config: Linter.Config[] = [
 	// this block follows the type-checked set, which turns the core rule off.
 	// `node:vm` runs a source string too, and none of the three rules sees it: a test
 	// loaded it through `import(specifier)` and called `vm.runInNewContext('…')`
-	// (PR 579 review). Refused: the `vm` import; the `vm` specifier as a string or a
-	// template without expressions in `import()` or in any call (`require`,
-	// `createRequire(…)(…)`, `process.getBuiltinModule`); and each `vm` member that
-	// takes source text, named in a call or `new`, read with a dot or a literal key,
-	// destructured, or passed as a literal argument (`Reflect.get`), so a module
-	// reached any other way is caught by its member name. A key computed at run time
-	// is not seen (`.config/hiss/coverage.yaml` HISS-08).
+	// (PR 579 review). Refused: the `vm` import; the `vm` specifier, written as a
+	// string known without running the code (`staticString`: a literal or a template
+	// without expressions, bare or under one or two TypeScript assertions), in
+	// `import()` or in any call (`require`, `createRequire(…)(…)`,
+	// `process.getBuiltinModule`); and each `vm` member that takes source text,
+	// named in a call or `new`, read with a dot or such a string key, destructured,
+	// or passed as such a string argument (`Reflect.get`), so a module reached any
+	// other way is caught by its member name. `Script` is an everyday word (a test
+	// title, a component prop), so it is refused only where it is constructed by
+	// that name (`new Script`, `new vm.Script`) or reached through `Reflect`. Not
+	// seen: a specifier or member key held in a variable or computed at run time,
+	// and a `Script` read or destructured, then constructed under another name
+	// (`.config/hiss/coverage.yaml` HISS-08).
 	{
 		files: ['**/*.ts', '**/*.js', '**/*.mjs', '**/*.cjs', '**/*.svelte'],
 		rules: {
@@ -213,43 +284,12 @@ const config: Linter.Config[] = [
 				'error',
 				{
 					paths: [
-						{ name: 'vm', message: 'HISS-08: node:vm runs source strings.' },
-						{ name: 'node:vm', message: 'HISS-08: node:vm runs source strings.' },
+						{ name: 'vm', message: VM_IMPORT },
+						{ name: 'node:vm', message: VM_IMPORT },
 					],
 				},
 			],
-			'no-restricted-syntax': [
-				'error',
-				{
-					selector: 'ImportExpression[source.value=/^(node:)?vm$/]',
-					message: 'HISS-08: node:vm runs source strings.',
-				},
-				{
-					selector:
-						':matches(ImportExpression, CallExpression) > TemplateLiteral[expressions.length=0] > TemplateElement[value.cooked=/^(node:)?vm$/]',
-					message: 'HISS-08: node:vm runs source strings.',
-				},
-				{
-					selector: 'CallExpression > Literal.arguments[value=/^(node:)?vm$/]',
-					message: 'HISS-08: node:vm runs source strings.',
-				},
-				{
-					selector: `:matches(CallExpression, NewExpression)[callee.name=${VM_SOURCE_MEMBERS}]`,
-					message: 'HISS-08: a node:vm member runs or compiles a source string.',
-				},
-				{
-					selector: `MemberExpression:matches([property.name=${VM_SOURCE_MEMBERS}][computed=false], [property.value=${VM_SOURCE_MEMBERS}])`,
-					message: 'HISS-08: a node:vm member runs or compiles a source string.',
-				},
-				{
-					selector: `ObjectPattern > Property:matches([key.name=${VM_SOURCE_MEMBERS}][computed=false], [key.value=${VM_SOURCE_MEMBERS}])`,
-					message: 'HISS-08: a node:vm member runs or compiles a source string.',
-				},
-				{
-					selector: `CallExpression > Literal.arguments[value=${VM_SOURCE_MEMBERS}]`,
-					message: 'HISS-08: a node:vm member runs or compiles a source string.',
-				},
-			],
+			'no-restricted-syntax': ['error', ...vmSyntax],
 		},
 	},
 	// --- build-time files outside a tsconfig project ---------------------------------
