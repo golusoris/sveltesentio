@@ -198,10 +198,10 @@ class RelaySocket implements MemSocket {
 }
 
 /**
- * Deterministic in-memory `y-websocket` relay speaking `y-protocols/sync`.
- *
- * Uses `queueMicrotask` for socket open and frame delivery so tests drive
- * reconnection deterministically under fake timers without real sockets.
+ * In-memory stand-in for a `y-websocket` server. `test/provider-reconnect.test.ts`
+ * uses it to drive real `WebsocketProvider` dials, drops and refusals under
+ * Vitest fake timers with no network socket; P3, B1 and B2 there assert that
+ * two peers converge across drops.
  */
 export function createMemRelay(): MemRelay {
 	const state: RelayState = { docs: new Map(), sockets: [], dials: [], pendingRefusals: 0 };

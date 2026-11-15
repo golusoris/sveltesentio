@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as Y from 'yjs';
 import {
 	type AuthBinding,
@@ -204,6 +204,100 @@ describe('bindProviderAuth', () => {
 		expect(() => provider.emit('connection-close')).not.toThrow();
 		expect(provider.params).toEqual({ room: 'r1', token: 't-2' });
 	});
+	it('clears owned entries when the resolver throws, keeping caller entries', () => {
+		const provider = new FakeProvider();
+		provider.params = { room: 'r1' };
+		provider.protocols = ['yjs-v1'];
+		const failure = new Error('token service down');
+		const onError = vi.fn();
+		let calls = 0;
+		bindProviderAuth(provider, {
+			token: () => {
+				calls += 1;
+				if (calls > 1) throw failure;
+				return 'tok1';
+			},
+			protocol: 'bearer',
+			onError,
+		});
+		expect(provider.params).toEqual({ room: 'r1', token: 'tok1' });
+		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok1']);
+
+		expect(() => provider.emit('connection-close')).not.toThrow();
+		expect(onError).toHaveBeenCalledTimes(1);
+		expect(onError).toHaveBeenCalledWith(failure);
+		expect(provider.params).toEqual({ room: 'r1' });
+		expect(provider.protocols).toEqual(['yjs-v1']);
+	});
+
+	it('reports a resolver failure through console.error when no onError is given', () => {
+		const provider = new FakeProvider();
+		const failure = new Error('token expired');
+		let calls = 0;
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				calls += 1;
+				if (calls > 1) throw failure;
+				return 'tok1';
+			});
+			provider.emit('connection-close');
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('auth token resolver threw'),
+				failure,
+			);
+			expect(provider.params).toEqual({});
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('lets a resolver failure at bind time reach the caller and binds nothing', () => {
+		const provider = new FakeProvider();
+		provider.params = { room: 'r1' };
+		const failure = new Error('token service down');
+		const onError = vi.fn();
+		const bind = (): unknown =>
+			bindProviderAuth(provider, {
+				token: () => {
+					throw failure;
+				},
+				onError,
+			});
+		expect(bind).toThrow(failure);
+		expect(onError).not.toHaveBeenCalled();
+		expect(provider.params).toEqual({ room: 'r1' });
+		expect(provider.listenerCount('connection-close')).toBe(0);
+	});
+
+	it('restores the caller value of a param the token shadowed once the token is revoked', () => {
+		const provider = new FakeProvider();
+		provider.params = { token: 'guest', v: '2' };
+		const issued = ['tok1', 'tok2'];
+		let n = 0;
+		bindProviderAuth(provider, () => issued[n++] ?? null);
+		expect(provider.params).toEqual({ token: 'tok1', v: '2' });
+
+		provider.emit('connection-close');
+		expect(provider.params).toEqual({ token: 'tok2', v: '2' });
+
+		provider.emit('connection-close');
+		expect(provider.params).toEqual({ token: 'guest', v: '2' });
+	});
+
+	it('keeps the position of a caller copy of an owned subprotocol', () => {
+		const provider = new FakeProvider();
+		provider.protocols = ['yjs-v1'];
+		const issued = ['tok1', 'tok2'];
+		let n = 0;
+		bindProviderAuth(provider, { token: () => issued[n++] ?? null, protocol: 'bearer' });
+		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok1']);
+
+		provider.protocols.push('x', 'bearer.tok1');
+		provider.emit('connection-close');
+		expect(provider.protocols).toEqual(['yjs-v1', 'x', 'bearer.tok1', 'bearer.tok2']);
+	});
 });
 
 describe('connectProvider — auth binding', () => {
@@ -241,7 +335,8 @@ describe('connectProvider — auth binding', () => {
 		disconnect();
 	});
 
-	it('re-resolves a rotating token across a reconnect cycle', () => {
+	it('resolves a rotating token for every dial, not only at construction', () => {
+		NoopSocket.last = null;
 		const doc = new Y.Doc();
 		let n = 0;
 		const { provider, disconnect } = connectProvider({
@@ -253,14 +348,17 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: () => `tok-${++n}`,
 		});
-		// Construction resolves the token at least once.
-		expect(provider.params.token).toMatch(/^tok-\d+$/);
-		const before = provider.params.token;
+		// Construction resolves once to fill provider.params; nothing dials yet.
+		expect(provider.params.token).toBe('tok-1');
+		expect(NoopSocket.last).toBeNull();
 
-		provider.emit('connection-close', [null, provider]);
-		// A reconnect re-resolves to a fresh token (monotonic counter advanced).
-		expect(provider.params.token).not.toBe(before);
-		expect(provider.params.token).toMatch(/^tok-\d+$/);
+		provider.connect();
+		expect(NoopSocket.last!.url).toContain('token=tok-2');
+
+		provider.disconnect();
+		provider.connect();
+		expect(NoopSocket.last!.url).toContain('token=tok-3');
+		expect(n).toBe(3);
 		disconnect();
 	});
 
@@ -282,7 +380,7 @@ describe('connectProvider — auth binding', () => {
 		disconnect();
 	});
 
-	it('disconnect unbinds the auth reconnect listener', () => {
+	it('resolves no further token after disconnect', () => {
 		const doc = new Y.Doc();
 		let n = 0;
 		const { provider, disconnect } = connectProvider({
@@ -294,11 +392,11 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: () => `tok-${++n}`,
 		});
-		expect(provider.params.token).toMatch(/^tok-\d+$/);
+		expect(provider.params.token).toBe('tok-1');
 		disconnect();
-		const frozen = provider.params.token;
-		// After disconnect the rebind listener is gone; emitting must not rotate.
+		// No listener is left behind, so a stray close event must not rotate.
 		provider.emit('connection-close', [null, provider]);
-		expect(provider.params.token).toBe(frozen);
+		expect(provider.params.token).toBe('tok-1');
+		expect(n).toBe(1);
 	});
 });

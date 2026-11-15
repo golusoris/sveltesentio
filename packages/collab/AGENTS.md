@@ -29,7 +29,6 @@ Need no hard import; unit-test against fake awareness.
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `y-indexeddb` compose recipe (`docs/compose/collab-persistence.md`) | Opt-in per ADR-0009; not shipped as hard dep                                                          |
 | `y-webrtc` compose recipe (`docs/compose/collab-p2p.md`)            | Opt-in per ADR-0009; not shipped as hard dep                                                          |
-| Convergence tests (two `Y.Doc` + fake WebSocket pair)               | Needs shared test harness; tracked with broader integration-test phase                                |
 | Auth-header binding on provider construction                        | Needs session-cookie handoff pattern from `@sveltesentio/auth` — revisit when downstream app wires it |
 
 ## Scope
