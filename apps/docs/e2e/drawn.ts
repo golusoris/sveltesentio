@@ -108,58 +108,71 @@ function partsInPage(elements: Element[], limits: DrawnLimits): (string | Box[])
 	return elements.map(failure);
 }
 
+/** What `textCoveredInPage` reads besides the elements. */
+interface TextInput {
+	parts: (string | Box[])[];
+	css: string;
+	maxNodes: number;
+	subpixel: number;
+	scrollers: readonly string[];
+}
+
 /**
  * Runs in the page: why the text under each element is not what a reader sees where it is laid
  * out, as reasons per element. Every text node under the element that holds more than white space,
  * up to `maxNodes`, must be visible itself: its parent passes `checkVisibility`, which also reads
  * the visibility and opacity of every ancestor (CSSOM View §6), so a hidden `<span>` inside a
- * visible block fails. Each line box of that text (`Range.getClientRects`) that lies inside a
- * visible part of the element is then hit-tested at its centre with `caretPositionFromPoint`
- * (CSSOM View §6.1), which must land in that same text node: an overlay, a later sibling or any
- * other box drawn over the text takes the hit instead. An extra style sheet makes every box a hit
- * target while it runs, so an overlay that sets `pointer-events: none` still counts on an engine
- * whose caret hit test honours it, and the page gets its own sheets back afterwards. The check
- * scrolls only vertically, so page coordinates stay valid.
+ * visible block fails. The text must have a line box (`Range.getClientRects`) wider than
+ * `subpixel`, so text shrunk to nothing (`font-size: 0`, `transform: scale(0)`) fails, and each
+ * of its line boxes must reach a visible part of the element, so a line moved off it
+ * (`text-indent`, a relative offset) fails; only a line inside one of `scrollers` may lie outside,
+ * since the reader can scroll to it. Each line box inside a visible part is then hit-tested at
+ * its centre with `caretPositionFromPoint` (CSSOM View §6.1), which must land in that same text
+ * node: an overlay, a later sibling or any other box drawn over the text takes the hit instead.
+ * An extra style sheet makes every box a hit target while it runs, so an overlay that sets
+ * `pointer-events: none` still counts on an engine whose caret hit test honours it, and the page
+ * gets its own sheets back afterwards. The check scrolls only vertically, so page coordinates
+ * stay valid.
  */
-function textCoveredInPage(
-	elements: Element[],
-	input: { parts: (string | Box[])[]; css: string; maxNodes: number; subpixel: number },
-): string[][] {
+function textCoveredInPage(elements: Element[], input: TextInput): string[][] {
 	const solidPart = (box: Box): boolean =>
 		box.right - box.left > input.subpixel && box.bottom > box.top;
-	const centres = (node: Text, parts: Box[]): { x: number; y: number }[] => {
+	const lineCentres = (node: Text, parts: Box[]): { x: number; y: number }[][] => {
 		const range = document.createRange();
 		range.selectNodeContents(node);
-		return [...range.getClientRects()].flatMap((rect) => {
-			const top = rect.top + window.scrollY;
-			const bottom = rect.bottom + window.scrollY;
-			return parts.flatMap((part) => {
+		const rects = [...range.getClientRects()].filter(solidPart);
+		return rects.map((rect) =>
+			parts.flatMap((part) => {
 				const cut = {
 					left: Math.max(rect.left, part.left),
 					right: Math.min(rect.right, part.right),
-					top: Math.max(top, part.top),
-					bottom: Math.min(bottom, part.bottom),
+					top: Math.max(rect.top + window.scrollY, part.top),
+					bottom: Math.min(rect.bottom + window.scrollY, part.bottom),
 				};
 				if (!solidPart(cut)) return [];
 				return [{ x: (cut.left + cut.right) / 2, y: (cut.top + cut.bottom) / 2 }];
-			});
-		});
+			}),
+		);
 	};
+	const scroller = input.scrollers.join(', ');
 	const caretOn = (node: Text, point: { x: number; y: number }): boolean => {
 		window.scrollTo({ top: point.y - window.innerHeight / 2, behavior: 'instant' });
-		const caret = document.caretPositionFromPoint(point.x, point.y - window.scrollY);
-		return caret?.offsetNode === node;
+		return document.caretPositionFromPoint(point.x, point.y - window.scrollY)?.offsetNode === node;
 	};
 	const label = (node: Text): string => JSON.stringify(node.data.trim().slice(0, 24));
 	const textReasons = (node: Text, parts: Box[]): string[] => {
 		const parent = node.parentElement;
-		if (parent === null) return [];
-		if (!parent.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
+		if (parent?.checkVisibility({ visibilityProperty: true, opacityProperty: true }) !== true)
 			return [`text ${label(node)} hidden`];
-		const covered = centres(node, parts).some((point) => !caretOn(node, point));
+		const lines = lineCentres(node, parts);
+		if (lines.length === 0) return [`text ${label(node)} has no size`];
+		if (lines.some((points) => points.length === 0) && parent.closest(scroller) === null)
+			return [`text ${label(node)} outside the visible element`];
+		const covered = lines.flat().some((point) => !caretOn(node, point));
 		return covered ? [`text ${label(node)} covered`] : [];
 	};
-	const elementReasons = (element: Element, parts: Box[]): string[] => {
+	const elementReasons = (element: Element, parts: string | Box[] | undefined): string[] => {
+		if (!Array.isArray(parts)) return [];
 		const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
 		const reasons: string[] = [];
 		let count = 0;
@@ -176,10 +189,7 @@ function textCoveredInPage(
 	const own = document.adoptedStyleSheets;
 	document.adoptedStyleSheets = [...own, sheet];
 	try {
-		return elements.map((element, index) => {
-			const parts = input.parts.at(index);
-			return Array.isArray(parts) ? elementReasons(element, parts) : [];
-		});
+		return elements.map((element, index) => elementReasons(element, input.parts.at(index)));
 	} finally {
 		document.adoptedStyleSheets = own;
 	}
@@ -239,6 +249,7 @@ export async function undrawn(locator: Locator, whole: boolean): Promise<string[
 		css: HIT_EVERY_BOX,
 		maxNodes: MAX_TEXT_NODES,
 		subpixel: SUBPIXEL,
+		scrollers: SIDEWAYS_SCROLLERS,
 	});
 	const pseudo = await locator.evaluateAll(pseudoCoversInPage, {
 		maxElements: MAX_PROSE_ELEMENTS,
