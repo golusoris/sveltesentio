@@ -291,7 +291,7 @@ jobs:
       - *setup_node
       - *cache_pnpm
       - *pnpm_install
-      # Only auth, media and shell define `test:e2e`; the filter narrows the run to the affected ones.
+      # auth, media, shell and apps/docs define `test:e2e`; the filter narrows the run to the affected ones.
       - name: Run end-to-end tests of affected packages
         env:
           TURBO_FILTER: ${{ needs.detect-changes.outputs.turbo_filter }}
@@ -311,6 +311,8 @@ jobs:
             packages/*/e2e/test-results/
             packages/*/e2e/playwright-report/
             packages/*/playwright-report/
+            apps/*/test-results/
+            apps/*/playwright-report/
           retention-days: 7
 
   visual:

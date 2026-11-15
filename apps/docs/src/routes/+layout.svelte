@@ -55,7 +55,9 @@
 <style>
 	.layout {
 		display: grid;
-		grid-template-columns: var(--sidebar-width) 1fr;
+		/* A bare 1fr track has an automatic minimum, the longest code line; minmax(0, 1fr)
+		   lets code blocks and tables scroll inside their own box (WCAG 2.2 SC 1.4.10). */
+		grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
 		min-height: 100vh;
 	}
 
@@ -154,7 +156,7 @@
 
 	@media (max-width: 48rem) {
 		.layout {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.sidebar {

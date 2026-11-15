@@ -18,9 +18,10 @@
 		"build": "vite build",
 		"dev": "vite dev",
 		"preview": "vite preview",
-		"lint": "svelte-kit sync && eslint src/",
+		"lint": "svelte-kit sync && eslint src/ e2e/",
 		"test": "node ../../scripts/node-test.mjs \"mdsvex/*.test.js\"",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"typecheck": "tsc --noEmit -p e2e/tsconfig.json"
 	},
 	"type": "module",
 	"version": "0.0.0",
