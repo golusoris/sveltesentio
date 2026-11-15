@@ -133,16 +133,22 @@ function withErrors(body: () => void): unknown[][] {
 	}
 }
 
-/** The one `node:vm` call the realm test makes; collab type-checks without `@types/node`. */
-interface VmHost {
-	runInNewContext(code: string): unknown;
-}
-
-/** A `SyntaxError` built in another realm, as an iframe's `WebSocket` would throw. */
-async function foreignSyntaxError(): Promise<Error> {
-	const specifier: string = 'node:vm';
-	const vm = (await import(specifier)) as VmHost;
-	return vm.runInNewContext('new SyntaxError("invalid dial")') as Error;
+/**
+ * A stand-in for a `SyntaxError` from another realm, as an iframe's `WebSocket`
+ * would throw: an error object the `SyntaxError` constructor built (it carries
+ * `[[ErrorData]]`), named `SyntaxError`, whose prototype chain holds none of
+ * this realm's prototypes, so `instanceof` misses it as it misses a foreign
+ * error. `Reflect.construct` with a foreign `newTarget` builds it, so no source
+ * string runs (HISS-08).
+ */
+function foreignSyntaxError(): Error {
+	const foreignError = Object.create(null, { name: { value: 'Error' } }) as object;
+	const prototype = Object.create(foreignError, { name: { value: 'SyntaxError' } }) as object;
+	const ForeignSyntaxError = function (): void {
+		// Only a `newTarget`: its `prototype` is all `Reflect.construct` reads.
+	};
+	Object.defineProperty(ForeignSyntaxError, 'prototype', { value: prototype });
+	return Reflect.construct(SyntaxError, ['invalid dial'], ForeignSyntaxError) as Error;
 }
 
 describe('resolveAuthParams', () => {
@@ -609,6 +615,51 @@ describe('bindProviderAuth — refused dial events, part 5', () => {
 			await Promise.resolve();
 			expect(listener).not.toHaveBeenCalled();
 			expect(socket.readyState).toBe(socket.CLOSED);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
+describe('bindProviderAuth — refused dial events, part 6', () => {
+	it('logs a throwing listener of a refused dial and still runs the later ones', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			const seen: string[] = [];
+			const removed = vi.fn();
+			socket.addEventListener('error', function (this: unknown) {
+				seen.push(this === socket ? 'error function on the socket' : 'error function elsewhere');
+				throw new RangeError('listener');
+			});
+			const closeObject = {
+				handleEvent(this: unknown): void {
+					seen.push(this === closeObject ? 'close object on itself' : 'close object elsewhere');
+					throw new TypeError('listener');
+				},
+			};
+			socket.addEventListener('close', closeObject);
+			socket.addEventListener('close', removed);
+			socket.addEventListener('close', (event) => {
+				seen.push(`close ${String(event.code)}`);
+			});
+			socket.removeEventListener('close', removed);
+			await Promise.resolve();
+			expect(seen).toEqual([
+				'error function on the socket',
+				'close object on itself',
+				'close 1006',
+			]);
+			expect(removed).not.toHaveBeenCalled();
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: auth token resolver threw; dial refused:', 'Error'],
+				['[sentio] collab: socket event handler threw:', 'RangeError'],
+				['[sentio] collab: socket event handler threw:', 'TypeError'],
+			]);
 		} finally {
 			errorSpy.mockRestore();
 		}
@@ -1181,8 +1232,11 @@ describe('bindProviderAuth — permanent refusals, part 3', () => {
 
 describe('bindProviderAuth — permanent refusals, part 4', () => {
 	it('retries a SyntaxError from another realm', async () => {
-		const foreign = await foreignSyntaxError();
+		const foreign = foreignSyntaxError();
+		expect(Object.prototype.toString.call(foreign)).toBe('[object Error]');
+		expect(foreign.name).toBe('SyntaxError');
 		expect(foreign instanceof SyntaxError).toBe(false);
+		expect(foreign instanceof Error).toBe(false);
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
 			const provider = strictProvider(() => foreign);
@@ -1610,13 +1664,19 @@ describe('bindProviderAuth — refused binding, part 5', () => {
 	});
 });
 
+/** The key of the binding slot a first binding added to `provider`, its only own symbol. */
+function bindingSlotKey(provider: FakeProvider): symbol {
+	const [slotKey] = Object.getOwnPropertySymbols(provider);
+	if (slotKey === undefined) throw new Error('provider has no binding slot');
+	return slotKey;
+}
+
 /**
  * Makes the provider's binding slot take one more write, then fail the next,
  * so a rebind's rollback of that slot throws (`throw`) or is dropped (`drop`).
  */
 function slotFailsOnRollback(provider: FakeProvider, failure: 'throw' | 'drop'): void {
-	const [slotKey] = Object.getOwnPropertySymbols(provider);
-	if (slotKey === undefined) throw new Error('provider has no binding slot');
+	const slotKey = bindingSlotKey(provider);
 	let value: unknown = Reflect.get(provider, slotKey);
 	let writes = 0;
 	Object.defineProperty(provider, slotKey, {
@@ -1752,6 +1812,75 @@ describe('bindProviderAuth — refused binding, part 7', () => {
 		]);
 		provider.dial();
 		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+});
+
+/**
+ * Replaces `key` on `provider` with an accessor whose setter stores the value
+ * and then throws, as a setter or proxy trap can; after the first write, later
+ * writes do the same (`store`) or are dropped without a throw (`drop`).
+ */
+function storesThenThrows(provider: FakeProvider, key: PropertyKey, later: 'store' | 'drop'): void {
+	let value: unknown = Reflect.get(provider, key);
+	let writes = 0;
+	Object.defineProperty(provider, key, {
+		get: () => value,
+		set: (next: unknown) => {
+			writes += 1;
+			if (writes > 1 && later === 'drop') return;
+			value = next;
+			throw new RangeError('trap');
+		},
+	});
+}
+
+describe('bindProviderAuth — refused binding, part 8', () => {
+	it.each([
+		['_WS', (): PropertyKey => '_WS', 'writing provider _WS threw (RangeError)'],
+		['the binding slot', bindingSlotKey, 'writing the binding slot threw (RangeError)'],
+	] as const)(
+		'keeps the earlier binding when a write stores the rebind and throws (%s)',
+		(_label, key, refused) => {
+			const provider = new FakeProvider();
+			bindProviderAuth(provider, 'tok1');
+			storesThenThrows(provider, key(provider), 'store');
+			const errors = withErrors(() => {
+				bindProviderAuth(provider, 'tok2')();
+			});
+			expect(errors).toEqual([[`[sentio] collab: ${refused}; auth not bound, provider stopped`]]);
+			expect(provider.shouldConnect).toBe(false);
+			// Both writes were put back, so the caller's connect() dials with the earlier token.
+			provider.shouldConnect = true;
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok1']);
+		},
+	);
+
+	it('refuses every dial when _WS keeps a refused rebind', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1');
+		storesThenThrows(provider, '_WS', 'drop');
+		const bindErrors = withErrors(() => {
+			bindProviderAuth(provider, 'tok2')();
+		});
+		expect(bindErrors).toEqual([
+			[
+				'[sentio] collab: writing provider _WS threw (RangeError); putting provider _WS back did not hold, the new binding refuses every dial; auth not bound, provider stopped',
+			],
+		]);
+		expect(provider.shouldConnect).toBe(false);
+		// The refused binding stays as _WS, closed: neither token goes out.
+		provider.shouldConnect = true;
+		const dialErrors = withErrors(() => {
+			provider.dial();
+		});
+		expect(dialErrors).toEqual([
+			[
+				'[sentio] collab: auth binding closed by a refused rebind; dial refused, provider stopped until connect() is called',
+			],
+		]);
+		expect(provider.dials).toEqual([]);
+		expect(provider.shouldConnect).toBe(false);
 	});
 });
 
@@ -1901,6 +2030,52 @@ describe('bindProviderAuth — rebind and unbind, part 3', () => {
 		});
 		provider.dial();
 		expect(provider.dials).toEqual([{ url: 'ws://x/room?room=r1&token=t-1', protocols: [] }]);
+	});
+});
+
+/** provider.ts loaded again from a fresh module registry, as a duplicated dependency would be. */
+async function secondCopy(): Promise<typeof bindProviderAuth> {
+	vi.resetModules();
+	const copy = await import('../src/provider.js');
+	expect(copy.bindProviderAuth).not.toBe(bindProviderAuth);
+	return copy.bindProviderAuth;
+}
+
+describe('bindProviderAuth — rebind and unbind, part 4', () => {
+	it('lets a second loaded copy replace the binding of the first', async () => {
+		const bindCopy = await secondCopy();
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok-first-copy');
+		bindCopy(provider, 'tok-second-copy');
+		provider.dial();
+		bindProviderAuth(provider, 'tok-first-again');
+		provider.dial();
+		expect(provider.urls()).toEqual([
+			'ws://x/room?token=tok-second-copy',
+			'ws://x/room?token=tok-first-again',
+		]);
+		// Each rebind replaced the layer the other copy put on: one auth layer.
+		expect(Object.getPrototypeOf(provider._WS)).toBe(provider.original);
+	});
+
+	it('lets a second loaded copy close the binding of the first when its rebind is refused', async () => {
+		const bindCopy = await secondCopy();
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok-first-copy');
+		Object.freeze(provider);
+		const errors = withErrors(() => {
+			bindCopy(provider, 'tok-second-copy');
+			provider.dial();
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider takes no binding slot (sealed or frozen); auth not bound, provider not stopped: its dials could not be stopped; earlier binding closed',
+			],
+			[
+				'[sentio] collab: auth binding closed by a refused rebind; dial refused, provider not stopped',
+			],
+		]);
+		expect(provider.dials).toEqual([]);
 	});
 });
 

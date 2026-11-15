@@ -44,6 +44,9 @@ const PERMANENT_REFUSALS: ReadonlySet<RefusalReason> = new Set<RefusalReason>([
 	'socket constructor rejected the dial',
 ]);
 
+/** A listener as `EventTarget` takes it, `null` included. */
+type ListenerArgument = Parameters<EventTarget['addEventListener']>[1];
+
 /** A refused dial: its reason and, when something threw, the thrown value. */
 export interface Refusal {
 	readonly reason: RefusalReason;
@@ -69,8 +72,11 @@ function runHandler(handler: () => void): void {
  * refusal reason, so y-websocket emits `connection-error` and
  * `connection-close` and backs off before it dials again, as for a refused
  * connection. Each event goes to the `on…` handler, then to the listeners added
- * with `addEventListener`. A throwing `on…` handler is logged and does not stop
- * the close.
+ * with `addEventListener`. A throwing `on…` handler or listener is logged and
+ * does not stop the close or the later listeners. Each listener is wrapped as
+ * it is added (`guard`), because Node's `EventTarget` reports a listener's
+ * throw as an uncaught exception after `dispatchEvent` returns, which ends a
+ * process without an `uncaughtException` handler.
  *
  * `close()` before the refusal runs turns it into a close without the error.
  * The close still fires, because y-websocket (2.0.4 to 3.1.0) clears
@@ -78,8 +84,9 @@ function runHandler(handler: () => void): void {
  * `provider.ws` is null. Tests:
  * `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
  * "refuses the dial without building a socket when the resolver throws",
- * "fires only the close for a refused dial closed before the refusal runs" and
- * "fires the events of a refused dial to its listeners".
+ * "fires only the close for a refused dial closed before the refusal runs",
+ * "fires the events of a refused dial to its listeners" and "logs a throwing
+ * listener of a refused dial and still runs the later ones".
  */
 export class RefusedDial extends EventTarget implements WebSocket {
 	readonly CONNECTING = 0;
@@ -100,6 +107,8 @@ export class RefusedDial extends EventTarget implements WebSocket {
 	onerror: WebSocket['onerror'] = null;
 	onmessage: WebSocket['onmessage'] = null;
 	onopen: WebSocket['onopen'] = null;
+	/** The wrapper each listener was added as, so `removeEventListener` finds it. */
+	private readonly guarded = new WeakMap<EventListenerOrEventListenerObject, EventListener>();
 
 	constructor(url: string, reason: RefusalReason, halted: boolean) {
 		super();
@@ -130,6 +139,39 @@ export class RefusedDial extends EventTarget implements WebSocket {
 			this.onclose?.(close);
 		});
 		this.dispatchEvent(close);
+	}
+
+	override addEventListener(
+		type: string,
+		listener: ListenerArgument,
+		options?: AddEventListenerOptions | boolean,
+	): void {
+		if (listener === null) return;
+		super.addEventListener(type, this.guard(listener), options);
+	}
+
+	override removeEventListener(
+		type: string,
+		listener: ListenerArgument,
+		options?: EventListenerOptions | boolean,
+	): void {
+		if (listener === null) return;
+		const guarded = this.guarded.get(listener);
+		if (guarded !== undefined) super.removeEventListener(type, guarded, options);
+	}
+
+	/** `listener` run through `runHandler`, one wrapper per listener, called as `EventTarget` would. */
+	private guard(listener: EventListenerOrEventListenerObject): EventListener {
+		const known = this.guarded.get(listener);
+		if (known !== undefined) return known;
+		const guarded = (event: Event): void => {
+			runHandler(() => {
+				if (typeof listener === 'function') listener.call(this, event);
+				else listener.handleEvent(event);
+			});
+		};
+		this.guarded.set(listener, guarded);
+		return guarded;
 	}
 
 	close(): void {

@@ -221,7 +221,13 @@ rules:
           enabled by this repository after the first version of this catalog
           recorded them as OFF, plus the local
           `@sveltesentio/no-unsanitised-html` rule in packages/core/src/eslint.ts.
-          Measured free: zero violations in shipped source.
+          The same ESLint block refuses `node:vm`, which runs a source string
+          none of the three rules sees: `no-restricted-imports` on `vm` and
+          `node:vm`, and `no-restricted-syntax` on a literal `import('node:vm')`
+          and on the `runIn*Context`, `compileFunction`, `Script` and
+          `SourceTextModule` calls, over every file, tests included.
+          `gap/vm-source-string.ts` holds the shape. Measured free: zero
+          violations in shipped source.
         rationale: >-
           Dynamic execution is reported in all three of its forms, including
           `setTimeout` on a string, and so is an unsanitised HTML sink:

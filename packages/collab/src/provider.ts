@@ -208,11 +208,16 @@ export interface AuthBindableProvider {
  * later `bindProviderAuth` on the same provider overwrites the slot, so only one
  * binding injects. The slot lives on the provider it describes, as `RETRIED`
  * does on a request in `packages/api/src/auth-middleware.ts`, so this module
- * keeps no mutable state (`docs/principles.md` §2.1, row 6). Tests:
- * `test/provider-auth.test.ts` "lets only the latest binding inject" and "keeps
- * the binding of each provider apart".
+ * keeps no mutable state (`docs/principles.md` §2.1, row 6). The key comes from
+ * the global symbol registry (`Symbol.for`), so two copies of this package
+ * loaded side by side (two bundles, a duplicated dependency) share the slot and
+ * a rebind through either copy replaces the other's binding instead of
+ * stacking on it. The `@1` names the slot layout, so a copy that changes it
+ * takes another key. Tests: `test/provider-auth.test.ts` "lets only the latest
+ * binding inject", "keeps the binding of each provider apart" and "lets a
+ * second loaded copy replace the binding of the first".
  */
-const ACTIVE_BINDING = Symbol('sveltesentio.collab.activeBinding');
+const ACTIVE_BINDING: unique symbol = Symbol.for('@sveltesentio/collab/activeBinding@1');
 
 /** A provider seen through its active-binding slot. */
 interface BindingSlot {
@@ -380,9 +385,11 @@ interface BindingState {
  * Key of the static field on a binding's socket class holding its
  * `BindingState`, so a binding installed as `_WS` can be closed through the
  * class even when the provider no longer takes writes (`closeInstalledBinding`).
- * The field lives on the class this module builds, not on the provider.
+ * The field lives on the class this module builds, not on the provider. The key
+ * is a registry symbol for the same reason as `ACTIVE_BINDING`: a second copy
+ * of this package closes a binding the first installed.
  */
-const BINDING_STATE = Symbol('sveltesentio.collab.bindingState');
+const BINDING_STATE = Symbol.for('@sveltesentio/collab/bindingState@1');
 
 /**
  * Closes the binding installed as the provider's `_WS`, or the one a wrapper
@@ -484,8 +491,10 @@ function authSocket(
  * binding and puts back the socket constructor it wrapped, unless something
  * has wrapped it since; it stops injecting also when the provider was frozen
  * after binding. A `_WS` that is missing, cannot be subclassed (an arrow
- * function, a bound function) or is read-only, a sealed or frozen provider,
- * and a binding with `param: null` and no `protocol`, bind nothing; the
+ * function, a bound function) or is read-only, a sealed or frozen provider, a
+ * `_WS` or slot write that throws (even after storing the value, see
+ * `installBinding`), and a binding with `param: null` and no `protocol`, bind
+ * nothing; the
  * provider is stopped (`stopProvider`) and a `console.error` names why, so it
  * dials no further without the token until the caller calls `connect()`
  * again. When the provider cannot be stopped either (a setter that ignores
@@ -570,8 +579,12 @@ function bindAuth(
 	} catch (error) {
 		return `provider _WS cannot be subclassed (${errorLabel(error)})`;
 	}
-	const refused = installBinding(slot, AuthSocket);
-	if (refused !== undefined) return refused;
+	const refused = installBinding(slot, AuthSocket, current);
+	if (refused !== undefined) {
+		// A setter may have kept this binding somewhere; it then refuses every dial.
+		state.closed = 'auth binding closed by a refused rebind';
+		return refused;
+	}
 	const unbind = (): void => {
 		state.active = false;
 		try {
@@ -591,49 +604,93 @@ function bindAuth(
  * Makes `AuthSocket` the active binding and the provider's `_WS`, reading each
  * write back, or returns why it could not. A sealed or frozen provider takes no
  * new slot, so `isActive` would never match and every dial would pass through
- * without the token; a read-only `_WS` keeps its constructor, and the slot
- * then gets its earlier value back (`rollBackSlot`), so nothing is left half
- * bound. A write that throws before that reaches `tryBind`, so the binding is
- * refused and the caller stops the provider. On a first binding, a provider
- * that already dialed is stopped (`stopUnboundDial`). Tests:
+ * without the token; a read-only `_WS` keeps its constructor. A write that
+ * throws is refused too, even when its setter or proxy trap stored the value
+ * first. On any refusal both writes are rolled back (`rollBack`), so neither
+ * an inactive `AuthSocket` left as `_WS` nor an earlier binding left out of
+ * the slot dials without the token; `bindAuth` also closes `AuthSocket`, so a
+ * copy a setter kept refuses every dial. On a first binding, a provider that
+ * already dialed is stopped (`stopUnboundDial`). Tests:
  * `test/provider-auth.test.ts` "binds nothing on a sealed provider", "binds
- * nothing and keeps the earlier binding when _WS is read-only" and "closes
- * the earlier binding when rolling a rebind back throws".
+ * nothing and keeps the earlier binding when _WS is read-only", "closes the
+ * earlier binding when rolling a rebind back throws" and "keeps the earlier
+ * binding when a write stores the rebind and throws".
  */
 function installBinding(
 	slot: AuthBindableProvider & BindingSlot,
 	AuthSocket: SocketConstructor,
+	current: unknown,
 ): string | undefined {
 	const previous: unknown = Reflect.get(slot, ACTIVE_BINDING);
-	Reflect.set(slot, ACTIVE_BINDING, AuthSocket);
-	if (!isActive(slot, AuthSocket)) return 'provider takes no binding slot (sealed or frozen)';
-	const refused = writeSocket(slot, AuthSocket);
-	if (refused !== undefined) return rollBackSlot(slot, previous, refused);
+	const refused = claimSlot(slot, AuthSocket) ?? writeSocket(slot, AuthSocket);
+	if (refused !== undefined) return rollBack(slot, previous, current, refused);
 	if (previous === undefined) stopUnboundDial(slot);
 	return undefined;
 }
 
+/** Writes `AuthSocket` to the active-binding slot and reads it back, or returns why it did not hold. */
+function claimSlot(slot: BindingSlot, AuthSocket: SocketConstructor): string | undefined {
+	try {
+		Reflect.set(slot, ACTIVE_BINDING, AuthSocket);
+		if (isActive(slot, AuthSocket)) return undefined;
+		return 'provider takes no binding slot (sealed or frozen)';
+	} catch (error) {
+		return `writing the binding slot threw (${errorLabel(error)})`;
+	}
+}
+
 /**
- * Writes `previous` back to the active-binding slot after a refused `_WS`
- * write, reads it back, and returns `refused`. A rollback that throws or does
- * not hold leaves the earlier binding, still installed as `_WS`, out of the
- * slot, so its dials would pass through without the token after the caller's
- * `connect()`; it is closed instead (`closeInstalledBinding`), so they are
- * refused, and the reason says so. Tests: `test/provider-auth.test.ts`
- * "closes the earlier binding when rolling a rebind back throws" and "closes
- * the earlier binding when a rebind rollback does not hold".
+ * Rolls a refused install back: `_WS` first, to `current`, then the slot, to
+ * `previous` (`rollBackSlot`), and returns `refused` with any part that did
+ * not hold. When `_WS` cannot be put back it still holds the new binding,
+ * which `bindAuth` closes, so every dial is refused; the slot is left naming
+ * it, so a later rebind unwraps it (`innerSocket`) instead of wrapping a
+ * closed binding. Tests: `test/provider-auth.test.ts` "keeps the earlier
+ * binding when a write stores the rebind and throws" and "refuses every dial
+ * when _WS keeps a refused rebind".
+ */
+function rollBack(slot: BindingSlot, previous: unknown, current: unknown, refused: string): string {
+	const left = putBack(slot, '_WS', current);
+	if (left === undefined) return rollBackSlot(slot, previous, refused);
+	return `${refused}; putting provider _WS back ${left}, the new binding refuses every dial`;
+}
+
+/**
+ * Writes `previous` back to the active-binding slot after a refused install
+ * and returns `refused`. A rollback that does not hold leaves the earlier
+ * binding, installed as `_WS`, out of the slot, so its dials would pass
+ * through without the token after the caller's `connect()`; it is closed
+ * instead (`closeInstalledBinding`), so they are refused, and the reason says
+ * so. Tests: `test/provider-auth.test.ts` "closes the earlier binding when
+ * rolling a rebind back throws" and "closes the earlier binding when a rebind
+ * rollback does not hold".
  */
 function rollBackSlot(slot: BindingSlot, previous: unknown, refused: string): string {
-	let failure: string;
-	try {
-		Reflect.set(slot, ACTIVE_BINDING, previous);
-		if (Reflect.get(slot, ACTIVE_BINDING) === previous) return refused;
-		failure = 'did not hold';
-	} catch (error) {
-		failure = `threw (${errorLabel(error)})`;
-	}
+	const failure = putBack(slot, ACTIVE_BINDING, previous);
+	if (failure === undefined) return refused;
 	const closed = closeInstalledBinding(slot) ? 'earlier binding closed' : 'no binding to close';
 	return `${refused}; rolling the binding slot back ${failure}, ${closed}`;
+}
+
+/**
+ * Puts `value` back at `key` unless it is there already, or returns how that
+ * failed. The read afterwards decides, so a setter or proxy trap that stores
+ * the value and then throws counts as put back.
+ */
+function putBack(target: object, key: PropertyKey, value: unknown): string | undefined {
+	let thrown: string | undefined;
+	try {
+		if (Reflect.get(target, key) === value) return undefined;
+		Reflect.set(target, key, value);
+	} catch (error) {
+		thrown = `threw (${errorLabel(error)})`;
+	}
+	try {
+		if (Reflect.get(target, key) === value) return undefined;
+	} catch (error) {
+		return `threw (${errorLabel(error)})`;
+	}
+	return thrown ?? 'did not hold';
 }
 
 /** Writes `AuthSocket` to `_WS` and reads it back, or returns why it did not hold. */

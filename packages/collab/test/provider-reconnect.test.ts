@@ -642,6 +642,37 @@ describe('connectProvider reconnection — negative — after disconnect', () =>
 	});
 });
 
+describe('connectProvider reconnection — negative — disconnect from a reconnect status', () => {
+	it('N26: leaves no socket open when onStatusChange runs disconnect() on a reconnect, without auth', async () => {
+		const relay = createMemRelay();
+		const handle: { teardown?: () => void } = {};
+		let connecting = 0;
+		// y-websocket's setupWS (2.0.4 to 3.1.0) builds the socket and stores it as
+		// provider.ws before it emits `connecting`, so the teardown closes that socket.
+		const onStatusChange = (status: ProviderStatus): void => {
+			if (status !== 'connecting') return;
+			connecting += 1;
+			if (connecting === 2) handle.teardown?.();
+		};
+		const peerA = connectPeer(relay, 'room-n26', { onStatusChange });
+		handle.teardown = peerA.disconnect;
+		await settle();
+		expect(relay.dials).toHaveLength(1);
+
+		relay.drop(activeSocket(peerA), 1006);
+		await settle(FAST_BACKOFF_MS);
+		expect(connecting).toBe(2);
+		expect(relay.dials).toHaveLength(2);
+		expect(relay.sockets).toEqual([]);
+		expect(peerA.provider.ws).toBeNull();
+		expect(peerA.provider.shouldConnect).toBe(false);
+
+		await settle(10 * FAST_BACKOFF_MS);
+		expect(relay.dials).toHaveLength(2);
+		expect(relay.sockets).toEqual([]);
+	});
+});
+
 /** A socket that accepts the dial and throws on `close()`, as a broken polyfill can. */
 class CloseThrowsSocket {
 	static dials = 0;

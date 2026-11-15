@@ -189,12 +189,41 @@ const config: Linter.Config[] = [
 	// (gap audit A2-9). Zero violations anywhere when widened. `no-implied-eval` is
 	// included because `setTimeout('code')` evaluates a string exactly as `eval` does;
 	// this block follows the type-checked set, which turns the core rule off.
+	// `node:vm` runs a source string too, and none of the three rules sees it: a test
+	// loaded it through `import(specifier)` and called `vm.runInNewContext('…')`
+	// (PR 579 review). The import, a literal dynamic import and the `vm` calls that
+	// take source text are refused; the call names catch a module reached any other way.
 	{
 		files: ['**/*.ts', '**/*.js', '**/*.mjs', '**/*.cjs', '**/*.svelte'],
 		rules: {
 			'no-eval': 'error',
 			'no-new-func': 'error',
 			'no-implied-eval': 'error',
+			'no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{ name: 'vm', message: 'HISS-08: node:vm runs source strings.' },
+						{ name: 'node:vm', message: 'HISS-08: node:vm runs source strings.' },
+					],
+				},
+			],
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector: 'ImportExpression[source.value=/^(node:)?vm$/]',
+					message: 'HISS-08: node:vm runs source strings.',
+				},
+				{
+					selector:
+						'CallExpression[callee.property.name=/^(runInContext|runInNewContext|runInThisContext|compileFunction)$/]',
+					message: 'HISS-08: a node:vm call runs a source string.',
+				},
+				{
+					selector: 'NewExpression[callee.property.name=/^(Script|SourceTextModule)$/]',
+					message: 'HISS-08: a node:vm script compiles a source string.',
+				},
+			],
 		},
 	},
 	// --- build-time files outside a tsconfig project ---------------------------------
