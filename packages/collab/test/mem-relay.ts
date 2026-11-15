@@ -94,6 +94,8 @@ export interface MemRelay {
 	readonly sockets: readonly MemSocket[];
 	/** Every dial, kept as the assertion log of the one test that owns the relay. */
 	readonly dials: readonly MemDial[];
+	/** Values an `onerror` handler threw; `onclose` still fired after each. */
+	readonly handlerErrors: readonly unknown[];
 	docFor(room: string): Y.Doc;
 	drop(socket: MemSocket, code?: number, reason?: string): void;
 	refuseNext(count: number): void;
@@ -157,8 +159,24 @@ interface RelayState {
 	readonly docs: Map<string, Y.Doc>;
 	readonly sockets: MemSocket[];
 	readonly dials: MemDial[];
+	readonly handlerErrors: unknown[];
 	readonly maxSockets: number;
 	pendingRefusals: number;
+}
+
+/**
+ * Fires `onerror`, then `onclose`, as a browser fails a connection in one
+ * task. A throw from `onerror` lands in `errors` and `onclose` still fires,
+ * as a browser reports a listener exception and goes on dispatching (WHATWG
+ * HTML, "report an exception"). Tests: `test/mem-relay.test.ts` "drop()".
+ */
+function failAndClose(socket: MemSocket, event: MemCloseEvent, errors: unknown[]): void {
+	try {
+		socket.onerror?.({ type: 'error' });
+	} catch (error) {
+		errors.push(error);
+	}
+	socket.onclose?.(event);
 }
 
 function roomDoc(state: RelayState, room: string): Y.Doc {
@@ -267,8 +285,8 @@ class RelaySocket implements MemSocket {
 		forgetSocket(this.#relay, this, this.CLOSING);
 		queueTask(() => {
 			this.readyState = this.CLOSED;
-			if (!wasOpen) this.onerror?.({ type: 'error' });
-			this.onclose?.(wasOpen ? { code: 1005, reason: '' } : { code: 1006, reason: '' });
+			if (wasOpen) this.onclose?.({ code: 1005, reason: '' });
+			else failAndClose(this, { code: 1006, reason: '' }, this.#relay.handlerErrors);
 		});
 	}
 }
@@ -286,6 +304,7 @@ export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
 		docs: new Map(),
 		sockets: [],
 		dials: [],
+		handlerErrors: [],
 		maxSockets: Math.max(1, options.maxSockets ?? DEFAULT_MAX_SOCKETS),
 		pendingRefusals: 0,
 	};
@@ -296,10 +315,23 @@ export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
 		}
 	}
 
+	/**
+	 * Ends `socket` from the server side. Like `close()`, the socket leaves the
+	 * fan-out at once and the events fire one task later. A 1006 close, the
+	 * default, is a dropped connection: `onerror` fires before `onclose`, as a
+	 * browser fails a connection (WHATWG WebSockets, "fail the WebSocket
+	 * connection"); any other code is a close frame the server sent, so only
+	 * `onclose` fires. A throw from `onerror` lands in `handlerErrors` and
+	 * `onclose` still fires. Tests: `test/mem-relay.test.ts` "drop()".
+	 */
 	function drop(socket: MemSocket, code = 1006, reason = 'drop'): void {
 		if (socket.readyState >= socket.CLOSING) return;
-		forgetSocket(state, socket);
-		socket.onclose?.({ code, reason });
+		forgetSocket(state, socket, socket.CLOSING);
+		queueTask(() => {
+			socket.readyState = socket.CLOSED;
+			if (code === 1006) failAndClose(socket, { code, reason }, state.handlerErrors);
+			else socket.onclose?.({ code, reason });
+		});
 	}
 
 	function refuseNext(count: number): void {
@@ -310,6 +342,7 @@ export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
 		Socket,
 		sockets: state.sockets,
 		dials: state.dials,
+		handlerErrors: state.handlerErrors,
 		docFor: (room) => roomDoc(state, room),
 		drop,
 		refuseNext,

@@ -135,6 +135,66 @@ describe('createMemRelay close()', () => {
 	});
 });
 
+describe('createMemRelay drop()', () => {
+	/** One open socket with every event it fires recorded in order. */
+	async function openTraced() {
+		const relay = createMemRelay();
+		const { sockets } = dial(relay, 1);
+		const socket = sockets[0];
+		if (socket === undefined) throw new Error('socket missing');
+		const events: string[] = [];
+		await nextTask();
+		socket.onerror = () => {
+			events.push('error');
+		};
+		socket.onclose = (event) => {
+			events.push(`close ${event.code} ${event.reason}`);
+		};
+		return { relay, socket, events };
+	}
+
+	it('fails a dropped socket one task later: error, then close 1006 (positive)', async () => {
+		const { relay, socket, events } = await openTraced();
+		relay.drop(socket);
+		expect(socket.readyState).toBe(socket.CLOSING);
+		expect(relay.sockets).not.toContain(socket);
+		expect(events).toEqual([]);
+		await nextTask();
+		expect(events).toEqual(['error', 'close 1006 drop']);
+		expect(socket.readyState).toBe(socket.CLOSED);
+		expect(relay.handlerErrors).toEqual([]);
+	});
+
+	it('closes with a server close code and fires no error event (negative)', async () => {
+		const { relay, socket, events } = await openTraced();
+		relay.drop(socket, 4401, 'unauthorized');
+		await nextTask();
+		expect(events).toEqual(['close 4401 unauthorized']);
+	});
+
+	it('fires close once for a second drop (boundary)', async () => {
+		const { relay, socket, events } = await openTraced();
+		relay.drop(socket);
+		relay.drop(socket, 1000, 'again');
+		await nextTask();
+		await nextTask();
+		expect(events).toEqual(['error', 'close 1006 drop']);
+	});
+
+	it('still fires close when the error handler throws, keeping the thrown value (boundary)', async () => {
+		const { relay, socket, events } = await openTraced();
+		const failure = new Error('handler bug');
+		socket.onerror = () => {
+			events.push('error');
+			throw failure;
+		};
+		relay.drop(socket);
+		await nextTask();
+		expect(events).toEqual(['error', 'close 1006 drop']);
+		expect(relay.handlerErrors).toEqual([failure]);
+	});
+});
+
 describe('createMemRelay task timing', () => {
 	it('fires open one task after the dial, after pending microtasks', async () => {
 		const relay = createMemRelay();

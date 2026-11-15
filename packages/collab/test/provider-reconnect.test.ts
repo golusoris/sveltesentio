@@ -13,12 +13,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
 import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	type AuthBinding,
 	type ConnectedProvider,
 	type ProviderStatus,
 	COLLAB_START_FAILED_TYPE,
+	bindProviderAuth,
 	connectProvider,
 } from '../src/provider.js';
 import {
@@ -180,6 +182,9 @@ describe('connectProvider reconnection — positive', () => {
 		await settle();
 
 		relay.drop(activeSocket(peerA), 1006);
+		// The close fires one task later, as a browser's does.
+		expect(peerA.provider.wsconnected).toBe(true);
+		await nextTask();
 		expect(peerA.provider.wsconnected).toBe(false);
 
 		peerA.doc.getMap<string>('notes').set('offlineA', 'from-a');
@@ -264,6 +269,8 @@ describe('connectProvider reconnection — negative', () => {
 		await settle();
 
 		relay.drop(activeSocket(peerA), 4401, 'unauthorized');
+		expect(closedEvents).toEqual([]);
+		await nextTask();
 		expect(closedEvents).toEqual([{ code: 4401, reason: 'unauthorized' }]);
 		expect(peerA.statuses.at(-1)).toBe('disconnected');
 
@@ -407,9 +414,11 @@ describe('connectProvider reconnection — negative', () => {
 			relay.drop(activeSocket(peerA), 1006);
 			await settle(FAST_BACKOFF_MS);
 
-			expect(errors).toHaveLength(1);
-			expect(errors[0]).toBeInstanceOf(Event);
-			expect(errors[0]).not.toHaveProperty('error');
+			// The drop's own error event, then the refused dial's plain one.
+			expect(errors).toHaveLength(2);
+			expect(errors[0]).toEqual({ type: 'error' });
+			expect(errors[1]).toBeInstanceOf(Event);
+			expect(errors[1]).not.toHaveProperty('error');
 			expect(relay.dials).toHaveLength(1);
 			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'Error');
 
@@ -501,7 +510,9 @@ describe('connectProvider reconnection — negative', () => {
 
 		try {
 			await settle();
-			relay.drop(activeSocket(peerA), 1006);
+			// A close frame from the server (1001) fires no error event, so the
+			// refused dial's is the only one the listener sees.
+			relay.drop(activeSocket(peerA), 1001, 'going away');
 			await settle(FAST_BACKOFF_MS);
 			await settle(FAST_BACKOFF_MS);
 
@@ -620,6 +631,44 @@ describe('connectProvider reconnection — negative', () => {
 		expect(peerA.syncs).toEqual([true, false, true]);
 		expect(relay.sockets).toEqual([requireDial(relay, 1).socket]);
 	});
+	it.each([
+		['still connecting', 0],
+		['open', 1],
+	] as const)(
+		'N17: closes the socket a provider dialed before bindProviderAuth (%s) and redials with the token',
+		async (_label, settlesBeforeBind) => {
+			const relay = createMemRelay();
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+			const doc = new Y.Doc();
+			// Default connect: true, so the constructor dials before any binding.
+			const provider = new WebsocketProvider(SERVER_URL, 'room-n13', doc, {
+				disableBc: true,
+				maxBackoffTime: FAST_BACKOFF_MS,
+				WebSocketPolyfill: relay.Socket as unknown as typeof WebSocket,
+			});
+			teardowns.push(() => {
+				provider.destroy();
+				doc.destroy();
+			});
+			try {
+				if (settlesBeforeBind > 0) await settle();
+				expect(relay.dials).toHaveLength(1);
+				bindProviderAuth(provider, 'tok');
+				expect(warnSpy).toHaveBeenCalledTimes(1);
+				await settle(FAST_BACKOFF_MS);
+
+				expect(relay.dials.map((dial) => dial.url)).toEqual([
+					`${SERVER_URL}/room-n13`,
+					`${SERVER_URL}/room-n13?token=tok`,
+				]);
+				const first = requireDial(relay, 0).socket;
+				expect(first.readyState).toBe(first.CLOSED);
+				expect(provider.wsconnected).toBe(true);
+			} finally {
+				warnSpy.mockRestore();
+			}
+		},
+	);
 });
 
 describe('connectProvider held-back connect', () => {

@@ -63,7 +63,7 @@ This package does **not**:
 - Awareness helpers (`./awareness`) test against in-memory `FakeAwareness` implementing `AwarenessLike` — no `y-protocols` dependency at test time.
 - Rune helpers (`*.svelte.ts`) exercised indirectly via pure helpers they compose.
 - Direct rune runtime tests land once monorepo wires `vitest` + Svelte plugin harness.
-- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one.
+- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one. `relay.drop()` with 1006 = `error` then `close` (failed connection); other codes = `close` only. `onerror` throw -> `relay.handlerErrors`, `close` still fires.
 - Coverage ≥ 85% on pure helpers.
 
 ## Common tasks
