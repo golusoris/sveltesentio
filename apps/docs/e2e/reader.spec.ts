@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 /**
  * Guards the markdown reader layout (gap audit C15-2, issue #501): code blocks,
  * callouts and sidebar navigation on apps/docs/src/routes/docs/[...slug], and
- * reflow down to 320 CSS px (WCAG 2.2 SC 1.4.10).
+ * reflow of every reader page down to 320 CSS px (WCAG 2.2 SC 1.4.10).
  */
 
 const DESKTOP = { width: 1280, height: 800 } as const;
@@ -11,23 +11,36 @@ const VIEW_HEIGHT = 800;
 /** SC 1.4.10 reflow width. */
 const MIN_WIDTH = 320;
 /** 768 sits on the 48rem layout breakpoint, which `max-width` includes. */
-const REFLOW_WIDTHS = [MIN_WIDTH, 375, 768, 1024] as const;
-const REFLOW_SLUGS = [
+const REFLOW_WIDTHS = [MIN_WIDTH, 375, 768, 1024, DESKTOP.width] as const;
+/** The pages that overflowed on `main` before the reflow fix; the page walk must still reach them. */
+const KNOWN_WIDE_SLUGS = [
 	'principles',
 	'compose/progressive-enhancement',
 	'compose/connectrpc',
 ] as const;
+/** Upper bound for the page walk (HISS-02); the sidebar lists the whole registry, 197 pages today. */
+const MAX_READER_PAGES = 400;
+/** Deadline for the whole page walk; 197 pages at five widths took 37 s locally beside eight other workers. */
+const PAGE_WALK_TIMEOUT_MS = 240_000;
 /** Page with many code blocks, a leading callout and Svelte markup inside code fences. */
 const CODE_SLUG = 'compose/progressive-enhancement';
 /** Layout boxes land on fractional pixels; allow half a pixel of rounding. */
 const SUBPIXEL = 0.5;
 /** Explicit deadline for each navigation and poll (HISS-02); the local preview answers in well under 1 s. */
 const NAV_TIMEOUT_MS = 15_000;
-/**
- * A computed colour with zero alpha, in legacy `rgba(..., 0)` or modern `... / 0)` form. Only
- * the rgba form is matched by its last comma, so an opaque `rgb(r, g, 0)` does not count.
- */
-const ZERO_ALPHA = /^transparent$|^rgba\(.*,\s*0\)$|\/\s*0\)$/;
+/** One just noticeable difference as an OKLab distance (deltaEOK), from CSS Color 4 §14.2.1. */
+const OKLAB_JND = 0.02;
+/** Ancestors searched for an opaque background behind the callout (HISS-02). */
+const MAX_BACKGROUND_DEPTH = 32;
+/** A computed `oklab()` colour; the alpha part is present only below 1. */
+const OKLAB = /^oklab\((\S+) (\S+) (\S+)(?: \/ (\S+))?\)$/;
+
+interface Oklab {
+	l: number;
+	a: number;
+	b: number;
+	alpha: number;
+}
 
 function docLink(page: Page, slug: string): Locator {
 	return page.locator(`aside.sidebar a[href$="/docs/${slug}"]`);
@@ -52,7 +65,93 @@ async function boxOf(locator: Locator): Promise<{ x: number; width: number }> {
 	return box ?? { x: Number.NaN, width: Number.NaN };
 }
 
-test.describe('apps/docs markdown reader (C15-2)', () => {
+function parseOklab(css: string): Oklab {
+	const match = OKLAB.exec(css);
+	expect(match, `${css} is a computed oklab() colour`).not.toBeNull();
+	const [l, a, b, alpha = '1'] = match?.slice(1) ?? [];
+	return { l: Number(l), a: Number(a), b: Number(b), alpha: Number(alpha) };
+}
+
+function deltaEOK(one: Oklab, two: Oklab): number {
+	return Math.hypot(one.l - two.l, one.a - two.a, one.b - two.b);
+}
+
+/**
+ * Reads the callout's left border colour and the background colours from the callout up its
+ * ancestors. The browser converts each one to OKLab, so any authored colour form compares.
+ */
+async function calloutColours(callout: Locator): Promise<{ border: Oklab; backgrounds: Oklab[] }> {
+	const colours = await callout.evaluate((element, maxDepth) => {
+		const probe = document.createElement('span');
+		document.body.append(probe);
+		const toOklab = (color: string): string => {
+			probe.style.color = `oklab(from ${color} l a b / alpha)`;
+			return getComputedStyle(probe).color;
+		};
+		const backgrounds: string[] = [];
+		let node: Element | null = element;
+		for (let depth = 0; node !== null && depth < maxDepth; depth += 1) {
+			backgrounds.push(toOklab(getComputedStyle(node).backgroundColor));
+			node = node.parentElement;
+		}
+		const border = toOklab(getComputedStyle(element).borderLeftColor);
+		probe.remove();
+		return { border, backgrounds };
+	}, MAX_BACKGROUND_DEPTH);
+	return { border: parseOklab(colours.border), backgrounds: colours.backgrounds.map(parseOklab) };
+}
+
+/** Every reader page in the sidebar, which lists the whole registry (`navGroups` in src/lib/docs.ts). */
+async function readerSlugs(page: Page): Promise<string[]> {
+	await page.setViewportSize(DESKTOP);
+	await openDoc(page, KNOWN_WIDE_SLUGS[0]);
+	const paths = await page
+		.locator('aside.sidebar a[href*="/docs/"]')
+		.evaluateAll((links) =>
+			links.map((link) => new URL(link.getAttribute('href') ?? '', location.href).pathname),
+		);
+	const slugs = [...new Set(paths.map((path) => path.replace(/^\/docs\//, '')))];
+	expect(slugs.length, 'the page walk stays inside its bound').toBeLessThanOrEqual(
+		MAX_READER_PAGES,
+	);
+	expect(slugs).toEqual(expect.arrayContaining([...KNOWN_WIDE_SLUGS]));
+	return slugs;
+}
+
+/**
+ * Runs in the page: sideways overflow of the document, and whether the article and its first
+ * heading are drawn with a non-empty box that ends inside the viewport.
+ */
+function readerLayout(subpixel: number): { overflow: number; article: boolean; heading: boolean } {
+	const shown = (element: Element | null | undefined): boolean => {
+		if (!element?.checkVisibility({ visibilityProperty: true })) return false;
+		const rect = element.getBoundingClientRect();
+		return rect.width > 0 && rect.height > 0 && rect.right <= window.innerWidth + subpixel;
+	};
+	const article = document.querySelector('article.prose');
+	return {
+		overflow: document.documentElement.scrollWidth - window.innerWidth,
+		article: shown(article),
+		heading: shown(article?.querySelector('h1')),
+	};
+}
+
+/** Loads one reader page once, then lists each width where it scrolls sideways or hides its text. */
+async function reflowFailures(page: Page, slug: string): Promise<string[]> {
+	await openDoc(page, slug);
+	const failures: string[] = [];
+	for (const width of REFLOW_WIDTHS) {
+		await page.setViewportSize({ width, height: VIEW_HEIGHT });
+		const layout = await page.evaluate(readerLayout, SUBPIXEL);
+		if (layout.overflow > 0)
+			failures.push(`/docs/${slug} at ${width} px: ${layout.overflow} px wider`);
+		if (!layout.article) failures.push(`/docs/${slug} at ${width} px: article not shown`);
+		if (!layout.heading) failures.push(`/docs/${slug} at ${width} px: heading not shown`);
+	}
+	return failures;
+}
+
+test.describe('apps/docs reader code blocks (C15-2)', () => {
 	test('code blocks render as scrollable monospace text (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await openDoc(page, CODE_SLUG);
@@ -74,6 +173,27 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		await expect(page.locator('article.prose pre form, article.prose pre aside')).toHaveCount(0);
 	});
 
+	test('code blocks scroll inside their own box at 320 px (boundary)', async ({ page }) => {
+		await page.setViewportSize({ width: MIN_WIDTH, height: VIEW_HEIGHT });
+		await openDoc(page, CODE_SLUG);
+
+		const blocks = await page.locator('article.prose pre').evaluateAll((nodes) =>
+			nodes.map((node) => ({
+				scrolls: node.scrollWidth > node.clientWidth,
+				overflowX: getComputedStyle(node).overflowX,
+				right: node.getBoundingClientRect().right,
+			})),
+		);
+		expect(blocks.length).toBeGreaterThanOrEqual(1);
+		expect(blocks.some((block) => block.scrolls)).toBe(true);
+		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of scrolling.
+		expect(blocks.filter((block) => block.overflowX !== 'auto')).toEqual([]);
+		const widestRight = Math.max(...blocks.map((block) => block.right));
+		expect(widestRight).toBeLessThanOrEqual(MIN_WIDTH + SUBPIXEL);
+	});
+});
+
+test.describe('apps/docs reader callouts (C15-2)', () => {
 	test('callout keeps its left border inside the article (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await openDoc(page, CODE_SLUG);
@@ -83,8 +203,6 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		await expect(callout).not.toBeEmpty();
 		expect(await styleOf(callout, 'border-left-style')).toBe('solid');
 		expect(await styleOf(callout, 'border-left-width')).toBe('4px');
-		// A solid 4 px border in a transparent colour still passes the two checks above.
-		expect(await styleOf(callout, 'border-left-color')).not.toMatch(ZERO_ALPHA);
 
 		const box = await boxOf(callout);
 		const article = await boxOf(page.locator('article.prose'));
@@ -92,6 +210,27 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		expect(box.x + box.width).toBeLessThanOrEqual(article.x + article.width + SUBPIXEL);
 	});
 
+	for (const colorScheme of ['light', 'dark'] as const) {
+		test(`callout border differs from the page background in ${colorScheme} mode (positive)`, async ({
+			page,
+		}) => {
+			await page.emulateMedia({ colorScheme });
+			await page.setViewportSize(DESKTOP);
+			await openDoc(page, CODE_SLUG);
+
+			const { border, backgrounds } = await calloutColours(
+				page.locator('article.prose blockquote').first(),
+			);
+			// A transparent or translucent border would show the background instead of its own colour.
+			expect(border.alpha, 'border colour is opaque').toBe(1);
+			const background = backgrounds.find((colour) => colour.alpha === 1);
+			expect(background, 'an opaque background sits behind the callout').toBeDefined();
+			expect(deltaEOK(border, background ?? border)).toBeGreaterThan(OKLAB_JND);
+		});
+	}
+});
+
+test.describe('apps/docs reader sidebar (C15-2)', () => {
 	test('sidebar marks the current page and follows navigation (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await openDoc(page, 'principles');
@@ -143,7 +282,9 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		expect(Math.abs(aside.height - VIEW_HEIGHT)).toBeLessThanOrEqual(1);
 		expect(mainLeft).toBeGreaterThanOrEqual(aside.right - SUBPIXEL);
 	});
+});
 
+test.describe('apps/docs reader routes and reflow (C15-2)', () => {
 	test('an unknown slug marks no sidebar link as current (negative)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const response = await page.goto('/docs/this-slug-does-not-exist-ever', {
@@ -157,37 +298,15 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		await expect(sidebar.locator('a.active')).toHaveCount(0);
 	});
 
-	for (const width of REFLOW_WIDTHS) {
-		test(`reader pages fit a ${width} px viewport without sideways scrolling (boundary)`, async ({
-			page,
-		}) => {
-			await page.setViewportSize({ width, height: VIEW_HEIGHT });
-			for (const slug of REFLOW_SLUGS) {
-				await openDoc(page, slug);
-				const overflow = await page.evaluate(
-					() => document.documentElement.scrollWidth - window.innerWidth,
-				);
-				expect.soft(overflow, `/docs/${slug} overflows at ${width} px`).toBeLessThanOrEqual(0);
-			}
-		});
-	}
-
-	test('code blocks scroll inside their own box at 320 px (boundary)', async ({ page }) => {
-		await page.setViewportSize({ width: MIN_WIDTH, height: VIEW_HEIGHT });
-		await openDoc(page, CODE_SLUG);
-
-		const blocks = await page.locator('article.prose pre').evaluateAll((nodes) =>
-			nodes.map((node) => ({
-				scrolls: node.scrollWidth > node.clientWidth,
-				overflowX: getComputedStyle(node).overflowX,
-				right: node.getBoundingClientRect().right,
-			})),
-		);
-		expect(blocks.length).toBeGreaterThanOrEqual(1);
-		expect(blocks.some((block) => block.scrolls)).toBe(true);
-		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of scrolling.
-		expect(blocks.filter((block) => block.overflowX !== 'auto')).toEqual([]);
-		const widestRight = Math.max(...blocks.map((block) => block.right));
-		expect(widestRight).toBeLessThanOrEqual(MIN_WIDTH + SUBPIXEL);
+	test('every reader page fits 320 to 1280 px without sideways scrolling (boundary)', async ({
+		page,
+	}) => {
+		test.setTimeout(PAGE_WALK_TIMEOUT_MS);
+		const slugs = await readerSlugs(page);
+		const failures: string[] = [];
+		for (const slug of slugs.slice(0, MAX_READER_PAGES)) {
+			failures.push(...(await reflowFailures(page, slug)));
+		}
+		expect(failures).toEqual([]);
 	});
 });
