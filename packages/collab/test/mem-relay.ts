@@ -5,6 +5,18 @@ import * as Y from 'yjs';
 
 const MESSAGE_SYNC = 0;
 
+/**
+ * Default cap on open relay sockets. Each update fans out over the open
+ * sockets, so the cap bounds that loop (HISS-02, HISS-06); the suites open at
+ * most two peers at once.
+ */
+const DEFAULT_MAX_SOCKETS = 16;
+
+export interface MemRelayOptions {
+	/** Open sockets the relay admits; a dial past it closes with 1013. Defaults to 16. */
+	readonly maxSockets?: number;
+}
+
 export interface MemCloseEvent {
 	readonly code: number;
 	readonly reason: string;
@@ -48,7 +60,7 @@ export interface MemDial {
 
 export interface MemRelay {
 	readonly Socket: MemSocketConstructor;
-	/** Sockets not yet closed; a socket leaves on `close()`, a drop or a refusal. */
+	/** Sockets not yet closed, at most `maxSockets`; a socket leaves on `close()`, a drop or a refusal. */
 	readonly sockets: readonly MemSocket[];
 	/** Every dial, kept as the assertion log of the one test that owns the relay. */
 	readonly dials: readonly MemDial[];
@@ -115,6 +127,7 @@ interface RelayState {
 	readonly docs: Map<string, Y.Doc>;
 	readonly sockets: MemSocket[];
 	readonly dials: MemDial[];
+	readonly maxSockets: number;
 	pendingRefusals: number;
 }
 
@@ -141,8 +154,13 @@ function forgetSocket(state: RelayState, socket: MemSocket): void {
 	if (index >= 0) state.sockets.splice(index, 1);
 }
 
-function openOrRefuse(state: RelayState, socket: MemSocket): void {
+function openOrRefuse(state: RelayState, socket: MemSocket, admitted: boolean): void {
 	if (socket.readyState !== socket.CONNECTING) return;
+	if (!admitted) {
+		socket.readyState = socket.CLOSED;
+		socket.onclose?.({ code: 1013, reason: 'relay full' });
+		return;
+	}
 	if (state.pendingRefusals > 0) {
 		state.pendingRefusals -= 1;
 		forgetSocket(state, socket);
@@ -185,10 +203,11 @@ class RelaySocket implements MemSocket {
 		this.url = typeof url === 'string' ? url : url.toString();
 		this.protocols = normaliseProtocols(protocols);
 		this.room = parseRoom(this.url);
-		relay.sockets.push(this);
+		const admitted = relay.sockets.length < relay.maxSockets;
+		if (admitted) relay.sockets.push(this);
 		relay.dials.push({ url: this.url, protocols: [...this.protocols], socket: this });
 		queueMicrotask(() => {
-			openOrRefuse(relay, this);
+			openOrRefuse(relay, this, admitted);
 		});
 	}
 
@@ -210,10 +229,17 @@ class RelaySocket implements MemSocket {
  * In-memory stand-in for a `y-websocket` server. `test/provider-reconnect.test.ts`
  * uses it to drive real `WebsocketProvider` dials, drops and refusals under
  * Vitest fake timers with no network socket; P3, B1 and B2 there assert that
- * two peers converge across drops.
+ * two peers converge across drops. It admits at most `maxSockets` open sockets
+ * (`test/mem-relay.test.ts`).
  */
-export function createMemRelay(): MemRelay {
-	const state: RelayState = { docs: new Map(), sockets: [], dials: [], pendingRefusals: 0 };
+export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
+	const state: RelayState = {
+		docs: new Map(),
+		sockets: [],
+		dials: [],
+		maxSockets: Math.max(1, options.maxSockets ?? DEFAULT_MAX_SOCKETS),
+		pendingRefusals: 0,
+	};
 
 	class Socket extends RelaySocket {
 		constructor(url: string | URL, protocols?: string | string[]) {

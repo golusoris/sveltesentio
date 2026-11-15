@@ -100,7 +100,8 @@ type SocketConstructor = WebsocketProvider['_WS'];
  * The slice of `WebsocketProvider` the auth binding touches.
  *
  * The binding reads and replaces `_WS`, the socket constructor y-websocket calls
- * for every dial, and writes nothing else. `params`, `protocols`, `on` and `off`
+ * for every dial, and otherwise writes only a symbol-keyed slot naming the
+ * active binding (`ACTIVE_BINDING`). `params`, `protocols`, `on` and `off`
  * stay in the type so a stand-in written against its earlier shape still
  * compiles (the public API is append-only); `_WS` is optional for the same
  * reason, and a provider without it gets a warning and no auth. A real
@@ -115,12 +116,20 @@ export interface AuthBindableProvider {
 }
 
 /**
- * The socket constructor of the binding that injects auth on each provider. A
- * later `bindProviderAuth` on the same provider replaces the entry, so only one
- * binding injects. Keyed weakly, so a dropped provider is not retained.
- * Tests: `test/provider-auth.test.ts` "lets only the latest binding inject".
+ * Key of the slot on a provider that names the binding injecting auth there. A
+ * later `bindProviderAuth` on the same provider overwrites the slot, so only one
+ * binding injects. The slot lives on the provider it describes, as `RETRIED`
+ * does on a request in `packages/api/src/auth-middleware.ts`, so this module
+ * keeps no mutable state (`docs/principles.md` §2.1, row 6). Tests:
+ * `test/provider-auth.test.ts` "lets only the latest binding inject" and "keeps
+ * the binding of each provider apart".
  */
-const activeBindings = new WeakMap<object, SocketConstructor>();
+const ACTIVE_BINDING = Symbol('sveltesentio.collab.activeBinding');
+
+/** A provider seen through its active-binding slot. */
+interface BindingSlot {
+	[ACTIVE_BINDING]?: SocketConstructor | undefined;
+}
 
 /**
  * Entries of `next` absent from `present`, each once. Browsers reject a
@@ -174,27 +183,43 @@ function dialUrl(url: string, authParams: Readonly<Record<string, string>>): str
 	return `${base}?${[...kept, ...authPairs].join('&')}`;
 }
 
+/**
+ * A loggable label for a thrown value: its error name, or else its type. The
+ * message and other fields stay out of the log, because a resolver or handler
+ * error can carry the token it failed on. Tests: `test/provider-auth.test.ts`
+ * "logs only the name of a resolver error".
+ */
+function errorLabel(error: unknown): string {
+	return error instanceof Error ? error.name : typeof error;
+}
+
 /** Runs one socket event handler; a throw is logged so the next event still fires. */
 function runHandler(handler: () => void): void {
 	try {
 		handler();
 	} catch (error) {
-		console.error('[sentio] collab: socket event handler threw', error);
+		console.error('[sentio] collab: socket event handler threw:', errorLabel(error));
 	}
 }
 
 /**
  * Socket stand-in for a dial whose token resolver threw. It opens no
- * connection. On the next microtask it fires `onerror`, carrying the resolver
- * error as `error`, then `onclose` with code 1006, so y-websocket emits
+ * connection. On the next microtask it fires `error`, carrying the resolver
+ * error as `error`, then `close` with code 1006, so y-websocket emits
  * `connection-error` and `connection-close` and backs off before it dials
- * again, as for a refused connection. A throwing handler is logged and does not
- * stop the close, as in a browser. y-websocket attaches handlers through the
- * `on…` properties only, so listener registration is accepted and never fires.
- * Tests: `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
- * "refuses the dial without building a socket when the resolver throws".
+ * again, as for a refused connection. Each event goes to the `on…` handler,
+ * then to the listeners added with `addEventListener`. A throwing `on…` handler
+ * is logged and does not stop the close.
+ *
+ * `close()` before the refusal runs turns it into a close without the error.
+ * The close still fires, because y-websocket 2.0.0 clears `provider.ws` only in
+ * `onclose`, and `connect()` dials only while `provider.ws` is null. Tests:
+ * `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
+ * "refuses the dial without building a socket when the resolver throws",
+ * "fires only the close for a refused dial closed before the refusal runs" and
+ * "fires the events of a refused dial to its listeners".
  */
-class RefusedDial implements WebSocket {
+class RefusedDial extends EventTarget implements WebSocket {
 	readonly CONNECTING = 0;
 	readonly OPEN = 1;
 	readonly CLOSING = 2;
@@ -211,6 +236,7 @@ class RefusedDial implements WebSocket {
 	onopen: WebSocket['onopen'] = null;
 
 	constructor(url: string, cause: unknown) {
+		super();
 		this.url = url;
 		queueMicrotask(() => {
 			this.refuse(cause);
@@ -218,47 +244,38 @@ class RefusedDial implements WebSocket {
 	}
 
 	private refuse(cause: unknown): void {
-		if (this.readyState === this.CLOSED) return;
+		const cancelled = this.readyState === this.CLOSING;
 		this.readyState = this.CLOSED;
-		const error = Object.assign(new Event('error'), { error: cause });
+		if (!cancelled) {
+			const error = Object.assign(new Event('error'), { error: cause });
+			runHandler(() => {
+				this.onerror?.(error);
+			});
+			this.dispatchEvent(error);
+		}
 		const close = Object.assign(new Event('close'), {
 			code: 1006,
 			reason: 'auth token resolver threw',
 			wasClean: false,
 		});
 		runHandler(() => {
-			this.onerror?.(error);
-		});
-		runHandler(() => {
 			this.onclose?.(close);
 		});
+		this.dispatchEvent(close);
 	}
 
 	close(): void {
-		this.readyState = this.CLOSED;
+		if (this.readyState === this.CONNECTING) this.readyState = this.CLOSING;
 	}
 
 	send(): void {
 		// Never opens, and y-websocket sends only after `onopen`.
 	}
-
-	addEventListener(): void {
-		// Accepted and never fired: y-websocket uses the `on…` properties.
-	}
-
-	removeEventListener(): void {
-		// addEventListener registers nothing, so there is nothing to remove.
-	}
-
-	dispatchEvent(): boolean {
-		// No listener runs (see addEventListener); the event is not cancelled.
-		return true;
-	}
 }
 
-/** Logs a resolver throw and returns a socket that dials nothing. */
+/** Logs a resolver throw by its label and returns a socket that dials nothing. */
 function refuseDial(url: string, cause: unknown): WebSocket {
-	console.error('[sentio] collab: auth token resolver threw; dial refused', cause);
+	console.error('[sentio] collab: auth token resolver threw; dial refused:', errorLabel(cause));
 	return new RefusedDial(url, cause);
 }
 
@@ -271,13 +288,13 @@ function refuseDial(url: string, cause: unknown): WebSocket {
  * binding on the provider is active, this one passes the dial through.
  */
 function authSocket(
-	provider: object,
+	slot: BindingSlot,
 	Base: SocketConstructor,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): SocketConstructor {
 	const AuthSocket = class extends Base {
 		constructor(url: string | URL, protocols?: string | string[]) {
-			if (activeBindings.get(provider) !== AuthSocket) {
+			if (slot[ACTIVE_BINDING] !== AuthSocket) {
 				super(url, protocols);
 				return;
 			}
@@ -319,11 +336,12 @@ export function bindProviderAuth(
 			// Nothing was bound.
 		};
 	}
-	const AuthSocket = authSocket(provider, Base, auth);
-	activeBindings.set(provider, AuthSocket);
+	const slot = provider as AuthBindableProvider & BindingSlot;
+	const AuthSocket = authSocket(slot, Base, auth);
+	slot[ACTIVE_BINDING] = AuthSocket;
 	provider._WS = AuthSocket;
 	return () => {
-		if (activeBindings.get(provider) === AuthSocket) activeBindings.delete(provider);
+		if (slot[ACTIVE_BINDING] === AuthSocket) slot[ACTIVE_BINDING] = undefined;
 		if (provider._WS === AuthSocket) provider._WS = Base;
 	};
 }

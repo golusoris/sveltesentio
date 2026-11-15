@@ -293,7 +293,7 @@ describe('bindProviderAuth', () => {
 			expect(closeEvent?.code).toBe(1006);
 			expect(closeEvent?.wasClean).toBe(false);
 			expect(socket.readyState).toBe(socket.CLOSED);
-			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), failure);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'Error');
 
 			provider.dial();
 			expect(provider.urls()).toEqual(['ws://x/room?token=tok2']);
@@ -322,34 +322,88 @@ describe('bindProviderAuth', () => {
 			expect(closes).toBe(1);
 			expect(errorSpy).toHaveBeenCalledWith(
 				expect.stringContaining('socket event handler threw'),
-				handlerFailure,
+				'Error',
 			);
 		} finally {
 			errorSpy.mockRestore();
 		}
 	});
 
-	it('fires nothing for a refused dial closed before the refusal runs', async () => {
+	it('fires only the close for a refused dial closed before the refusal runs', async () => {
 		const provider = new FakeProvider();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
 			bindProviderAuth(provider, () => {
 				throw new Error('token service down');
 			});
-			const socket = provider.dial();
-			const handler = vi.fn();
-			socket.onerror = handler;
-			socket.onclose = handler;
+			// y-websocket 2.0.0 shape: onclose clears provider.ws, and connect() needs it null.
+			let ws: WebSocket | null = provider.dial();
+			const socket = ws;
+			const onerror = vi.fn();
+			const closes: CloseEvent[] = [];
+			const listener = vi.fn();
+			socket.onerror = onerror;
+			socket.onclose = (event) => {
+				closes.push(event);
+				ws = null;
+			};
+			socket.addEventListener('close', listener);
+			socket.close();
+			expect(socket.readyState).toBe(socket.CLOSING);
+			await Promise.resolve();
+			expect(onerror).not.toHaveBeenCalled();
+			expect(closes).toHaveLength(1);
+			expect(closes[0]).toMatchObject({ code: 1006, wasClean: false });
+			expect(listener).toHaveBeenCalledTimes(1);
+			expect(ws).toBeNull();
+			expect(socket.readyState).toBe(socket.CLOSED);
 			socket.close();
 			await Promise.resolve();
-			expect(handler).not.toHaveBeenCalled();
+			expect(closes).toHaveLength(1);
 			expect(socket.readyState).toBe(socket.CLOSED);
 		} finally {
 			errorSpy.mockRestore();
 		}
 	});
 
-	it('accepts listeners and sends on a refused dial and never fires them', async () => {
+	it('fires the events of a refused dial to its listeners', async () => {
+		const provider = new FakeProvider();
+		const failure = new Error('token service down');
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw failure;
+			});
+			const socket = provider.dial();
+			const seen: string[] = [];
+			const errors: unknown[] = [];
+			const closeCodes: number[] = [];
+			socket.onerror = () => seen.push('onerror');
+			socket.addEventListener('error', (event) => {
+				seen.push('error listener');
+				errors.push((event as Event & { readonly error: unknown }).error);
+			});
+			socket.addEventListener('close', (event) => {
+				seen.push('close listener');
+				closeCodes.push(event.code);
+			});
+			socket.send('frame');
+			expect(socket).toMatchObject({
+				binaryType: 'blob',
+				bufferedAmount: 0,
+				extensions: '',
+				protocol: '',
+			});
+			await Promise.resolve();
+			expect(seen).toEqual(['onerror', 'error listener', 'close listener']);
+			expect(errors).toEqual([failure]);
+			expect(closeCodes).toEqual([1006]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('fires nothing to a listener removed before the refusal runs', async () => {
 		const provider = new FakeProvider();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
@@ -360,19 +414,89 @@ describe('bindProviderAuth', () => {
 			const listener = vi.fn();
 			socket.addEventListener('close', listener);
 			socket.removeEventListener('close', listener);
-			socket.send('frame');
-			expect(socket.dispatchEvent(new Event('close'))).toBe(true);
-			expect(socket).toMatchObject({
-				binaryType: 'blob',
-				bufferedAmount: 0,
-				extensions: '',
-				protocol: '',
-			});
 			await Promise.resolve();
 			expect(listener).not.toHaveBeenCalled();
 		} finally {
 			errorSpy.mockRestore();
 		}
+	});
+
+	it('fires nothing to a listener added after the refusal ran', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			await Promise.resolve();
+			const listener = vi.fn();
+			socket.addEventListener('close', listener);
+			socket.addEventListener('error', listener);
+			await Promise.resolve();
+			expect(listener).not.toHaveBeenCalled();
+			expect(socket.readyState).toBe(socket.CLOSED);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('logs only the name of a resolver error', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		class TokenError extends Error {
+			override name = 'TokenError';
+		}
+		try {
+			bindProviderAuth(provider, () => {
+				throw new TokenError('token tok-secret was rejected');
+			});
+			const socket = provider.dial();
+			await Promise.resolve();
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'TokenError');
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+			expect(socket.readyState).toBe(socket.CLOSED);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('logs only the type of a thrown value that is not an error', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				// eslint-disable-next-line @typescript-eslint/only-throw-error -- a resolver may throw a non-Error value; its log line must not carry it
+				throw 'tok-secret';
+			});
+			const socket = provider.dial();
+			socket.onerror = () => {
+				// eslint-disable-next-line @typescript-eslint/only-throw-error -- a handler may throw a non-Error value; its log line must not carry it
+				throw { token: 'tok-secret' };
+			};
+			await Promise.resolve();
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'string');
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('socket event handler threw'),
+				'object',
+			);
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('keeps the binding of each provider apart', () => {
+		const first = new FakeProvider();
+		const second = new FakeProvider();
+		bindProviderAuth(first, { token: 'tokA', param: 'a' });
+		const unbindSecond = bindProviderAuth(second, { token: 'tokB', param: 'b' });
+		first.dial();
+		second.dial();
+		unbindSecond();
+		first.dial();
+		expect(first.urls()).toEqual(['ws://x/room?a=tokA', 'ws://x/room?a=tokA']);
+		expect(second.urls()).toEqual(['ws://x/room?b=tokB']);
 	});
 
 	it('lets only the latest binding inject', () => {

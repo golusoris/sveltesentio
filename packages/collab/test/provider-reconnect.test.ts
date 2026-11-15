@@ -395,7 +395,7 @@ describe('connectProvider reconnection — negative', () => {
 
 			expect(errors).toEqual([failure]);
 			expect(relay.dials).toHaveLength(1);
-			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), failure);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'Error');
 
 			await settle(FAST_BACKOFF_MS);
 			expect(relay.dials).toHaveLength(2);
@@ -487,7 +487,7 @@ describe('connectProvider reconnection — negative', () => {
 			expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n11?token=tok3`);
 			expect(errorSpy).toHaveBeenCalledWith(
 				expect.stringContaining('socket event handler threw'),
-				listenerFailure,
+				'Error',
 			);
 		} finally {
 			errorSpy.mockRestore();
