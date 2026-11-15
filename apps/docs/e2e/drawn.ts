@@ -4,6 +4,11 @@ import type { Locator } from '@playwright/test';
  * Whether reader text is drawn where a reader can see it, for `reader.spec.ts` (gap audit C15-2).
  * Every function named `...InPage` runs inside the page through `evaluate`, so it reads only its
  * arguments and browser globals.
+ *
+ * Scope: these checks prove reflow (WCAG 2.2 SC 1.4.10), that text is drawn, inside the screen
+ * width or a code block's or table's scroll area, and not covered. They do not prove legibility:
+ * low contrast, overlapping glyphs and CSS written to defeat these checks pass them; issue #591
+ * tracks those checks.
  */
 
 /** Layout boxes land on fractional pixels; allow half a pixel of rounding. */
@@ -14,10 +19,12 @@ export const MAX_ANCESTOR_DEPTH = 32;
 const MAX_FRAGMENTS = 5_000;
 /** Elements checked for clipping per page (HISS-02); the largest article holds 3,106 today. */
 export const MAX_PROSE_ELEMENTS = 20_000;
-/** Text nodes hit-tested per element (HISS-02); well above the text nodes of the largest article. */
+/** Text nodes walked per element, white space included (HISS-02); the largest article holds 4,512 today. */
 const MAX_TEXT_NODES = 20_000;
 /** Makes every box and pseudo-element a hit target, so an overlay with `pointer-events: none` still covers. */
 const HIT_EVERY_BOX = '*, *::before, *::after { pointer-events: auto !important; }';
+/** The `Symbol.for` key the hit-target sheet sits under on `document` while `textCoveredInPage` runs. */
+const HIT_SHEET_KEY = '@sveltesentio/docs/e2e/hit-every-box';
 /** Paint properties that can hide a reader box while its layout, visibility and opacity stay unchanged. */
 const PLAIN_PAINT = ['clip-path', 'mask-image', 'filter'] as const;
 /** The boxes reader styles let scroll sideways (`pre` and `table` in apps/docs/src/app.css); prose must wrap. */
@@ -111,88 +118,106 @@ function partsInPage(elements: Element[], limits: DrawnLimits): (string | Box[])
 /** What `textCoveredInPage` reads besides the elements. */
 interface TextInput {
 	parts: (string | Box[])[];
-	css: string;
 	maxNodes: number;
+	maxFragments: number;
 	subpixel: number;
 	scrollers: readonly string[];
 }
 
+/** Runs in the page: adds `css` as one more adopted style sheet, kept on `document` under `key`. */
+function addSheetInPage(input: { css: string; key: string }): void {
+	const sheet = new CSSStyleSheet();
+	sheet.replaceSync(input.css);
+	Reflect.set(document, Symbol.for(input.key), sheet);
+	document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+}
+
+/** Runs in the page: removes the sheet `addSheetInPage` kept under `key` and leaves every other one. */
+function dropSheetInPage(key: string): void {
+	const sheet: unknown = Reflect.get(document, Symbol.for(key));
+	Reflect.deleteProperty(document, Symbol.for(key));
+	document.adoptedStyleSheets = document.adoptedStyleSheets.filter((own) => own !== sheet);
+}
+
 /**
  * Runs in the page: why the text under each element is not what a reader sees where it is laid
- * out, as reasons per element. Every text node under the element that holds more than white space,
- * up to `maxNodes`, must be visible itself: its parent passes `checkVisibility`, which also reads
- * the visibility and opacity of every ancestor (CSSOM View §6), so a hidden `<span>` inside a
- * visible block fails. The text must have a line box (`Range.getClientRects`) wider than
- * `subpixel`, so text shrunk to nothing (`font-size: 0`, `transform: scale(0)`) fails, and each
- * of its line boxes must reach a visible part of the element, so a line moved off it
- * (`text-indent`, a relative offset) fails; only a line inside one of `scrollers` may lie outside,
- * since the reader can scroll to it. Each line box inside a visible part is then hit-tested at
- * its centre with `caretPositionFromPoint` (CSSOM View §6.1), which must land in that same text
- * node: an overlay, a later sibling or any other box drawn over the text takes the hit instead.
- * An extra style sheet makes every box a hit target while it runs, so an overlay that sets
- * `pointer-events: none` still counts on an engine whose caret hit test honours it, and the page
- * gets its own sheets back afterwards. The check scrolls only vertically, so page coordinates
- * stay valid.
+ * out, as reasons per element. The walk visits at most `maxNodes` text nodes, white space
+ * included (HISS-02). Every one that holds more than white space and format characters
+ * (`\p{Cf}`, such as a soft hyphen, which draw nothing) must be visible itself: its parent passes
+ * `checkVisibility`, which also reads the visibility and opacity of every ancestor (CSSOM View
+ * §6), so a hidden `<span>` inside a visible block fails. The text must have a line box
+ * (`Range.getClientRects`, at most `maxFragments`) wider and taller than `subpixel`, so text
+ * shrunk to nothing (`font-size: 0`, `transform: scale(0)` or `scaleY(0.001)`) fails, and each of
+ * its line boxes must reach a visible part of the element, so a line moved off it (`text-indent`,
+ * a relative offset) fails. A line inside one of `scrollers` may lie outside the visible parts
+ * only within that scroller's scroll area, which the reader can scroll to; overflow past its top
+ * or start edge cannot be scrolled to, so a line moved off there fails too. Each line box inside
+ * a visible part is then hit-tested at its centre with `caretPositionFromPoint` (CSSOM View
+ * §6.1), which must land in that same text node: an overlay, a later sibling or any other box
+ * drawn over the text takes the hit instead. `undrawn` adds a style sheet that makes every box a
+ * hit target while this runs, so an overlay that sets `pointer-events: none` still counts on an
+ * engine whose caret hit test honours it. The check scrolls only vertically and reads every line
+ * box in page coordinates.
  */
 function textCoveredInPage(elements: Element[], input: TextInput): string[][] {
-	const solidPart = (box: Box): boolean =>
-		box.right - box.left > input.subpixel && box.bottom > box.top;
-	const lineCentres = (node: Text, parts: Box[]): { x: number; y: number }[][] => {
+	const { subpixel, maxFragments, scrollers } = input;
+	const seen = { visibilityProperty: true, opacityProperty: true };
+	const solid = (box: Box): boolean =>
+		box.right - box.left > subpixel && box.bottom - box.top > subpixel;
+	const lineBoxes = (node: Text): Box[] | null => {
 		const range = document.createRange();
 		range.selectNodeContents(node);
-		const rects = [...range.getClientRects()].filter(solidPart);
-		return rects.map((rect) =>
-			parts.flatMap((part) => {
-				const cut = {
-					left: Math.max(rect.left, part.left),
-					right: Math.min(rect.right, part.right),
-					top: Math.max(rect.top + window.scrollY, part.top),
-					bottom: Math.min(rect.bottom + window.scrollY, part.bottom),
-				};
-				if (!solidPart(cut)) return [];
-				return [{ x: (cut.left + cut.right) / 2, y: (cut.top + cut.bottom) / 2 }];
-			}),
-		);
+		const rects = range.getClientRects();
+		if (rects.length > maxFragments) return null;
+		const down = window.scrollY;
+		const page = Array.from(rects, (r) => new DOMRect(r.x, r.y + down, r.width, r.height));
+		return page.filter(solid);
 	};
-	const scroller = input.scrollers.join(', ');
-	const caretOn = (node: Text, point: { x: number; y: number }): boolean => {
+	const centres = (line: Box, parts: Box[]): DOMPoint[] =>
+		parts.flatMap((part) => {
+			const [left, right] = [Math.max(line.left, part.left), Math.min(line.right, part.right)];
+			const [top, bottom] = [Math.max(line.top, part.top), Math.min(line.bottom, part.bottom)];
+			const cut = new DOMPoint((left + right) / 2, (top + bottom) / 2);
+			return solid({ left, right, top, bottom }) ? [cut] : [];
+		});
+	const reachable = (node: Text, line: Box): boolean => {
+		const box = node.parentElement?.closest(scrollers.join(', ')) ?? null;
+		if (box === null) return false;
+		const outer = box.getBoundingClientRect();
+		const left = outer.left + box.clientLeft - box.scrollLeft;
+		const top = outer.top + window.scrollY + box.clientTop - box.scrollTop;
+		const across = line.left >= left - subpixel && line.right <= left + box.scrollWidth + subpixel;
+		return across && line.top >= top - subpixel && line.bottom <= top + box.scrollHeight + subpixel;
+	};
+	const caretOn = (node: Text, point: DOMPoint): boolean => {
 		window.scrollTo({ top: point.y - window.innerHeight / 2, behavior: 'instant' });
 		return document.caretPositionFromPoint(point.x, point.y - window.scrollY)?.offsetNode === node;
 	};
-	const label = (node: Text): string => JSON.stringify(node.data.trim().slice(0, 24));
 	const textReasons = (node: Text, parts: Box[]): string[] => {
-		const parent = node.parentElement;
-		if (parent?.checkVisibility({ visibilityProperty: true, opacityProperty: true }) !== true)
-			return [`text ${label(node)} hidden`];
-		const lines = lineCentres(node, parts);
-		if (lines.length === 0) return [`text ${label(node)} has no size`];
-		if (lines.some((points) => points.length === 0) && parent.closest(scroller) === null)
-			return [`text ${label(node)} outside the visible element`];
-		const covered = lines.flat().some((point) => !caretOn(node, point));
-		return covered ? [`text ${label(node)} covered`] : [];
+		const text = `text ${JSON.stringify(node.data.trim().slice(0, 24))}`;
+		if (node.parentElement?.checkVisibility(seen) !== true) return [`${text} hidden`];
+		const lines = lineBoxes(node);
+		if (lines === null) return [`${text} has more than ${maxFragments} boxes`];
+		if (lines.length === 0) return [`${text} has no size`];
+		const cuts = lines.map((line) => ({ line, points: centres(line, parts) }));
+		if (cuts.some(({ line, points }) => points.length === 0 && !reachable(node, line)))
+			return [`${text} outside the visible element`];
+		const covered = cuts.some(({ points }) => points.some((point) => !caretOn(node, point)));
+		return covered ? [`${text} covered`] : [];
 	};
 	const elementReasons = (element: Element, parts: string | Box[] | undefined): string[] => {
 		if (!Array.isArray(parts)) return [];
 		const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
 		const reasons: string[] = [];
-		let count = 0;
-		for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-			if (!(node instanceof Text) || node.data.trim() === '') continue;
-			count += 1;
-			if (count > input.maxNodes) return [`more than ${input.maxNodes} text nodes`];
-			reasons.push(...textReasons(node, parts));
+		for (let count = 0; count < input.maxNodes; count += 1) {
+			const node = walker.nextNode();
+			if (node === null) return reasons;
+			if (node instanceof Text && !/^[\s\p{Cf}]*$/u.test(node.data))
+				reasons.push(...textReasons(node, parts));
 		}
-		return reasons;
+		return walker.nextNode() === null ? reasons : [`more than ${input.maxNodes} text nodes`];
 	};
-	const sheet = new CSSStyleSheet();
-	sheet.replaceSync(input.css);
-	const own = document.adoptedStyleSheets;
-	document.adoptedStyleSheets = [...own, sheet];
-	try {
-		return elements.map((element, index) => elementReasons(element, input.parts.at(index)));
-	} finally {
-		document.adoptedStyleSheets = own;
-	}
+	return elements.map((element, index) => elementReasons(element, input.parts.at(index)));
 }
 
 /**
@@ -234,6 +259,23 @@ function pseudoCoversInPage(
 	});
 }
 
+/** `textCoveredInPage` with the hit-target sheet in place, which the page loses again afterwards, even on a throw. */
+async function textCovered(locator: Locator, parts: (string | Box[])[]): Promise<string[][]> {
+	const page = locator.page();
+	await page.evaluate(addSheetInPage, { css: HIT_EVERY_BOX, key: HIT_SHEET_KEY });
+	try {
+		return await locator.evaluateAll(textCoveredInPage, {
+			parts,
+			maxNodes: MAX_TEXT_NODES,
+			maxFragments: MAX_FRAGMENTS,
+			subpixel: SUBPIXEL,
+			scrollers: SIDEWAYS_SCROLLERS,
+		});
+	} finally {
+		await page.evaluate(dropSheetInPage, HIT_SHEET_KEY);
+	}
+}
+
 /** Why the matched elements or their text are not drawn, as `index: reason`; matching nothing is a failure too. */
 export async function undrawn(locator: Locator, whole: boolean): Promise<string[]> {
 	const limits: DrawnLimits = {
@@ -244,13 +286,7 @@ export async function undrawn(locator: Locator, whole: boolean): Promise<string[
 	};
 	const parts = await locator.evaluateAll(partsInPage, limits);
 	if (parts.length === 0) return ['no element matches'];
-	const covered = await locator.evaluateAll(textCoveredInPage, {
-		parts,
-		css: HIT_EVERY_BOX,
-		maxNodes: MAX_TEXT_NODES,
-		subpixel: SUBPIXEL,
-		scrollers: SIDEWAYS_SCROLLERS,
-	});
+	const covered = await textCovered(locator, parts);
 	const pseudo = await locator.evaluateAll(pseudoCoversInPage, {
 		maxElements: MAX_PROSE_ELEMENTS,
 		maxDepth: MAX_ANCESTOR_DEPTH,
