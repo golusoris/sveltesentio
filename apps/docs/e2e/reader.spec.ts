@@ -84,8 +84,9 @@ function deltaEOK(one: Oklab, two: Oklab): number {
 }
 
 /**
- * Reads the callout's left border colour and the background colours from the callout up its
- * ancestors. The browser converts each one to OKLab, so any authored colour form compares.
+ * Reads the callout's left border colour and the background colours of its ancestors, starting
+ * at its parent: the border's outer edge meets the page, not the callout's own fill. The browser
+ * converts each one to OKLab, so any authored colour form compares.
  */
 async function calloutColours(callout: Locator): Promise<{ border: Oklab; backgrounds: Oklab[] }> {
 	const colours = await callout.evaluate((element, maxDepth) => {
@@ -96,7 +97,7 @@ async function calloutColours(callout: Locator): Promise<{ border: Oklab; backgr
 			return getComputedStyle(probe).color;
 		};
 		const backgrounds: string[] = [];
-		let node: Element | null = element;
+		let node: Element | null = element.parentElement;
 		for (let depth = 0; node !== null && depth < maxDepth; depth += 1) {
 			backgrounds.push(toOklab(getComputedStyle(node).backgroundColor));
 			node = node.parentElement;
@@ -127,13 +128,16 @@ async function readerSlugs(page: Page): Promise<string[]> {
 
 /**
  * Runs in the page: sideways overflow of the document, and whether the article and its first
- * heading are drawn with a non-empty box that ends inside the viewport.
+ * heading are drawn, not transparent, with a non-empty box whose left and right edges sit inside
+ * the viewport.
  */
 function readerLayout(subpixel: number): { overflow: number; article: boolean; heading: boolean } {
 	const shown = (element: Element | null | undefined): boolean => {
-		if (!element?.checkVisibility({ visibilityProperty: true })) return false;
+		if (!element?.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
+			return false;
 		const rect = element.getBoundingClientRect();
-		return rect.width > 0 && rect.height > 0 && rect.right <= window.innerWidth + subpixel;
+		const inside = rect.left >= -subpixel && rect.right <= window.innerWidth + subpixel;
+		return rect.width > 0 && rect.height > 0 && inside;
 	};
 	const article = document.querySelector('article.prose');
 	return {
@@ -168,11 +172,17 @@ test.describe('apps/docs reader code blocks (C15-2)', () => {
 		expect(total).toBeGreaterThanOrEqual(1);
 		await expect(page.locator('article.prose pre > code')).toHaveCount(total);
 
-		const first = blocks.first();
-		await expect(first).toBeVisible();
-		// The UA stylesheet already gives <code> a bare `monospace`; assert the docs stack.
-		expect(await styleOf(first.locator('code'), 'font-family')).toContain('ui-monospace');
-		expect(await styleOf(first, 'overflow-x')).toBe('auto');
+		await expect(blocks.first()).toBeVisible();
+		// The UA stylesheet already gives <code> a bare `monospace`; assert the docs stack on
+		// every block, so a rule that only reaches a later block still fails.
+		const styles = await blocks.evaluateAll((nodes) =>
+			nodes.map((node) => ({
+				font: getComputedStyle(node.querySelector('code') ?? node).fontFamily,
+				overflowX: getComputedStyle(node).overflowX,
+			})),
+		);
+		expect(styles.filter((style) => !style.font.includes('ui-monospace'))).toEqual([]);
+		expect(styles.filter((style) => style.overflowX !== 'auto')).toEqual([]);
 
 		// Svelte markup inside a code fence stays text instead of becoming live DOM: a live
 		// <form> would not render its attributes as text.
@@ -188,15 +198,20 @@ test.describe('apps/docs reader code blocks (C15-2)', () => {
 			nodes.map((node) => ({
 				scrolls: node.scrollWidth > node.clientWidth,
 				overflowX: getComputedStyle(node).overflowX,
+				left: node.getBoundingClientRect().left,
 				right: node.getBoundingClientRect().right,
 			})),
 		);
 		expect(blocks.length).toBeGreaterThanOrEqual(1);
+		// At least one block is wider than 320 px, so this boundary case is exercised at all.
 		expect(blocks.some((block) => block.scrolls)).toBe(true);
-		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of scrolling.
+		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of
+		// scrolling, so every block, overflowing or not, must scroll on its own.
 		expect(blocks.filter((block) => block.overflowX !== 'auto')).toEqual([]);
-		const widestRight = Math.max(...blocks.map((block) => block.right));
-		expect(widestRight).toBeLessThanOrEqual(MIN_WIDTH + SUBPIXEL);
+		const outside = blocks.filter(
+			(block) => block.left < -SUBPIXEL || block.right > MIN_WIDTH + SUBPIXEL,
+		);
+		expect(outside, 'every code block sits inside the 320 px viewport').toEqual([]);
 	});
 });
 
