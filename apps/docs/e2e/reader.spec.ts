@@ -1,5 +1,7 @@
 import { expect as baseExpect, test, type Locator, type Page } from '@playwright/test';
 
+import { MAX_ANCESTOR_DEPTH, MAX_PROSE_ELEMENTS, SUBPIXEL, clipped, undrawn } from './drawn';
+
 /**
  * Guards the markdown reader layout (gap audit C15-2, issue #501): code blocks,
  * callouts and sidebar navigation on apps/docs/src/routes/docs/[...slug], and
@@ -24,24 +26,12 @@ const MAX_READER_PAGES = 400;
 const PAGE_WALK_TIMEOUT_MS = 240_000;
 /** Page with many code blocks, a leading callout and Svelte markup inside code fences. */
 const CODE_SLUG = 'compose/progressive-enhancement';
-/** Layout boxes land on fractional pixels; allow half a pixel of rounding. */
-const SUBPIXEL = 0.5;
 /** Explicit deadline for each navigation and poll (HISS-02); the local preview answers in well under 1 s. */
 const NAV_TIMEOUT_MS = 15_000;
 /** One just noticeable difference as an OKLab distance (deltaEOK), from CSS Color 4 §14.2.1. */
 const OKLAB_JND = 0.02;
-/** Ancestors walked for clipping boxes and backgrounds (HISS-02); reader `<code>` sits seven levels below `<html>`. */
-const MAX_ANCESTOR_DEPTH = 32;
-/** Boxes checked per element (HISS-02); the longest code block on CODE_SLUG has 553 today. */
-const MAX_FRAGMENTS = 5_000;
-/** Elements checked for clipping per page (HISS-02); the largest article holds 3,106 today. */
-const MAX_PROSE_ELEMENTS = 20_000;
 /** Glyphs per run when comparing the advance of a narrow and a wide letter. */
 const GLYPH_RUN = 20;
-/** Makes every box and pseudo-element a hit target, so an overlay with `pointer-events: none` still covers. */
-const HIT_EVERY_BOX = '*, *::before, *::after { pointer-events: auto !important; }';
-/** Paint properties that can hide a reader box while its layout, visibility and opacity stay unchanged. */
-const PLAIN_PAINT = ['clip-path', 'mask-image', 'filter'] as const;
 /** Screenshot rows read down the callout border (HISS-02); the first callout on CODE_SLUG is 58 px tall today. */
 const MAX_BORDER_ROWS = 2_000;
 /** Rows skipped at each end of the border, where it meets the box edge on a fractional pixel. */
@@ -61,22 +51,6 @@ const expect = baseExpect.configure({ timeout: NAV_TIMEOUT_MS });
 interface Colour {
 	channels: number[];
 	alpha: number;
-}
-
-interface DrawnLimits {
-	subpixel: number;
-	maxFragments: number;
-	maxDepth: number;
-	/** Whether the whole border box must sit inside the viewport width, as every block must. */
-	whole: boolean;
-}
-
-/** A box in page coordinates. */
-interface Box {
-	left: number;
-	right: number;
-	top: number;
-	bottom: number;
 }
 
 function docLink(page: Page, slug: string): Locator {
@@ -216,171 +190,6 @@ async function readerSlugs(page: Page): Promise<string[]> {
 }
 
 /**
- * Runs in the page: why each element is not drawn, or the parts of its boxes a reader can see. It
- * must not be hidden or transparent (`checkVisibility` also reads the opacity of every ancestor,
- * CSSOM View §6). Each of its boxes (one for a block, one or more per line for inline `<code>`) is
- * cut to the viewport's client width, which leaves out a vertical scrollbar, and to the padding box
- * of every ancestor that clips or scrolls, on each axis whose overflow is not visible. `<body>`
- * counts unless it passes its overflow to the viewport (CSS Overflow 3 §3.3), which
- * `clippedInPage` checks. At least one part must remain. A box scrolled out of its code block is
- * reachable, not hidden, so it is skipped. Boxes are kept in page coordinates.
- */
-function partsInPage(elements: Element[], limits: DrawnLimits): (string | Box[])[] {
-	const { subpixel, maxFragments, maxDepth, whole } = limits;
-	const far = Number.POSITIVE_INFINITY;
-	const root = document.documentElement;
-	const width = root.clientWidth;
-	const rootStyle = getComputedStyle(root);
-	const visibleRoot = rootStyle.overflowX === 'visible' && rootStyle.overflowY === 'visible';
-	const stop = visibleRoot ? document.body : root;
-	const solid = (box: Box): boolean => box.right - box.left > subpixel && box.bottom > box.top;
-	const meet = (one: Box, two: Box): Box => ({
-		left: Math.max(one.left, two.left),
-		right: Math.min(one.right, two.right),
-		top: Math.max(one.top, two.top),
-		bottom: Math.min(one.bottom, two.bottom),
-	});
-	const onPage = (rect: DOMRect): Box => {
-		const { left, right } = rect;
-		return { left, right, top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY };
-	};
-	const clipOf = (node: Element): Box => {
-		const style = getComputedStyle(node);
-		const box = onPage(node.getBoundingClientRect());
-		const left = box.left + node.clientLeft;
-		const top = box.top + node.clientTop;
-		const across =
-			style.overflowX === 'visible'
-				? { left: -far, right: far }
-				: { left, right: left + node.clientWidth };
-		const down =
-			style.overflowY === 'visible'
-				? { top: -far, bottom: far }
-				: { top, bottom: top + node.clientHeight };
-		return { ...across, ...down };
-	};
-	const clipBox = (element: Element): Box | null => {
-		let box: Box = { left: 0, right: width, top: -far, bottom: far };
-		let node = element.parentElement;
-		for (let depth = 0; node !== null && node !== stop && depth < maxDepth; depth += 1) {
-			box = meet(box, clipOf(node));
-			node = node.parentElement;
-		}
-		return node === null || node === stop ? box : null;
-	};
-	const failure = (element: Element): string | Box[] => {
-		if (!element.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
-			return 'hidden';
-		const rect = element.getBoundingClientRect();
-		const edges = rect.left >= -subpixel && rect.right <= width + subpixel;
-		if (whole && !edges) return 'outside the viewport width';
-		const clip = clipBox(element);
-		if (clip === null) return `more than ${maxDepth} ancestors`;
-		const boxes = [...element.getClientRects()].map(onPage).filter(solid);
-		if (boxes.length > maxFragments) return `more than ${maxFragments} boxes`;
-		const parts = boxes.map((box) => meet(box, clip)).filter(solid);
-		return parts.length === 0 ? 'no part inside the viewport' : parts;
-	};
-	return elements.map(failure);
-}
-
-/**
- * Runs in the page: whether the topmost box at the centre of any visible part of each element lies
- * outside that element, which happens when `clip-path`, an overlay or a pseudo-element covers it.
- * An extra style sheet makes every box a hit target while it runs, so an overlay that sets
- * `pointer-events: none` still counts, and the page gets its own sheets back afterwards. The check
- * scrolls only vertically, so page coordinates stay valid.
- */
-function coveredInPage(
-	elements: Element[],
-	input: { parts: (string | Box[])[]; css: string },
-): boolean[] {
-	const covered = (element: Element, part: Box): boolean => {
-		const y = (part.top + part.bottom) / 2;
-		window.scrollTo({ top: y - window.innerHeight / 2, behavior: 'instant' });
-		const hit = document.elementFromPoint((part.left + part.right) / 2, y - window.scrollY);
-		return hit === null || !element.contains(hit);
-	};
-	const sheet = new CSSStyleSheet();
-	sheet.replaceSync(input.css);
-	const own = document.adoptedStyleSheets;
-	document.adoptedStyleSheets = [...own, sheet];
-	try {
-		return elements.map((element, index) => {
-			const parts = input.parts.at(index);
-			return !Array.isArray(parts) || parts.some((part) => covered(element, part));
-		});
-	} finally {
-		document.adoptedStyleSheets = own;
-	}
-}
-
-/** Why the matched elements are not drawn, as `index: reason`; matching nothing is a failure too. */
-async function undrawn(locator: Locator, whole: boolean): Promise<string[]> {
-	const limits: DrawnLimits = {
-		subpixel: SUBPIXEL,
-		maxFragments: MAX_FRAGMENTS,
-		maxDepth: MAX_ANCESTOR_DEPTH,
-		whole,
-	};
-	const parts = await locator.evaluateAll(partsInPage, limits);
-	if (parts.length === 0) return ['no element matches'];
-	const covered = await locator.evaluateAll(coveredInPage, { parts, css: HIT_EVERY_BOX });
-	return parts.flatMap((part, index) => {
-		if (typeof part === 'string') return [`${index}: ${part}`];
-		return covered.at(index) === false ? [] : [`${index}: covered`];
-	});
-}
-
-/**
- * Runs in the page: the boxes that cut off or hide their content. A box with `overflow: hidden` or
- * `clip` whose content is wider or taller than its padding box hides that content, where `auto` or
- * `scroll` would let the reader scroll to it. Checks the article, everything inside it and its
- * ancestors, `<body>` included unless it passes its overflow to the viewport (CSS Overflow 3 §3.3:
- * the root's overflow, or the body's when the root's is visible on both axes, applies to the
- * viewport, where `clip` acts as `hidden`). `<hr>` has `overflow: hidden` from the UA stylesheet
- * but no content. Every one of those boxes, `<html>` included, must also leave each paint property
- * in `plain` at `none`.
- */
-function clippedInPage(
-	article: Element,
-	limits: { maxElements: number; maxDepth: number; plain: readonly string[] },
-): string[] {
-	const inside = article.querySelectorAll('*');
-	if (inside.length > limits.maxElements) return [`more than ${limits.maxElements} elements`];
-	const root = document.documentElement;
-	const rootStyle = getComputedStyle(root);
-	const fromBody = rootStyle.overflowX === 'visible' && rootStyle.overflowY === 'visible';
-	const above: Element[] = [];
-	let node = article.parentElement;
-	for (let depth = 0; node !== null && depth < limits.maxDepth; depth += 1) {
-		above.push(node);
-		node = node.parentElement;
-	}
-	const stop = above.indexOf(fromBody ? document.body : root);
-	const boxes = [article, ...inside];
-	const clipping = [...boxes, ...above.slice(0, stop === -1 ? above.length : stop)];
-	const cuts = (overflow: string): boolean => overflow === 'hidden' || overflow === 'clip';
-	const viewport = fromBody ? getComputedStyle(document.body) : rootStyle;
-	const scrollport =
-		(cuts(viewport.overflowX) && root.scrollWidth > root.clientWidth) ||
-		(cuts(viewport.overflowY) && root.scrollHeight > root.clientHeight);
-	const name = (box: Element): string => `<${box.tagName.toLowerCase()}>`;
-	const clipped = clipping.flatMap((box) => {
-		const style = getComputedStyle(box);
-		const wide = cuts(style.overflowX) && box.scrollWidth > box.clientWidth;
-		const tall = cuts(style.overflowY) && box.scrollHeight > box.clientHeight;
-		return wide || tall ? [`${name(box)} clips its content`] : [];
-	});
-	const painted = [...boxes, ...above].flatMap((box) => {
-		const style = getComputedStyle(box);
-		const set = limits.plain.filter((property) => style.getPropertyValue(property) !== 'none');
-		return set.map((property) => `${name(box)} sets ${property}`);
-	});
-	return [...(scrollport ? ['the viewport clips the page'] : []), ...clipped, ...painted];
-}
-
-/**
  * Runs in the page: the distinct `color` and `-webkit-text-fill-color` of every element under the
  * roots, roots included, that holds text of its own, and how many elements it read. Nothing is read
  * past `maxElements`.
@@ -433,7 +242,11 @@ async function borderColumnInPage(input: {
 }): Promise<string | string[]> {
 	const bytes = Uint8Array.from(atob(input.png), (char) => char.charCodeAt(0));
 	const decode = createImageBitmap(new Blob([bytes], { type: 'image/png' }));
-	const late = new Promise<null>((resolve) => setTimeout(() => resolve(null), input.deadline));
+	const late = new Promise<null>((resolve) => {
+		setTimeout(() => {
+			resolve(null);
+		}, input.deadline);
+	});
 	const bitmap = await Promise.race([decode, late]);
 	if (bitmap === null) return `no decode within ${input.deadline} ms`;
 	const rows = bitmap.height - 2 * input.skip;
@@ -475,11 +288,6 @@ async function reflowFailures(page: Page, slug: string): Promise<string[]> {
 	await openDoc(page, slug);
 	const article = page.locator('article.prose');
 	const blocks = article.locator(':scope > *').filter({ hasText: /\S/ });
-	const limits = {
-		maxElements: MAX_PROSE_ELEMENTS,
-		maxDepth: MAX_ANCESTOR_DEPTH,
-		plain: PLAIN_PAINT,
-	};
 	const failures: string[] = [];
 	for (const width of REFLOW_WIDTHS) {
 		await page.setViewportSize({ width, height: VIEW_HEIGHT });
@@ -488,7 +296,7 @@ async function reflowFailures(page: Page, slug: string): Promise<string[]> {
 		);
 		const problems = [
 			...(overflow > 0 ? [`${overflow} px wider`] : []),
-			...(await article.evaluate(clippedInPage, limits, { timeout: NAV_TIMEOUT_MS })),
+			...(await clipped(article, NAV_TIMEOUT_MS)),
 			...(await transparentText(page, article)),
 			...(await undrawn(article, true)).map((reason) => `article ${reason}`),
 			...(await undrawn(article.locator('h1').first(), true)).map((reason) => `heading ${reason}`),
