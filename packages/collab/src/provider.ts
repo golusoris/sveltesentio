@@ -39,7 +39,8 @@ export interface AuthBinding {
 	/**
 	 * Resolves the current auth token. It is called as each socket is built, the
 	 * first dial included, so a held-back connect or a dial after a long backoff
-	 * sends the token current at that moment. Returning `null` / `undefined` /
+	 * sends the token current at that moment; a method is called on its binding,
+	 * so it can read `this`. Returning `null` / `undefined` /
 	 * `''` attaches no token; the caller params still go out, a fallback under
 	 * `param` included, so the dial is anonymous only when the caller params
 	 * carry no credential (see `param`). A throw refuses that dial: no
@@ -160,7 +161,9 @@ function readAuth(auth: AuthBinding | string | (() => string | null | undefined)
 	const binding = toAuthBinding(auth);
 	const source = binding.token;
 	const fixed = typeof source !== 'function';
-	const token = fixed ? source : source();
+	// Called on the binding, so a `token` method reading `this` keeps its
+	// receiver (`test/provider-auth.test.ts` "calls a token method on its binding").
+	const token = fixed ? source : source.call(binding);
 	if (token === null || token === undefined || token === '') {
 		return { resolved: { params: {}, protocols: [] }, bare: false, fixed };
 	}
@@ -313,6 +316,27 @@ function planDial(
 }
 
 /**
+ * `planDial` for the binding holding `state`, refused with its close reason
+ * when the binding was closed before the dial or while its token resolved: a
+ * resolver that calls `connectProvider`'s `disconnect` closes the binding but
+ * leaves it active, so without the second read the dial would still be built
+ * after the teardown. Tests: `test/provider-reconnect.test.ts` N25.
+ */
+function planBoundDial(
+	state: BindingState,
+	active: () => boolean,
+	auth: AuthBinding | string | (() => string | null | undefined),
+	url: string,
+	protocols: string | string[] | undefined,
+): DialPlan {
+	const before = state.closed;
+	if (before !== undefined) return { kind: 'refuse', refusal: { reason: before } };
+	const plan = planDial(active, auth, url, protocols);
+	const after = state.closed;
+	return after === undefined ? plan : { kind: 'refuse', refusal: { reason: after } };
+}
+
+/**
  * The dial with `resolved` added, or a refusal: a key or value that
  * `encodeURIComponent` rejects (refused with `unencodable`), or auth entries
  * that take the query pairs or the subprotocols over `MAX_DIAL_ENTRIES`, as
@@ -407,7 +431,8 @@ interface BoundAuth {
  * provider frozen after binding. Once `state.closed` is set (`connectProvider`'s
  * `disconnect`, or a refused rebind that could not stop the provider) every
  * dial is refused and stops the provider, so a `provider.connect()` after
- * teardown sends nothing, with or without the token. Tests:
+ * teardown sends nothing, with or without the token; a close while the token
+ * resolves refuses that dial too (`planBoundDial`). Tests:
  * `test/provider-auth.test.ts` "stops the provider on a dial the socket
  * constructor rejects", "stops injecting after unbind on a provider frozen
  * after binding" and "closes the earlier binding when a refused rebind cannot
@@ -421,10 +446,8 @@ function authSocket(
 ): SocketConstructor {
 	const AuthSocket = class extends Base {
 		constructor(url: string | URL, protocols?: string | string[]) {
-			if (state.closed !== undefined)
-				return refuseDial(slot, String(url), { reason: state.closed });
 			const active = (): boolean => state.active && isActive(slot, AuthSocket);
-			const plan = planDial(active, auth, String(url), protocols);
+			const plan = planBoundDial(state, active, auth, String(url), protocols);
 			if (plan.kind === 'refuse') return refuseDial(slot, String(url), plan.refusal);
 			if (plan.kind === 'pass') {
 				super(url, protocols);
@@ -569,15 +592,13 @@ function bindAuth(
  * write back, or returns why it could not. A sealed or frozen provider takes no
  * new slot, so `isActive` would never match and every dial would pass through
  * without the token; a read-only `_WS` keeps its constructor, and the slot
- * then gets its earlier value back, so nothing is left half bound. A write
- * that throws, that rollback included, reaches `tryBind`, so the binding is
- * refused and the caller stops the provider; an earlier binding whose slot
- * could not be written back then adds no token, as for any refused direct
- * binding (#589). On a first binding, a provider that already dialed is
- * stopped (`stopUnboundDial`). Tests: `test/provider-auth.test.ts` "binds
- * nothing on a sealed provider", "binds nothing and keeps the earlier binding
- * when _WS is read-only" and "refuses and stops the provider when rolling a
- * rebind back throws".
+ * then gets its earlier value back (`rollBackSlot`), so nothing is left half
+ * bound. A write that throws before that reaches `tryBind`, so the binding is
+ * refused and the caller stops the provider. On a first binding, a provider
+ * that already dialed is stopped (`stopUnboundDial`). Tests:
+ * `test/provider-auth.test.ts` "binds nothing on a sealed provider", "binds
+ * nothing and keeps the earlier binding when _WS is read-only" and "closes
+ * the earlier binding when rolling a rebind back throws".
  */
 function installBinding(
 	slot: AuthBindableProvider & BindingSlot,
@@ -587,12 +608,32 @@ function installBinding(
 	Reflect.set(slot, ACTIVE_BINDING, AuthSocket);
 	if (!isActive(slot, AuthSocket)) return 'provider takes no binding slot (sealed or frozen)';
 	const refused = writeSocket(slot, AuthSocket);
-	if (refused !== undefined) {
-		Reflect.set(slot, ACTIVE_BINDING, previous);
-		return refused;
-	}
+	if (refused !== undefined) return rollBackSlot(slot, previous, refused);
 	if (previous === undefined) stopUnboundDial(slot);
 	return undefined;
+}
+
+/**
+ * Writes `previous` back to the active-binding slot after a refused `_WS`
+ * write, reads it back, and returns `refused`. A rollback that throws or does
+ * not hold leaves the earlier binding, still installed as `_WS`, out of the
+ * slot, so its dials would pass through without the token after the caller's
+ * `connect()`; it is closed instead (`closeInstalledBinding`), so they are
+ * refused, and the reason says so. Tests: `test/provider-auth.test.ts`
+ * "closes the earlier binding when rolling a rebind back throws" and "closes
+ * the earlier binding when a rebind rollback does not hold".
+ */
+function rollBackSlot(slot: BindingSlot, previous: unknown, refused: string): string {
+	let failure: string;
+	try {
+		Reflect.set(slot, ACTIVE_BINDING, previous);
+		if (Reflect.get(slot, ACTIVE_BINDING) === previous) return refused;
+		failure = 'did not hold';
+	} catch (error) {
+		failure = `threw (${errorLabel(error)})`;
+	}
+	const closed = closeInstalledBinding(slot) ? 'earlier binding closed' : 'no binding to close';
+	return `${refused}; rolling the binding slot back ${failure}, ${closed}`;
 }
 
 /** Writes `AuthSocket` to `_WS` and reads it back, or returns why it did not hold. */

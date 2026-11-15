@@ -610,6 +610,36 @@ describe('connectProvider reconnection — negative — after disconnect', () =>
 			}
 		},
 	);
+
+	it('N25: builds no socket when the token resolver runs disconnect() before it returns a token', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const handle: { teardown?: () => void } = {};
+		let calls = 0;
+		const auth = (): string => {
+			calls += 1;
+			handle.teardown?.();
+			return 'tok';
+		};
+		try {
+			const peerA = connectPeer(relay, 'room-n25', { auth, connect: false });
+			handle.teardown = peerA.disconnect;
+			peerA.provider.connect();
+			await settle(10 * FAST_BACKOFF_MS);
+
+			expect(calls).toBe(1);
+			expect(relay.dials).toEqual([]);
+			expect(relay.sockets).toEqual([]);
+			expect(peerA.provider.shouldConnect).toBe(false);
+			expect(errorSpy.mock.calls).toEqual([
+				[
+					'[sentio] collab: provider disconnected by connectProvider; dial refused, provider stopped until connect() is called',
+				],
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
 });
 
 /** A socket that accepts the dial and throws on `close()`, as a broken polyfill can. */

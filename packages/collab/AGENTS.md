@@ -10,7 +10,7 @@
 | `./array`          | `snapshotYjsArray` / `observeYjsArray` / `appendToYjsArray` / `insertIntoYjsArray` / `deleteFromYjsArray` / `transactYjs` — pure helpers over `Y.Array<T>`                                           |
 | `./map`            | `snapshotYjsMap` / `snapshotYjsMapEntries` / `observeYjsMap` / `setYjsMap` / `deleteYjsMap` / `clearYjsMap` — pure helpers over `Y.Map<V>`                                                           |
 | `./text`           | `snapshotYjsText` / `observeYjsText` / `insertYjsText` / `deleteYjsText` / `appendYjsText` — pure helpers over `Y.Text`                                                                              |
-| `./provider`       | `connectProvider({url, room, doc, ...})` — `y-websocket@^3` factory with status normalisation + `onStatusChange` / `onSync` callbacks; returns `{provider, disconnect}`                              |
+| `./provider`       | `connectProvider({url, room, doc, ...})` — `y-websocket >=2.0.4` factory with status normalisation + `onStatusChange` / `onSync` callbacks; returns `{provider, disconnect}`                         |
 | `./store`          | `createYjsStore<T>(yArray)` — `$state`-backed rune wrapper for `Y.Array<T>`                                                                                                                          |
 | `./map-store`      | `createYjsMap<V>(yMap)` — `$state`-backed rune wrapper for `Y.Map<V>`                                                                                                                                |
 | `./text-store`     | `createYjsText(yText)` — `$state`-backed rune wrapper for `Y.Text`                                                                                                                                   |
@@ -35,7 +35,7 @@ Need no hard import; unit-test against fake awareness.
 
 This package:
 
-- Wraps `y-websocket@^3` provider construction with status normalisation.
+- Wraps `y-websocket >=2.0.4` (the peer range) provider construction with status normalisation.
 - Exposes runes helpers mirroring Yjs collection semantics as `$state`-backed proxies.
 - Stays small — does not re-export Yjs types. Consumers import `yjs` directly for `Y.Doc` / `Y.Array` / `Y.Map`.
 

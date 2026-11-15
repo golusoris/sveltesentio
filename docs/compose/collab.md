@@ -1,6 +1,6 @@
 # Collab — Yjs + y-websocket + `createYjsStore`
 
-`@sveltesentio/collab` wraps `yjs@^13.6` + `y-websocket@^3` with a
+`@sveltesentio/collab` wraps `yjs@^13.6` + `y-websocket >=2.0.4` (its peer range) with a
 runes-first helper (`createYjsStore<T>`) so components can read a
 shared Y.Doc as if it were local `$state`. No `y-svelte` binding — we
 own the subscribe/unsubscribe lifecycle.

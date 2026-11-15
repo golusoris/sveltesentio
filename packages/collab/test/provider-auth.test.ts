@@ -207,6 +207,43 @@ describe('resolveAuthParams', () => {
 	});
 });
 
+/** A binding whose `token` method reads the session through `this`. */
+class SessionAuth {
+	readonly param = 'access_token';
+	session: string | null = 'tok-a';
+	token(): string | null {
+		return this.session;
+	}
+}
+
+describe('resolveAuthParams — token method', () => {
+	it('calls a token method on its binding', () => {
+		expect(resolveAuthParams(new SessionAuth())).toEqual({
+			params: { access_token: 'tok-a' },
+			protocols: [],
+		});
+	});
+
+	it('dials with the token a method reads through its binding, as it changes', () => {
+		const auth = new SessionAuth();
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, auth);
+		provider.dial();
+		auth.session = 'tok-b';
+		provider.dial();
+		expect(provider.urls()).toEqual([
+			'ws://x/room?access_token=tok-a',
+			'ws://x/room?access_token=tok-b',
+		]);
+	});
+
+	it('attaches nothing when the method reads a revoked session (negative)', () => {
+		const auth = new SessionAuth();
+		auth.session = null;
+		expect(resolveAuthParams(auth)).toEqual({ params: {}, protocols: [] });
+	});
+});
+
 describe('bindProviderAuth — token in the dial, part 1', () => {
 	it('puts the token in the dial URL and writes nothing to the provider', () => {
 		const provider = new FakeProvider();
@@ -1574,10 +1611,10 @@ describe('bindProviderAuth — refused binding, part 5', () => {
 });
 
 /**
- * Makes the provider's binding slot take one more write, then throw on the
- * next, so a rebind's rollback of that slot throws.
+ * Makes the provider's binding slot take one more write, then fail the next,
+ * so a rebind's rollback of that slot throws (`throw`) or is dropped (`drop`).
  */
-function slotThrowsOnRollback(provider: FakeProvider): void {
+function slotFailsOnRollback(provider: FakeProvider, failure: 'throw' | 'drop'): void {
 	const [slotKey] = Object.getOwnPropertySymbols(provider);
 	if (slotKey === undefined) throw new Error('provider has no binding slot');
 	let value: unknown = Reflect.get(provider, slotKey);
@@ -1586,28 +1623,59 @@ function slotThrowsOnRollback(provider: FakeProvider): void {
 		get: () => value,
 		set: (next: unknown) => {
 			writes += 1;
-			if (writes > 1) throw new RangeError('trap');
-			value = next;
+			if (writes === 1) value = next;
+			else if (failure === 'throw') throw new RangeError('trap');
 		},
 	});
 }
 
 describe('bindProviderAuth — refused binding, part 6', () => {
-	it('refuses and stops the provider when rolling a rebind back throws', () => {
+	it.each([
+		['rolling a rebind back throws', 'throw', 'threw (RangeError)'],
+		['a rebind rollback does not hold', 'drop', 'did not hold'],
+	] as const)('closes the earlier binding when %s', (_label, failure, outcome) => {
 		const provider = new FakeProvider();
 		bindProviderAuth(provider, 'tok1');
 		Object.defineProperty(provider, '_WS', { value: provider._WS, writable: false });
-		slotThrowsOnRollback(provider);
+		slotFailsOnRollback(provider, failure);
+		const bindErrors = withErrors(() => {
+			bindProviderAuth(provider, 'tok2')();
+		});
+		expect(bindErrors).toEqual([
+			[
+				`[sentio] collab: provider _WS is read-only; rolling the binding slot back ${outcome}, earlier binding closed; auth not bound, provider stopped`,
+			],
+		]);
+		expect(provider.shouldConnect).toBe(false);
+		// The caller's connect() then meets the closed earlier binding: refused, no dial.
+		provider.shouldConnect = true;
+		const dialErrors = withErrors(() => {
+			provider.dial();
+		});
+		expect(dialErrors).toEqual([
+			[
+				'[sentio] collab: auth binding closed by a refused rebind; dial refused, provider stopped until connect() is called',
+			],
+		]);
+		expect(provider.urls()).toEqual([]);
+		expect(provider.shouldConnect).toBe(false);
+	});
+
+	it('names no binding to close when a first binding rollback throws (boundary)', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1')();
+		Object.defineProperty(provider, '_WS', { value: provider._WS, writable: false });
+		slotFailsOnRollback(provider, 'throw');
 		const errors = withErrors(() => {
 			bindProviderAuth(provider, 'tok2')();
 		});
 		expect(errors).toEqual([
 			[
-				'[sentio] collab: reading the auth binding or the provider threw (RangeError); auth not bound, provider stopped',
+				'[sentio] collab: provider _WS is read-only; rolling the binding slot back threw (RangeError), no binding to close; auth not bound, provider stopped',
 			],
 		]);
 		expect(provider.shouldConnect).toBe(false);
-		// The slot keeps the refused binding, so the earlier one adds no token (#589).
+		// No binding was ever installed after the unbind, so the dial carries no token (#589).
 		provider.dial();
 		expect(provider.urls()).toEqual(['ws://x/room']);
 	});
