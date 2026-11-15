@@ -13,7 +13,10 @@ import type { Locator } from '@playwright/test';
 
 /** Layout boxes land on fractional pixels; allow half a pixel of rounding. */
 export const SUBPIXEL = 0.5;
-/** Ancestors walked for clipping boxes and backgrounds (HISS-02); reader `<code>` sits seven levels below `<html>`. */
+/**
+ * Ancestors walked for clipping boxes and pseudo-elements, and scrolling boxes walked around a line
+ * (HISS-02); reader `<code>` sits seven levels below `<html>`.
+ */
 export const MAX_ANCESTOR_DEPTH = 32;
 /** Boxes checked per element (HISS-02); the longest code block on CODE_SLUG has 553 today. */
 const MAX_FRAGMENTS = 5_000;
@@ -107,9 +110,9 @@ function partsInPage(elements: Element[], limits: DrawnLimits): (string | Box[])
 		if (whole && !edges) return 'outside the viewport width';
 		const clip = clipBox(element);
 		if (clip === null) return `more than ${maxDepth} ancestors`;
-		const boxes = [...element.getClientRects()].map(onPage).filter(solid);
-		if (boxes.length > maxFragments) return `more than ${maxFragments} boxes`;
-		const parts = boxes.map((box) => meet(box, clip)).filter(solid);
+		const rects = element.getClientRects();
+		if (rects.length > maxFragments) return `more than ${maxFragments} boxes`;
+		const parts = Array.from(rects, (rect) => meet(onPage(rect), clip)).filter(solid);
 		return parts.length === 0 ? 'no part inside the viewport' : parts;
 	};
 	return elements.map(failure);
@@ -118,10 +121,68 @@ function partsInPage(elements: Element[], limits: DrawnLimits): (string | Box[])
 /** What `textCoveredInPage` reads besides the elements. */
 interface TextInput {
 	parts: (string | Box[])[];
+	/** The test `scrollReachInPage` returns, kept in the page. */
+	reachable: (node: Text, line: Box) => boolean;
 	maxNodes: number;
 	maxFragments: number;
 	subpixel: number;
+}
+
+/** What `scrollReachInPage` reads. */
+interface ReachLimits {
+	subpixel: number;
+	maxDepth: number;
 	scrollers: readonly string[];
+}
+
+/**
+ * Runs in the page: returns a test, kept in the page for `textCoveredInPage`, of whether a line box
+ * outside its element's visible parts can be scrolled into view. The line must lie in the scroll
+ * area of the nearest of `scrollers` around its text: the scrollable overflow, which starts at the
+ * padding box's left edge, or at its right edge in a right-to-left box (where `scrollLeft` is 0 or
+ * negative), and moves with the scroll position. Overflow past the top or start edge is not in that
+ * area, since it cannot be scrolled to. On an axis where a scroller does not scroll (`overflow`
+ * other than `auto` or `scroll`), its scroll area is its padding box. Scrolling a box never moves
+ * the box itself, so its padding box must lie in the scroll area of the next scroller around it in
+ * turn, and the outermost one's padding box inside the viewport's client width and below the top
+ * of the page. Text with no scroller around it, or inside more than `maxDepth` nested ones, is out
+ * of reach. Only a horizontal writing mode is read. Boxes are in page coordinates.
+ */
+function scrollReachInPage(limits: ReachLimits): (node: Text, line: Box) => boolean {
+	const { subpixel, maxDepth } = limits;
+	const selector = limits.scrollers.join(', ');
+	const width = document.documentElement.clientWidth;
+	const screen: Box = { left: 0, right: width, top: 0, bottom: Number.POSITIVE_INFINITY };
+	const inside = (inner: Box, outer: Box): boolean =>
+		inner.left >= outer.left - subpixel &&
+		inner.right <= outer.right + subpixel &&
+		inner.top >= outer.top - subpixel &&
+		inner.bottom <= outer.bottom + subpixel;
+	const padding = (box: Element): Box => {
+		const outer = box.getBoundingClientRect();
+		const left = outer.left + box.clientLeft;
+		const top = outer.top + window.scrollY + box.clientTop;
+		return { left, right: left + box.clientWidth, top, bottom: top + box.clientHeight };
+	};
+	const scrolls = (overflow: string): boolean => overflow === 'auto' || overflow === 'scroll';
+	const area = (box: Element): Box => {
+		const [edge, style] = [padding(box), getComputedStyle(box)];
+		const start = style.direction === 'rtl' ? edge.right - box.scrollWidth : edge.left;
+		const [left, top] = [start - box.scrollLeft, edge.top - box.scrollTop];
+		const across = scrolls(style.overflowX) ? { left, right: left + box.scrollWidth } : edge;
+		const down = scrolls(style.overflowY) ? { top, bottom: top + box.scrollHeight } : edge;
+		return { left: across.left, right: across.right, top: down.top, bottom: down.bottom };
+	};
+	const around = (node: Node): Element | null => node.parentElement?.closest(selector) ?? null;
+	return (node: Text, line: Box): boolean => {
+		let [inner, box] = [line, around(node)];
+		if (box === null) return false;
+		for (let depth = 0; box !== null && depth < maxDepth; depth += 1) {
+			if (!inside(inner, area(box))) return false;
+			[inner, box] = [padding(box), around(box)];
+		}
+		return box === null && inside(inner, screen);
+	};
 }
 
 /** Runs in the page: adds `css` as one more adopted style sheet, kept on `document` under `key`. */
@@ -149,18 +210,19 @@ function dropSheetInPage(key: string): void {
  * (`Range.getClientRects`, at most `maxFragments`) wider and taller than `subpixel`, so text
  * shrunk to nothing (`font-size: 0`, `transform: scale(0)` or `scaleY(0.001)`) fails, and each of
  * its line boxes must reach a visible part of the element, so a line moved off it (`text-indent`,
- * a relative offset) fails. A line inside one of `scrollers` may lie outside the visible parts
- * only within that scroller's scroll area, which the reader can scroll to; overflow past its top
- * or start edge cannot be scrolled to, so a line moved off there fails too. Each line box inside
- * a visible part is then hit-tested at its centre with `caretPositionFromPoint` (CSSOM View
+ * a relative offset) fails. A line that reaches none may still pass when `reachable` finds it in
+ * a scroll area the reader can scroll to (see `scrollReachInPage`). Each line box is then
+ * hit-tested at the centre of every overlap with a visible part that is wider and taller than
+ * `subpixel`, or, when it has none, of every overlap however thin, so a line scrolled almost out
+ * of its box is still tested where it shows. The hit test is `caretPositionFromPoint` (CSSOM View
  * §6.1), which must land in that same text node: an overlay, a later sibling or any other box
- * drawn over the text takes the hit instead. `undrawn` adds a style sheet that makes every box a
- * hit target while this runs, so an overlay that sets `pointer-events: none` still counts on an
- * engine whose caret hit test honours it. The check scrolls only vertically and reads every line
- * box in page coordinates.
+ * drawn over the text takes the hit instead. `textCovered` adds a style sheet that makes every
+ * box a hit target while this runs, so an overlay that sets `pointer-events: none` still counts
+ * on an engine whose caret hit test honours it. The check scrolls only vertically and reads every
+ * line box in page coordinates.
  */
 function textCoveredInPage(elements: Element[], input: TextInput): string[][] {
-	const { subpixel, maxFragments, scrollers } = input;
+	const { subpixel, maxFragments, reachable } = input;
 	const seen = { visibilityProperty: true, opacityProperty: true };
 	const solid = (box: Box): boolean =>
 		box.right - box.left > subpixel && box.bottom - box.top > subpixel;
@@ -173,21 +235,16 @@ function textCoveredInPage(elements: Element[], input: TextInput): string[][] {
 		const page = Array.from(rects, (r) => new DOMRect(r.x, r.y + down, r.width, r.height));
 		return page.filter(solid);
 	};
-	const centres = (line: Box, parts: Box[]): DOMPoint[] =>
+	const overlaps = (line: Box, parts: Box[], least: number): DOMPoint[] =>
 		parts.flatMap((part) => {
 			const [left, right] = [Math.max(line.left, part.left), Math.min(line.right, part.right)];
 			const [top, bottom] = [Math.max(line.top, part.top), Math.min(line.bottom, part.bottom)];
 			const cut = new DOMPoint((left + right) / 2, (top + bottom) / 2);
-			return solid({ left, right, top, bottom }) ? [cut] : [];
+			return right - left > least && bottom - top > least ? [cut] : [];
 		});
-	const reachable = (node: Text, line: Box): boolean => {
-		const box = node.parentElement?.closest(scrollers.join(', ')) ?? null;
-		if (box === null) return false;
-		const outer = box.getBoundingClientRect();
-		const left = outer.left + box.clientLeft - box.scrollLeft;
-		const top = outer.top + window.scrollY + box.clientTop - box.scrollTop;
-		const across = line.left >= left - subpixel && line.right <= left + box.scrollWidth + subpixel;
-		return across && line.top >= top - subpixel && line.bottom <= top + box.scrollHeight + subpixel;
+	const centres = (line: Box, parts: Box[]): DOMPoint[] => {
+		const wide = overlaps(line, parts, subpixel);
+		return wide.length > 0 ? wide : overlaps(line, parts, 0);
 	};
 	const caretOn = (node: Text, point: DOMPoint): boolean => {
 		window.scrollTo({ top: point.y - window.innerHeight / 2, behavior: 'instant' });
@@ -259,20 +316,29 @@ function pseudoCoversInPage(
 	});
 }
 
-/** `textCoveredInPage` with the hit-target sheet in place, which the page loses again afterwards, even on a throw. */
+/**
+ * `textCoveredInPage` with the hit-target sheet and the scroll test in place, both of which the
+ * page drops again afterwards, even on a throw.
+ */
 async function textCovered(locator: Locator, parts: (string | Box[])[]): Promise<string[][]> {
 	const page = locator.page();
-	await page.evaluate(addSheetInPage, { css: HIT_EVERY_BOX, key: HIT_SHEET_KEY });
+	const reachable = await page.evaluateHandle(scrollReachInPage, {
+		subpixel: SUBPIXEL,
+		maxDepth: MAX_ANCESTOR_DEPTH,
+		scrollers: SIDEWAYS_SCROLLERS,
+	});
 	try {
+		await page.evaluate(addSheetInPage, { css: HIT_EVERY_BOX, key: HIT_SHEET_KEY });
 		return await locator.evaluateAll(textCoveredInPage, {
 			parts,
+			reachable,
 			maxNodes: MAX_TEXT_NODES,
 			maxFragments: MAX_FRAGMENTS,
 			subpixel: SUBPIXEL,
-			scrollers: SIDEWAYS_SCROLLERS,
 		});
 	} finally {
 		await page.evaluate(dropSheetInPage, HIT_SHEET_KEY);
+		await reachable.dispose();
 	}
 }
 
@@ -334,10 +400,11 @@ function clippedInPage(
 	const clipping = [...boxes, ...above.slice(0, stop === -1 ? above.length : stop)];
 	const cuts = (overflow: string): boolean => overflow === 'hidden' || overflow === 'clip';
 	const scrolls = (overflow: string): boolean => overflow === 'auto' || overflow === 'scroll';
-	const viewport = fromBody ? getComputedStyle(document.body) : rootStyle;
-	const scrollport =
-		(cuts(viewport.overflowX) && root.scrollWidth > root.clientWidth) ||
-		(cuts(viewport.overflowY) && root.scrollHeight > root.clientHeight);
+	const scrollport = (): boolean => {
+		const viewport = fromBody ? getComputedStyle(document.body) : rootStyle;
+		const wide = cuts(viewport.overflowX) && root.scrollWidth > root.clientWidth;
+		return wide || (cuts(viewport.overflowY) && root.scrollHeight > root.clientHeight);
+	};
 	const name = (box: Element): string => `<${box.tagName.toLowerCase()}>`;
 	const clipped = clipping.flatMap((box) => {
 		const style = getComputedStyle(box);
@@ -355,7 +422,7 @@ function clippedInPage(
 		const set = limits.plain.filter((property) => style.getPropertyValue(property) !== 'none');
 		return set.map((property) => `${name(box)} sets ${property}`);
 	});
-	return [...(scrollport ? ['the viewport clips the page'] : []), ...clipped, ...painted];
+	return [...(scrollport() ? ['the viewport clips the page'] : []), ...clipped, ...painted];
 }
 
 /** Why the article clips, hides, sideways-scrolls or paints over its content; see `clippedInPage`. */
