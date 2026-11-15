@@ -133,6 +133,18 @@ function withErrors(body: () => void): unknown[][] {
 	}
 }
 
+/** The one `node:vm` call the realm test makes; collab type-checks without `@types/node`. */
+interface VmHost {
+	runInNewContext(code: string): unknown;
+}
+
+/** A `SyntaxError` built in another realm, as an iframe's `WebSocket` would throw. */
+async function foreignSyntaxError(): Promise<Error> {
+	const specifier: string = 'node:vm';
+	const vm = (await import(specifier)) as VmHost;
+	return vm.runInNewContext('new SyntaxError("invalid dial")') as Error;
+}
+
 describe('resolveAuthParams', () => {
 	it('maps a bare token string to the default `token` query param', () => {
 		expect(resolveAuthParams('secret-123')).toEqual({
@@ -1078,6 +1090,29 @@ describe('bindProviderAuth — permanent refusals, part 3', () => {
 	});
 });
 
+describe('bindProviderAuth — permanent refusals, part 4', () => {
+	it('retries a SyntaxError from another realm', async () => {
+		const foreign = await foreignSyntaxError();
+		expect(foreign instanceof SyntaxError).toBe(false);
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const provider = strictProvider(() => foreign);
+			bindProviderAuth(provider, 'tok-secret');
+			const refused = provider.dial();
+			await Promise.resolve();
+			expect(refused.readyState).toBe(refused.CLOSED);
+			expect(provider.shouldConnect).toBe(true);
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok-secret']);
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: socket constructor threw; dial refused:', 'object'],
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
 describe('bindProviderAuth — thrown value labels, part 1', () => {
 	it('labels a thrown value it cannot read, and the next dial goes through', async () => {
 		const provider = new FakeProvider();
@@ -1486,6 +1521,46 @@ describe('bindProviderAuth — refused binding, part 5', () => {
 	});
 });
 
+/**
+ * Makes the provider's binding slot take one more write, then throw on the
+ * next, so a rebind's rollback of that slot throws.
+ */
+function slotThrowsOnRollback(provider: FakeProvider): void {
+	const [slotKey] = Object.getOwnPropertySymbols(provider);
+	if (slotKey === undefined) throw new Error('provider has no binding slot');
+	let value: unknown = Reflect.get(provider, slotKey);
+	let writes = 0;
+	Object.defineProperty(provider, slotKey, {
+		get: () => value,
+		set: (next: unknown) => {
+			writes += 1;
+			if (writes > 1) throw new RangeError('trap');
+			value = next;
+		},
+	});
+}
+
+describe('bindProviderAuth — refused binding, part 6', () => {
+	it('refuses and stops the provider when rolling a rebind back throws', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1');
+		Object.defineProperty(provider, '_WS', { value: provider._WS, writable: false });
+		slotThrowsOnRollback(provider);
+		const errors = withErrors(() => {
+			bindProviderAuth(provider, 'tok2')();
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: reading the auth binding or the provider threw (RangeError); auth not bound, provider stopped',
+			],
+		]);
+		expect(provider.shouldConnect).toBe(false);
+		// The slot keeps the refused binding, so the earlier one adds no token (#589).
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+});
+
 describe('bindProviderAuth — dial before the first binding, part 1', () => {
 	it('stops a provider that dialed before the first binding, and dials with the token on connect()', () => {
 		const close = vi.fn();
@@ -1593,6 +1668,34 @@ describe('bindProviderAuth — rebind and unbind, part 3', () => {
 		expect(resolved).toBe(0);
 	});
 
+	it('unbind does not throw when writing the provider back throws', () => {
+		const provider = new FakeProvider();
+		const unbind = bindProviderAuth(provider, 'tok-secret');
+		const AuthSocket = provider._WS;
+		Object.defineProperty(provider, '_WS', {
+			configurable: true,
+			get: () => AuthSocket,
+			set: () => {
+				throw new TypeError('trap');
+			},
+		});
+		const errors = withErrors(() => {
+			expect(() => {
+				unbind();
+			}).not.toThrow();
+		});
+		expect(errors).toEqual([['[sentio] collab: unbind threw (TypeError); no token is added']]);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+
+	it('unbind logs nothing when writing the provider back holds (negative)', () => {
+		const provider = new FakeProvider();
+		const unbind = bindProviderAuth(provider, 'tok-secret');
+		expect(withErrors(unbind)).toEqual([]);
+		expect(provider._WS).toBe(provider.original);
+	});
+
 	it('ignores a stray third argument, so no caller-supplied state reaches a dial', () => {
 		const provider = new FakeProvider();
 		provider.params = { room: 'r1' };
@@ -1698,6 +1801,40 @@ describe('connectProvider — token lifetime', () => {
 		disconnect();
 		expect(provider._WS).toBe(NoopSocket);
 		expect(n).toBe(0);
+	});
+});
+
+describe('connectProvider — teardown', () => {
+	it('disconnect destroys the provider even when unbinding throws', () => {
+		const { provider, disconnect } = connectNoop({ auth: 'tok-secret', connect: false });
+		const AuthSocket = provider._WS;
+		Object.defineProperty(provider, '_WS', {
+			configurable: true,
+			get: () => AuthSocket,
+			set: () => {
+				throw new TypeError('trap');
+			},
+		});
+		const destroySpy = vi.spyOn(provider, 'destroy');
+		const errors = withErrors(disconnect);
+		expect(errors).toEqual([['[sentio] collab: unbind threw (TypeError); no token is added']]);
+		expect(destroySpy).toHaveBeenCalledTimes(1);
+		expect(provider.shouldConnect).toBe(false);
+	});
+
+	it('disconnect destroys the provider and rethrows when removing a listener throws', () => {
+		const { provider, disconnect } = connectNoop({
+			auth: 'tok-secret',
+			connect: false,
+			onStatusChange: () => undefined,
+		});
+		vi.spyOn(provider, 'off').mockImplementation(() => {
+			throw new TypeError('off');
+		});
+		const destroySpy = vi.spyOn(provider, 'destroy');
+		expect(disconnect).toThrow(TypeError);
+		expect(destroySpy).toHaveBeenCalledTimes(1);
+		expect(provider.shouldConnect).toBe(false);
 	});
 });
 

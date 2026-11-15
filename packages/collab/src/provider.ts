@@ -3,6 +3,7 @@ import { WebsocketProvider } from 'y-websocket';
 import { ProblemError } from '@sveltesentio/core/problem';
 import { dialProtocols, dialUrl, exceedsEntryBound } from './internal/dial-url.js';
 import { errorLabel, rejectsDial } from './internal/error-label.js';
+import { haltDials, stopProvider, stopUnboundDial } from './internal/stop-provider.js';
 
 export type ProviderStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -373,21 +374,6 @@ function refuseDial(provider: object, url: string, refusal: Refusal): WebSocket 
 }
 
 /**
- * Sets `shouldConnect` to `false` and reads it back; a setter or getter that
- * throws counts as not stopped. y-websocket dials only while it is `true`
- * (`setupWS`, y-websocket 2.0.4 to 3.1.0), its scheduled reconnect included,
- * and `connect()` sets it again.
- */
-function haltDials(provider: object): boolean {
-	try {
-		Reflect.set(provider, 'shouldConnect', false);
-		return Reflect.get(provider, 'shouldConnect') === false;
-	} catch {
-		return false;
-	}
-}
-
-/**
  * What one dial of a binding does; `active` tells whether that binding still
  * injects. While it does not, the dial passes through. It refuses the dial when
  * the resolver throws, and when the resolver replaced or removed this binding,
@@ -588,7 +574,12 @@ function tryBind(
  * missing, cannot be subclassed or is read-only, or the provider takes no
  * binding slot. The unbind clears the binding's `state.active` first, then
  * writes the slot and `_WS` back with `Reflect.set`, which on a provider
- * frozen since returns `false` instead of throwing.
+ * frozen since returns `false` instead of throwing. The unbind never throws:
+ * a getter, setter or proxy trap that throws while it writes back is logged
+ * with `console.error`, and the binding adds no token either way, so a
+ * caller's teardown after it (`connectProvider`'s `disconnect`) still runs.
+ * Tests: `test/provider-auth.test.ts` "unbind does not throw when writing the
+ * provider back throws".
  */
 function bindAuth(
 	provider: AuthBindableProvider,
@@ -613,8 +604,12 @@ function bindAuth(
 	if (refused !== undefined) return refused;
 	return () => {
 		state.active = false;
-		if (isActive(slot, AuthSocket)) Reflect.set(slot, ACTIVE_BINDING, undefined);
-		if (Reflect.get(slot, '_WS') === AuthSocket) Reflect.set(slot, '_WS', Base);
+		try {
+			if (isActive(slot, AuthSocket)) Reflect.set(slot, ACTIVE_BINDING, undefined);
+			if (Reflect.get(slot, '_WS') === AuthSocket) Reflect.set(slot, '_WS', Base);
+		} catch (error) {
+			console.error(`[sentio] collab: unbind threw (${errorLabel(error)}); no token is added`);
+		}
 	};
 }
 
@@ -623,10 +618,15 @@ function bindAuth(
  * write back, or returns why it could not. A sealed or frozen provider takes no
  * new slot, so `isActive` would never match and every dial would pass through
  * without the token; a read-only `_WS` keeps its constructor, and the slot
- * then gets its earlier value back, so nothing is left half bound. On a first
- * binding, a provider that already dialed is stopped (`stopUnboundDial`).
- * Tests: `test/provider-auth.test.ts` "binds nothing on a sealed provider" and
- * "binds nothing and keeps the earlier binding when _WS is read-only".
+ * then gets its earlier value back, so nothing is left half bound. A write
+ * that throws, that rollback included, reaches `tryBind`, so the binding is
+ * refused and the caller stops the provider; an earlier binding whose slot
+ * could not be written back then adds no token, as for any refused direct
+ * binding (#589). On a first binding, a provider that already dialed is
+ * stopped (`stopUnboundDial`). Tests: `test/provider-auth.test.ts` "binds
+ * nothing on a sealed provider", "binds nothing and keeps the earlier binding
+ * when _WS is read-only" and "refuses and stops the provider when rolling a
+ * rebind back throws".
  */
 function installBinding(
 	slot: AuthBindableProvider & BindingSlot,
@@ -652,59 +652,6 @@ function writeSocket(slot: object, AuthSocket: SocketConstructor): string | unde
 	} catch (error) {
 		return `writing provider _WS threw (${errorLabel(error)})`;
 	}
-}
-
-/**
- * Stops a provider that dialed before its first binding: that socket,
- * `provider.ws`, carried no token. The provider is stopped (`stopProvider`)
- * rather than redialed, so nothing more goes out until the caller calls
- * `connect()`, which dials through the binding. The `console.error` says
- * whether the stop held and names the order that sends no request without the
- * token. Tests: `test/provider-auth.test.ts` "stops a provider that dialed
- * before the first binding"; `test/provider-reconnect.test.ts` N17.
- */
-function stopUnboundDial(provider: object): void {
-	if (!holdsSocket(provider)) return;
-	const left = stopProvider(provider);
-	const outcome =
-		left === undefined
-			? 'stopped it; call connect() to dial with the token'
-			: `could not stop it (${left}), so that socket may stay open without the token`;
-	console.error(
-		`[sentio] collab: provider dialed before auth was bound, without the token; ${outcome}. Construct it with connect: false and call connect() after bindProviderAuth.`,
-	);
-}
-
-/** Whether `provider` holds a socket; a `ws` read that throws counts as one, so it gets stopped. */
-function holdsSocket(provider: object): boolean {
-	try {
-		const ws: unknown = Reflect.get(provider, 'ws');
-		return typeof ws === 'object' && ws !== null;
-	} catch {
-		return true;
-	}
-}
-
-/**
- * Stops `provider` from dialing (`haltDials`) and closes the socket it holds,
- * or returns why it may still be connected: its dials could not be stopped,
- * or reading its socket, its `close()` or calling it threw. A WHATWG `close()` with no
- * arguments never throws (its only throwing steps check a code and a reason);
- * a polyfill's may. y-websocket's `onclose` then clears `provider.ws` and,
- * with `shouldConnect` false, dials no more.
- */
-function stopProvider(provider: object): string | undefined {
-	if (!haltDials(provider)) return 'its dials could not be stopped';
-	try {
-		const ws: unknown = Reflect.get(provider, 'ws');
-		if (typeof ws !== 'object' || ws === null) return undefined;
-		const close: unknown = Reflect.get(ws, 'close');
-		if (typeof close !== 'function') return 'its socket has no close()';
-		Reflect.apply(close, ws, []);
-	} catch (error) {
-		return `reading or closing its socket threw (${errorLabel(error)})`;
-	}
-	return undefined;
 }
 
 /**
@@ -889,11 +836,16 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 	const guard: CallbackGuard = { surfacing: false };
 	const unbindEvents = bindProviderEvents(provider, guard, onStatusChange, onSync);
 
+	// The provider is destroyed even when an unbind throws, so it never stays live
+	// with a binding that adds no token.
 	const disconnect = (): void => {
-		if (unbindAuth) unbindAuth();
-		unbindEvents();
-		provider.disconnect();
-		provider.destroy();
+		try {
+			if (unbindAuth) unbindAuth();
+			unbindEvents();
+		} finally {
+			provider.disconnect();
+			provider.destroy();
+		}
 	};
 
 	if (options.connect !== false) startOrTearDown(provider, guard, disconnect);

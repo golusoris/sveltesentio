@@ -12,6 +12,24 @@ const MESSAGE_SYNC = 0;
  */
 const DEFAULT_MAX_SOCKETS = 16;
 
+/** The largest `maxSockets` a relay takes, so no option lifts the fan-out bound. */
+const MAX_RELAY_SOCKETS = 256;
+
+/**
+ * The socket cap for a requested `maxSockets`: one below one, as before. A
+ * value that is not a finite number (`Infinity`, `NaN`) or is over
+ * `MAX_RELAY_SOCKETS` throws a `RangeError` instead of lifting the bound; a
+ * test helper, so it throws a plain `RangeError`, not a core `ProblemError`.
+ * Tests: `test/mem-relay.test.ts` "refuses a socket cap that is not finite or
+ * over the bound".
+ */
+function socketCap(requested: number): number {
+	if (!Number.isFinite(requested) || requested > MAX_RELAY_SOCKETS) {
+		throw new RangeError(`maxSockets must be finite and at most ${MAX_RELAY_SOCKETS}`);
+	}
+	return Math.max(1, Math.floor(requested));
+}
+
 /**
  * The Node global the relay schedules with. Collab type-checks without
  * `@types/node`, which would also expose Node globals to `src/`, so the one
@@ -43,7 +61,7 @@ export function nextTask(): Promise<void> {
 }
 
 export interface MemRelayOptions {
-	/** Open sockets the relay admits; a dial past it fails (`error`, then close 1006). Defaults to 16. */
+	/** Open sockets the relay admits, 16 by default and at most 256; a dial past it fails (`error`, then close 1006). */
 	readonly maxSockets?: number;
 }
 
@@ -313,7 +331,7 @@ export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
 		sockets: [],
 		dials: [],
 		handlerErrors: [],
-		maxSockets: Math.max(1, options.maxSockets ?? DEFAULT_MAX_SOCKETS),
+		maxSockets: socketCap(options.maxSockets ?? DEFAULT_MAX_SOCKETS),
 		pendingRefusals: 0,
 	};
 

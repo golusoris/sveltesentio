@@ -74,6 +74,15 @@ describe('createMemRelay socket cap', () => {
 		expect(second.closes).toEqual([null]);
 		expect(relay.sockets).toEqual(second.sockets);
 	});
+
+	it('refuses a socket cap that is not finite or over the bound', () => {
+		// Negative: Infinity, NaN and a cap over 256 would lift the fan-out bound.
+		for (const maxSockets of [Number.POSITIVE_INFINITY, Number.NaN, -Infinity, 257]) {
+			expect(() => createMemRelay({ maxSockets })).toThrow(RangeError);
+		}
+		// Boundary: 256 itself is taken.
+		expect(() => createMemRelay({ maxSockets: 256 })).not.toThrow();
+	});
 });
 
 /** One open socket with its close and error events recorded. */

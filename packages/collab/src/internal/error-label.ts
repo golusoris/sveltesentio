@@ -51,9 +51,14 @@ export function errorLabel(error: unknown): string {
  * check reads the type, not the loggable name, so a polyfill error that only
  * calls itself `SyntaxError` is retried. A network failure reaches the
  * socket's `error` and `close` events instead, so any other throw may pass.
+ * A socket constructor from another realm, such as an iframe's `WebSocket`,
+ * throws that realm's types, which `instanceof` does not match. ECMA-262 gives
+ * a native error no brand but `[[ErrorData]]`, which every `Error` shares, so
+ * only the name could tell such a throw apart, and the name is what this check
+ * does not trust; that dial is retried after the backoff, as any other throw.
  * Reading the value cannot throw out of here. Tests:
  * `test/provider-auth.test.ts` "retries a dial the socket constructor throws
- * on with another error".
+ * on with another error" and "retries a SyntaxError from another realm".
  */
 export function rejectsDial(cause: unknown): boolean {
 	try {
