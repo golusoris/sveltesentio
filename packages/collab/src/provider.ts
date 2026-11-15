@@ -17,22 +17,31 @@ export interface AuthBinding {
 	 * first dial included, so a held-back connect or a dial after a long backoff
 	 * sends the token current at that moment. Returning `null` / `undefined` /
 	 * `''` attaches nothing (anonymous connect). A throw refuses that dial: no
-	 * request goes out, the error is logged and reaches y-websocket's
-	 * `connection-error` event, and the provider dials again after its backoff.
-	 * Tests: `test/provider-reconnect.test.ts` P4, P6, N7.
+	 * request goes out, the error is logged by its label only, y-websocket's
+	 * `connection-error` gets a plain `error` event without the thrown value, as
+	 * for a refused connection, and the provider dials again after its backoff.
+	 * A token that cannot go on the wire refuses the dial the same way: one with
+	 * a lone UTF-16 surrogate, which `encodeURIComponent` rejects, or a
+	 * subprotocol entry outside the RFC 6455 token characters. Tests:
+	 * `test/provider-reconnect.test.ts` P4, P6, N7; `test/provider-auth.test.ts`
+	 * "refuses a dial whose token cannot be encoded".
 	 */
 	readonly token: string | (() => string | null | undefined);
 	/**
 	 * Query-parameter key the token is attached under. `y-websocket` appends it
 	 * to the WS connect URL. Defaults to `'token'`. Set to `null` to skip the
 	 * query-param transport (e.g. when only the subprotocol carries the token).
+	 * While a token resolves it replaces a caller param under the same key; while
+	 * none does, the caller param is sent, so a caller value under this key is a
+	 * fallback such as a guest token, never a copy of the session token.
 	 */
 	readonly param?: string | null;
 	/**
 	 * When set, the token is also emitted as a WebSocket subprotocol entry,
 	 * formatted as `${protocol}.${token}`. A Node `ws` polyfill surfaces this on
 	 * the server as the `Sec-WebSocket-Protocol` header, the closest browser-safe
-	 * analogue to an `Authorization` header.
+	 * analogue to an `Authorization` header. Caller subprotocols are always sent,
+	 * also one of the form `${protocol}.…`, so keep the token out of them.
 	 */
 	readonly protocol?: string;
 }
@@ -102,17 +111,19 @@ type SocketConstructor = WebsocketProvider['_WS'];
  * The binding reads and replaces `_WS`, the socket constructor y-websocket calls
  * for every dial, and otherwise writes only a symbol-keyed slot naming the
  * active binding (`ACTIVE_BINDING`). `params`, `protocols`, `on` and `off`
- * stay in the type so a stand-in written against its earlier shape still
- * compiles (the public API is append-only); `_WS` is optional for the same
- * reason, and a provider without it gets a warning and no auth. A real
- * `WebsocketProvider` remains assignable, so callers are unchanged.
+ * stay in the type so a stand-in written against its earlier shape keeps them.
+ * `_WS` is required: without it no dial can carry the token, so a stand-in
+ * that lacks it fails to compile instead of connecting without credentials. A
+ * real `WebsocketProvider` (y-websocket 2.0.0 and later) has it and remains
+ * assignable. A provider that reaches `bindProviderAuth` without `_WS` anyway,
+ * from untyped code or through a cast, gets a `console.error` and no binding.
  */
 export interface AuthBindableProvider {
 	params: Record<string, string>;
 	protocols: string[];
 	on(event: 'connection-close', cb: () => void): void;
 	off(event: 'connection-close', cb: () => void): void;
-	_WS?: SocketConstructor;
+	_WS: SocketConstructor;
 }
 
 /**
@@ -129,6 +140,11 @@ const ACTIVE_BINDING = Symbol('sveltesentio.collab.activeBinding');
 /** A provider seen through its active-binding slot. */
 interface BindingSlot {
 	[ACTIVE_BINDING]?: SocketConstructor | undefined;
+}
+
+/** Whether the binding whose socket class is `self` is the one active on `slot`. */
+function isActive(slot: BindingSlot, self: SocketConstructor): boolean {
+	return slot[ACTIVE_BINDING] === self;
 }
 
 /**
@@ -184,14 +200,60 @@ function dialUrl(url: string, authParams: Readonly<Record<string, string>>): str
 }
 
 /**
- * A loggable label for a thrown value: its error name, or else its type. The
- * message and other fields stay out of the log, because a resolver or handler
- * error can carry the token it failed on. Tests: `test/provider-auth.test.ts`
- * "logs only the name of a resolver error".
+ * The error names a log line may carry as they are: the ECMAScript native
+ * errors (ECMA-262 §20.5 `Error`, §20.5.5 the native error types, §20.5.7
+ * `AggregateError`). Any other `name` is free text a thrower chose.
+ */
+const NATIVE_ERROR_NAMES: ReadonlySet<string> = new Set([
+	'Error',
+	'EvalError',
+	'RangeError',
+	'ReferenceError',
+	'SyntaxError',
+	'TypeError',
+	'URIError',
+	'AggregateError',
+]);
+
+/**
+ * A loggable label for a thrown value: a native error name, `'custom Error'`
+ * for any other error, or else the value's type. The message, a custom name and
+ * other fields stay out of the log, because a resolver or handler error can
+ * carry the token it failed on. Tests: `test/provider-auth.test.ts` "logs only
+ * the name of a resolver error" and "withholds a custom error name".
  */
 function errorLabel(error: unknown): string {
-	return error instanceof Error ? error.name : typeof error;
+	if (!(error instanceof Error)) return typeof error;
+	return NATIVE_ERROR_NAMES.has(error.name) ? error.name : 'custom Error';
 }
+
+/** Why a dial was refused; also the reason of its close event. */
+type RefusalReason =
+	| 'auth token resolver threw'
+	| 'auth binding replaced while its token resolved'
+	| 'auth token cannot be encoded for the dial';
+
+/** A refused dial: its reason and, when something threw, the thrown value. */
+interface Refusal {
+	readonly reason: RefusalReason;
+	readonly cause?: unknown;
+}
+
+/** What one dial of a binding does. */
+type DialPlan =
+	| { readonly kind: 'pass' }
+	| { readonly kind: 'refuse'; readonly refusal: Refusal }
+	| { readonly kind: 'dial'; readonly url: string; readonly protocols: string[] };
+
+const PASS_THROUGH: DialPlan = { kind: 'pass' };
+
+/**
+ * The characters of a `Sec-WebSocket-Protocol` element: RFC 6455 §4.1 item 10
+ * (`1#token`, RFC 2616 token characters), which the WHATWG `WebSocket`
+ * constructor enforces with a `SyntaxError`. The same allow-list as
+ * `subprotocolRegex` in `ws` 8.22.0 `lib/websocket.js`.
+ */
+const PROTOCOL_TOKEN = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
 
 /** Runs one socket event handler; a throw is logged so the next event still fires. */
 function runHandler(handler: () => void): void {
@@ -203,13 +265,16 @@ function runHandler(handler: () => void): void {
 }
 
 /**
- * Socket stand-in for a dial whose token resolver threw. It opens no
- * connection. On the next microtask it fires `error`, carrying the resolver
- * error as `error`, then `close` with code 1006, so y-websocket emits
- * `connection-error` and `connection-close` and backs off before it dials
- * again, as for a refused connection. Each event goes to the `on…` handler,
- * then to the listeners added with `addEventListener`. A throwing `on…` handler
- * is logged and does not stop the close.
+ * Socket stand-in for a refused dial: its token resolver threw, its binding was
+ * replaced while the token resolved, or the token cannot be encoded. It opens
+ * no connection. On the next microtask it fires a plain `error` event, which
+ * like a browser's carries no detail, so neither the thrown value nor the token
+ * reaches `connection-error` listeners, then `close` with code 1006 and the
+ * refusal reason, so y-websocket emits `connection-error` and
+ * `connection-close` and backs off before it dials again, as for a refused
+ * connection. Each event goes to the `on…` handler, then to the listeners added
+ * with `addEventListener`. A throwing `on…` handler is logged and does not stop
+ * the close.
  *
  * `close()` before the refusal runs turns it into a close without the error.
  * The close still fires, because y-websocket 2.0.0 clears `provider.ws` only in
@@ -235,19 +300,19 @@ class RefusedDial extends EventTarget implements WebSocket {
 	onmessage: WebSocket['onmessage'] = null;
 	onopen: WebSocket['onopen'] = null;
 
-	constructor(url: string, cause: unknown) {
+	constructor(url: string, reason: RefusalReason) {
 		super();
 		this.url = url;
 		queueMicrotask(() => {
-			this.refuse(cause);
+			this.refuse(reason);
 		});
 	}
 
-	private refuse(cause: unknown): void {
+	private refuse(reason: RefusalReason): void {
 		const cancelled = this.readyState === this.CLOSING;
 		this.readyState = this.CLOSED;
 		if (!cancelled) {
-			const error = Object.assign(new Event('error'), { error: cause });
+			const error = new Event('error');
 			runHandler(() => {
 				this.onerror?.(error);
 			});
@@ -255,7 +320,7 @@ class RefusedDial extends EventTarget implements WebSocket {
 		}
 		const close = Object.assign(new Event('close'), {
 			code: 1006,
-			reason: 'auth token resolver threw',
+			reason,
 			wasClean: false,
 		});
 		runHandler(() => {
@@ -273,10 +338,61 @@ class RefusedDial extends EventTarget implements WebSocket {
 	}
 }
 
-/** Logs a resolver throw by its label and returns a socket that dials nothing. */
-function refuseDial(url: string, cause: unknown): WebSocket {
-	console.error('[sentio] collab: auth token resolver threw; dial refused:', errorLabel(cause));
-	return new RefusedDial(url, cause);
+/**
+ * Logs a refused dial, with the label of the thrown value when something threw,
+ * and returns a socket that dials nothing.
+ */
+function refuseDial(url: string, refusal: Refusal): WebSocket {
+	const line = `[sentio] collab: ${refusal.reason}; dial refused`;
+	if ('cause' in refusal) console.error(`${line}:`, errorLabel(refusal.cause));
+	else console.error(line);
+	return new RefusedDial(url, refusal.reason);
+}
+
+/**
+ * What one dial of the binding whose socket class is `self` does. While another
+ * binding is active it passes the dial through. It refuses the dial when the
+ * resolver throws, and when the resolver replaced or removed this binding, so
+ * no credentials of a stale binding go out and the next dial, after the
+ * backoff, goes through the binding active then. It also refuses a token that
+ * cannot go on the wire: a subprotocol entry outside `PROTOCOL_TOKEN`, or a
+ * lone surrogate, on which `encodeURIComponent` throws `URIError`. Otherwise it
+ * dials with the resolved auth added. Tests: `test/provider-auth.test.ts`
+ * "refuses the dial when the resolver replaces its binding" and "refuses a dial
+ * whose token cannot be encoded".
+ */
+function planDial(
+	slot: BindingSlot,
+	self: SocketConstructor,
+	auth: AuthBinding | string | (() => string | null | undefined),
+	url: string,
+	protocols: string | string[] | undefined,
+): DialPlan {
+	if (!isActive(slot, self)) return PASS_THROUGH;
+	let resolved: ResolvedAuth;
+	try {
+		resolved = resolveAuthParams(auth);
+	} catch (cause) {
+		return { kind: 'refuse', refusal: { reason: 'auth token resolver threw', cause } };
+	}
+	if (!isActive(slot, self)) {
+		return {
+			kind: 'refuse',
+			refusal: { reason: 'auth binding replaced while its token resolved' },
+		};
+	}
+	if (!resolved.protocols.every((entry) => PROTOCOL_TOKEN.test(entry))) {
+		return { kind: 'refuse', refusal: { reason: 'auth token cannot be encoded for the dial' } };
+	}
+	try {
+		const dial = dialUrl(url, resolved.params);
+		return { kind: 'dial', url: dial, protocols: dialProtocols(protocols, resolved.protocols) };
+	} catch (cause) {
+		return {
+			kind: 'refuse',
+			refusal: { reason: 'auth token cannot be encoded for the dial', cause },
+		};
+	}
 }
 
 /**
@@ -284,8 +400,8 @@ function refuseDial(url: string, cause: unknown): WebSocket {
  * point a fresh token can still reach the dial: y-websocket builds every socket
  * with `new provider._WS(provider.url, provider.protocols)` (`setupWS` in
  * y-websocket 3.1.0 `src/y-websocket.js`). Nothing is written to the provider,
- * so its `params` and `protocols` keep caller entries only. While another
- * binding on the provider is active, this one passes the dial through.
+ * so its `params` and `protocols` keep caller entries only. `planDial` decides
+ * whether the dial passes through, is refused, or carries the token.
  */
 function authSocket(
 	slot: BindingSlot,
@@ -294,17 +410,10 @@ function authSocket(
 ): SocketConstructor {
 	const AuthSocket = class extends Base {
 		constructor(url: string | URL, protocols?: string | string[]) {
-			if (slot[ACTIVE_BINDING] !== AuthSocket) {
-				super(url, protocols);
-				return;
-			}
-			let resolved: ResolvedAuth;
-			try {
-				resolved = resolveAuthParams(auth);
-			} catch (cause) {
-				return refuseDial(String(url), cause);
-			}
-			super(dialUrl(String(url), resolved.params), dialProtocols(protocols, resolved.protocols));
+			const plan = planDial(slot, AuthSocket, auth, String(url), protocols);
+			if (plan.kind === 'refuse') return refuseDial(String(url), plan.refusal);
+			if (plan.kind === 'dial') super(plan.url, plan.protocols);
+			else super(url, protocols);
 		}
 	};
 	return AuthSocket;
@@ -321,7 +430,8 @@ function authSocket(
  * resolver throw refuses that dial (see `AuthBinding.token`).
  *
  * Binding the same provider again replaces the earlier binding, which then
- * passes dials through. The returned unbind stops this binding and puts back
+ * passes dials through; a dial whose resolver replaces its binding is refused
+ * (see `planDial`). The returned unbind stops this binding and puts back
  * the socket constructor it wrapped, unless something has wrapped it since.
  * Tests: the `bindProviderAuth` block in `test/provider-auth.test.ts`.
  */
@@ -329,9 +439,11 @@ export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
-	const Base = provider._WS;
-	if (Base === undefined) {
-		console.warn('[sentio] collab: provider has no _WS socket constructor; auth not bound');
+	const Base = provider._WS as SocketConstructor | undefined;
+	if (typeof Base !== 'function') {
+		console.error(
+			'[sentio] collab: provider has no _WS socket constructor; auth not bound, dials carry no token',
+		);
 		return () => {
 			// Nothing was bound.
 		};

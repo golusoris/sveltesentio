@@ -385,7 +385,7 @@ describe('connectProvider reconnection — negative', () => {
 			},
 		});
 		peerA.provider.on('connection-error', (event) => {
-			errors.push((event as unknown as { readonly error: unknown }).error);
+			errors.push(event);
 		});
 
 		try {
@@ -393,7 +393,9 @@ describe('connectProvider reconnection — negative', () => {
 			relay.drop(activeSocket(peerA), 1006);
 			await settle(FAST_BACKOFF_MS);
 
-			expect(errors).toEqual([failure]);
+			expect(errors).toHaveLength(1);
+			expect(errors[0]).toBeInstanceOf(Event);
+			expect(errors[0]).not.toHaveProperty('error');
 			expect(relay.dials).toHaveLength(1);
 			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'Error');
 

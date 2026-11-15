@@ -289,8 +289,10 @@ describe('bindProviderAuth', () => {
 
 			await Promise.resolve();
 			expect(seen).toEqual(['error', 'close']);
-			expect(errorEvent).toHaveProperty('error', failure);
+			expect(errorEvent).toBeInstanceOf(Event);
+			expect(errorEvent).not.toHaveProperty('error');
 			expect(closeEvent?.code).toBe(1006);
+			expect(closeEvent?.reason).toBe('auth token resolver threw');
 			expect(closeEvent?.wasClean).toBe(false);
 			expect(socket.readyState).toBe(socket.CLOSED);
 			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'Error');
@@ -376,12 +378,12 @@ describe('bindProviderAuth', () => {
 			});
 			const socket = provider.dial();
 			const seen: string[] = [];
-			const errors: unknown[] = [];
+			const errors: Event[] = [];
 			const closeCodes: number[] = [];
 			socket.onerror = () => seen.push('onerror');
 			socket.addEventListener('error', (event) => {
 				seen.push('error listener');
-				errors.push((event as Event & { readonly error: unknown }).error);
+				errors.push(event);
 			});
 			socket.addEventListener('close', (event) => {
 				seen.push('close listener');
@@ -396,7 +398,8 @@ describe('bindProviderAuth', () => {
 			});
 			await Promise.resolve();
 			expect(seen).toEqual(['onerror', 'error listener', 'close listener']);
-			expect(errors).toEqual([failure]);
+			expect(errors).toHaveLength(1);
+			expect(errors[0]).not.toHaveProperty('error');
 			expect(closeCodes).toEqual([1006]);
 		} finally {
 			errorSpy.mockRestore();
@@ -444,21 +447,232 @@ describe('bindProviderAuth', () => {
 	it('logs only the name of a resolver error', async () => {
 		const provider = new FakeProvider();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		class TokenError extends Error {
-			override name = 'TokenError';
-		}
 		try {
 			bindProviderAuth(provider, () => {
-				throw new TokenError('token tok-secret was rejected');
+				throw new RangeError('token tok-secret was rejected');
 			});
 			const socket = provider.dial();
 			await Promise.resolve();
-			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'TokenError');
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), 'RangeError');
 			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
 			expect(socket.readyState).toBe(socket.CLOSED);
 		} finally {
 			errorSpy.mockRestore();
 		}
+	});
+
+	it('withholds a custom error name, which a thrower can fill with the token', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		class TokenError extends Error {
+			override name = 'TokenError tok-secret';
+		}
+		try {
+			bindProviderAuth(provider, () => {
+				throw new TokenError('rejected');
+			});
+			const socket = provider.dial();
+			socket.onerror = () => {
+				throw Object.assign(new Error('handler'), { name: 'tok-secret' });
+			};
+			await Promise.resolve();
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('dial refused'),
+				'custom Error',
+			);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('socket event handler threw'),
+				'custom Error',
+			);
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('logs a native error name as is, also on a subclass that keeps it', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		class PlainSubclass extends Error {}
+		const thrown: readonly Error[] = [
+			new PlainSubclass('a'),
+			new AggregateError([], 'b'),
+			new URIError('c'),
+		];
+		try {
+			let calls = 0;
+			bindProviderAuth(provider, () => {
+				const next = thrown.at(calls) ?? new RangeError('only three dials');
+				calls += 1;
+				throw next;
+			});
+			for (let i = 0; i < thrown.length; i += 1) provider.dial();
+			await Promise.resolve();
+			expect(errorSpy.mock.calls.map((call: readonly unknown[]) => call[1])).toEqual([
+				'Error',
+				'AggregateError',
+				'URIError',
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('refuses the dial when the resolver replaces its binding, and the next dial uses the new one', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			let oldCalls = 0;
+			bindProviderAuth(provider, () => {
+				oldCalls += 1;
+				bindProviderAuth(provider, 'tok-new');
+				return 'tok-old';
+			});
+			const socket = provider.dial();
+			let reason = '';
+			socket.onclose = (event) => {
+				reason = event.reason;
+			};
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(reason).toBe('auth binding replaced while its token resolved');
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('binding replaced'));
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-old');
+
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok-new']);
+			expect(oldCalls).toBe(1);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('refuses the dial when the resolver unbinds its own binding, and the next dial is anonymous', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const unbind = bindProviderAuth(provider, () => {
+				unbind();
+				return 'tok-old';
+			});
+			const socket = provider.dial();
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(socket.readyState).toBe(socket.CLOSED);
+			expect(provider._WS).toBe(provider.original);
+
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room']);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('keeps the token when the resolver binds a different provider', () => {
+		const provider = new FakeProvider();
+		const other = new FakeProvider();
+		bindProviderAuth(provider, () => {
+			bindProviderAuth(other, 'tok-other');
+			return 'tok';
+		});
+		provider.dial();
+		other.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
+		expect(other.urls()).toEqual(['ws://x/room?token=tok-other']);
+	});
+
+	it('refuses a dial whose token cannot be encoded, then dials once it can', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const issued = ['tok\uD800', 'tok\uDC00x', 'tok'];
+		try {
+			let calls = 0;
+			bindProviderAuth(provider, () => {
+				const next = issued.at(calls) ?? null;
+				calls += 1;
+				return next;
+			});
+			const first = provider.dial();
+			const second = provider.dial();
+			const reasons: string[] = [];
+			first.onclose = (event) => reasons.push(event.reason);
+			second.onclose = (event) => reasons.push(event.reason);
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(reasons).toEqual([
+				'auth token cannot be encoded for the dial',
+				'auth token cannot be encoded for the dial',
+			]);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('cannot be encoded'),
+				'URIError',
+			);
+
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('refuses a dial whose auth param key cannot be encoded', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, { token: 'tok', param: 'key\uDBFF' });
+			const socket = provider.dial();
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(socket.readyState).toBe(socket.CLOSED);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('cannot be encoded'),
+				'URIError',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('encodes a well-formed surrogate pair in the token', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok\u{1F600}');
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok%F0%9F%98%80']);
+	});
+
+	it('refuses a dial whose auth subprotocol is not an RFC 6455 token', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const issued = ['a=b', 'a b', 'a,b', 'a/b', 'caf\u00e9'];
+		try {
+			let calls = 0;
+			bindProviderAuth(provider, {
+				token: () => {
+					const next = issued.at(calls) ?? null;
+					calls += 1;
+					return next;
+				},
+				param: null,
+				protocol: 'bearer',
+			});
+			const sockets = issued.map(() => provider.dial());
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(sockets.every((socket) => socket.readyState === socket.CLOSED)).toBe(true);
+			expect(errorSpy).toHaveBeenCalledTimes(issued.length);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('cannot be encoded'));
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('bearer.');
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('sends an auth subprotocol made of every RFC 6455 token character', () => {
+		const provider = new FakeProvider();
+		const token = "!#$%&'*+-.^_`|~09AZaz";
+		bindProviderAuth(provider, { token, param: null, protocol: 'bearer' });
+		provider.dial();
+		expect(provider.dials).toEqual([{ url: 'ws://x/room', protocols: [`bearer.${token}`] }]);
 	});
 
 	it('logs only the type of a thrown value that is not an error', async () => {
@@ -546,24 +760,54 @@ describe('bindProviderAuth', () => {
 		expect(provider.urls()).toEqual(['ws://x/room']);
 	});
 
-	it('warns and binds nothing on a provider without a socket constructor', () => {
-		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+	it('requires a socket constructor on the provider type', () => {
+		// @ts-expect-error -- a stand-in without _WS must not compile: no dial could carry the token.
+		const bare: AuthBindableProvider = {
+			params: {},
+			protocols: [],
+			on: () => undefined,
+			off: () => undefined,
+		};
+		expect(bare).not.toHaveProperty('_WS');
+	});
+
+	it('logs an error and binds nothing on an untyped provider without a socket constructor', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
-			const bare: AuthBindableProvider = {
+			const bare = {
 				params: {},
 				protocols: [],
 				on: () => undefined,
 				off: () => undefined,
-			};
+			} as unknown as AuthBindableProvider;
 			const unbind = bindProviderAuth(bare, 'tok');
-			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no _WS'));
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dials carry no token'));
 			expect(bare).not.toHaveProperty('_WS');
 			expect(bare.params).toEqual({});
 			expect(() => {
 				unbind();
 			}).not.toThrow();
 		} finally {
-			warnSpy.mockRestore();
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('logs an error and binds nothing when _WS is not a constructor', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const odd = {
+				params: {},
+				protocols: [],
+				on: () => undefined,
+				off: () => undefined,
+				_WS: null,
+			} as unknown as AuthBindableProvider;
+			bindProviderAuth(odd, 'tok');
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(odd._WS).toBeNull();
+		} finally {
+			errorSpy.mockRestore();
 		}
 	});
 
