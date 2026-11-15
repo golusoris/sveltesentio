@@ -86,6 +86,20 @@ Pure helpers (no runes, unit-tested) live under `./awareness`:
 - No `y-svelte` dependency — pre-runes, stale. We ship the runes helper ourselves.
 - TanStack Query is the wrong tool for CRDT merge — it solves server-state fetch, not last-writer-wins conflict resolution.
 
+## Auth binding threat model
+
+`connectProvider` with `auth` set puts the token on every dial or refuses the dial; when it cannot bind, it destroys the provider and throws a `ProblemError` ([`src/provider.ts`](src/provider.ts)). `bindProviderAuth` puts the token on every dial of a binding it installs, or refuses the dial. When it cannot install one, it binds nothing, stops the provider and logs one `console.error`; a later caller `provider.connect()` then dials without the token (test "binds nothing on a sealed provider"). A refused dial opens nothing, logs one `console.error` naming the reason, and never throws into y-websocket's `setupWS`, so the provider keeps reconnecting after its backoff unless the refusal is permanent.
+
+That holds for these callers and dependencies (tests in [`test/provider-auth.test.ts`](test/provider-auth.test.ts) and [`test/provider-reconnect.test.ts`](test/provider-reconnect.test.ts)):
+
+- a token resolver that throws, rebinds, unbinds or calls `disconnect()` while the token resolves;
+- a socket constructor or `WebSocketPolyfill` that throws, rejects the dial, or cannot be subclassed;
+- a provider that is sealed or frozen, has a read-only `_WS` or a `_WS` that cannot be subclassed, or carries a setter on `_WS` or the binding slot that stores the value and throws, or drops later writes: nothing is bound. A first binding stops the provider; a frozen one cannot be stopped and keeps dialing without the token, as it would unbound. A rebind stops the provider and keeps the earlier binding; on a provider it cannot stop, it closes the earlier binding, so every dial is refused. A binding left in place that cannot be put back refuses every dial ("refused binding" tests);
+- a getter on the binding slot that throws while a dial is planned ("refuses the dial when reading the binding slot throws");
+- a second loaded copy of this package, which meets the first on the `Symbol.for` keys `@sveltesentio/collab/activeBinding@1` and `@sveltesentio/collab/bindingState@1`.
+
+Out of scope: a caller that sabotages its own provider's `_WS` or active-binding slot with accessors or proxy traps built to defeat the binding's read-back. Examples: a `_WS` setter that stores a constructor other than the one written; a slot setter that fails the rollback's write and then takes the next rebind's, so that rebind wraps the closed earlier binding; a foreign value such as `NaN` written into the slot. Such a provider may dial without the token or refuse every dial. Issue [#592](https://github.com/golusoris/sveltesentio/issues/592) tracks hardening against these shapes.
+
 ## Related ADRs
 
 - [ADR-0009](../../docs/adr/0009-yjs-ywebsocket-framework-lock.md) — Yjs + `y-websocket` framework lock.

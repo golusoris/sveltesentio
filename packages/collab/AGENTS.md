@@ -10,7 +10,7 @@
 | `./array`          | `snapshotYjsArray` / `observeYjsArray` / `appendToYjsArray` / `insertIntoYjsArray` / `deleteFromYjsArray` / `transactYjs` — pure helpers over `Y.Array<T>`                                           |
 | `./map`            | `snapshotYjsMap` / `snapshotYjsMapEntries` / `observeYjsMap` / `setYjsMap` / `deleteYjsMap` / `clearYjsMap` — pure helpers over `Y.Map<V>`                                                           |
 | `./text`           | `snapshotYjsText` / `observeYjsText` / `insertYjsText` / `deleteYjsText` / `appendYjsText` — pure helpers over `Y.Text`                                                                              |
-| `./provider`       | `connectProvider({url, room, doc, ...})` — `y-websocket@^3` factory with status normalisation + `onStatusChange` / `onSync` callbacks; returns `{provider, disconnect}`                              |
+| `./provider`       | `connectProvider({url, room, doc, ...})` — `y-websocket >=2.0.4` factory with status normalisation + `onStatusChange` / `onSync` callbacks; returns `{provider, disconnect}`                         |
 | `./store`          | `createYjsStore<T>(yArray)` — `$state`-backed rune wrapper for `Y.Array<T>`                                                                                                                          |
 | `./map-store`      | `createYjsMap<V>(yMap)` — `$state`-backed rune wrapper for `Y.Map<V>`                                                                                                                                |
 | `./text-store`     | `createYjsText(yText)` — `$state`-backed rune wrapper for `Y.Text`                                                                                                                                   |
@@ -25,18 +25,17 @@ Need no hard import; unit-test against fake awareness.
 
 ## Follow-through
 
-| Task                                                                | Why deferred                                                                                          |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `y-indexeddb` compose recipe (`docs/compose/collab-persistence.md`) | Opt-in per ADR-0009; not shipped as hard dep                                                          |
-| `y-webrtc` compose recipe (`docs/compose/collab-p2p.md`)            | Opt-in per ADR-0009; not shipped as hard dep                                                          |
-| Convergence tests (two `Y.Doc` + fake WebSocket pair)               | Needs shared test harness; tracked with broader integration-test phase                                |
-| Auth-header binding on provider construction                        | Needs session-cookie handoff pattern from `@sveltesentio/auth` — revisit when downstream app wires it |
+| Task                                                                   | Why deferred                                                                                                           |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `y-indexeddb` compose recipe (`docs/compose/collab-persistence.md`)    | Opt-in per ADR-0009; not shipped as hard dep                                                                           |
+| `y-webrtc` compose recipe (`docs/compose/collab-p2p.md`)               | Opt-in per ADR-0009; not shipped as hard dep                                                                           |
+| Session-cookie handoff from `@sveltesentio/auth` to `bindProviderAuth` | Per-dial token binding shipped (`bindProviderAuth`, `connectProvider` `auth`); cookie handoff waits for downstream app |
 
 ## Scope
 
 This package:
 
-- Wraps `y-websocket@^3` provider construction with status normalisation.
+- Wraps `y-websocket >=2.0.4` (the peer range) provider construction with status normalisation.
 - Exposes runes helpers mirroring Yjs collection semantics as `$state`-backed proxies.
 - Stays small — does not re-export Yjs types. Consumers import `yjs` directly for `Y.Doc` / `Y.Array` / `Y.Map`.
 
@@ -56,6 +55,7 @@ This package does **not**:
 - **Presence reads via `'change'`, not `'update'`.** `observePresence` / `createPresenceStore` default to awareness `'change'` event -> listeners fire on real transitions, not every heartbeat. `'update'` opt-in via `{ event: 'update' }`.
 - **`diffPresence` keys updates on reference identity.** Yjs replaces client state object on every change -> `prev.get(id) !== next.get(id)` = correct, allocation-free staleness check; no deep compare.
 - **Presence mutations route through awareness.** `store.setLocal(x)` calls `awareness.setLocalState(x)`; `others` `readonly`.
+- **Provider errors = core `ProblemError`.** `connectProvider` throws `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` set + `_WS` not subclassable, binding has no transport (`param: null`, no `protocol`) or reading binding/provider throws (provider destroyed before any dial, also with `connect: false`); `COLLAB_START_FAILED_TYPE` when first dial throws (`cause` = thrown value) or is refused permanently (`PERMANENT_REFUSALS`: socket constructor throws `SyntaxError`, dial over entry bound, fixed (string) token that cannot be encoded; provider stopped). Resolver token that cannot be encoded = retried. Other constructor throw = dial refused, retried after backoff. Cross-realm `SyntaxError` (iframe `WebSocket`) = retried too: no brand beyond `[[ErrorData]]`, name untrusted. Unbind never throws: write-back throw -> `console.error`, binding adds no token; `disconnect` closes binding (no unbind): later `provider.connect()` refused, provider stopped, no dial; destroys provider even when `provider.disconnect()` throws; callbacks detached first (`detached` flag), so a listener `off` fails to remove calls no callback after `disconnect`, other `off` still runs. Teardown throw after failed start = named in `ProblemError` detail, never replaces it. Constructor-throw refusal on reconnect = auth-bound providers only; without `auth`, `_WS` = y-websocket's own. Direct `bindProviderAuth` never throws: refusal or dial-before-bind -> provider stopped (`shouldConnect` false, socket closed) + `console.error`; refused rebind + provider not stoppable (frozen, setter ignores write) -> earlier binding installed as `_WS` closed (`closeInstalledBinding`), later dials refused, never its token. `@sveltesentio/core` = runtime dependency for this.
 
 ## Test policy
 
@@ -63,7 +63,7 @@ This package does **not**:
 - Awareness helpers (`./awareness`) test against in-memory `FakeAwareness` implementing `AwarenessLike` — no `y-protocols` dependency at test time.
 - Rune helpers (`*.svelte.ts`) exercised indirectly via pure helpers they compose.
 - Direct rune runtime tests land once monorepo wires `vitest` + Svelte plugin harness.
-- Provider tests use `WebSocketPolyfill` option with no-op socket to avoid real sockets.
+- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one. `relay.drop()` with 1006 = `error` then `close` (failed connection); other codes = `close` only. Relay full + `refuseNext` = `error` then `close` 1006 (connection never opened). `onerror` throw -> `relay.handlerErrors`, `close` still fires.
 - Coverage ≥ 85% on pure helpers.
 
 ## Common tasks
