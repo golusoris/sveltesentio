@@ -5,8 +5,9 @@
  * `onSync` resets, offline CRDT edit convergence, a token resolved at every dial
  * (rotation, revocation, a held-back first dial), a refused dial when the
  * resolver throws, caller params and subprotocols kept and read at every dial,
- * teardown when the first dial throws, terminal 44xx closes, backoff capping,
- * and closed sockets leaving the relay.
+ * teardown when the first dial throws, status and sync callbacks that throw
+ * later, a socket the client closes itself, terminal 44xx closes, backoff
+ * capping, and closed sockets leaving the relay.
  * Uses the deterministic in-memory `y-protocols/sync` relay (`./mem-relay.js`)
  * and Vitest fake timers — no network sockets or wall-clock sleeps.
  */
@@ -31,6 +32,8 @@ interface PeerOptions {
 	readonly auth?: AuthBinding | string | (() => string | null | undefined);
 	readonly maxBackoffTime?: number;
 	readonly connect?: boolean;
+	readonly onStatusChange?: (status: ProviderStatus) => void;
+	readonly onSync?: (synced: boolean) => void;
 }
 
 interface PeerHandle {
@@ -438,9 +441,10 @@ describe('connectProvider reconnection — negative', () => {
 		expect(caught).toBe(failure);
 		expect(relay.dials).toHaveLength(1);
 		const socket = requireDial(relay, 0).socket;
-		expect(socket.readyState).toBe(socket.CLOSED);
+		expect(socket.readyState).toBe(socket.CLOSING);
 
 		await settle(10 * FAST_BACKOFF_MS);
+		expect(socket.readyState).toBe(socket.CLOSED);
 		expect(relay.dials).toHaveLength(1);
 		expect(statuses).toEqual(['connecting']);
 	});
@@ -515,6 +519,91 @@ describe('connectProvider reconnection — negative', () => {
 
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n12?token=guest2`);
 	});
+
+	it('N13: keeps reconnecting when onStatusChange throws after the first dial, logging each throw', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const statuses: ProviderStatus[] = [];
+		try {
+			const peerA = connectPeer(relay, 'room-n13', {
+				onStatusChange: (status) => {
+					statuses.push(status);
+					if (statuses.length > 1) throw new TypeError(`status ${status} for tok-secret`);
+				},
+			});
+			await settle();
+			relay.drop(activeSocket(peerA), 1006);
+			await settle(FAST_BACKOFF_MS);
+
+			expect(relay.dials).toHaveLength(2);
+			expect(peerA.provider.wsconnected).toBe(true);
+			expect(peerA.provider.synced).toBe(true);
+			expect(statuses).toEqual([
+				'connecting',
+				'connected',
+				'disconnected',
+				'connecting',
+				'connected',
+			]);
+			expect(errorSpy).toHaveBeenCalledTimes(4);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('onStatusChange callback threw'),
+				'TypeError',
+			);
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('N14: keeps reconnecting when onSync throws on the sync reset of a drop', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const syncs: boolean[] = [];
+		try {
+			const peerA = connectPeer(relay, 'room-n14', {
+				onSync: (synced) => {
+					syncs.push(synced);
+					if (!synced) throw new RangeError('sync reset');
+				},
+			});
+			await settle();
+			relay.drop(activeSocket(peerA), 1006);
+			await settle(FAST_BACKOFF_MS);
+
+			expect(relay.dials).toHaveLength(2);
+			expect(syncs).toEqual([true, false, true]);
+			expect(peerA.statuses).toEqual([
+				'connecting',
+				'connected',
+				'disconnected',
+				'connecting',
+				'connected',
+			]);
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('onSync callback threw'),
+				'RangeError',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('N16: redials after the client closes its own socket', async () => {
+		const relay = createMemRelay();
+		const peerA = connectPeer(relay, 'room-n16');
+		await settle();
+		const statusMark = peerA.statuses.length;
+
+		activeSocket(peerA).close();
+		await settle(FAST_BACKOFF_MS);
+
+		expect(relay.dials).toHaveLength(2);
+		expect(peerA.statuses.slice(statusMark)).toEqual(['disconnected', 'connecting', 'connected']);
+		expect(peerA.syncs).toEqual([true, false, true]);
+		expect(relay.sockets).toEqual([requireDial(relay, 1).socket]);
+	});
 });
 
 describe('connectProvider held-back connect', () => {
@@ -532,6 +621,34 @@ describe('connectProvider held-back connect', () => {
 		expect(peerA.statuses).toEqual(['connecting', 'connected']);
 		expect(peerA.syncs).toEqual([true]);
 	});
+
+	it('N15: logs a throwing onStatusChange on a held-back provider.connect() and still dials', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const peerA = connectPeer(relay, 'room-n15', {
+				connect: false,
+				onStatusChange: (status) => {
+					if (status === 'connecting') throw new TypeError('connecting');
+				},
+			});
+			expect(() => {
+				peerA.provider.connect();
+			}).not.toThrow();
+			await settle();
+
+			expect(relay.dials).toHaveLength(1);
+			expect(peerA.provider.wsconnected).toBe(true);
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('onStatusChange callback threw'),
+				'TypeError',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
 	it('P6: resolves the token when the held-back first dial goes out, not at construction', async () => {
 		const relay = createMemRelay();
 		let token = 'tok1';

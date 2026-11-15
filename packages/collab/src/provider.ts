@@ -34,6 +34,12 @@ export interface AuthBinding {
 	 * While a token resolves it replaces a caller param under the same key; while
 	 * none does, the caller param is sent, so a caller value under this key is a
 	 * fallback such as a guest token, never a copy of the session token.
+	 *
+	 * The URL, this pair included, reaches every server, proxy and tracer on the
+	 * way, and those commonly log request URLs, so a token sent here can land in
+	 * their logs. Redact this key wherever URLs are logged, or set `param: null`
+	 * and send the token with `protocol` alone. Making the query transport
+	 * opt-in is tracked in #585.
 	 */
 	readonly param?: string | null;
 	/**
@@ -64,7 +70,13 @@ export interface ConnectProviderOptions {
 	readonly connect?: boolean;
 	readonly awareness?: WebsocketProvider['awareness'];
 	readonly WebSocketPolyfill?: typeof WebSocket;
+	/**
+	 * Called on every status change. A throw is logged and the provider keeps
+	 * reconnecting, except during the first dial `connectProvider` starts: then
+	 * the provider is torn down and the error reaches the caller.
+	 */
 	readonly onStatusChange?: (status: ProviderStatus) => void;
+	/** Called when the sync state changes. A throw is logged and the provider keeps reconnecting. */
 	readonly onSync?: (synced: boolean) => void;
 }
 
@@ -139,12 +151,26 @@ const ACTIVE_BINDING = Symbol('sveltesentio.collab.activeBinding');
 
 /** A provider seen through its active-binding slot. */
 interface BindingSlot {
-	[ACTIVE_BINDING]?: SocketConstructor | undefined;
+	[ACTIVE_BINDING]?: unknown;
 }
 
 /** Whether the binding whose socket class is `self` is the one active on `slot`. */
 function isActive(slot: BindingSlot, self: SocketConstructor): boolean {
 	return slot[ACTIVE_BINDING] === self;
+}
+
+/**
+ * The constructor a new binding wraps: the one under `current` when `current`
+ * is the active binding's socket class, else `current` itself. A rebind then
+ * replaces the active layer instead of stacking on it, so repeated rebinds keep
+ * one auth layer and hold no closure of a replaced binding. A constructor
+ * something else has wrapped around a binding stays, since this module cannot
+ * remove a layer it did not put on top. Tests: `test/provider-auth.test.ts`
+ * "keeps one auth layer across rebinds" and "keeps a wrapper put over a
+ * binding".
+ */
+function innerSocket(slot: BindingSlot, current: SocketConstructor): SocketConstructor {
+	return isActive(slot, current) ? (Object.getPrototypeOf(current) as SocketConstructor) : current;
 }
 
 /**
@@ -177,14 +203,43 @@ function queryKey(pair: string): string {
 	return equals >= 0 ? pair.slice(0, equals) : pair;
 }
 
+/** A URL cut around its query (RFC 3986 §3). */
+interface UrlParts {
+	/** Everything before the query. */
+	readonly head: string;
+	/** The query without its `?`; empty when there is none. */
+	readonly query: string;
+	/** The fragment with its `#`; empty when there is none. */
+	readonly fragment: string;
+}
+
 /**
- * `url` with the auth query pairs appended, after dropping caller pairs under
- * the same keys. Keys are compared percent-encoded, the form y-websocket writes
- * (`encodeQueryParams` in lib0 `url.js`), and the query is the part after the
- * last `?`, which y-websocket writes only in front of its encoded params. With
- * no auth pairs the URL is returned as is, so a caller pair the token shadowed
- * is sent again once the token is revoked. Tests:
- * `test/provider-reconnect.test.ts` N3, N10, N12.
+ * `url` cut as a server's URL parser reads it: the query runs from the first
+ * `?` to the first `#` and may itself hold `?` (RFC 3986 §3.4); a `?` after the
+ * first `#` belongs to the fragment (§3.5).
+ */
+function splitUrl(url: string): UrlParts {
+	const hash = url.indexOf('#');
+	const end = hash >= 0 ? hash : url.length;
+	const mark = url.indexOf('?');
+	const cut = mark >= 0 && mark < end ? mark : end;
+	return {
+		head: url.slice(0, cut),
+		query: cut < end ? url.slice(cut + 1, end) : '',
+		fragment: url.slice(end),
+	};
+}
+
+/**
+ * `url` with the auth query pairs appended to its query, after dropping caller
+ * pairs under the same keys. Keys are compared percent-encoded, the form
+ * y-websocket writes (`encodeQueryParams` in lib0 `url.js`), and the query is
+ * cut as the server reads it (`splitUrl`), so a `?` inside a caller value
+ * cannot hide an earlier pair under an auth key. With no auth pairs the URL is
+ * returned as is, so a caller pair the token shadowed is sent again once the
+ * token is revoked. Tests: `test/provider-reconnect.test.ts` N3, N10, N12;
+ * `test/provider-auth.test.ts` "reads the query from the first ? to the
+ * fragment, as a server does".
  */
 function dialUrl(url: string, authParams: Readonly<Record<string, string>>): string {
 	const authPairs = Object.entries(authParams).map(
@@ -192,11 +247,9 @@ function dialUrl(url: string, authParams: Readonly<Record<string, string>>): str
 	);
 	if (authPairs.length === 0) return url;
 	const replaced = new Set(authPairs.map((pair) => queryKey(pair)));
-	const cut = url.lastIndexOf('?');
-	const base = cut >= 0 ? url.slice(0, cut) : url;
-	const query = cut >= 0 ? url.slice(cut + 1) : '';
+	const { head, query, fragment } = splitUrl(url);
 	const kept = query.split('&').filter((pair) => pair !== '' && !replaced.has(queryKey(pair)));
-	return `${base}?${[...kept, ...authPairs].join('&')}`;
+	return `${head}?${[...kept, ...authPairs].join('&')}${fragment}`;
 }
 
 /**
@@ -219,12 +272,20 @@ const NATIVE_ERROR_NAMES: ReadonlySet<string> = new Set([
  * A loggable label for a thrown value: a native error name, `'custom Error'`
  * for any other error, or else the value's type. The message, a custom name and
  * other fields stay out of the log, because a resolver or handler error can
- * carry the token it failed on. Tests: `test/provider-auth.test.ts` "logs only
- * the name of a resolver error" and "withholds a custom error name".
+ * carry the token it failed on. Reading the value cannot throw out of here: a
+ * `name` getter or a proxy trap that throws gives `'unreadable thrown value'`,
+ * so labelling never interrupts a refusal or a close. Tests:
+ * `test/provider-auth.test.ts` "logs only the name of a resolver error",
+ * "withholds a custom error name" and "labels a thrown value it cannot read".
  */
 function errorLabel(error: unknown): string {
-	if (!(error instanceof Error)) return typeof error;
-	return NATIVE_ERROR_NAMES.has(error.name) ? error.name : 'custom Error';
+	try {
+		if (!(error instanceof Error)) return typeof error;
+		const { name } = error;
+		return NATIVE_ERROR_NAMES.has(name) ? name : 'custom Error';
+	} catch {
+		return 'unreadable thrown value';
+	}
 }
 
 /** Why a dial was refused; also the reason of its close event. */
@@ -431,30 +492,41 @@ function authSocket(
  *
  * Binding the same provider again replaces the earlier binding, which then
  * passes dials through; a dial whose resolver replaces its binding is refused
- * (see `planDial`). The returned unbind stops this binding and puts back
- * the socket constructor it wrapped, unless something has wrapped it since.
- * Tests: the `bindProviderAuth` block in `test/provider-auth.test.ts`.
+ * (see `planDial`). The new binding wraps the constructor under the active one
+ * (`innerSocket`), so rebinds do not stack. The returned unbind stops this
+ * binding and puts back the socket constructor it wrapped, unless something
+ * has wrapped it since. A `_WS` that is missing or cannot be subclassed (an
+ * arrow function, a bound function) gets a `console.error`, stays as it is and
+ * binds nothing. Tests: the `bindProviderAuth` block in
+ * `test/provider-auth.test.ts`.
  */
 export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
-	const Base = provider._WS as SocketConstructor | undefined;
-	if (typeof Base !== 'function') {
-		console.error(
-			'[sentio] collab: provider has no _WS socket constructor; auth not bound, dials carry no token',
-		);
-		return () => {
-			// Nothing was bound.
-		};
-	}
+	const current: unknown = provider._WS;
+	if (typeof current !== 'function') return unbound('provider has no _WS socket constructor');
 	const slot = provider as AuthBindableProvider & BindingSlot;
-	const AuthSocket = authSocket(slot, Base, auth);
+	const Base = innerSocket(slot, current as SocketConstructor);
+	let AuthSocket: SocketConstructor;
+	try {
+		AuthSocket = authSocket(slot, Base, auth);
+	} catch (error) {
+		return unbound(`provider _WS cannot be subclassed (${errorLabel(error)})`);
+	}
 	slot[ACTIVE_BINDING] = AuthSocket;
 	provider._WS = AuthSocket;
 	return () => {
 		if (slot[ACTIVE_BINDING] === AuthSocket) slot[ACTIVE_BINDING] = undefined;
 		if (provider._WS === AuthSocket) provider._WS = Base;
+	};
+}
+
+/** Logs why no binding was made and returns the unbind of nothing. */
+function unbound(reason: string): () => void {
+	console.error(`[sentio] collab: ${reason}; auth not bound, dials carry no token`);
+	return () => {
+		// Nothing was bound.
 	};
 }
 
@@ -485,24 +557,59 @@ function buildProviderOptions(
 }
 
 /**
+ * Whether a caller callback's throw reaches the code that started the event.
+ * Set only while `startOrTearDown` runs the first dial.
+ */
+interface CallbackGuard {
+	surfacing: boolean;
+}
+
+/**
+ * `callback` with its throws kept out of y-websocket. y-websocket calls status
+ * and sync listeners inside its close handler and inside `connect()`, ahead of
+ * scheduling or building the next socket (`closeWebsocketConnection` and
+ * `setupWS` in y-websocket 3.1.0 `src/y-websocket.js`), so a throw that escaped
+ * there would stop every later reconnect. A throw is logged by its label alone
+ * (`errorLabel`) and the provider carries on; only while `guard.surfacing` is
+ * set does it propagate, to `startOrTearDown`. Tests:
+ * `test/provider-reconnect.test.ts` N13, N14, N15.
+ */
+function guarded<T>(
+	guard: CallbackGuard,
+	name: string,
+	callback: (value: T) => void,
+): (value: T) => void {
+	return (value) => {
+		try {
+			callback(value);
+		} catch (error) {
+			if (guard.surfacing) throw error;
+			console.error(`[sentio] collab: ${name} callback threw:`, errorLabel(error));
+		}
+	};
+}
+
+/**
  * Subscribes the optional status and sync callbacks, returning the matching detach.
  *
  * Pairing attach with detach here keeps the two lists from drifting apart:
  * previously `connectProvider` registered each listener in one place and removed it
  * in another, so a listener added without a matching `off` would outlive
- * `disconnect()`.
+ * `disconnect()`. Both callbacks run through `guarded`.
  */
 function bindProviderEvents(
 	provider: WebsocketProvider,
+	guard: CallbackGuard,
 	onStatusChange?: (status: ProviderStatus) => void,
 	onSync?: (synced: boolean) => void,
 ): () => void {
-	const handleStatus = onStatusChange
-		? ({ status }: { status: string }) => {
-				onStatusChange(normaliseStatus(status));
+	const status = onStatusChange ? guarded(guard, 'onStatusChange', onStatusChange) : undefined;
+	const handleStatus = status
+		? ({ status: next }: { status: string }) => {
+				status(normaliseStatus(next));
 			}
 		: undefined;
-	const handleSync = onSync ? (synced: boolean) => onSync(synced) : undefined;
+	const handleSync = onSync ? guarded(guard, 'onSync', onSync) : undefined;
 	if (handleStatus) provider.on('status', handleStatus);
 	if (handleSync) provider.on('sync', handleSync);
 	return () => {
@@ -513,15 +620,25 @@ function bindProviderEvents(
 
 /**
  * Starts the first dial. y-websocket emits `'connecting'` synchronously inside
- * `connect()`, so a throwing `onStatusChange` lands here; the provider is torn
- * down before the error is rethrown. Tests: `test/provider-reconnect.test.ts` N8.
+ * `connect()`; a throwing `onStatusChange` there propagates (`guard.surfacing`),
+ * the provider is torn down and the error is rethrown to the caller of
+ * `connectProvider`. Later throws are logged (`guarded`). Tests:
+ * `test/provider-reconnect.test.ts` N8, N13.
  */
-function startOrTearDown(provider: WebsocketProvider, teardown: () => void): void {
+function startOrTearDown(
+	provider: WebsocketProvider,
+	guard: CallbackGuard,
+	teardown: () => void,
+): void {
+	guard.surfacing = true;
 	try {
 		provider.connect();
 	} catch (error) {
+		guard.surfacing = false;
 		teardown();
 		throw error;
+	} finally {
+		guard.surfacing = false;
 	}
 }
 
@@ -540,7 +657,8 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 
 	const unbindAuth = auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
 
-	const unbindEvents = bindProviderEvents(provider, onStatusChange, onSync);
+	const guard: CallbackGuard = { surfacing: false };
+	const unbindEvents = bindProviderEvents(provider, guard, onStatusChange, onSync);
 
 	const disconnect = (): void => {
 		if (unbindAuth) unbindAuth();
@@ -549,7 +667,7 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 		provider.destroy();
 	};
 
-	if (options.connect !== false) startOrTearDown(provider, disconnect);
+	if (options.connect !== false) startOrTearDown(provider, guard, disconnect);
 
 	return { provider, disconnect };
 }

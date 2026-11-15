@@ -211,11 +211,21 @@ describe('bindProviderAuth', () => {
 		expect(provider.urls()).toEqual(['ws://x/room?flag&token=tok']);
 	});
 
-	it('reads the query after the last ?, the one y-websocket writes before its params', () => {
+	it('reads the query from the first ? to the fragment, as a server does', () => {
 		const provider = new FakeProvider();
 		bindProviderAuth(provider, 'tok');
+		provider.build('ws://x/s?token=old&next=a?b/room?p=1', []);
 		provider.build('ws://x/a?b?token=old', []);
-		expect(provider.urls()).toEqual(['ws://x/a?b?token=tok']);
+		provider.build('ws://x/room?token=old#f?token=x', []);
+		provider.build('ws://x/room#f?token=old', []);
+		provider.build('ws://x/room?', []);
+		expect(provider.urls()).toEqual([
+			'ws://x/s?next=a?b/room?p=1&token=tok',
+			'ws://x/a?b?token=old&token=tok',
+			'ws://x/room?token=tok#f?token=x',
+			'ws://x/room?token=tok#f?token=old',
+			'ws://x/room?token=tok',
+		]);
 	});
 
 	it('appends the auth subprotocol to a copy and never mutates the caller array', () => {
@@ -675,6 +685,54 @@ describe('bindProviderAuth', () => {
 		expect(provider.dials).toEqual([{ url: 'ws://x/room', protocols: [`bearer.${token}`] }]);
 	});
 
+	it('labels a thrown value it cannot read, and the next dial goes through', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const unreadableName = new Error('tok-secret');
+			Object.defineProperty(unreadableName, 'name', {
+				get(): string {
+					throw new TypeError('name getter');
+				},
+			});
+			const trappedProxy = new Proxy(
+				{},
+				{
+					getPrototypeOf(): object | null {
+						throw new TypeError('getPrototypeOf trap');
+					},
+				},
+			);
+			const thrown: unknown[] = [unreadableName, trappedProxy];
+			let n = 0;
+			bindProviderAuth(provider, () => {
+				const value = thrown[n];
+				n += 1;
+				// eslint-disable-next-line @typescript-eslint/only-throw-error -- a resolver may throw a value whose reads throw; labelling must survive it
+				if (value !== undefined) throw value;
+				return 'tok';
+			});
+			const first = provider.dial();
+			const second = provider.dial();
+			await Promise.resolve();
+			provider.dial();
+			expect(errorSpy).toHaveBeenCalledTimes(2);
+			for (const call of [1, 2]) {
+				expect(errorSpy).toHaveBeenNthCalledWith(
+					call,
+					expect.stringContaining('dial refused'),
+					'unreadable thrown value',
+				);
+			}
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+			expect(first.readyState).toBe(first.CLOSED);
+			expect(second.readyState).toBe(second.CLOSED);
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
 	it('logs only the type of a thrown value that is not an error', async () => {
 		const provider = new FakeProvider();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -759,6 +817,72 @@ describe('bindProviderAuth', () => {
 		provider.dial();
 		expect(provider.urls()).toEqual(['ws://x/room']);
 	});
+
+	it('keeps one auth layer across rebinds, unbound in any order', () => {
+		const provider = new FakeProvider();
+		const unbindA = bindProviderAuth(provider, { token: 'tokA', param: 'a' });
+		const unbindB = bindProviderAuth(provider, { token: 'tokB', param: 'b' });
+		const unbindC = bindProviderAuth(provider, { token: 'tokC', param: 'c' });
+		expect(Object.getPrototypeOf(provider._WS)).toBe(provider.original);
+		provider.dial();
+		unbindA();
+		unbindB();
+		expect(Object.getPrototypeOf(provider._WS)).toBe(provider.original);
+		provider.dial();
+		unbindC();
+		expect(provider._WS).toBe(provider.original);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?c=tokC', 'ws://x/room?c=tokC', 'ws://x/room']);
+	});
+
+	it('binds over the original socket constructor again after an unbind', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1')();
+		bindProviderAuth(provider, 'tok2');
+		expect(Object.getPrototypeOf(provider._WS)).toBe(provider.original);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok2']);
+	});
+
+	it('keeps a wrapper put over a binding when rebinding, and puts it back on unbind', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, { token: 'tokA', param: 'a' });
+		const Wrapper = class extends provider._WS {};
+		provider._WS = Wrapper;
+		const unbindB = bindProviderAuth(provider, { token: 'tokB', param: 'b' });
+		expect(Object.getPrototypeOf(provider._WS)).toBe(Wrapper);
+		provider.dial();
+		unbindB();
+		expect(provider._WS).toBe(Wrapper);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?b=tokB', 'ws://x/room']);
+	});
+
+	it.each([
+		['an arrow function', (() => undefined) as unknown as SocketConstructor],
+		['a bound class', NoopSocket.bind(null) as unknown as SocketConstructor],
+	])(
+		'logs an error and binds nothing when _WS is %s, which cannot be subclassed',
+		(_label, socket) => {
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			try {
+				const provider = new FakeProvider();
+				provider._WS = socket;
+				const unbind = bindProviderAuth(provider, 'tok');
+				expect(errorSpy).toHaveBeenCalledTimes(1);
+				expect(errorSpy).toHaveBeenCalledWith(
+					expect.stringMatching(
+						/cannot be subclassed \(TypeError\); auth not bound, dials carry no token$/,
+					),
+				);
+				expect(provider._WS).toBe(socket);
+				unbind();
+				expect(provider._WS).toBe(socket);
+			} finally {
+				errorSpy.mockRestore();
+			}
+		},
+	);
 
 	it('requires a socket constructor on the provider type', () => {
 		// @ts-expect-error -- a stand-in without _WS must not compile: no dial could carry the token.

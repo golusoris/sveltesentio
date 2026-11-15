@@ -58,3 +58,79 @@ describe('createMemRelay socket cap', () => {
 		expect(relay.sockets).toEqual(second.sockets);
 	});
 });
+
+describe('createMemRelay close()', () => {
+	/** One open socket with its close and error events recorded. */
+	async function openSocket() {
+		const relay = createMemRelay();
+		const { sockets, closes } = dial(relay, 1);
+		const socket = sockets[0];
+		if (socket === undefined) throw new Error('socket missing');
+		const errors: unknown[] = [];
+		socket.onerror = (event) => {
+			errors.push(event);
+		};
+		await Promise.resolve();
+		return { relay, socket, closes, errors };
+	}
+
+	it('closes an open socket one task later with 1005 and fires onclose once (positive)', async () => {
+		const { relay, socket, closes, errors } = await openSocket();
+		expect(socket.readyState).toBe(socket.OPEN);
+		socket.close();
+		expect(socket.readyState).toBe(socket.CLOSING);
+		expect(relay.sockets).not.toContain(socket);
+		expect(closes).toEqual([null]);
+		await Promise.resolve();
+		expect(socket.readyState).toBe(socket.CLOSED);
+		expect(closes).toEqual([{ code: 1005, reason: '' }]);
+		expect(errors).toEqual([]);
+	});
+
+	it('ignores a second close() and a drop after close() (negative)', async () => {
+		const { relay, socket, closes } = await openSocket();
+		let fired = 0;
+		socket.onclose = () => {
+			fired += 1;
+		};
+		socket.close();
+		socket.close();
+		relay.drop(socket);
+		await Promise.resolve();
+		await Promise.resolve();
+		socket.close();
+		relay.drop(socket);
+		await Promise.resolve();
+		expect(fired).toBe(1);
+		expect(closes).toEqual([null]);
+		expect(socket.readyState).toBe(socket.CLOSED);
+	});
+
+	it('fails a socket closed while connecting: error, then close 1006, never open (boundary)', async () => {
+		const relay = createMemRelay();
+		const { sockets, closes } = dial(relay, 1);
+		const socket = sockets[0];
+		if (socket === undefined) throw new Error('socket missing');
+		const events: string[] = [];
+		socket.onopen = () => {
+			events.push('open');
+		};
+		socket.onerror = () => {
+			events.push('error');
+		};
+		const record = socket.onclose;
+		socket.onclose = (event) => {
+			events.push('close');
+			record?.(event);
+		};
+		expect(socket.readyState).toBe(socket.CONNECTING);
+		socket.close();
+		expect(socket.readyState).toBe(socket.CLOSING);
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(events).toEqual(['error', 'close']);
+		expect(closes).toEqual([{ code: 1006, reason: '' }]);
+		expect(socket.readyState).toBe(socket.CLOSED);
+		expect(relay.sockets).toEqual([]);
+	});
+});

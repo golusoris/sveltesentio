@@ -60,7 +60,7 @@ export interface MemDial {
 
 export interface MemRelay {
 	readonly Socket: MemSocketConstructor;
-	/** Sockets not yet closed, at most `maxSockets`; a socket leaves on `close()`, a drop or a refusal. */
+	/** Sockets connecting or open, at most `maxSockets`; a socket leaves once `close()` is called, or on a drop or a refusal. */
 	readonly sockets: readonly MemSocket[];
 	/** Every dial, kept as the assertion log of the one test that owns the relay. */
 	readonly dials: readonly MemDial[];
@@ -147,9 +147,12 @@ function roomDoc(state: RelayState, room: string): Y.Doc {
 	return doc;
 }
 
-/** Marks `socket` closed and removes it from the sockets updates fan out to. */
-function forgetSocket(state: RelayState, socket: MemSocket): void {
-	socket.readyState = socket.CLOSED;
+/**
+ * Sets `socket` to `next` (closed unless given) and removes it from the
+ * sockets updates fan out to.
+ */
+function forgetSocket(state: RelayState, socket: MemSocket, next: number = socket.CLOSED): void {
+	socket.readyState = next;
 	const index = state.sockets.indexOf(socket);
 	if (index >= 0) state.sockets.splice(index, 1);
 }
@@ -220,8 +223,23 @@ class RelaySocket implements MemSocket {
 		});
 	}
 
+	/**
+	 * Closes as a browser socket does (WHATWG WebSockets, `close()`): the socket
+	 * is `CLOSING` and out of the fan-out at once, and one task later it is
+	 * `CLOSED` and `onclose` fires once, with 1005 (no status) for an open
+	 * socket. A socket still connecting never opens; it fires `onerror` and then
+	 * `onclose` with 1006. A second call does nothing. Tests:
+	 * `test/mem-relay.test.ts` "close()".
+	 */
 	close(): void {
-		forgetSocket(this.#relay, this);
+		if (this.readyState >= this.CLOSING) return;
+		const wasOpen = this.readyState === this.OPEN;
+		forgetSocket(this.#relay, this, this.CLOSING);
+		queueMicrotask(() => {
+			this.readyState = this.CLOSED;
+			if (!wasOpen) this.onerror?.({ type: 'error' });
+			this.onclose?.(wasOpen ? { code: 1005, reason: '' } : { code: 1006, reason: '' });
+		});
 	}
 }
 
@@ -248,7 +266,7 @@ export function createMemRelay(options: MemRelayOptions = {}): MemRelay {
 	}
 
 	function drop(socket: MemSocket, code = 1006, reason = 'drop'): void {
-		if (socket.readyState === socket.CLOSED) return;
+		if (socket.readyState >= socket.CLOSING) return;
 		forgetSocket(state, socket);
 		socket.onclose?.({ code, reason });
 	}
