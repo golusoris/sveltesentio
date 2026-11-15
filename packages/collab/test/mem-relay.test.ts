@@ -18,6 +18,26 @@ function dial(relay: ReturnType<typeof createMemRelay>, count: number) {
 	return { sockets, closes };
 }
 
+/**
+ * Records `open`, `error` and `close <code> <reason>` of `socket` in firing
+ * order, keeping the `onclose` set before.
+ */
+function trace(socket: MemSocket): string[] {
+	const events: string[] = [];
+	const record = socket.onclose;
+	socket.onopen = () => {
+		events.push('open');
+	};
+	socket.onerror = () => {
+		events.push('error');
+	};
+	socket.onclose = (event) => {
+		events.push(`close ${event.code} ${event.reason}`);
+		record?.(event);
+	};
+	return events;
+}
+
 describe('createMemRelay socket cap', () => {
 	it('opens every socket up to maxSockets', async () => {
 		const relay = createMemRelay({ maxSockets: 2 });
@@ -28,19 +48,16 @@ describe('createMemRelay socket cap', () => {
 		expect(relay.sockets).toHaveLength(2);
 	});
 
-	it('closes a dial past maxSockets with 1013 and never opens it', async () => {
+	it('fails a dial past maxSockets: error, then close 1006, never open', async () => {
 		const relay = createMemRelay({ maxSockets: 2 });
 		const { sockets, closes } = dial(relay, 3);
-		let opened = false;
 		const extra = sockets[2];
 		if (extra === undefined) throw new Error('third socket missing');
-		extra.onopen = () => {
-			opened = true;
-		};
+		const events = trace(extra);
 		await nextTask();
-		expect(opened).toBe(false);
+		expect(events).toEqual(['error', 'close 1006 relay full']);
 		expect(extra.readyState).toBe(extra.CLOSED);
-		expect(closes[2]).toEqual({ code: 1013, reason: 'relay full' });
+		expect(closes[2]).toEqual({ code: 1006, reason: 'relay full' });
 		expect(relay.sockets).not.toContain(extra);
 		expect(relay.dials).toHaveLength(3);
 	});
@@ -59,21 +76,21 @@ describe('createMemRelay socket cap', () => {
 	});
 });
 
-describe('createMemRelay close()', () => {
-	/** One open socket with its close and error events recorded. */
-	async function openSocket() {
-		const relay = createMemRelay();
-		const { sockets, closes } = dial(relay, 1);
-		const socket = sockets[0];
-		if (socket === undefined) throw new Error('socket missing');
-		const errors: unknown[] = [];
-		socket.onerror = (event) => {
-			errors.push(event);
-		};
-		await nextTask();
-		return { relay, socket, closes, errors };
-	}
+/** One open socket with its close and error events recorded. */
+async function openSocket() {
+	const relay = createMemRelay();
+	const { sockets, closes } = dial(relay, 1);
+	const socket = sockets[0];
+	if (socket === undefined) throw new Error('socket missing');
+	const errors: unknown[] = [];
+	socket.onerror = (event) => {
+		errors.push(event);
+	};
+	await nextTask();
+	return { relay, socket, closes, errors };
+}
 
+describe('createMemRelay close()', () => {
 	it('closes an open socket one task later with 1005 and fires onclose once (positive)', async () => {
 		const { relay, socket, closes, errors } = await openSocket();
 		expect(socket.readyState).toBe(socket.OPEN);
@@ -105,54 +122,45 @@ describe('createMemRelay close()', () => {
 		expect(closes).toEqual([null]);
 		expect(socket.readyState).toBe(socket.CLOSED);
 	});
+});
 
+describe('createMemRelay close() while connecting', () => {
 	it('fails a socket closed while connecting: error, then close 1006, never open (boundary)', async () => {
 		const relay = createMemRelay();
 		const { sockets, closes } = dial(relay, 1);
 		const socket = sockets[0];
 		if (socket === undefined) throw new Error('socket missing');
-		const events: string[] = [];
-		socket.onopen = () => {
-			events.push('open');
-		};
-		socket.onerror = () => {
-			events.push('error');
-		};
-		const record = socket.onclose;
-		socket.onclose = (event) => {
-			events.push('close');
-			record?.(event);
-		};
+		const events = trace(socket);
 		expect(socket.readyState).toBe(socket.CONNECTING);
 		socket.close();
 		expect(socket.readyState).toBe(socket.CLOSING);
 		await nextTask();
 		await nextTask();
-		expect(events).toEqual(['error', 'close']);
+		expect(events).toEqual(['error', 'close 1006 ']);
 		expect(closes).toEqual([{ code: 1006, reason: '' }]);
 		expect(socket.readyState).toBe(socket.CLOSED);
 		expect(relay.sockets).toEqual([]);
 	});
 });
 
-describe('createMemRelay drop()', () => {
-	/** One open socket with every event it fires recorded in order. */
-	async function openTraced() {
-		const relay = createMemRelay();
-		const { sockets } = dial(relay, 1);
-		const socket = sockets[0];
-		if (socket === undefined) throw new Error('socket missing');
-		const events: string[] = [];
-		await nextTask();
-		socket.onerror = () => {
-			events.push('error');
-		};
-		socket.onclose = (event) => {
-			events.push(`close ${event.code} ${event.reason}`);
-		};
-		return { relay, socket, events };
-	}
+/** One open socket with every event it fires recorded in order. */
+async function openTraced() {
+	const relay = createMemRelay();
+	const { sockets } = dial(relay, 1);
+	const socket = sockets[0];
+	if (socket === undefined) throw new Error('socket missing');
+	const events: string[] = [];
+	await nextTask();
+	socket.onerror = () => {
+		events.push('error');
+	};
+	socket.onclose = (event) => {
+		events.push(`close ${event.code} ${event.reason}`);
+	};
+	return { relay, socket, events };
+}
 
+describe('createMemRelay drop()', () => {
 	it('fails a dropped socket one task later: error, then close 1006 (positive)', async () => {
 		const { relay, socket, events } = await openTraced();
 		relay.drop(socket);
@@ -191,6 +199,47 @@ describe('createMemRelay drop()', () => {
 		relay.drop(socket);
 		await nextTask();
 		expect(events).toEqual(['error', 'close 1006 drop']);
+		expect(relay.handlerErrors).toEqual([failure]);
+	});
+});
+
+describe('createMemRelay refuseNext()', () => {
+	it('fails a refused dial: error, then close 1006, never open, and opens the next (positive)', async () => {
+		const relay = createMemRelay();
+		relay.refuseNext(1);
+		const [refused, admitted] = dial(relay, 2).sockets;
+		if (refused === undefined || admitted === undefined) throw new Error('socket missing');
+		const events = trace(refused);
+		await nextTask();
+		expect(events).toEqual(['error', 'close 1006 refused']);
+		expect(refused.readyState).toBe(refused.CLOSED);
+		expect(admitted.readyState).toBe(admitted.OPEN);
+		expect(relay.sockets).toEqual([admitted]);
+	});
+
+	it('refuses nothing for a count below one (negative)', async () => {
+		const relay = createMemRelay();
+		relay.refuseNext(-1);
+		const [socket] = dial(relay, 1).sockets;
+		if (socket === undefined) throw new Error('socket missing');
+		const events = trace(socket);
+		await nextTask();
+		expect(events).toEqual(['open']);
+	});
+
+	it('still fires the close of a refused dial when its error handler throws (boundary)', async () => {
+		const relay = createMemRelay();
+		relay.refuseNext(1);
+		const [socket] = dial(relay, 1).sockets;
+		if (socket === undefined) throw new Error('socket missing');
+		const events = trace(socket);
+		const failure = new Error('handler bug');
+		socket.onerror = () => {
+			events.push('error');
+			throw failure;
+		};
+		await nextTask();
+		expect(events).toEqual(['error', 'close 1006 refused']);
 		expect(relay.handlerErrors).toEqual([failure]);
 	});
 });

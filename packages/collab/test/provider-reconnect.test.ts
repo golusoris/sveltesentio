@@ -134,7 +134,30 @@ function snapshotMapViaUpdate(doc: Y.Doc, mapName: string): Record<string, unkno
 	return snapshot;
 }
 
-describe('connectProvider reconnection — positive', () => {
+/** `count` distinct caller subprotocols, the most a dial takes before auth adds its own. */
+function callerProtocols(count: number): string[] {
+	return Array.from({ length: count }, (_, i) => `p${String(i)}`);
+}
+
+/**
+ * A y-websocket provider built with its default `connect: true`, so its
+ * constructor dials before any binding; destroyed at teardown.
+ */
+function autoConnectedProvider(relay: MemRelay, room: string): WebsocketProvider {
+	const doc = new Y.Doc();
+	const provider = new WebsocketProvider(SERVER_URL, room, doc, {
+		disableBc: true,
+		maxBackoffTime: FAST_BACKOFF_MS,
+		WebSocketPolyfill: relay.Socket as unknown as typeof WebSocket,
+	});
+	teardowns.push(() => {
+		provider.destroy();
+		doc.destroy();
+	});
+	return provider;
+}
+
+describe('connectProvider reconnection — positive — connect and drop', () => {
 	it('P1: connects, reports status + sync, and converges bidirectional edits', async () => {
 		const relay = createMemRelay();
 		const peerA = connectPeer(relay, 'room-p1');
@@ -173,7 +196,9 @@ describe('connectProvider reconnection — positive', () => {
 		expect(relay.dials).toHaveLength(2);
 		expect(requireDial(relay, 1).url).toBe(firstDial.url);
 	});
+});
 
+describe('connectProvider reconnection — positive — offline edits', () => {
 	it('P3: merges offline edits made on both sides while disconnected', async () => {
 		const relay = createMemRelay();
 		const peerA = connectPeer(relay, 'room-p3');
@@ -203,7 +228,9 @@ describe('connectProvider reconnection — positive', () => {
 		expect(stateB).toEqual(stateA);
 		expect(stateRelay).toEqual(stateA);
 	});
+});
 
+describe('connectProvider reconnection — positive — token per dial', () => {
 	it('P4: resolves a rotating token exactly once per dial', async () => {
 		const relay = createMemRelay();
 		const issued = ['tok1', 'tok2'];
@@ -257,7 +284,7 @@ describe('connectProvider reconnection — positive', () => {
 	});
 });
 
-describe('connectProvider reconnection — negative', () => {
+describe('connectProvider reconnection — negative — terminal close and disconnect', () => {
 	it('N1: treats close code 4401 as terminal and does not reconnect', async () => {
 		const relay = createMemRelay();
 		const peerA = connectPeer(relay, 'room-n1');
@@ -298,7 +325,9 @@ describe('connectProvider reconnection — negative', () => {
 		expect(peerA.statuses).toEqual(statusSnapshot);
 		expect(peerA.syncs).toEqual(syncSnapshot);
 	});
+});
 
+describe('connectProvider reconnection — negative — auth across reconnects, part 1', () => {
 	it('N3: strips query param and bearer subprotocol when token is revoked to null, keeping caller params', async () => {
 		const relay = createMemRelay();
 		let token: string | null = 'tok1';
@@ -357,7 +386,9 @@ describe('connectProvider reconnection — negative', () => {
 			expect(dial.protocols).toEqual(['yjs-v1', `bearer.tok${i + 1}`]);
 		}
 	});
+});
 
+describe('connectProvider reconnection — negative — auth across reconnects, part 2', () => {
 	it('N6: keeps a caller subprotocol equal to an auth entry and never sends it twice', async () => {
 		const relay = createMemRelay();
 		const RECONNECTS = 2;
@@ -387,6 +418,9 @@ describe('connectProvider reconnection — negative', () => {
 		expect(requireDial(relay, 1).protocols).toEqual(['bearer.tok1', 'bearer.tok2']);
 		expect(requireDial(relay, 2).protocols).toEqual(['bearer.tok1']);
 	});
+});
+
+describe('connectProvider reconnection — negative — refused dials', () => {
 	it('N7: refuses the dial, sends no anonymous request, and reconnects when the resolver throws', async () => {
 		const relay = createMemRelay();
 		const failure = new Error('token service down');
@@ -431,7 +465,9 @@ describe('connectProvider reconnection — negative', () => {
 			errorSpy.mockRestore();
 		}
 	});
+});
 
+describe('connectProvider reconnection — negative — first dial, part 1', () => {
 	it('N8: tears the provider down and throws a problem error when onStatusChange throws on the first dial', async () => {
 		const relay = createMemRelay();
 		const failure = new Error('status listener failed');
@@ -473,7 +509,77 @@ describe('connectProvider reconnection — negative', () => {
 		expect(relay.dials).toHaveLength(1);
 		expect(statuses).toEqual(['connecting']);
 	});
+});
 
+describe('connectProvider reconnection — negative — first dial, part 2', () => {
+	it('N18: tears the provider down and throws a problem error when the first dial is refused permanently', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const doc = new Y.Doc();
+		teardowns.push(() => {
+			doc.destroy();
+		});
+		let caught: unknown = null;
+		try {
+			connectProvider({
+				url: SERVER_URL,
+				room: 'room-n18',
+				doc,
+				disableBc: true,
+				maxBackoffTime: FAST_BACKOFF_MS,
+				WebSocketPolyfill: relay.Socket as unknown as typeof WebSocket,
+				protocols: callerProtocols(4000),
+				auth: { token: 'tok', param: null, protocol: 'bearer' },
+			});
+		} catch (error) {
+			caught = error;
+		} finally {
+			errorSpy.mockRestore();
+		}
+
+		expect(caught).toBeInstanceOf(ProblemError);
+		const problem = caught as ProblemError;
+		expect(problem.type).toBe(COLLAB_START_FAILED_TYPE);
+		expect(problem.detail).toBe(
+			'the first dial was refused (dial exceeds the query pair or subprotocol bound); the provider was torn down',
+		);
+		await settle(10 * FAST_BACKOFF_MS);
+		expect(relay.dials).toHaveLength(0);
+	});
+});
+
+describe('connectProvider reconnection — negative — first dial, part 3', () => {
+	it('N20: keeps a provider whose first dial is refused for now (resolver throws), and connects after the backoff (boundary)', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		let calls = 0;
+		try {
+			const peerA = connectPeer(relay, 'room-n20', {
+				auth: () => {
+					calls += 1;
+					if (calls === 1) throw new Error('token service down');
+					return `tok${calls}`;
+				},
+			});
+			await settle();
+			expect(relay.dials).toHaveLength(0);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: auth token resolver threw; dial refused:',
+				'Error',
+			);
+			expect(peerA.provider.shouldConnect).toBe(true);
+
+			await settle(FAST_BACKOFF_MS);
+			expect(relay.dials).toHaveLength(1);
+			expect(requireDial(relay, 0).url).toBe(`${SERVER_URL}/room-n20?token=tok2`);
+			expect(peerA.provider.synced).toBe(true);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
+describe('connectProvider reconnection — negative — caller fallback, part 1', () => {
 	it('N10: falls back to the caller value of a param the token shadowed once the token is revoked', async () => {
 		const relay = createMemRelay();
 		let token: string | null = 'tok1';
@@ -491,7 +597,9 @@ describe('connectProvider reconnection — negative', () => {
 
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n10?token=guest`);
 	});
+});
 
+describe('connectProvider reconnection — negative — throwing listeners, part 1', () => {
 	it('N11: keeps reconnecting when a connection-error listener throws on a refused dial', async () => {
 		const relay = createMemRelay();
 		const listenerFailure = new Error('listener bug');
@@ -526,7 +634,9 @@ describe('connectProvider reconnection — negative', () => {
 			errorSpy.mockRestore();
 		}
 	});
+});
 
+describe('connectProvider reconnection — negative — caller fallback, part 2', () => {
 	it('N12: sends a caller update under the auth key once the token is revoked', async () => {
 		const relay = createMemRelay();
 		let token: string | null = 'tok1';
@@ -546,7 +656,9 @@ describe('connectProvider reconnection — negative', () => {
 
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n12?token=guest2`);
 	});
+});
 
+describe('connectProvider reconnection — negative — throwing listeners, part 2', () => {
 	it('N13: keeps reconnecting when onStatusChange throws after the first dial, logging each throw', async () => {
 		const relay = createMemRelay();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -582,7 +694,9 @@ describe('connectProvider reconnection — negative', () => {
 			errorSpy.mockRestore();
 		}
 	});
+});
 
+describe('connectProvider reconnection — negative — throwing listeners, part 3', () => {
 	it('N14: keeps reconnecting when onSync throws on the sync reset of a drop', async () => {
 		const relay = createMemRelay();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -616,7 +730,9 @@ describe('connectProvider reconnection — negative', () => {
 			errorSpy.mockRestore();
 		}
 	});
+});
 
+describe('connectProvider reconnection — negative — own close and early dial', () => {
 	it('N16: redials after the client closes its own socket', async () => {
 		const relay = createMemRelay();
 		const peerA = connectPeer(relay, 'room-n16');
@@ -631,47 +747,43 @@ describe('connectProvider reconnection — negative', () => {
 		expect(peerA.syncs).toEqual([true, false, true]);
 		expect(relay.sockets).toEqual([requireDial(relay, 1).socket]);
 	});
+
 	it.each([
 		['still connecting', 0],
 		['open', 1],
 	] as const)(
-		'N17: closes the socket a provider dialed before bindProviderAuth (%s) and redials with the token',
+		'N17: stops a provider that dialed before bindProviderAuth (%s); connect() then dials with the token',
 		async (_label, settlesBeforeBind) => {
 			const relay = createMemRelay();
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-			const doc = new Y.Doc();
-			// Default connect: true, so the constructor dials before any binding.
-			const provider = new WebsocketProvider(SERVER_URL, 'room-n13', doc, {
-				disableBc: true,
-				maxBackoffTime: FAST_BACKOFF_MS,
-				WebSocketPolyfill: relay.Socket as unknown as typeof WebSocket,
-			});
-			teardowns.push(() => {
-				provider.destroy();
-				doc.destroy();
-			});
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			const provider = autoConnectedProvider(relay, 'room-n17');
 			try {
 				if (settlesBeforeBind > 0) await settle();
 				expect(relay.dials).toHaveLength(1);
 				bindProviderAuth(provider, 'tok');
-				expect(warnSpy).toHaveBeenCalledTimes(1);
-				await settle(FAST_BACKOFF_MS);
-
-				expect(relay.dials.map((dial) => dial.url)).toEqual([
-					`${SERVER_URL}/room-n13`,
-					`${SERVER_URL}/room-n13?token=tok`,
-				]);
+				expect(errorSpy).toHaveBeenCalledTimes(1);
+				expect(provider.shouldConnect).toBe(false);
+				await settle(10 * FAST_BACKOFF_MS);
+				expect(relay.dials).toHaveLength(1);
 				const first = requireDial(relay, 0).socket;
 				expect(first.readyState).toBe(first.CLOSED);
+				expect(provider.wsconnected).toBe(false);
+
+				provider.connect();
+				await settle();
+				expect(relay.dials.map((dial) => dial.url)).toEqual([
+					`${SERVER_URL}/room-n17`,
+					`${SERVER_URL}/room-n17?token=tok`,
+				]);
 				expect(provider.wsconnected).toBe(true);
 			} finally {
-				warnSpy.mockRestore();
+				errorSpy.mockRestore();
 			}
 		},
 	);
 });
 
-describe('connectProvider held-back connect', () => {
+describe('connectProvider held-back connect — status', () => {
 	it('N5: connect: false dials nothing until provider.connect(), then reports connecting first', async () => {
 		const relay = createMemRelay();
 		const peerA = connectPeer(relay, 'room-n5', { connect: false });
@@ -713,7 +825,9 @@ describe('connectProvider held-back connect', () => {
 			errorSpy.mockRestore();
 		}
 	});
+});
 
+describe('connectProvider held-back connect — token', () => {
 	it('P6: resolves the token when the held-back first dial goes out, not at construction', async () => {
 		const relay = createMemRelay();
 		let token = 'tok1';
@@ -727,6 +841,29 @@ describe('connectProvider held-back connect', () => {
 
 		expect(relay.dials).toHaveLength(1);
 		expect(requireDial(relay, 0).url).toBe(`${SERVER_URL}/room-p6?token=tok2`);
+	});
+
+	it('N19: stops a held-back provider whose dial is refused permanently, until connect() is called again', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const peerA = connectPeer(relay, 'room-n19', {
+				connect: false,
+				protocols: callerProtocols(4000),
+				auth: { token: 'tok', param: null, protocol: 'bearer' },
+			});
+			peerA.provider.connect();
+			await settle(10 * FAST_BACKOFF_MS);
+
+			expect(relay.dials).toHaveLength(0);
+			expect(peerA.provider.shouldConnect).toBe(false);
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: dial exceeds the query pair or subprotocol bound; dial refused, provider stopped until connect() is called',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
 	});
 
 	it('N9: dials without credentials when the token is revoked before a held-back connect', async () => {
@@ -748,7 +885,7 @@ describe('connectProvider held-back connect', () => {
 	});
 });
 
-describe('connectProvider reconnection — boundary', () => {
+describe('connectProvider reconnection — boundary — convergence', () => {
 	it('B1: recovers and converges when dropped right after open before sync completes', async () => {
 		const relay = createMemRelay();
 		const peerB = connectPeer(relay, 'room-b1');
@@ -812,7 +949,9 @@ describe('connectProvider reconnection — boundary', () => {
 		// Only the open sockets stay; peer A redialled last, so its socket comes second.
 		expect(relay.sockets).toEqual([activeSocket(peerB), activeSocket(peerA)]);
 	});
+});
 
+describe('connectProvider reconnection — boundary — backoff', () => {
 	it('B3: caps reconnect backoff at maxBackoffTime across consecutive refusals', async () => {
 		const relay = createMemRelay();
 		const REFUSALS = 4;

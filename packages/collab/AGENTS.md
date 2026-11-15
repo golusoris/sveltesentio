@@ -55,7 +55,7 @@ This package does **not**:
 - **Presence reads via `'change'`, not `'update'`.** `observePresence` / `createPresenceStore` default to awareness `'change'` event -> listeners fire on real transitions, not every heartbeat. `'update'` opt-in via `{ event: 'update' }`.
 - **`diffPresence` keys updates on reference identity.** Yjs replaces client state object on every change -> `prev.get(id) !== next.get(id)` = correct, allocation-free staleness check; no deep compare.
 - **Presence mutations route through awareness.** `store.setLocal(x)` calls `awareness.setLocalState(x)`; `others` `readonly`.
-- **Provider errors = core `ProblemError`.** `connectProvider` throws `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` set + `_WS` not subclassable (provider destroyed before any dial, also with `connect: false`); `COLLAB_START_FAILED_TYPE` when first dial throws (`cause` = thrown value). `@sveltesentio/core` = runtime dependency for this.
+- **Provider errors = core `ProblemError`.** `connectProvider` throws `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` set + `_WS` not subclassable or binding has no transport (`param: null`, no `protocol`) (provider destroyed before any dial, also with `connect: false`); `COLLAB_START_FAILED_TYPE` when first dial throws (`cause` = thrown value) or is refused permanently (`PERMANENT_REFUSALS`: socket constructor rejects dial, dial over entry bound; provider stopped). Direct `bindProviderAuth` never throws: refusal or dial-before-bind -> provider stopped (`shouldConnect` false, socket closed) + `console.error`. `@sveltesentio/core` = runtime dependency for this.
 
 ## Test policy
 
@@ -63,7 +63,7 @@ This package does **not**:
 - Awareness helpers (`./awareness`) test against in-memory `FakeAwareness` implementing `AwarenessLike` — no `y-protocols` dependency at test time.
 - Rune helpers (`*.svelte.ts`) exercised indirectly via pure helpers they compose.
 - Direct rune runtime tests land once monorepo wires `vitest` + Svelte plugin harness.
-- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one. `relay.drop()` with 1006 = `error` then `close` (failed connection); other codes = `close` only. `onerror` throw -> `relay.handlerErrors`, `close` still fires.
+- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one. `relay.drop()` with 1006 = `error` then `close` (failed connection); other codes = `close` only. Relay full + `refuseNext` = `error` then `close` 1006 (connection never opened). `onerror` throw -> `relay.handlerErrors`, `close` still fires.
 - Coverage ≥ 85% on pure helpers.
 
 ## Common tasks

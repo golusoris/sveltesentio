@@ -43,7 +43,7 @@ export function nextTask(): Promise<void> {
 }
 
 export interface MemRelayOptions {
-	/** Open sockets the relay admits; a dial past it closes with 1013. Defaults to 16. */
+	/** Open sockets the relay admits; a dial past it fails (`error`, then close 1006). Defaults to 16. */
 	readonly maxSockets?: number;
 }
 
@@ -205,17 +205,25 @@ function forgetSocket(state: RelayState, socket: MemSocket, next: number = socke
 	if (index >= 0) state.sockets.splice(index, 1);
 }
 
+/**
+ * Opens `socket`, or fails it as a browser fails a connection the server
+ * refused (the relay is full, or `refuseNext` is pending): `error`, then
+ * `close` with 1006, which a browser reports for a connection that never
+ * opened (WHATWG WebSockets, "fail the WebSocket connection"). Tests:
+ * `test/mem-relay.test.ts` "fails a dial past maxSockets" and "fails a refused
+ * dial".
+ */
 function openOrRefuse(state: RelayState, socket: MemSocket, admitted: boolean): void {
 	if (socket.readyState !== socket.CONNECTING) return;
 	if (!admitted) {
 		socket.readyState = socket.CLOSED;
-		socket.onclose?.({ code: 1013, reason: 'relay full' });
+		failAndClose(socket, { code: 1006, reason: 'relay full' }, state.handlerErrors);
 		return;
 	}
 	if (state.pendingRefusals > 0) {
 		state.pendingRefusals -= 1;
 		forgetSocket(state, socket);
-		socket.onclose?.({ code: 1006, reason: 'refused' });
+		failAndClose(socket, { code: 1006, reason: 'refused' }, state.handlerErrors);
 		return;
 	}
 	const doc = roomDoc(state, socket.room);
