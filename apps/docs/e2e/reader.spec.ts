@@ -32,8 +32,9 @@ const NAV_TIMEOUT_MS = 15_000;
 const OKLAB_JND = 0.02;
 /** Ancestors searched for an opaque background behind the callout (HISS-02). */
 const MAX_BACKGROUND_DEPTH = 32;
-/** A computed `oklab()` colour; the alpha part is present only below 1. */
-const OKLAB = /^oklab\((\S+) (\S+) (\S+)(?: \/ (\S+))?\)$/;
+/** A computed colour reads `oklab(L a b)`, with ` / alpha` added only below full opacity. */
+const OKLAB_PREFIX = 'oklab(';
+const ALPHA_SEPARATOR = ' / ';
 
 interface Oklab {
 	l: number;
@@ -65,11 +66,17 @@ async function boxOf(locator: Locator): Promise<{ x: number; width: number }> {
 	return box ?? { x: Number.NaN, width: Number.NaN };
 }
 
+/** Splits the string instead of matching a regular expression, so no input can backtrack. */
 function parseOklab(css: string): Oklab {
-	const match = OKLAB.exec(css);
-	expect(match, `${css} is a computed oklab() colour`).not.toBeNull();
-	const [l, a, b, alpha = '1'] = match?.slice(1) ?? [];
-	return { l: Number(l), a: Number(a), b: Number(b), alpha: Number(alpha) };
+	const wrapped = css.startsWith(OKLAB_PREFIX) && css.endsWith(')');
+	const inner = wrapped ? css.slice(OKLAB_PREFIX.length, -1) : '';
+	const [channels = '', alpha = '1', ...extra] = inner.split(ALPHA_SEPARATOR);
+	const parts = [...channels.split(' '), alpha];
+	const values = parts.map((part) => (part === '' ? Number.NaN : Number(part)));
+	const valid = extra.length === 0 && parts.length === 4 && values.every(Number.isFinite);
+	expect(valid, `${css} is a computed oklab() colour`).toBe(true);
+	const [l = 0, a = 0, b = 0, opacity = 0] = values;
+	return { l, a, b, alpha: opacity };
 }
 
 function deltaEOK(one: Oklab, two: Oklab): number {
