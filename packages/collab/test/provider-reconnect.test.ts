@@ -206,6 +206,32 @@ describe('connectProvider reconnection — positive', () => {
 		expect(resolverCalls).toBe(relay.dials.length);
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-p4?token=tok2`);
 	});
+
+	it('P5: keeps provider.params identity so a held reference reaches later dials', async () => {
+		const relay = createMemRelay();
+		let count = 0;
+		const peerA = connectPeer(relay, 'room-p5', {
+			params: { tenant: 't1' },
+			auth: () => {
+				count += 1;
+				return `tok${count}`;
+			},
+		});
+
+		await settle();
+		const held = peerA.provider.params;
+		relay.drop(activeSocket(peerA), 1006);
+		await settle(FAST_BACKOFF_MS);
+
+		expect(peerA.provider.params).toBe(held);
+		held.tenant = 't2';
+		relay.drop(activeSocket(peerA), 1006);
+		await settle(FAST_BACKOFF_MS);
+
+		expect(relay.dials).toHaveLength(3);
+		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-p5?tenant=t1&token=tok2`);
+		expect(requireDial(relay, 2).url).toBe(`${SERVER_URL}/room-p5?tenant=t2&token=tok3`);
+	});
 });
 
 describe('connectProvider reconnection — negative', () => {
@@ -248,10 +274,11 @@ describe('connectProvider reconnection — negative', () => {
 		expect(peerA.syncs).toEqual(syncSnapshot);
 	});
 
-	it('N3: strips query param and bearer subprotocol when token is revoked to null', async () => {
+	it('N3: strips query param and bearer subprotocol when token is revoked to null, keeping caller params', async () => {
 		const relay = createMemRelay();
 		let token: string | null = 'tok1';
 		const peerA = connectPeer(relay, 'room-n3', {
+			params: { tenant: 't1' },
 			auth: {
 				token: () => token,
 				protocol: 'bearer',
@@ -259,7 +286,7 @@ describe('connectProvider reconnection — negative', () => {
 		});
 
 		await settle();
-		expect(requireDial(relay, 0).url).toBe(`${SERVER_URL}/room-n3?token=tok1`);
+		expect(requireDial(relay, 0).url).toBe(`${SERVER_URL}/room-n3?tenant=t1&token=tok1`);
 		expect(requireDial(relay, 0).protocols).toEqual(['bearer.tok1']);
 
 		token = null;
@@ -267,7 +294,7 @@ describe('connectProvider reconnection — negative', () => {
 		await settle(FAST_BACKOFF_MS);
 
 		const reconnectDial = requireDial(relay, 1);
-		expect(reconnectDial.url).toBe(`${SERVER_URL}/room-n3`);
+		expect(reconnectDial.url).toBe(`${SERVER_URL}/room-n3?tenant=t1`);
 		expect(reconnectDial.url).not.toContain('token');
 		expect(reconnectDial.protocols.some((entry) => entry.startsWith('bearer.'))).toBe(false);
 		expect(reconnectDial.protocols).toEqual([]);
@@ -304,6 +331,36 @@ describe('connectProvider reconnection — negative', () => {
 			expect(bearerEntries).toEqual([`bearer.tok${i + 1}`]);
 			expect(dial.protocols).toEqual(['yjs-v1', `bearer.tok${i + 1}`]);
 		}
+	});
+
+	it('N6: keeps a caller subprotocol equal to an auth entry and never sends it twice', async () => {
+		const relay = createMemRelay();
+		const RECONNECTS = 2;
+		const issued: Array<string | null> = ['tok1', 'tok2', null];
+		let calls = 0;
+		const peerA = connectPeer(relay, 'room-n6', {
+			protocols: ['bearer.tok1'],
+			auth: {
+				token: () => {
+					const next = issued[calls] ?? null;
+					calls += 1;
+					return next;
+				},
+				param: null,
+				protocol: 'bearer',
+			},
+		});
+
+		await settle();
+		for (let i = 0; i < RECONNECTS; i += 1) {
+			relay.drop(activeSocket(peerA), 1006);
+			await settle(FAST_BACKOFF_MS);
+		}
+
+		expect(relay.dials).toHaveLength(RECONNECTS + 1);
+		expect(requireDial(relay, 0).protocols).toEqual(['bearer.tok1']);
+		expect(requireDial(relay, 1).protocols).toEqual(['bearer.tok1', 'bearer.tok2']);
+		expect(requireDial(relay, 2).protocols).toEqual(['bearer.tok1']);
 	});
 });
 

@@ -109,58 +109,101 @@ export interface AuthBindableProvider {
 }
 
 /**
- * Replaces the auth entries owned by a binding while leaving caller-supplied
- * `params` and `protocols` intact.
+ * The auth entries a binding added to the provider: the param keys it set and
+ * the subprotocols it appended. A rebind removes exactly these, so caller
+ * entries survive, including a caller subprotocol equal to an auth one.
  */
-function replaceOwned(
-	current: Pick<AuthBindableProvider, 'params' | 'protocols'>,
-	owned: ResolvedAuth,
-	next: ResolvedAuth,
-): { params: Record<string, string>; protocols: string[] } {
-	const keptParams = Object.fromEntries(
-		Object.entries(current.params).filter(([key]) => !Object.hasOwn(owned.params, key)),
-	);
-	const ownedProtocols = new Set(owned.protocols);
-	const keptProtocols = current.protocols.filter((entry) => !ownedProtocols.has(entry));
-	return {
-		params: { ...keptParams, ...next.params },
-		protocols: [...keptProtocols, ...next.protocols],
-	};
+interface OwnedAuth {
+	readonly params: readonly string[];
+	readonly protocols: readonly string[];
+}
+
+const NOTHING_OWNED: OwnedAuth = { params: [], protocols: [] };
+
+/** Entries of `next` absent from `present`, each listed once. */
+function missingEntries(present: readonly string[], next: readonly string[]): string[] {
+	return next.filter((entry, index) => !present.includes(entry) && next.indexOf(entry) === index);
 }
 
 /**
- * Re-resolves `auth` into the live provider's mutable `params` and `protocols`
- * so a rotated or revoked token is picked up on the next reconnect (`y-websocket`
+ * Swaps the binding's previous auth entries for `next` and returns what it now
+ * owns. `params` is mutated in place, so a reference a caller holds stays the
+ * object y-websocket reads; `protocols` is rebuilt as a new array, so an array
+ * the caller handed to y-websocket (possibly frozen) is never mutated.
+ */
+function swapOwnedAuth(
+	provider: AuthBindableProvider,
+	owned: OwnedAuth,
+	next: ResolvedAuth,
+): OwnedAuth {
+	for (const key of owned.params) Reflect.deleteProperty(provider.params, key);
+	Object.assign(provider.params, next.params);
+	const kept = [...provider.protocols];
+	for (const entry of owned.protocols) {
+		const index = kept.lastIndexOf(entry);
+		if (index >= 0) kept.splice(index, 1);
+	}
+	const added = missingEntries(kept, next.protocols);
+	provider.protocols = [...kept, ...added];
+	return { params: Object.keys(next.params), protocols: added };
+}
+
+/** Re-resolves `auth` on every `connection-close`, starting from `owned`. */
+function bindOwnedAuth(
+	provider: AuthBindableProvider,
+	auth: AuthBinding | string | (() => string | null | undefined),
+	owned: OwnedAuth,
+): () => void {
+	let current = owned;
+	const rebind = (): void => {
+		current = swapOwnedAuth(provider, current, resolveAuthParams(auth));
+	};
+	provider.on('connection-close', rebind);
+	return () => provider.off('connection-close', rebind);
+}
+
+/**
+ * Re-resolves `auth` into the live provider's `params` and `protocols` so a
+ * rotated or revoked token is picked up on the next reconnect (`y-websocket`
  * re-reads both fields each time it dials).
  *
- * Tracks the entries this binding owns and replaces only those on each
- * `connection-close`, preserving caller-supplied `params` and subprotocols. When
- * an auth param key equals a caller param key, auth wins while a token is set;
- * removing the token also removes that key.
- *
- * Pass `initial` when construction-time auth has already been merged onto the
- * provider so the token resolver is not called again at bind time; when
- * `initial` is omitted, `auth` is resolved and applied once immediately. Returns
- * an unbind function. Exported for callers that construct the provider
- * themselves.
+ * Applies the current token once at bind time, then on every `connection-close`
+ * removes only the entries this binding added and adds the newly resolved ones.
+ * Caller-supplied params and subprotocols survive, including a caller
+ * subprotocol equal to an auth one, and no subprotocol is sent twice. When an
+ * auth param key equals a caller param key, auth wins while a token is set;
+ * removing the token also removes that key. `params` keeps its identity, so a
+ * caller holding `provider.params` keeps writing to the object y-websocket
+ * reads. Returns an unbind function. Exported for callers that construct the
+ * provider themselves.
  */
 export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
-	initial?: ResolvedAuth,
 ): () => void {
-	let owned: ResolvedAuth = initial ?? { params: {}, protocols: [] };
-	const apply = (): void => {
-		const next = resolveAuthParams(auth);
-		const updated = replaceOwned(provider, owned, next);
-		provider.params = updated.params;
-		provider.protocols = updated.protocols;
-		owned = next;
+	const owned = swapOwnedAuth(provider, NOTHING_OWNED, resolveAuthParams(auth));
+	return bindOwnedAuth(provider, auth, owned);
+}
+
+/**
+ * Merges caller and construction-time auth entries for the `WebsocketProvider`
+ * constructor and records which entries the binding owns. An auth subprotocol
+ * equal to a caller one is not appended again.
+ */
+function mergeInitialAuth(options: ConnectProviderOptions): {
+	params: Record<string, string>;
+	protocols: string[];
+	owned: OwnedAuth;
+} {
+	const resolved =
+		options.auth !== undefined ? resolveAuthParams(options.auth) : { params: {}, protocols: [] };
+	const callerProtocols = [...(options.protocols ?? [])];
+	const authProtocols = missingEntries(callerProtocols, resolved.protocols);
+	return {
+		params: { ...options.params, ...resolved.params },
+		protocols: [...callerProtocols, ...authProtocols],
+		owned: { params: Object.keys(resolved.params), protocols: authProtocols },
 	};
-	if (initial === undefined) apply();
-	const rebind = (): void => apply();
-	provider.on('connection-close', rebind);
-	return () => provider.off('connection-close', rebind);
 }
 
 /**
@@ -217,20 +260,17 @@ function bindProviderEvents(
 }
 
 export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
-	const { url, room, doc, params, protocols, auth, onStatusChange, onSync } = options;
+	const { url, room, doc, auth, onStatusChange, onSync } = options;
 
-	const resolved = auth !== undefined ? resolveAuthParams(auth) : { params: {}, protocols: [] };
-	const mergedParams = { ...params, ...resolved.params };
-	const mergedProtocols = [...(protocols ?? []), ...resolved.protocols];
-
+	const initial = mergeInitialAuth(options);
 	const provider = new WebsocketProvider(
 		url,
 		room,
 		doc,
-		buildProviderOptions(options, mergedParams, mergedProtocols),
+		buildProviderOptions(options, initial.params, initial.protocols),
 	);
 
-	const unbindAuth = auth !== undefined ? bindProviderAuth(provider, auth, resolved) : undefined;
+	const unbindAuth = auth !== undefined ? bindOwnedAuth(provider, auth, initial.owned) : undefined;
 
 	const unbindEvents = bindProviderEvents(provider, onStatusChange, onSync);
 

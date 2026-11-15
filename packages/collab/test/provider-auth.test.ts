@@ -147,6 +147,63 @@ describe('bindProviderAuth', () => {
 		provider.emit('connection-close');
 		expect(provider.params).toEqual({ token: 't-1' });
 	});
+
+	it('keeps a caller subprotocol that a rotated token later resolves to', () => {
+		const provider = new FakeProvider();
+		provider.protocols = ['bearer.tok2'];
+		const issued = ['tok1', 'tok2', 'tok3'];
+		let n = 0;
+		bindProviderAuth(provider, { token: () => issued[n++] ?? null, protocol: 'bearer' });
+		expect(provider.protocols).toEqual(['bearer.tok2', 'bearer.tok1']);
+
+		provider.emit('connection-close');
+		expect(provider.protocols).toEqual(['bearer.tok2']);
+
+		provider.emit('connection-close');
+		expect(provider.protocols).toEqual(['bearer.tok2', 'bearer.tok3']);
+	});
+
+	it('does not duplicate a caller subprotocol equal to the auth entry', () => {
+		const provider = new FakeProvider();
+		provider.protocols = ['bearer.tok'];
+		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
+		expect(provider.protocols).toEqual(['bearer.tok']);
+
+		provider.emit('connection-close');
+		expect(provider.protocols).toEqual(['bearer.tok']);
+	});
+
+	it('updates params in place so a held reference stays live', () => {
+		const provider = new FakeProvider();
+		const held = provider.params;
+		let n = 0;
+		bindProviderAuth(provider, () => `t-${++n}`);
+		provider.emit('connection-close');
+		expect(provider.params).toBe(held);
+		expect(held).toEqual({ token: 't-2' });
+	});
+
+	it('never mutates a frozen protocols array the caller supplied', () => {
+		const provider = new FakeProvider();
+		const callerProtocols = Object.freeze(['yjs-v1']);
+		provider.protocols = callerProtocols as string[];
+		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
+		provider.emit('connection-close');
+		expect(callerProtocols).toEqual(['yjs-v1']);
+		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok']);
+	});
+
+	it('ignores a stray third argument, so no caller-supplied owned state reaches the rebind', () => {
+		const provider = new FakeProvider();
+		provider.params = { room: 'r1' };
+		const bindLoose = bindProviderAuth as (...args: unknown[]) => () => void;
+		let n = 0;
+		bindLoose(provider, () => `t-${++n}`, { params: null, protocols: null });
+		expect(provider.params).toEqual({ room: 'r1', token: 't-1' });
+
+		expect(() => provider.emit('connection-close')).not.toThrow();
+		expect(provider.params).toEqual({ room: 'r1', token: 't-2' });
+	});
 });
 
 describe('connectProvider — auth binding', () => {
