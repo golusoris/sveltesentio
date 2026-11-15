@@ -2,6 +2,7 @@ import type * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ProblemError } from '@sveltesentio/core/problem';
 import { dialProtocols, dialUrl, exceedsEntryBound } from './internal/dial-url.js';
+import { errorLabel, rejectsDial } from './internal/error-label.js';
 
 export type ProviderStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -198,60 +199,25 @@ function innerSocket(slot: BindingSlot, current: SocketConstructor): SocketConst
 	return isActive(slot, current) ? (Object.getPrototypeOf(current) as SocketConstructor) : current;
 }
 
-/**
- * The error names a log line may carry as they are: the ECMAScript native
- * errors (ECMA-262 §20.5 `Error`, §20.5.5 the native error types, §20.5.7
- * `AggregateError`). Any other `name` is free text a thrower chose.
- */
-const NATIVE_ERROR_NAMES: ReadonlySet<string> = new Set([
-	'Error',
-	'EvalError',
-	'RangeError',
-	'ReferenceError',
-	'SyntaxError',
-	'TypeError',
-	'URIError',
-	'AggregateError',
-]);
-
-/**
- * A loggable label for a thrown value: a native error name, `'custom Error'`
- * for any other error, or else the value's type. The message, a custom name and
- * other fields stay out of the log, because a resolver or handler error can
- * carry the token it failed on. Reading the value cannot throw out of here: a
- * `name` getter or a proxy trap that throws gives `'unreadable thrown value'`,
- * so labelling never interrupts a refusal or a close. Tests:
- * `test/provider-auth.test.ts` "logs only the name of a resolver error",
- * "withholds a custom error name" and "labels a thrown value it cannot read".
- */
-function errorLabel(error: unknown): string {
-	try {
-		if (!(error instanceof Error)) return typeof error;
-		const { name } = error;
-		return NATIVE_ERROR_NAMES.has(name) ? name : 'custom Error';
-	} catch {
-		return 'unreadable thrown value';
-	}
-}
-
 /** Why a dial was refused; also the reason of its close event. */
 type RefusalReason =
 	| 'auth token resolver threw'
 	| 'auth binding replaced while its token resolved'
 	| 'auth token cannot be encoded for the dial'
 	| 'dial exceeds the query pair or subprotocol bound'
-	| 'socket constructor rejected the dial';
+	| 'socket constructor rejected the dial'
+	| 'socket constructor threw';
 
 /**
  * Refusals the next dial would meet again, so y-websocket's reconnect would
  * retry them forever: a socket constructor rejecting the caller's URL or
- * subprotocols (a URL that does not parse, or a subprotocol that occurs more
- * than once or is not a `Sec-WebSocket-Protocol` element, which the WHATWG
- * `new WebSocket()` steps reject with a `SyntaxError`), and a dial over the
- * entry bound. Such a refusal stops the provider
- * (`haltDials`). The others depend on the token or the binding at that moment
- * and are retried after the backoff. Tests: `test/provider-auth.test.ts`
- * "stops the provider on a dial the socket constructor rejects".
+ * subprotocols with a `SyntaxError` (`rejectsDial`), and a dial over the entry
+ * bound. Such a refusal stops the provider (`haltDials`). The others depend on
+ * the token, the binding or the moment, a socket constructor throwing anything
+ * else included, and are retried after the backoff. Tests:
+ * `test/provider-auth.test.ts` "stops the provider on a dial the socket
+ * constructor rejects" and "retries a dial the socket constructor throws on
+ * with another error".
  */
 const PERMANENT_REFUSALS: ReadonlySet<RefusalReason> = new Set<RefusalReason>([
 	'dial exceeds the query pair or subprotocol bound',
@@ -391,13 +357,18 @@ function refuseDial(provider: object, url: string, refusal: Refusal): WebSocket 
 }
 
 /**
- * Sets `shouldConnect` to `false` and reads it back. y-websocket dials only
- * while it is `true` (`setupWS`, y-websocket 2.0.4 to 3.1.0), its scheduled
- * reconnect included, and `connect()` sets it again.
+ * Sets `shouldConnect` to `false` and reads it back; a setter or getter that
+ * throws counts as not stopped. y-websocket dials only while it is `true`
+ * (`setupWS`, y-websocket 2.0.4 to 3.1.0), its scheduled reconnect included,
+ * and `connect()` sets it again.
  */
 function haltDials(provider: object): boolean {
-	Reflect.set(provider, 'shouldConnect', false);
-	return Reflect.get(provider, 'shouldConnect') === false;
+	try {
+		Reflect.set(provider, 'shouldConnect', false);
+		return Reflect.get(provider, 'shouldConnect') === false;
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -486,8 +457,9 @@ function authDial(
  * whether the dial passes through, is refused, or carries the token. A throw
  * from `Base` on a dial carrying the token refuses that dial instead of
  * escaping into y-websocket's `setupWS`, where it would stop every later
- * reconnect, and stops the provider, since the next dial would meet it again
- * (`PERMANENT_REFUSALS`); a pass-through dial behaves as without the binding.
+ * reconnect; a `SyntaxError` also stops the provider, since the next dial
+ * would meet it again (`PERMANENT_REFUSALS`). A pass-through dial behaves as
+ * without the binding.
  * The binding injects while `state.active` is set and it holds the provider's
  * active-binding slot; unbind clears `state.active`, so it stops also on a
  * provider frozen after binding. Tests: `test/provider-auth.test.ts` "stops
@@ -512,8 +484,10 @@ function authSocket(
 			try {
 				super(plan.url, plan.protocols);
 			} catch (cause) {
-				const refusal: Refusal = { reason: 'socket constructor rejected the dial', cause };
-				return refuseDial(slot, String(url), refusal);
+				const reason = rejectsDial(cause)
+					? 'socket constructor rejected the dial'
+					: 'socket constructor threw';
+				return refuseDial(slot, String(url), { reason, cause });
 			}
 		}
 	};
@@ -557,7 +531,7 @@ export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
-	const bound = bindAuth(provider, auth);
+	const bound = tryBind(provider, auth);
 	if (typeof bound !== 'string') return bound;
 	const left = stopProvider(provider);
 	const outcome = left === undefined ? 'provider stopped' : `provider not stopped: ${left}`;
@@ -565,6 +539,24 @@ export function bindProviderAuth(
 	return () => {
 		// Nothing was bound.
 	};
+}
+
+/**
+ * `bindAuth`, with a throw while it reads or writes the provider or the
+ * binding (a getter, a setter or a proxy trap) turned into the reason nothing
+ * was bound, so the caller refuses and stops the provider as for any other.
+ * Tests: `test/provider-auth.test.ts` "binds nothing when reading the provider
+ * throws".
+ */
+function tryBind(
+	provider: AuthBindableProvider,
+	auth: AuthBinding | string | (() => string | null | undefined),
+): (() => void) | string {
+	try {
+		return bindAuth(provider, auth);
+	} catch (error) {
+		return `reading the auth binding or the provider threw (${errorLabel(error)})`;
+	}
 }
 
 /**
@@ -620,13 +612,23 @@ function installBinding(
 	const previous: unknown = Reflect.get(slot, ACTIVE_BINDING);
 	Reflect.set(slot, ACTIVE_BINDING, AuthSocket);
 	if (!isActive(slot, AuthSocket)) return 'provider takes no binding slot (sealed or frozen)';
-	Reflect.set(slot, '_WS', AuthSocket);
-	if (Reflect.get(slot, '_WS') !== AuthSocket) {
+	const refused = writeSocket(slot, AuthSocket);
+	if (refused !== undefined) {
 		Reflect.set(slot, ACTIVE_BINDING, previous);
-		return 'provider _WS is read-only';
+		return refused;
 	}
 	if (previous === undefined) stopUnboundDial(slot);
 	return undefined;
+}
+
+/** Writes `AuthSocket` to `_WS` and reads it back, or returns why it did not hold. */
+function writeSocket(slot: object, AuthSocket: SocketConstructor): string | undefined {
+	try {
+		Reflect.set(slot, '_WS', AuthSocket);
+		return Reflect.get(slot, '_WS') === AuthSocket ? undefined : 'provider _WS is read-only';
+	} catch (error) {
+		return `writing provider _WS threw (${errorLabel(error)})`;
+	}
 }
 
 /**
@@ -639,8 +641,7 @@ function installBinding(
  * before the first binding"; `test/provider-reconnect.test.ts` N17.
  */
 function stopUnboundDial(provider: object): void {
-	const ws: unknown = Reflect.get(provider, 'ws');
-	if (typeof ws !== 'object' || ws === null) return;
+	if (!holdsSocket(provider)) return;
 	const left = stopProvider(provider);
 	const outcome =
 		left === undefined
@@ -651,24 +652,34 @@ function stopUnboundDial(provider: object): void {
 	);
 }
 
+/** Whether `provider` holds a socket; a `ws` read that throws counts as one, so it gets stopped. */
+function holdsSocket(provider: object): boolean {
+	try {
+		const ws: unknown = Reflect.get(provider, 'ws');
+		return typeof ws === 'object' && ws !== null;
+	} catch {
+		return true;
+	}
+}
+
 /**
  * Stops `provider` from dialing (`haltDials`) and closes the socket it holds,
  * or returns why it may still be connected: its dials could not be stopped,
- * or its socket has no `close()` or `close()` threw. A WHATWG `close()` with no
+ * or reading its socket, its `close()` or calling it threw. A WHATWG `close()` with no
  * arguments never throws (its only throwing steps check a code and a reason);
  * a polyfill's may. y-websocket's `onclose` then clears `provider.ws` and,
  * with `shouldConnect` false, dials no more.
  */
 function stopProvider(provider: object): string | undefined {
 	if (!haltDials(provider)) return 'its dials could not be stopped';
-	const ws: unknown = Reflect.get(provider, 'ws');
-	if (typeof ws !== 'object' || ws === null) return undefined;
 	try {
+		const ws: unknown = Reflect.get(provider, 'ws');
+		if (typeof ws !== 'object' || ws === null) return undefined;
 		const close: unknown = Reflect.get(ws, 'close');
 		if (typeof close !== 'function') return 'its socket has no close()';
 		Reflect.apply(close, ws, []);
 	} catch (error) {
-		return `closing its socket threw (${errorLabel(error)})`;
+		return `reading or closing its socket threw (${errorLabel(error)})`;
 	}
 	return undefined;
 }
@@ -685,7 +696,7 @@ function bindOrDestroy(
 	provider: WebsocketProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
-	const bound = bindAuth(provider, auth);
+	const bound = tryBind(provider, auth);
 	if (typeof bound !== 'string') return bound;
 	provider.destroy();
 	throw new ProblemError({

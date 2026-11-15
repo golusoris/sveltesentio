@@ -92,10 +92,13 @@ class FakeProvider implements AuthBindableProvider {
 }
 
 /**
- * A provider whose socket constructor throws a `SyntaxError` on its first dial,
- * as `new WebSocket()` does on a bad URL or a repeated subprotocol.
+ * A provider whose socket constructor throws `reject(url)` on its first dial; by
+ * default a `SyntaxError`, as `new WebSocket()` throws on a bad URL or a
+ * repeated subprotocol.
  */
-function strictProvider(): FakeProvider {
+function strictProvider(
+	reject: (url: string) => Error = (url) => new SyntaxError(`invalid dial ${url}`),
+): FakeProvider {
 	const provider = new FakeProvider();
 	const Recording = provider.original as unknown as typeof NoopSocket;
 	let rejectNext = true;
@@ -103,7 +106,7 @@ function strictProvider(): FakeProvider {
 		constructor(url: string, protocols?: string | string[]) {
 			if (rejectNext) {
 				rejectNext = false;
-				throw new SyntaxError(`invalid dial ${url}`);
+				throw reject(url);
 			}
 			super(url, protocols);
 		}
@@ -278,6 +281,21 @@ describe('bindProviderAuth — query keys', () => {
 			'ws://x/room??token=kept&%zz=1&token%=2&token=tok',
 			'ws://x/room?access%2Btoken=keep&access%20token=tok',
 		]);
+	});
+
+	it('drops a caller key split by a tab or newline, which URL parsing removes', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok');
+		provider.build('ws://x/room?to\tken=stale&tok\nen=s2&\rtoken=s3&a=1', []);
+		provider.build('ws://x/ro\tom?a=b\nc#f\tg', []);
+		provider.build('ws://x/room?to\u000Bken=keep&tok%09en=keep2', []);
+		expect(provider.urls()).toEqual([
+			'ws://x/room?a=1&token=tok',
+			'ws://x/room?a=bc&token=tok#fg',
+			'ws://x/room?to\u000Bken=keep&tok%09en=keep2&token=tok',
+		]);
+		const sent = provider.urls().map((url) => new URL(url).searchParams.getAll('token'));
+		expect(sent).toEqual([['tok'], ['tok'], ['tok']]);
 	});
 
 	it('keeps a query pair without a value and drops an empty one', () => {
@@ -918,6 +936,74 @@ describe('bindProviderAuth — permanent refusals, part 2', () => {
 	});
 });
 
+describe('bindProviderAuth — permanent refusals, part 3', () => {
+	it('retries a dial the socket constructor throws on with another error', async () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const rejects = [(url: string) => new TypeError(url), (url: string) => new Error(url)];
+			for (const reject of rejects) {
+				const provider = strictProvider(reject);
+				bindProviderAuth(provider, 'tok-secret');
+				const refused = provider.dial();
+				await Promise.resolve();
+				expect(refused.readyState).toBe(refused.CLOSED);
+				expect(provider.shouldConnect).toBe(true);
+				// The next dial, after y-websocket's backoff, goes through.
+				provider.dial();
+				expect(provider.urls()).toEqual(['ws://x/room?token=tok-secret']);
+			}
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: socket constructor threw; dial refused:', 'TypeError'],
+				['[sentio] collab: socket constructor threw; dial refused:', 'Error'],
+			]);
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+
+			// Boundary: the DOMException Node's global WebSocket throws stops it.
+			const strict = strictProvider((url) => new DOMException(url, 'SyntaxError'));
+			bindProviderAuth(strict, 'tok');
+			strict.dial();
+			expect(strict.shouldConnect).toBe(false);
+			expect(errorSpy).toHaveBeenLastCalledWith(
+				'[sentio] collab: socket constructor rejected the dial; dial refused, provider stopped until connect() is called:',
+				'SyntaxError',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('counts only non-empty query pairs against the entry bound', () => {
+		const pairs = (count: number): string =>
+			Array.from({ length: count }, (_, i) => `k${String(i)}=v`).join('&');
+		const viaProtocol = new FakeProvider();
+		const viaQuery = new FakeProvider();
+		const errors = withErrors(() => {
+			bindProviderAuth(viaProtocol, { token: 'tok', param: null, protocol: 'bearer' });
+			bindProviderAuth(viaQuery, 'tok');
+			// Positive: empty pairs around 4000 non-empty ones do not count.
+			viaProtocol.build(`ws://x/room?&&${pairs(4000)}&&&`, []);
+			// Boundary: a query of empty pairs only holds no pair at all.
+			viaProtocol.build(`ws://x/room?${'&'.repeat(5000)}`, []);
+			// Positive: the token pair joins 3999 caller pairs; empty ones are dropped.
+			viaQuery.build(`ws://x/room?&&${pairs(3999)}&`, []);
+			// Negative: 4001 non-empty pairs are refused.
+			viaProtocol.build(`ws://x/room?${pairs(4001)}&`, []);
+		});
+		expect(viaProtocol.urls()).toEqual([
+			`ws://x/room?&&${pairs(4000)}&&&`,
+			`ws://x/room?${'&'.repeat(5000)}`,
+		]);
+		expect(viaQuery.urls()).toEqual([`ws://x/room?${pairs(3999)}&token=tok`]);
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: dial exceeds the query pair or subprotocol bound; dial refused, provider stopped until connect() is called',
+			],
+		]);
+		expect(viaProtocol.shouldConnect).toBe(false);
+		expect(viaQuery.shouldConnect).toBe(true);
+	});
+});
+
 describe('bindProviderAuth — thrown value labels, part 1', () => {
 	it('labels a thrown value it cannot read, and the next dial goes through', async () => {
 		const provider = new FakeProvider();
@@ -1254,6 +1340,78 @@ describe('bindProviderAuth — refused binding, part 4', () => {
 	});
 });
 
+/** `provider` with `key` replaced by an accessor whose getter or setter throws `error`. */
+function throwingField(
+	provider: FakeProvider,
+	key: '_WS' | 'shouldConnect' | 'ws',
+	access: 'get' | 'set',
+	error: Error,
+): FakeProvider {
+	const value: unknown = provider[key];
+	const fail = (): never => {
+		throw error;
+	};
+	Object.defineProperty(provider, key, {
+		get: access === 'get' ? fail : () => value,
+		set: access === 'set' ? fail : () => undefined,
+	});
+	return provider;
+}
+
+describe('bindProviderAuth — refused binding, part 5', () => {
+	it('binds nothing when reading the provider throws', () => {
+		const reading = throwingField(new FakeProvider(), '_WS', 'get', new TypeError('trap'));
+		const writing = new FakeProvider();
+		bindProviderAuth(writing, 'tok1');
+		throwingField(writing, '_WS', 'set', new RangeError('trap'));
+		const errors = withErrors(() => {
+			bindProviderAuth(reading, 'tok');
+			bindProviderAuth(writing, 'tok2')();
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: reading the auth binding or the provider threw (TypeError); auth not bound, provider stopped',
+			],
+			[
+				'[sentio] collab: writing provider _WS threw (RangeError); auth not bound, provider stopped',
+			],
+		]);
+		expect(reading.shouldConnect).toBe(false);
+		expect(writing.shouldConnect).toBe(false);
+		// The earlier binding keeps its slot, so dials still carry its token.
+		writing.dial();
+		expect(writing.urls()).toEqual(['ws://x/room?token=tok1']);
+	});
+
+	it('says the provider is not stopped when its shouldConnect setter throws (negative)', () => {
+		const provider = throwingField(new FakeProvider(), '_WS', 'get', new TypeError('trap'));
+		throwingField(provider, 'shouldConnect', 'set', new TypeError('frozen'));
+		const errors = withErrors(() => {
+			bindProviderAuth(provider, 'tok');
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: reading the auth binding or the provider threw (TypeError); auth not bound, provider not stopped: its dials could not be stopped',
+			],
+		]);
+	});
+
+	it('stops a first binding whose provider ws read throws (boundary)', () => {
+		const provider = throwingField(new FakeProvider(), 'ws', 'get', new TypeError('trap'));
+		const errors = withErrors(() => {
+			bindProviderAuth(provider, 'tok');
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider dialed before auth was bound, without the token; could not stop it (reading or closing its socket threw (TypeError)), so that socket may stay open without the token. Construct it with connect: false and call connect() after bindProviderAuth.',
+			],
+		]);
+		expect(provider.shouldConnect).toBe(false);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
+	});
+});
+
 describe('bindProviderAuth — dial before the first binding, part 1', () => {
 	it('stops a provider that dialed before the first binding, and dials with the token on connect()', () => {
 		const close = vi.fn();
@@ -1295,7 +1453,7 @@ describe('bindProviderAuth — dial before the first binding, part 2', () => {
 					throw new TypeError('socket gone');
 				},
 			},
-			'closing its socket threw (TypeError)',
+			'reading or closing its socket threw (TypeError)',
 		],
 		['is missing', {}, 'its socket has no close()'],
 	] as const)(
@@ -1479,6 +1637,22 @@ describe('connectProvider — refused auth binding', () => {
 		expect(problem.type).toBe(COLLAB_AUTH_NOT_BOUND_TYPE);
 		expect(problem.detail).toBe(
 			'provider _WS cannot be subclassed (TypeError); the provider was destroyed before any dial',
+		);
+		expect(destroyed).toBe(1);
+		expect(NoopSocket.last).toBeNull();
+	});
+
+	it('throws instead of connecting when reading the auth binding throws', () => {
+		const auth: AuthBinding = {
+			token: 'sekret',
+			get param(): string {
+				throw new TypeError('trap');
+			},
+		};
+		const { problem, destroyed } = refusedConnect({ auth });
+		expect(problem.type).toBe(COLLAB_AUTH_NOT_BOUND_TYPE);
+		expect(problem.detail).toBe(
+			'reading the auth binding or the provider threw (TypeError); the provider was destroyed before any dial',
 		);
 		expect(destroyed).toBe(1);
 		expect(NoopSocket.last).toBeNull();

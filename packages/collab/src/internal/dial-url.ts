@@ -56,10 +56,27 @@ function queryKey(pair: string): string {
  */
 const MAX_DIAL_ENTRIES = 4000;
 
-/** Whether the query pairs of `url` or the subprotocols exceed `MAX_DIAL_ENTRIES`. */
+/**
+ * The non-empty pairs of `query`, at most `MAX_DIAL_ENTRIES + 1` of them, so a
+ * caller can tell the query went over the bound. An empty pair (`&&`, a
+ * trailing `&`) is dropped, as a server's query parser drops it, and does not
+ * count. Tests: `test/provider-auth.test.ts` "counts only non-empty query
+ * pairs against the entry bound".
+ */
+function queryPairs(query: string): string[] {
+	const pair = /[^&]+/g;
+	const pairs: string[] = [];
+	for (let match = pair.exec(query); match !== null; match = pair.exec(query)) {
+		pairs.push(match[0]);
+		if (pairs.length > MAX_DIAL_ENTRIES) break;
+	}
+	return pairs;
+}
+
+/** Whether the non-empty query pairs of `url` or the subprotocols exceed `MAX_DIAL_ENTRIES`. */
 export function exceedsEntryBound(url: string, protocols: string | string[] | undefined): boolean {
 	if (Array.isArray(protocols) && protocols.length > MAX_DIAL_ENTRIES) return true;
-	return splitUrl(url).query.split('&', MAX_DIAL_ENTRIES + 1).length > MAX_DIAL_ENTRIES;
+	return queryPairs(splitUrl(url).query).length > MAX_DIAL_ENTRIES;
 }
 
 /** A URL cut around its query (RFC 3986 §3). */
@@ -73,19 +90,29 @@ interface UrlParts {
 }
 
 /**
- * `url` cut as a server's URL parser reads it: the query runs from the first
- * `?` to the first `#` and may itself hold `?` (RFC 3986 §3.4); a `?` after the
- * first `#` belongs to the fragment (§3.5).
+ * Every ASCII tab or newline (WHATWG Infra: U+0009, U+000A, U+000D). The URL
+ * parser `new WebSocket()` runs removes them all before reading the URL (WHATWG
+ * URL, basic URL parser), so `to<TAB>ken` reaches the server as `token`.
+ */
+const TAB_OR_NEWLINE = /[\t\n\r]/g;
+
+/**
+ * `url` cut as a server's URL parser reads it: tabs and newlines removed first
+ * (`TAB_OR_NEWLINE`), then the query runs from the first `?` to the first `#`
+ * and may itself hold `?` (RFC 3986 §3.4); a `?` after the first `#` belongs to
+ * the fragment (§3.5). Tests: `test/provider-auth.test.ts` "drops a caller key
+ * split by a tab or newline, which URL parsing removes".
  */
 function splitUrl(url: string): UrlParts {
-	const hash = url.indexOf('#');
-	const end = hash >= 0 ? hash : url.length;
-	const mark = url.indexOf('?');
+	const parsed = url.replace(TAB_OR_NEWLINE, '');
+	const hash = parsed.indexOf('#');
+	const end = hash >= 0 ? hash : parsed.length;
+	const mark = parsed.indexOf('?');
 	const cut = mark >= 0 && mark < end ? mark : end;
 	return {
-		head: url.slice(0, cut),
-		query: cut < end ? url.slice(cut + 1, end) : '',
-		fragment: url.slice(end),
+		head: parsed.slice(0, cut),
+		query: cut < end ? parsed.slice(cut + 1, end) : '',
+		fragment: parsed.slice(end),
 	};
 }
 
@@ -107,8 +134,6 @@ export function dialUrl(url: string, authParams: Readonly<Record<string, string>
 	if (authPairs.length === 0) return url;
 	const replaced = new Set(Object.keys(authParams));
 	const { head, query, fragment } = splitUrl(url);
-	const kept = query
-		.split('&', MAX_DIAL_ENTRIES)
-		.filter((pair) => pair !== '' && !replaced.has(queryKey(pair)));
+	const kept = queryPairs(query).filter((pair) => !replaced.has(queryKey(pair)));
 	return `${head}?${[...kept, ...authPairs].join('&')}${fragment}`;
 }
