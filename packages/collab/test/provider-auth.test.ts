@@ -666,6 +666,37 @@ describe('bindProviderAuth — refused dial events, part 6', () => {
 	});
 });
 
+describe('bindProviderAuth — refused dial events, part 7', () => {
+	it('runs a listener added twice once and takes a null or undefined listener as none', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			const listener = vi.fn();
+			socket.addEventListener('close', listener);
+			socket.addEventListener('close', listener);
+			// A caller without types can pass either; `EventTarget` takes both as no listener.
+			for (const none of [null, undefined]) {
+				const absent = none as unknown as EventListener;
+				expect(() => {
+					socket.addEventListener('close', absent);
+					socket.removeEventListener('error', absent);
+				}).not.toThrow();
+			}
+			await Promise.resolve();
+			expect(listener).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: auth token resolver threw; dial refused:', 'Error'],
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
 describe('bindProviderAuth — refusal logs, part 1', () => {
 	it('logs only the name of a resolver error', async () => {
 		const provider = new FakeProvider();
@@ -809,6 +840,43 @@ describe('bindProviderAuth — resolver rebinding, part 2', () => {
 		expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
 		expect(other.urls()).toEqual(['ws://x/room?token=tok-other']);
 	});
+});
+
+describe('bindProviderAuth — resolver rebinding, part 3', () => {
+	it.each(['before the dial', 'while its token resolves'] as const)(
+		'refuses the dial when reading the binding slot throws %s',
+		async (moment) => {
+			const provider = new FakeProvider();
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			try {
+				// A getter or proxy trap on the slot throws when the binding checks it is active.
+				const trapSlot = (): void => {
+					Object.defineProperty(provider, bindingSlotKey(provider), {
+						get: (): never => {
+							throw new TypeError('trap');
+						},
+					});
+				};
+				bindProviderAuth(provider, () => {
+					if (moment === 'while its token resolves') trapSlot();
+					return 'tok';
+				});
+				if (moment === 'before the dial') trapSlot();
+				let socket: WebSocket | undefined;
+				expect(() => {
+					socket = provider.dial();
+				}).not.toThrow();
+				await Promise.resolve();
+				expect(provider.dials).toEqual([]);
+				expect(socket?.readyState).toBe(WebSocket.CLOSED);
+				expect(errorSpy.mock.calls).toEqual([
+					['[sentio] collab: auth binding check threw; dial refused:', 'TypeError'],
+				]);
+			} finally {
+				errorSpy.mockRestore();
+			}
+		},
+	);
 });
 
 describe('bindProviderAuth — encoding refusals, part 1', () => {
@@ -1856,6 +1924,28 @@ describe('bindProviderAuth — refused binding, part 8', () => {
 		},
 	);
 
+	it('writes nothing to _WS when the slot claim is refused and _WS still holds the earlier binding', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1');
+		const earlier = provider._WS;
+		storesThenThrows(provider, bindingSlotKey(provider), 'store');
+		const writes = vi.fn();
+		Object.defineProperty(provider, '_WS', { get: () => earlier, set: writes });
+		const errors = withErrors(() => {
+			bindProviderAuth(provider, 'tok2');
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: writing the binding slot threw (RangeError); auth not bound, provider stopped',
+			],
+		]);
+		// Neither the install after the refused claim nor the rollback of an unchanged _WS writes it.
+		expect(writes).not.toHaveBeenCalled();
+		provider.shouldConnect = true;
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok1']);
+	});
+
 	it('refuses every dial when _WS keeps a refused rebind', () => {
 		const provider = new FakeProvider();
 		bindProviderAuth(provider, 'tok1');
@@ -1881,6 +1971,17 @@ describe('bindProviderAuth — refused binding, part 8', () => {
 		]);
 		expect(provider.dials).toEqual([]);
 		expect(provider.shouldConnect).toBe(false);
+		// The slot still names the closed binding, so a later rebind unwraps it instead
+		// of wrapping it, and its dials carry the new token.
+		Object.defineProperty(provider, '_WS', { value: provider._WS, writable: true });
+		expect(
+			withErrors(() => {
+				bindProviderAuth(provider, 'tok3');
+			}),
+		).toEqual([]);
+		provider.shouldConnect = true;
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok3']);
 	});
 });
 
@@ -2046,6 +2147,11 @@ describe('bindProviderAuth — rebind and unbind, part 4', () => {
 		const bindCopy = await secondCopy();
 		const provider = new FakeProvider();
 		bindProviderAuth(provider, 'tok-first-copy');
+		// Both copies meet on these registry keys, so a renamed or shared key splits them.
+		const keys = (target: object): (string | undefined)[] =>
+			Object.getOwnPropertySymbols(target).map((key) => Symbol.keyFor(key));
+		expect(keys(provider)).toEqual(['@sveltesentio/collab/activeBinding@1']);
+		expect(keys(provider._WS)).toEqual(['@sveltesentio/collab/bindingState@1']);
 		bindCopy(provider, 'tok-second-copy');
 		provider.dial();
 		bindProviderAuth(provider, 'tok-first-again');

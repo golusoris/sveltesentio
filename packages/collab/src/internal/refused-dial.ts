@@ -10,6 +10,7 @@ import { haltDials } from './stop-provider.js';
 /** Why a dial was refused; also the reason of its close event. */
 export type RefusalReason =
 	| 'auth token resolver threw'
+	| 'auth binding check threw'
 	| 'auth binding replaced while its token resolved'
 	| 'auth binding has no transport for its token'
 	| 'auth token cannot be encoded for the dial'
@@ -44,8 +45,12 @@ const PERMANENT_REFUSALS: ReadonlySet<RefusalReason> = new Set<RefusalReason>([
 	'socket constructor rejected the dial',
 ]);
 
-/** A listener as `EventTarget` takes it, `null` included. */
-type ListenerArgument = Parameters<EventTarget['addEventListener']>[1];
+/**
+ * A listener as `EventTarget` takes it. `null` and, from a caller without types,
+ * `undefined` add and remove nothing, as on `EventTarget` (WebIDL nullable
+ * `EventListener?`; measured on Node 26.13.1).
+ */
+type ListenerArgument = Parameters<EventTarget['addEventListener']>[1] | undefined;
 
 /** A refused dial: its reason and, when something threw, the thrown value. */
 export interface Refusal {
@@ -63,9 +68,10 @@ function runHandler(handler: () => void): void {
 }
 
 /**
- * Socket stand-in for a refused dial: its token resolver threw, its binding was
- * replaced while the token resolved, the token cannot be encoded, the dial is
- * over the entry bound, or the socket constructor threw on it. It opens
+ * Socket stand-in for a refused dial: its token resolver or a check of its
+ * binding threw, its binding was replaced while the token resolved, the token
+ * cannot be encoded, the dial is over the entry bound, or the socket
+ * constructor threw on it. It opens
  * no connection. On the next microtask it fires a plain `error` event, which
  * like a browser's carries no detail, so neither the thrown value nor the token
  * reaches `connection-error` listeners, then `close` with code 1006 and the
@@ -85,8 +91,9 @@ function runHandler(handler: () => void): void {
  * `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
  * "refuses the dial without building a socket when the resolver throws",
  * "fires only the close for a refused dial closed before the refusal runs",
- * "fires the events of a refused dial to its listeners" and "logs a throwing
- * listener of a refused dial and still runs the later ones".
+ * "fires the events of a refused dial to its listeners", "logs a throwing
+ * listener of a refused dial and still runs the later ones" and "runs a
+ * listener added twice once and takes a null or undefined listener as none".
  */
 export class RefusedDial extends EventTarget implements WebSocket {
 	readonly CONNECTING = 0;
@@ -146,7 +153,7 @@ export class RefusedDial extends EventTarget implements WebSocket {
 		listener: ListenerArgument,
 		options?: AddEventListenerOptions | boolean,
 	): void {
-		if (listener === null) return;
+		if (listener === null || listener === undefined) return;
 		super.addEventListener(type, this.guard(listener), options);
 	}
 
@@ -155,7 +162,7 @@ export class RefusedDial extends EventTarget implements WebSocket {
 		listener: ListenerArgument,
 		options?: EventListenerOptions | boolean,
 	): void {
-		if (listener === null) return;
+		if (listener === null || listener === undefined) return;
 		const guarded = this.guarded.get(listener);
 		if (guarded !== undefined) super.removeEventListener(type, guarded, options);
 	}

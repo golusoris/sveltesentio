@@ -656,6 +656,9 @@ describe('connectProvider reconnection — negative — disconnect from a reconn
 		};
 		const peerA = connectPeer(relay, 'room-n26', { onStatusChange });
 		handle.teardown = peerA.disconnect;
+		const disconnectSpy = vi.spyOn(peerA.provider, 'disconnect');
+		const destroySpy = vi.spyOn(peerA.provider, 'destroy');
+		const offSpy = vi.spyOn(peerA.provider, 'off');
 		await settle();
 		expect(relay.dials).toHaveLength(1);
 
@@ -666,6 +669,14 @@ describe('connectProvider reconnection — negative — disconnect from a reconn
 		expect(relay.sockets).toEqual([]);
 		expect(peerA.provider.ws).toBeNull();
 		expect(peerA.provider.shouldConnect).toBe(false);
+		// The teardown detached the status listener, then disconnected and destroyed the
+		// provider; y-websocket 3.1.0 `destroy()` calls `disconnect()` again.
+		expect(offSpy).toHaveBeenCalledWith('status', expect.any(Function));
+		expect(disconnectSpy).toHaveBeenCalledTimes(2);
+		expect(destroySpy).toHaveBeenCalledTimes(1);
+		expect(disconnectSpy.mock.invocationCallOrder[0]).toBeLessThan(
+			destroySpy.mock.invocationCallOrder[0] ?? 0,
+		);
 
 		await settle(10 * FAST_BACKOFF_MS);
 		expect(relay.dials).toHaveLength(2);

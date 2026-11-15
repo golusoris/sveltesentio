@@ -25,6 +25,11 @@ const SANCTIONED_TIME_READS = [
 	'packages/ai/src/server.ts',
 ];
 
+// The `node:vm` members that take source text (Node 26 `vm` API), as an esquery
+// regular expression for the HISS-08 block below.
+const VM_SOURCE_MEMBERS =
+	'/^(runInContext|runInNewContext|runInThisContext|compileFunction|Script|SourceTextModule)$/';
+
 const testPackageConfigs: Linter.Config[] = readdirSync(resolve(import.meta.dirname, 'packages'), {
 	withFileTypes: true,
 })
@@ -191,8 +196,13 @@ const config: Linter.Config[] = [
 	// this block follows the type-checked set, which turns the core rule off.
 	// `node:vm` runs a source string too, and none of the three rules sees it: a test
 	// loaded it through `import(specifier)` and called `vm.runInNewContext('…')`
-	// (PR 579 review). The import, a literal dynamic import and the `vm` calls that
-	// take source text are refused; the call names catch a module reached any other way.
+	// (PR 579 review). Refused: the `vm` import; the `vm` specifier as a string or a
+	// template without expressions in `import()` or in any call (`require`,
+	// `createRequire(…)(…)`, `process.getBuiltinModule`); and each `vm` member that
+	// takes source text, named in a call or `new`, read with a dot or a literal key,
+	// destructured, or passed as a literal argument (`Reflect.get`), so a module
+	// reached any other way is caught by its member name. A key computed at run time
+	// is not seen (`.config/hiss/coverage.yaml` HISS-08).
 	{
 		files: ['**/*.ts', '**/*.js', '**/*.mjs', '**/*.cjs', '**/*.svelte'],
 		rules: {
@@ -216,12 +226,28 @@ const config: Linter.Config[] = [
 				},
 				{
 					selector:
-						'CallExpression[callee.property.name=/^(runInContext|runInNewContext|runInThisContext|compileFunction)$/]',
-					message: 'HISS-08: a node:vm call runs a source string.',
+						':matches(ImportExpression, CallExpression) > TemplateLiteral[expressions.length=0] > TemplateElement[value.cooked=/^(node:)?vm$/]',
+					message: 'HISS-08: node:vm runs source strings.',
 				},
 				{
-					selector: 'NewExpression[callee.property.name=/^(Script|SourceTextModule)$/]',
-					message: 'HISS-08: a node:vm script compiles a source string.',
+					selector: 'CallExpression > Literal.arguments[value=/^(node:)?vm$/]',
+					message: 'HISS-08: node:vm runs source strings.',
+				},
+				{
+					selector: `:matches(CallExpression, NewExpression)[callee.name=${VM_SOURCE_MEMBERS}]`,
+					message: 'HISS-08: a node:vm member runs or compiles a source string.',
+				},
+				{
+					selector: `MemberExpression:matches([property.name=${VM_SOURCE_MEMBERS}][computed=false], [property.value=${VM_SOURCE_MEMBERS}])`,
+					message: 'HISS-08: a node:vm member runs or compiles a source string.',
+				},
+				{
+					selector: `ObjectPattern > Property:matches([key.name=${VM_SOURCE_MEMBERS}][computed=false], [key.value=${VM_SOURCE_MEMBERS}])`,
+					message: 'HISS-08: a node:vm member runs or compiles a source string.',
+				},
+				{
+					selector: `CallExpression > Literal.arguments[value=${VM_SOURCE_MEMBERS}]`,
+					message: 'HISS-08: a node:vm member runs or compiles a source string.',
 				},
 			],
 		},

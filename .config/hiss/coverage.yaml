@@ -216,18 +216,23 @@ rules:
           The engine scanner, run as `praetorctl audit` in the lefthook
           pre-commit and pre-push hooks and in verify-all, reports `eval`;
           that is the shape replayed here. ESLint is the second decider and
-          the only one for HTML sinks:
-          `no-eval`, `no-new-func` and `no-implied-eval` over packages/*/src,
-          enabled by this repository after the first version of this catalog
-          recorded them as OFF, plus the local
-          `@sveltesentio/no-unsanitised-html` rule in packages/core/src/eslint.ts.
-          The same ESLint block refuses `node:vm`, which runs a source string
-          none of the three rules sees: `no-restricted-imports` on `vm` and
-          `node:vm`, and `no-restricted-syntax` on a literal `import('node:vm')`
-          and on the `runIn*Context`, `compileFunction`, `Script` and
-          `SourceTextModule` calls, over every file, tests included.
+          the only one for HTML sinks and `node:vm`:
+          `no-eval`, `no-new-func` and `no-implied-eval` over every linted
+          file, tests and scripts included, enabled by this repository after
+          the first version of this catalog recorded them as OFF, plus the
+          local `@sveltesentio/no-unsanitised-html` rule in
+          packages/core/src/eslint.ts over packages/*/src.
+          The every-file block also refuses `node:vm`, which runs a source
+          string none of the three rules sees: `no-restricted-imports` on `vm`
+          and `node:vm`; `no-restricted-syntax` on the `vm` specifier as a
+          string, or a template without expressions, in `import()` or in any
+          call (`require`, `process.getBuiltinModule`), and on each `vm` member
+          that takes source text (`runIn*Context`, `compileFunction`, `Script`,
+          `SourceTextModule`) named in a call or `new`, read with a dot or a
+          literal key, destructured, or passed as a literal argument
+          (`Reflect.get`). A member key computed at run time is not seen.
           `gap/vm-source-string.ts` holds the shape. Measured free: zero
-          violations in shipped source.
+          violations in every linted file.
         rationale: >-
           Dynamic execution is reported in all three of its forms, including
           `setTimeout` on a string, and so is an unsanitised HTML sink:
@@ -247,14 +252,16 @@ rules:
           though it were raw. Measured both ways -- against the previous rule the
           first produced no diagnostic and the second produced a false one.
 
-          The three sink fixtures ESLint reports sit under gap/ beside the one
-          genuine gap, because this entry can name one decider and the scanner
-          is silent on them (cordanaLLM/praetor#1241). `dynamic-sink-key.ts` is
-          the only fixture there that no gate reports.
+          Four fixtures under gap/ are ones ESLint reports: the three HTML
+          sinks, linted at a packages/*/src path, and `vm-source-string.ts`.
+          They sit beside the one genuine gap because this entry can name one
+          decider and the scanner is silent on them (cordanaLLM/praetor#1241).
+          `dynamic-sink-key.ts` is the only fixture there that no gate reports.
 
           It stays partial because a key or value that is not statically knowable
           stays unresolved: a parameter, or a `let` written again between its
-          initialiser and the sink. That is deliberate rather than pending.
+          initialiser and the sink, and for `node:vm` a member key computed at
+          run time. That is deliberate rather than pending.
           Guessing safe would hide an injection; guessing unsafe would report
           every computed property assignment in the tree and train people to
           disable the rule. `dynamic-sink-key.ts` holds that shape.

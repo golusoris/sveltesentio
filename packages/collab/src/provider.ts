@@ -325,7 +325,15 @@ function planDial(
  * when the binding was closed before the dial or while its token resolved: a
  * resolver that calls `connectProvider`'s `disconnect` closes the binding but
  * leaves it active, so without the second read the dial would still be built
- * after the teardown. Tests: `test/provider-reconnect.test.ts` N25.
+ * after the teardown. A throw from `planDial` refuses the dial instead of
+ * escaping into y-websocket's `setupWS`, where it would stop every later
+ * reconnect: the resolver's throws are caught in `planDial`, so what reaches
+ * here is a check of the binding, such as the read of the provider's
+ * active-binding slot (`isActive`) when a getter or proxy trap on it throws.
+ * The dial is retried after the backoff, not refused for good, since the read
+ * may hold next time. Tests: `test/provider-reconnect.test.ts` N25;
+ * `test/provider-auth.test.ts` "refuses the dial when reading the binding slot
+ * throws".
  */
 function planBoundDial(
 	state: BindingState,
@@ -336,7 +344,12 @@ function planBoundDial(
 ): DialPlan {
 	const before = state.closed;
 	if (before !== undefined) return { kind: 'refuse', refusal: { reason: before } };
-	const plan = planDial(active, auth, url, protocols);
+	let plan: DialPlan;
+	try {
+		plan = planDial(active, auth, url, protocols);
+	} catch (cause) {
+		plan = { kind: 'refuse', refusal: { reason: 'auth binding check threw', cause } };
+	}
 	const after = state.closed;
 	return after === undefined ? plan : { kind: 'refuse', refusal: { reason: after } };
 }
