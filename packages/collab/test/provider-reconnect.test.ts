@@ -697,6 +697,45 @@ describe('connectProvider reconnection — negative — teardown that throws', (
 	});
 });
 
+describe('connectProvider reconnection — negative — detach that throws', () => {
+	it.each([['status'], ['sync (boundary)']] as const)(
+		'N24: calls no callback after disconnect() when provider.off throws for %s',
+		async (label) => {
+			const failing = label === 'status' ? 'status' : 'sync';
+			const relay = createMemRelay();
+			const destroySpy = vi.spyOn(WebsocketProvider.prototype, 'destroy');
+			try {
+				const peerA = connectPeer(relay, `room-n24-${failing}`);
+				await settle();
+				expect(peerA.statuses).toEqual(['connecting', 'connected']);
+				expect(peerA.syncs).toEqual([true]);
+
+				const { provider } = peerA;
+				const realOff = provider.off.bind(provider);
+				const offNames: string[] = [];
+				const failingOff: typeof provider.off = (name, handler) => {
+					offNames.push(name);
+					if (name === failing) throw new RangeError('off failed');
+					realOff(name, handler);
+				};
+				Object.defineProperty(provider, 'off', { value: failingOff });
+
+				expect(peerA.disconnect).toThrow(RangeError);
+				expect(offNames).toEqual(['status', 'sync']);
+				expect(destroySpy).toHaveBeenCalledTimes(1);
+				await settle(10 * FAST_BACKOFF_MS);
+				// The disconnect emitted `disconnected` and a sync reset to the listener
+				// `off` failed to remove; neither reached the caller callbacks.
+				expect(peerA.statuses).toEqual(['connecting', 'connected']);
+				expect(peerA.syncs).toEqual([true]);
+				expect(relay.dials).toHaveLength(1);
+			} finally {
+				destroySpy.mockRestore();
+			}
+		},
+	);
+});
+
 describe('connectProvider reconnection — negative — fixed token that cannot be encoded', () => {
 	it.each([
 		['a lone surrogate in the query token', 'tok\uD800'],

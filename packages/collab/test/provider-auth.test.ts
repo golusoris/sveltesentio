@@ -1613,6 +1613,80 @@ describe('bindProviderAuth — refused binding, part 6', () => {
 	});
 });
 
+describe('bindProviderAuth — refused binding, part 7', () => {
+	it.each([
+		[
+			'frozen after its first binding',
+			(provider: FakeProvider): void => {
+				Object.freeze(provider);
+			},
+			'provider takes no binding slot (sealed or frozen)',
+		],
+		[
+			'a read-only _WS and a shouldConnect setter that ignores the write',
+			(provider: FakeProvider): void => {
+				Object.defineProperty(provider, '_WS', { value: provider._WS, writable: false });
+				Object.defineProperty(provider, 'shouldConnect', {
+					get: () => true,
+					set: (): void => {
+						// Drops the write, so the provider keeps dialing.
+					},
+				});
+			},
+			'provider _WS is read-only',
+		],
+		[
+			'a wrapper over the earlier binding, then frozen',
+			(provider: FakeProvider): void => {
+				provider._WS = class extends provider._WS {};
+				Object.freeze(provider);
+			},
+			'provider takes no binding slot (sealed or frozen)',
+		],
+	] as const)(
+		'closes the earlier binding when a refused rebind cannot stop the provider (%s)',
+		async (_label, lock, refused) => {
+			const provider = new FakeProvider();
+			bindProviderAuth(provider, 'tok1');
+			lock(provider);
+			const reasons: string[] = [];
+			const errors = withErrors(() => {
+				bindProviderAuth(provider, 'tok2');
+				const socket = provider.dial();
+				socket.onclose = (event) => reasons.push(event.reason);
+			});
+			await Promise.resolve();
+			expect(errors).toEqual([
+				[
+					`[sentio] collab: ${refused}; auth not bound, provider not stopped: its dials could not be stopped; earlier binding closed`,
+				],
+				[
+					'[sentio] collab: auth binding closed by a refused rebind; dial refused, provider not stopped',
+				],
+			]);
+			expect(reasons).toEqual(['auth binding closed by a refused rebind']);
+			expect(provider.dials).toEqual([]);
+			expect(provider.shouldConnect).toBe(true);
+		},
+	);
+
+	it('closes nothing when no binding is installed as _WS (boundary)', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok1')();
+		Object.freeze(provider);
+		const errors = withErrors(() => {
+			bindProviderAuth(provider, 'tok2');
+		});
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider takes no binding slot (sealed or frozen); auth not bound, provider not stopped: its dials could not be stopped',
+			],
+		]);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+});
+
 describe('bindProviderAuth — dial before the first binding, part 1', () => {
 	it('stops a provider that dialed before the first binding, and dials with the token on connect()', () => {
 		const close = vi.fn();

@@ -3,7 +3,13 @@ import { WebsocketProvider } from 'y-websocket';
 import { ProblemError } from '@sveltesentio/core/problem';
 import { dialProtocols, dialUrl, exceedsEntryBound } from './internal/dial-url.js';
 import { errorLabel, rejectsDial } from './internal/error-label.js';
-import { haltDials, stopProvider, stopUnboundDial } from './internal/stop-provider.js';
+import {
+	type RefusalReason,
+	type Refusal,
+	RefusedDial,
+	refuseDial,
+} from './internal/refused-dial.js';
+import { stopProvider, stopUnboundDial } from './internal/stop-provider.js';
 
 export type ProviderStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -229,45 +235,6 @@ function innerSocket(slot: BindingSlot, current: SocketConstructor): SocketConst
 	return isActive(slot, current) ? (Object.getPrototypeOf(current) as SocketConstructor) : current;
 }
 
-/** Why a dial was refused; also the reason of its close event. */
-type RefusalReason =
-	| 'auth token resolver threw'
-	| 'auth binding replaced while its token resolved'
-	| 'auth binding has no transport for its token'
-	| 'auth token cannot be encoded for the dial'
-	| 'fixed auth token cannot be encoded for the dial'
-	| 'dial exceeds the query pair or subprotocol bound'
-	| 'socket constructor rejected the dial'
-	| 'socket constructor threw'
-	| 'provider disconnected by connectProvider';
-
-/**
- * Refusals the next dial would meet again, so y-websocket's reconnect would
- * retry them forever: a socket constructor rejecting the caller's URL or
- * subprotocols with a `SyntaxError` (`rejectsDial`), a dial over the entry
- * bound, a fixed (string) token that cannot go on the wire, and any dial after
- * `connectProvider`'s `disconnect`. Such a refusal stops the provider
- * (`haltDials`). The others depend on the token, the binding or the moment, a
- * resolver's token and a socket constructor throwing anything else included,
- * and are retried after the backoff. Tests: `test/provider-auth.test.ts`
- * "stops the provider on a dial the socket constructor rejects", "retries a
- * dial the socket constructor throws on with another error" and "stops the
- * provider on a fixed token that cannot be encoded";
- * `test/provider-reconnect.test.ts` N21.
- */
-const PERMANENT_REFUSALS: ReadonlySet<RefusalReason> = new Set<RefusalReason>([
-	'dial exceeds the query pair or subprotocol bound',
-	'fixed auth token cannot be encoded for the dial',
-	'provider disconnected by connectProvider',
-	'socket constructor rejected the dial',
-]);
-
-/** A refused dial: its reason and, when something threw, the thrown value. */
-interface Refusal {
-	readonly reason: RefusalReason;
-	readonly cause?: unknown;
-}
-
 /** What one dial of a binding does. */
 type DialPlan =
 	| { readonly kind: 'pass' }
@@ -286,113 +253,6 @@ const PASS_THROUGH: DialPlan = { kind: 'pass' };
  * "refuses a token ending in a line terminator".
  */
 const PROTOCOL_TOKEN = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
-
-/** Runs one socket event handler; a throw is logged so the next event still fires. */
-function runHandler(handler: () => void): void {
-	try {
-		handler();
-	} catch (error) {
-		console.error('[sentio] collab: socket event handler threw:', errorLabel(error));
-	}
-}
-
-/**
- * Socket stand-in for a refused dial: its token resolver threw, its binding was
- * replaced while the token resolved, the token cannot be encoded, the dial is
- * over the entry bound, or the socket constructor threw on it. It opens
- * no connection. On the next microtask it fires a plain `error` event, which
- * like a browser's carries no detail, so neither the thrown value nor the token
- * reaches `connection-error` listeners, then `close` with code 1006 and the
- * refusal reason, so y-websocket emits `connection-error` and
- * `connection-close` and backs off before it dials again, as for a refused
- * connection. Each event goes to the `on…` handler, then to the listeners added
- * with `addEventListener`. A throwing `on…` handler is logged and does not stop
- * the close.
- *
- * `close()` before the refusal runs turns it into a close without the error.
- * The close still fires, because y-websocket (2.0.4 to 3.1.0) clears
- * `provider.ws` only in `onclose`, and `connect()` dials only while
- * `provider.ws` is null. Tests:
- * `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
- * "refuses the dial without building a socket when the resolver throws",
- * "fires only the close for a refused dial closed before the refusal runs" and
- * "fires the events of a refused dial to its listeners".
- */
-class RefusedDial extends EventTarget implements WebSocket {
-	readonly CONNECTING = 0;
-	readonly OPEN = 1;
-	readonly CLOSING = 2;
-	readonly CLOSED = 3;
-	readonly bufferedAmount = 0;
-	readonly extensions = '';
-	readonly protocol = '';
-	readonly url: string;
-	/** Why the dial was refused. */
-	readonly reason: RefusalReason;
-	/** Whether the refusal stopped the provider (`PERMANENT_REFUSALS`). */
-	readonly halted: boolean;
-	binaryType: BinaryType = 'blob';
-	readyState: WebSocket['readyState'] = this.CONNECTING;
-	onclose: WebSocket['onclose'] = null;
-	onerror: WebSocket['onerror'] = null;
-	onmessage: WebSocket['onmessage'] = null;
-	onopen: WebSocket['onopen'] = null;
-
-	constructor(url: string, reason: RefusalReason, halted: boolean) {
-		super();
-		this.url = url;
-		this.reason = reason;
-		this.halted = halted;
-		queueMicrotask(() => {
-			this.refuse(reason);
-		});
-	}
-
-	private refuse(reason: RefusalReason): void {
-		const cancelled = this.readyState === this.CLOSING;
-		this.readyState = this.CLOSED;
-		if (!cancelled) {
-			const error = new Event('error');
-			runHandler(() => {
-				this.onerror?.(error);
-			});
-			this.dispatchEvent(error);
-		}
-		const close = Object.assign(new Event('close'), {
-			code: 1006,
-			reason,
-			wasClean: false,
-		});
-		runHandler(() => {
-			this.onclose?.(close);
-		});
-		this.dispatchEvent(close);
-	}
-
-	close(): void {
-		if (this.readyState === this.CONNECTING) this.readyState = this.CLOSING;
-	}
-
-	send(): void {
-		// Never opens, and y-websocket sends only after `onopen`.
-	}
-}
-
-/**
- * Logs a refused dial, with the label of the thrown value when something threw,
- * and returns a socket that dials nothing. A permanent refusal also stops
- * `provider` (`PERMANENT_REFUSALS`), and the log says whether it did.
- */
-function refuseDial(provider: object, url: string, refusal: Refusal): WebSocket {
-	const halted = PERMANENT_REFUSALS.has(refusal.reason) && haltDials(provider);
-	let outcome = 'dial refused';
-	if (halted) outcome = 'dial refused, provider stopped until connect() is called';
-	else if (PERMANENT_REFUSALS.has(refusal.reason)) outcome = 'dial refused, provider not stopped';
-	const line = `[sentio] collab: ${refusal.reason}; ${outcome}`;
-	if ('cause' in refusal) console.error(`${line}:`, errorLabel(refusal.cause));
-	else console.error(line);
-	return new RefusedDial(url, refusal.reason, halted);
-}
 
 /**
  * What one dial of a binding does; `active` tells whether that binding still
@@ -483,10 +343,41 @@ function authDial(
 	return { kind: 'dial', url: dial, protocols: list };
 }
 
-/** Whether a binding still injects (`active`) and whether it refuses every dial (`closed`). */
+/**
+ * Whether a binding still injects (`active`) and, once it refuses every dial,
+ * why (`closed`).
+ */
 interface BindingState {
 	active: boolean;
-	closed: boolean;
+	closed?: RefusalReason;
+}
+
+/**
+ * Key of the static field on a binding's socket class holding its
+ * `BindingState`, so a binding installed as `_WS` can be closed through the
+ * class even when the provider no longer takes writes (`closeInstalledBinding`).
+ * The field lives on the class this module builds, not on the provider.
+ */
+const BINDING_STATE = Symbol('sveltesentio.collab.bindingState');
+
+/**
+ * Closes the binding installed as the provider's `_WS`, or the one a wrapper
+ * there extends, so every later dial through it is refused, and says whether
+ * there was one. A read that throws counts as none. Tests:
+ * `test/provider-auth.test.ts` "closes the earlier binding when a refused
+ * rebind cannot stop the provider".
+ */
+function closeInstalledBinding(provider: object): boolean {
+	try {
+		const socket: unknown = Reflect.get(provider, '_WS');
+		const state: unknown =
+			typeof socket === 'function' ? Reflect.get(socket, BINDING_STATE) : undefined;
+		if (typeof state !== 'object' || state === null) return false;
+		(state as BindingState).closed = 'auth binding closed by a refused rebind';
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -514,11 +405,13 @@ interface BoundAuth {
  * The binding injects while `state.active` is set and it holds the provider's
  * active-binding slot; unbind clears `state.active`, so it stops also on a
  * provider frozen after binding. Once `state.closed` is set (`connectProvider`'s
- * `disconnect`) every dial is refused and stops the provider, so a
- * `provider.connect()` after teardown sends nothing, with or without the
- * token. Tests: `test/provider-auth.test.ts` "stops the provider on a dial the
- * socket constructor rejects" and "stops injecting after unbind on a provider
- * frozen after binding"; `test/provider-reconnect.test.ts` N21.
+ * `disconnect`, or a refused rebind that could not stop the provider) every
+ * dial is refused and stops the provider, so a `provider.connect()` after
+ * teardown sends nothing, with or without the token. Tests:
+ * `test/provider-auth.test.ts` "stops the provider on a dial the socket
+ * constructor rejects", "stops injecting after unbind on a provider frozen
+ * after binding" and "closes the earlier binding when a refused rebind cannot
+ * stop the provider"; `test/provider-reconnect.test.ts` N21.
  */
 function authSocket(
 	slot: BindingSlot,
@@ -528,11 +421,8 @@ function authSocket(
 ): SocketConstructor {
 	const AuthSocket = class extends Base {
 		constructor(url: string | URL, protocols?: string | string[]) {
-			if (state.closed) {
-				return refuseDial(slot, String(url), {
-					reason: 'provider disconnected by connectProvider',
-				});
-			}
+			if (state.closed !== undefined)
+				return refuseDial(slot, String(url), { reason: state.closed });
 			const active = (): boolean => state.active && isActive(slot, AuthSocket);
 			const plan = planDial(active, auth, String(url), protocols);
 			if (plan.kind === 'refuse') return refuseDial(slot, String(url), plan.refusal);
@@ -550,6 +440,7 @@ function authSocket(
 			}
 		}
 	};
+	Object.defineProperty(AuthSocket, BINDING_STATE, { value: state });
 	return AuthSocket;
 }
 
@@ -574,8 +465,11 @@ function authSocket(
  * and a binding with `param: null` and no `protocol`, bind nothing; the
  * provider is stopped (`stopProvider`) and a `console.error` names why, so it
  * dials no further without the token until the caller calls `connect()`
- * again. `connectProvider` instead destroys its provider and throws
- * (`bindOrDestroy`).
+ * again. When the provider cannot be stopped either (a setter that ignores
+ * the write, a provider frozen while dialing), the binding installed as `_WS`,
+ * an earlier one, is closed (`closeInstalledBinding`), so its reconnects are
+ * refused instead of sending its credentials. `connectProvider` instead
+ * destroys its provider and throws (`bindOrDestroy`).
  *
  * Bind before the first dial: construct the provider with `connect: false`,
  * bind, then call `provider.connect()`, as `connectProvider` does. y-websocket
@@ -593,7 +487,8 @@ export function bindProviderAuth(
 	const bound = tryBind(provider, auth);
 	if (typeof bound !== 'string') return bound.unbind;
 	const left = stopProvider(provider);
-	const outcome = left === undefined ? 'provider stopped' : `provider not stopped: ${left}`;
+	let outcome = left === undefined ? 'provider stopped' : `provider not stopped: ${left}`;
+	if (left !== undefined && closeInstalledBinding(provider)) outcome += '; earlier binding closed';
 	console.error(`[sentio] collab: ${bound}; auth not bound, ${outcome}`);
 	return () => {
 		// Nothing was bound.
@@ -645,7 +540,7 @@ function bindAuth(
 	if (typeof current !== 'function') return 'provider has no _WS socket constructor';
 	const slot = provider as AuthBindableProvider & BindingSlot;
 	const Base = innerSocket(slot, current as SocketConstructor);
-	const state: BindingState = { active: true, closed: false };
+	const state: BindingState = { active: true };
 	let AuthSocket: SocketConstructor;
 	try {
 		AuthSocket = authSocket(slot, Base, auth, state);
@@ -664,7 +559,7 @@ function bindAuth(
 		}
 	};
 	const close = (): void => {
-		state.closed = true;
+		state.closed = 'provider disconnected by connectProvider';
 	};
 	return { unbind, close };
 }
@@ -761,11 +656,13 @@ function buildProviderOptions(
 }
 
 /**
- * Whether a caller callback's throw reaches the code that started the event.
- * Set only while `startOrTearDown` runs the first dial.
+ * Whether a caller callback's throw reaches the code that started the event
+ * (`surfacing`, set only while `startOrTearDown` runs the first dial), and
+ * whether the callbacks are detached (`detached`, set by `disconnect`).
  */
 interface CallbackGuard {
 	surfacing: boolean;
+	detached: boolean;
 }
 
 /**
@@ -776,9 +673,11 @@ interface CallbackGuard {
  * `src/y-websocket.js`), so a throw that escaped there would stop every later
  * reconnect. A throw is logged by its label alone (`errorLabel`) and the
  * provider carries on; only while `guard.surfacing` is set does it propagate,
- * to `startOrTearDown`. Tests: `test/provider-reconnect.test.ts` N13, N14, N15.
+ * to `startOrTearDown`. Once `guard.detached` is set the callback is not
+ * called. Tests: `test/provider-reconnect.test.ts` N13, N14, N15, N24.
  */
 function runGuarded(guard: CallbackGuard, name: string, call: () => void): void {
+	if (guard.detached) return;
 	try {
 		call();
 	} catch (error) {
@@ -793,7 +692,11 @@ function runGuarded(guard: CallbackGuard, name: string, call: () => void): void 
  * Pairing attach with detach here keeps the two lists from drifting apart:
  * previously `connectProvider` registered each listener in one place and removed it
  * in another, so a listener added without a matching `off` would outlive
- * `disconnect()`. Both callbacks run through `runGuarded`.
+ * `disconnect()`. Both callbacks run through `runGuarded`. The detach sets
+ * `guard.detached` before it removes anything, and removes each listener even
+ * when removing the other throws, so a listener `off` fails to remove calls
+ * no caller callback after `disconnect`. Tests: `test/provider-reconnect.test.ts`
+ * N24.
  */
 function bindProviderEvents(
 	provider: WebsocketProvider,
@@ -818,8 +721,12 @@ function bindProviderEvents(
 	if (handleStatus) provider.on('status', handleStatus);
 	if (handleSync) provider.on('sync', handleSync);
 	return () => {
-		if (handleStatus) provider.off('status', handleStatus);
-		if (handleSync) provider.off('sync', handleSync);
+		guard.detached = true;
+		try {
+			if (handleStatus) provider.off('status', handleStatus);
+		} finally {
+			if (handleSync) provider.off('sync', handleSync);
+		}
 	};
 }
 
@@ -906,7 +813,7 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 
 	const closeAuth = auth === undefined ? undefined : bindOrDestroy(provider, auth);
 
-	const guard: CallbackGuard = { surfacing: false };
+	const guard: CallbackGuard = { surfacing: false, detached: false };
 	const unbindEvents = bindProviderEvents(provider, guard, onStatusChange, onSync);
 
 	// The binding is closed first, so any later dial is refused, and the provider
