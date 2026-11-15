@@ -12,6 +12,36 @@ const MESSAGE_SYNC = 0;
  */
 const DEFAULT_MAX_SOCKETS = 16;
 
+/**
+ * The Node global the relay schedules with. Collab type-checks without
+ * `@types/node`, which would also expose Node globals to `src/`, so the one
+ * signature used here is declared locally.
+ */
+interface ImmediateHost {
+	setImmediate(run: () => void): unknown;
+}
+
+/**
+ * Queues `run` as a task, as a browser fires WebSocket `open`, `message` and
+ * `close` events: WHATWG WebSockets Standard §4 "Feedback from the protocol"
+ * queues a task for each. Node runs a `setImmediate` callback as a macrotask,
+ * after the microtask queue drains, so a promise continuation queued before an
+ * event runs before it. Suites that fake timers keep `setImmediate` real
+ * (`toNotFake`), so relay tasks never move the fake clock. Tests:
+ * `test/mem-relay.test.ts` "fires open one task after the dial, after pending
+ * microtasks".
+ */
+function queueTask(run: () => void): void {
+	(globalThis as unknown as ImmediateHost).setImmediate(run);
+}
+
+/** Resolves once every relay task queued before the call has run. */
+export function nextTask(): Promise<void> {
+	return new Promise((resolve) => {
+		queueTask(resolve);
+	});
+}
+
 export interface MemRelayOptions {
 	/** Open sockets the relay admits; a dial past it closes with 1013. Defaults to 16. */
 	readonly maxSockets?: number;
@@ -87,7 +117,7 @@ function toBytes(data: ArrayBuffer | Uint8Array): Uint8Array {
 
 function deliverToClient(socket: MemSocket, payload: Uint8Array): void {
 	const copy = payload.slice();
-	queueMicrotask(() => {
+	queueTask(() => {
 		if (socket.readyState !== socket.OPEN) return;
 		socket.onmessage?.({ data: copy.buffer });
 	});
@@ -209,7 +239,7 @@ class RelaySocket implements MemSocket {
 		const admitted = relay.sockets.length < relay.maxSockets;
 		if (admitted) relay.sockets.push(this);
 		relay.dials.push({ url: this.url, protocols: [...this.protocols], socket: this });
-		queueMicrotask(() => {
+		queueTask(() => {
 			openOrRefuse(relay, this, admitted);
 		});
 	}
@@ -217,7 +247,7 @@ class RelaySocket implements MemSocket {
 	send(data: ArrayBuffer | Uint8Array): void {
 		if (this.readyState !== this.OPEN) return;
 		const frame = toBytes(data);
-		queueMicrotask(() => {
+		queueTask(() => {
 			if (this.readyState !== this.OPEN) return;
 			handleClientFrame(roomDoc(this.#relay, this.room), this, frame);
 		});
@@ -235,7 +265,7 @@ class RelaySocket implements MemSocket {
 		if (this.readyState >= this.CLOSING) return;
 		const wasOpen = this.readyState === this.OPEN;
 		forgetSocket(this.#relay, this, this.CLOSING);
-		queueMicrotask(() => {
+		queueTask(() => {
 			this.readyState = this.CLOSED;
 			if (!wasOpen) this.onerror?.({ type: 'error' });
 			this.onclose?.(wasOpen ? { code: 1005, reason: '' } : { code: 1006, reason: '' });
@@ -246,7 +276,8 @@ class RelaySocket implements MemSocket {
 /**
  * In-memory stand-in for a `y-websocket` server. `test/provider-reconnect.test.ts`
  * uses it to drive real `WebsocketProvider` dials, drops and refusals under
- * Vitest fake timers with no network socket; P3, B1 and B2 there assert that
+ * Vitest fake timers with no network socket. Socket events fire one task later
+ * (`queueTask`), as in a browser; P3, B1 and B2 there assert that
  * two peers converge across drops. It admits at most `maxSockets` open sockets
  * (`test/mem-relay.test.ts`).
  */

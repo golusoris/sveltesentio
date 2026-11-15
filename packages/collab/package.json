@@ -1,4 +1,7 @@
 {
+	"dependencies": {
+		"@sveltesentio/core": "workspace:*"
+	},
 	"description": "Yjs CRDT + y-websocket provider + createYjsStore / createYjsMap rune helpers + awareness/presence helpers",
 	"devDependencies": {
 		"lib0": "^0.2.117",

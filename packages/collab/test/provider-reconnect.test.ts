@@ -13,17 +13,26 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
+import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	type AuthBinding,
 	type ConnectedProvider,
 	type ProviderStatus,
+	COLLAB_START_FAILED_TYPE,
 	connectProvider,
 } from '../src/provider.js';
-import { type MemDial, type MemRelay, type MemSocket, createMemRelay } from './mem-relay.js';
+import {
+	type MemDial,
+	type MemRelay,
+	type MemSocket,
+	createMemRelay,
+	nextTask,
+} from './mem-relay.js';
 
 const SERVER_URL = 'ws://localhost:1234';
 const FAST_BACKOFF_MS = 50;
-const MICROTASK_FLUSH_STEPS = 8;
+/** Relay tasks a settle runs after the clock advance: a sync round trip is a few hops. */
+const RELAY_TASK_STEPS = 16;
 
 interface PeerOptions {
 	readonly doc?: Y.Doc;
@@ -47,7 +56,9 @@ interface PeerHandle {
 const teardowns: Array<() => void> = [];
 
 beforeEach(() => {
-	vi.useFakeTimers();
+	// The relay fires socket events as `setImmediate` tasks (`queueTask` in
+	// mem-relay.ts), kept real so they never move the fake clock.
+	vi.useFakeTimers({ toNotFake: ['setImmediate', 'clearImmediate'] });
 });
 
 afterEach(() => {
@@ -59,8 +70,8 @@ afterEach(() => {
 
 async function settle(ms = 0): Promise<void> {
 	await vi.advanceTimersByTimeAsync(ms);
-	for (let i = 0; i < MICROTASK_FLUSH_STEPS; i += 1) {
-		await Promise.resolve();
+	for (let i = 0; i < RELAY_TASK_STEPS; i += 1) {
+		await nextTask();
 	}
 }
 
@@ -412,7 +423,7 @@ describe('connectProvider reconnection — negative', () => {
 		}
 	});
 
-	it('N8: tears the provider down and rethrows when onStatusChange throws on the first dial', async () => {
+	it('N8: tears the provider down and throws a problem error when onStatusChange throws on the first dial', async () => {
 		const relay = createMemRelay();
 		const failure = new Error('status listener failed');
 		const statuses: ProviderStatus[] = [];
@@ -438,7 +449,12 @@ describe('connectProvider reconnection — negative', () => {
 			caught = error;
 		}
 
-		expect(caught).toBe(failure);
+		expect(caught).toBeInstanceOf(ProblemError);
+		const problem = caught as ProblemError;
+		expect(problem.type).toBe(COLLAB_START_FAILED_TYPE);
+		expect(problem.cause).toBe(failure);
+		expect(problem.detail).toBe('the first dial threw (Error); the provider was torn down');
+		expect(problem.message).not.toContain(failure.message);
 		expect(relay.dials).toHaveLength(1);
 		const socket = requireDial(relay, 0).socket;
 		expect(socket.readyState).toBe(socket.CLOSING);
@@ -696,9 +712,7 @@ describe('connectProvider reconnection — boundary', () => {
 		const peerA = connectPeer(relay, 'room-b1', { doc: docA });
 		const firstSocketA = requireDial(relay, 1).socket;
 
-		await new Promise<void>((resolve) => {
-			queueMicrotask(resolve);
-		});
+		await nextTask();
 		expect(peerA.provider.wsconnected).toBe(true);
 		expect(peerA.provider.synced).toBe(false);
 

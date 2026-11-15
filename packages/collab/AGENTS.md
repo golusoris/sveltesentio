@@ -55,6 +55,7 @@ This package does **not**:
 - **Presence reads via `'change'`, not `'update'`.** `observePresence` / `createPresenceStore` default to awareness `'change'` event -> listeners fire on real transitions, not every heartbeat. `'update'` opt-in via `{ event: 'update' }`.
 - **`diffPresence` keys updates on reference identity.** Yjs replaces client state object on every change -> `prev.get(id) !== next.get(id)` = correct, allocation-free staleness check; no deep compare.
 - **Presence mutations route through awareness.** `store.setLocal(x)` calls `awareness.setLocalState(x)`; `others` `readonly`.
+- **Provider errors = core `ProblemError`.** `connectProvider` throws `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` set + `_WS` not subclassable (provider destroyed before any dial, also with `connect: false`); `COLLAB_START_FAILED_TYPE` when first dial throws (`cause` = thrown value). `@sveltesentio/core` = runtime dependency for this.
 
 ## Test policy
 
@@ -62,7 +63,7 @@ This package does **not**:
 - Awareness helpers (`./awareness`) test against in-memory `FakeAwareness` implementing `AwarenessLike` — no `y-protocols` dependency at test time.
 - Rune helpers (`*.svelte.ts`) exercised indirectly via pure helpers they compose.
 - Direct rune runtime tests land once monorepo wires `vitest` + Svelte plugin harness.
-- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets.
+- Provider tests use the `WebSocketPolyfill` option: a no-op socket for construction tests, and the in-memory relay in `test/mem-relay.ts` (y-protocols sync, fake timers) for reconnect tests. No real sockets. Relay fires `open` / `message` / `close` one task later (`setImmediate`, kept real via `toNotFake`), as browser WebSocket events (WHATWG WebSockets §4); `nextTask()` waits one.
 - Coverage ≥ 85% on pure helpers.
 
 ## Common tasks

@@ -588,6 +588,9 @@ importers:
 
   packages/collab:
     dependencies:
+      '@sveltesentio/core':
+        specifier: workspace:*
+        version: link:../core
       y-protocols:
         specifier: '>=1.0.5'
         version: 1.0.7(yjs@13.6.32)

@@ -1,7 +1,20 @@
 import type * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { ProblemError } from '@sveltesentio/core/problem';
 
 export type ProviderStatus = 'disconnected' | 'connecting' | 'connected';
+
+/**
+ * RFC 9457 problem type of the `ProblemError` `connectProvider` throws when
+ * `auth` is set but cannot be bound to the provider's socket constructor.
+ */
+export const COLLAB_AUTH_NOT_BOUND_TYPE = 'https://sveltesentio.dev/problems/collab/auth-not-bound';
+
+/**
+ * RFC 9457 problem type of the `ProblemError` `connectProvider` throws when the
+ * first dial it starts throws; the thrown value is its `cause`.
+ */
+export const COLLAB_START_FAILED_TYPE = 'https://sveltesentio.dev/problems/collab/start-failed';
 
 /**
  * Browser `WebSocket` cannot set arbitrary HTTP headers, so `y-websocket`
@@ -73,7 +86,8 @@ export interface ConnectProviderOptions {
 	/**
 	 * Called on every status change. A throw is logged and the provider keeps
 	 * reconnecting, except during the first dial `connectProvider` starts: then
-	 * the provider is torn down and the error reaches the caller.
+	 * the provider is torn down and the caller gets a `ProblemError` of type
+	 * `COLLAB_START_FAILED_TYPE` whose `cause` is the thrown value.
 	 */
 	readonly onStatusChange?: (status: ProviderStatus) => void;
 	/** Called when the sync state changes. A throw is logged and the provider keeps reconnecting. */
@@ -107,9 +121,11 @@ export function resolveAuthParams(
 	if (token === null || token === undefined || token === '') {
 		return { params: {}, protocols: [] };
 	}
-	const params: Record<string, string> = {};
 	const key = binding.param === undefined ? 'token' : binding.param;
-	if (key !== null) params[key] = token;
+	// `Object.fromEntries` defines an own property, so a `param` of `'__proto__'`
+	// stays a key instead of setting the prototype (`test/provider-auth.test.ts`
+	// "keeps a __proto__ param as a query key").
+	const params = Object.fromEntries(key === null ? [] : [[key, token]]);
 	const protocols: string[] = [];
 	if (binding.protocol !== undefined) protocols.push(`${binding.protocol}.${token}`);
 	return { params, protocols };
@@ -156,7 +172,7 @@ interface BindingSlot {
 
 /** Whether the binding whose socket class is `self` is the one active on `slot`. */
 function isActive(slot: BindingSlot, self: SocketConstructor): boolean {
-	return slot[ACTIVE_BINDING] === self;
+	return Reflect.get(slot, ACTIVE_BINDING) === self;
 }
 
 /**
@@ -197,10 +213,35 @@ function dialProtocols(
 	return [...list, ...missingEntries(list, authProtocols)];
 }
 
-/** The key of one `key=value` query pair, still percent-encoded. */
+/**
+ * The key of one `key=value` query pair, decoded as a server's query parser
+ * decodes it: `+` as a space and percent-decoding without failing on a broken
+ * escape (WHATWG URL, `application/x-www-form-urlencoded` parsing). The
+ * leading `&` keeps `URLSearchParams` from dropping a `?` that starts the key,
+ * which a server reading the query keeps. Tests:
+ * `test/provider-auth.test.ts` "drops a caller pair whose key decodes to the
+ * auth key".
+ */
 function queryKey(pair: string): string {
 	const equals = pair.indexOf('=');
-	return equals >= 0 ? pair.slice(0, equals) : pair;
+	const raw = equals >= 0 ? pair.slice(0, equals) : pair;
+	return new URLSearchParams(`&${raw}`).keys().next().value ?? '';
+}
+
+/**
+ * Most query pairs, and most subprotocols, a bound dial takes. RFC 9110 §4.1
+ * asks for URIs of at least 8000 octets; a non-empty pair with its `&` takes
+ * two or more, so a URL of that length holds at most 4000 pairs. A subprotocol
+ * list gets the same bound. A dial over it is refused before its entries are
+ * copied or scanned (`planDial`). Tests: `test/provider-auth.test.ts` "refuses
+ * a dial over the entry bound".
+ */
+const MAX_DIAL_ENTRIES = 4000;
+
+/** Whether the caller's query pairs or subprotocols exceed `MAX_DIAL_ENTRIES`. */
+function exceedsEntryBound(url: string, protocols: string | string[] | undefined): boolean {
+	if (Array.isArray(protocols) && protocols.length > MAX_DIAL_ENTRIES) return true;
+	return splitUrl(url).query.split('&', MAX_DIAL_ENTRIES + 1).length > MAX_DIAL_ENTRIES;
 }
 
 /** A URL cut around its query (RFC 3986 §3). */
@@ -231,13 +272,13 @@ function splitUrl(url: string): UrlParts {
 }
 
 /**
- * `url` with the auth query pairs appended to its query, after dropping caller
- * pairs under the same keys. Keys are compared percent-encoded, the form
- * y-websocket writes (`encodeQueryParams` in lib0 `url.js`), and the query is
- * cut as the server reads it (`splitUrl`), so a `?` inside a caller value
- * cannot hide an earlier pair under an auth key. With no auth pairs the URL is
- * returned as is, so a caller pair the token shadowed is sent again once the
- * token is revoked. Tests: `test/provider-reconnect.test.ts` N3, N10, N12;
+ * `url` with the auth query pairs appended to its query, after dropping every
+ * caller pair whose key decodes to an auth key (`queryKey`), so a spelling
+ * such as `%74oken` cannot send a stale value next to the token. The query is cut as the server reads it (`splitUrl`), so a `?` inside
+ * a caller value cannot hide an earlier pair under an auth key. With no auth
+ * pairs the URL is returned as is, so a caller pair the token shadowed is sent
+ * again once the token is revoked. The caller checks `exceedsEntryBound`
+ * first. Tests: `test/provider-reconnect.test.ts` N3, N10, N12;
  * `test/provider-auth.test.ts` "reads the query from the first ? to the
  * fragment, as a server does".
  */
@@ -246,9 +287,11 @@ function dialUrl(url: string, authParams: Readonly<Record<string, string>>): str
 		([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
 	);
 	if (authPairs.length === 0) return url;
-	const replaced = new Set(authPairs.map((pair) => queryKey(pair)));
+	const replaced = new Set(Object.keys(authParams));
 	const { head, query, fragment } = splitUrl(url);
-	const kept = query.split('&').filter((pair) => pair !== '' && !replaced.has(queryKey(pair)));
+	const kept = query
+		.split('&', MAX_DIAL_ENTRIES)
+		.filter((pair) => pair !== '' && !replaced.has(queryKey(pair)));
 	return `${head}?${[...kept, ...authPairs].join('&')}${fragment}`;
 }
 
@@ -292,7 +335,9 @@ function errorLabel(error: unknown): string {
 type RefusalReason =
 	| 'auth token resolver threw'
 	| 'auth binding replaced while its token resolved'
-	| 'auth token cannot be encoded for the dial';
+	| 'auth token cannot be encoded for the dial'
+	| 'dial exceeds the query pair or subprotocol bound'
+	| 'socket constructor rejected the dial';
 
 /** A refused dial: its reason and, when something threw, the thrown value. */
 interface Refusal {
@@ -312,7 +357,10 @@ const PASS_THROUGH: DialPlan = { kind: 'pass' };
  * The characters of a `Sec-WebSocket-Protocol` element: RFC 6455 §4.1 item 10
  * (`1#token`, RFC 2616 token characters), which the WHATWG `WebSocket`
  * constructor enforces with a `SyntaxError`. The same allow-list as
- * `subprotocolRegex` in `ws` 8.22.0 `lib/websocket.js`.
+ * `subprotocolRegex` in `ws` 8.22.0 `lib/websocket.js`. Without the `m` flag,
+ * `$` matches only at the end of the input (ECMA-262, `Assertion :: $`), so an entry
+ * ending in a line terminator fails. Tests: `test/provider-auth.test.ts`
+ * "refuses a token ending in a line terminator".
  */
 const PROTOCOL_TOKEN = /^[!#$%&'*+\-.0-9A-Z^_`|a-z~]+$/;
 
@@ -327,7 +375,8 @@ function runHandler(handler: () => void): void {
 
 /**
  * Socket stand-in for a refused dial: its token resolver threw, its binding was
- * replaced while the token resolved, or the token cannot be encoded. It opens
+ * replaced while the token resolved, the token cannot be encoded, the dial is
+ * over the entry bound, or the socket constructor threw on it. It opens
  * no connection. On the next microtask it fires a plain `error` event, which
  * like a browser's carries no detail, so neither the thrown value nor the token
  * reaches `connection-error` listeners, then `close` with code 1006 and the
@@ -417,10 +466,11 @@ function refuseDial(url: string, refusal: Refusal): WebSocket {
  * no credentials of a stale binding go out and the next dial, after the
  * backoff, goes through the binding active then. It also refuses a token that
  * cannot go on the wire: a subprotocol entry outside `PROTOCOL_TOKEN`, or a
- * lone surrogate, on which `encodeURIComponent` throws `URIError`. Otherwise it
- * dials with the resolved auth added. Tests: `test/provider-auth.test.ts`
- * "refuses the dial when the resolver replaces its binding" and "refuses a dial
- * whose token cannot be encoded".
+ * lone surrogate, on which `encodeURIComponent` throws `URIError`, and, before
+ * resolving anything, a dial over `MAX_DIAL_ENTRIES`. Otherwise it dials with
+ * the resolved auth added. Tests: `test/provider-auth.test.ts` "refuses the
+ * dial when the resolver replaces its binding", "refuses a dial whose token
+ * cannot be encoded" and "refuses a dial over the entry bound".
  */
 function planDial(
 	slot: BindingSlot,
@@ -430,6 +480,12 @@ function planDial(
 	protocols: string | string[] | undefined,
 ): DialPlan {
 	if (!isActive(slot, self)) return PASS_THROUGH;
+	if (exceedsEntryBound(url, protocols)) {
+		return {
+			kind: 'refuse',
+			refusal: { reason: 'dial exceeds the query pair or subprotocol bound' },
+		};
+	}
 	let resolved: ResolvedAuth;
 	try {
 		resolved = resolveAuthParams(auth);
@@ -462,7 +518,11 @@ function planDial(
  * with `new provider._WS(provider.url, provider.protocols)` (`setupWS` in
  * y-websocket 3.1.0 `src/y-websocket.js`). Nothing is written to the provider,
  * so its `params` and `protocols` keep caller entries only. `planDial` decides
- * whether the dial passes through, is refused, or carries the token.
+ * whether the dial passes through, is refused, or carries the token. A throw
+ * from `Base` on a dial carrying the token refuses that dial instead of
+ * escaping into y-websocket's `setupWS`, where it would stop every later
+ * reconnect; a pass-through dial behaves as without the binding. Tests:
+ * `test/provider-auth.test.ts` "refuses a dial the socket constructor rejects".
  */
 function authSocket(
 	slot: BindingSlot,
@@ -473,8 +533,15 @@ function authSocket(
 		constructor(url: string | URL, protocols?: string | string[]) {
 			const plan = planDial(slot, AuthSocket, auth, String(url), protocols);
 			if (plan.kind === 'refuse') return refuseDial(String(url), plan.refusal);
-			if (plan.kind === 'dial') super(plan.url, plan.protocols);
-			else super(url, protocols);
+			if (plan.kind === 'pass') {
+				super(url, protocols);
+				return;
+			}
+			try {
+				super(plan.url, plan.protocols);
+			} catch (cause) {
+				return refuseDial(String(url), { reason: 'socket constructor rejected the dial', cause });
+			}
 		}
 	};
 	return AuthSocket;
@@ -497,37 +564,68 @@ function authSocket(
  * binding and puts back the socket constructor it wrapped, unless something
  * has wrapped it since. A `_WS` that is missing or cannot be subclassed (an
  * arrow function, a bound function) gets a `console.error`, stays as it is and
- * binds nothing. Tests: the `bindProviderAuth` block in
+ * binds nothing; `connectProvider` instead destroys its provider and throws
+ * (`bindOrDestroy`). Tests: the `bindProviderAuth` block in
  * `test/provider-auth.test.ts`.
  */
 export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
+	const bound = bindAuth(provider, auth);
+	if (typeof bound !== 'string') return bound;
+	console.error(`[sentio] collab: ${bound}; auth not bound, dials carry no token`);
+	return () => {
+		// Nothing was bound.
+	};
+}
+
+/**
+ * Binds `auth` as `bindProviderAuth` documents and returns the unbind, or
+ * returns why nothing was bound: `_WS` is missing or cannot be subclassed.
+ */
+function bindAuth(
+	provider: AuthBindableProvider,
+	auth: AuthBinding | string | (() => string | null | undefined),
+): (() => void) | string {
 	const current: unknown = provider._WS;
-	if (typeof current !== 'function') return unbound('provider has no _WS socket constructor');
+	if (typeof current !== 'function') return 'provider has no _WS socket constructor';
 	const slot = provider as AuthBindableProvider & BindingSlot;
 	const Base = innerSocket(slot, current as SocketConstructor);
 	let AuthSocket: SocketConstructor;
 	try {
 		AuthSocket = authSocket(slot, Base, auth);
 	} catch (error) {
-		return unbound(`provider _WS cannot be subclassed (${errorLabel(error)})`);
+		return `provider _WS cannot be subclassed (${errorLabel(error)})`;
 	}
-	slot[ACTIVE_BINDING] = AuthSocket;
+	Reflect.set(slot, ACTIVE_BINDING, AuthSocket);
 	provider._WS = AuthSocket;
 	return () => {
-		if (slot[ACTIVE_BINDING] === AuthSocket) slot[ACTIVE_BINDING] = undefined;
+		if (isActive(slot, AuthSocket)) Reflect.set(slot, ACTIVE_BINDING, undefined);
 		if (provider._WS === AuthSocket) provider._WS = Base;
 	};
 }
 
-/** Logs why no binding was made and returns the unbind of nothing. */
-function unbound(reason: string): () => void {
-	console.error(`[sentio] collab: ${reason}; auth not bound, dials carry no token`);
-	return () => {
-		// Nothing was bound.
-	};
+/**
+ * Binds `auth` to the provider `connectProvider` built, or fails closed: when
+ * no binding can be made (a `WebSocketPolyfill` that cannot be subclassed) the
+ * provider is destroyed before any dial and a `ProblemError` of type
+ * `COLLAB_AUTH_NOT_BOUND_TYPE` is thrown, also with `connect: false`, so no
+ * later `provider.connect()` dials without the token. Tests:
+ * `test/provider-auth.test.ts` "throws instead of connecting without auth".
+ */
+function bindOrDestroy(
+	provider: WebsocketProvider,
+	auth: AuthBinding | string | (() => string | null | undefined),
+): () => void {
+	const bound = bindAuth(provider, auth);
+	if (typeof bound !== 'string') return bound;
+	provider.destroy();
+	throw new ProblemError({
+		type: COLLAB_AUTH_NOT_BOUND_TYPE,
+		title: 'Collab auth not bound',
+		detail: `${bound}; the provider was destroyed before any dial`,
+	});
 }
 
 /**
@@ -565,28 +663,22 @@ interface CallbackGuard {
 }
 
 /**
- * `callback` with its throws kept out of y-websocket. y-websocket calls status
- * and sync listeners inside its close handler and inside `connect()`, ahead of
- * scheduling or building the next socket (`closeWebsocketConnection` and
- * `setupWS` in y-websocket 3.1.0 `src/y-websocket.js`), so a throw that escaped
- * there would stop every later reconnect. A throw is logged by its label alone
- * (`errorLabel`) and the provider carries on; only while `guard.surfacing` is
- * set does it propagate, to `startOrTearDown`. Tests:
- * `test/provider-reconnect.test.ts` N13, N14, N15.
+ * Runs a caller callback with its throws kept out of y-websocket. y-websocket
+ * calls status and sync listeners inside its close handler and inside
+ * `connect()`, ahead of scheduling or building the next socket
+ * (`closeWebsocketConnection` and `setupWS` in y-websocket 3.1.0
+ * `src/y-websocket.js`), so a throw that escaped there would stop every later
+ * reconnect. A throw is logged by its label alone (`errorLabel`) and the
+ * provider carries on; only while `guard.surfacing` is set does it propagate,
+ * to `startOrTearDown`. Tests: `test/provider-reconnect.test.ts` N13, N14, N15.
  */
-function guarded<T>(
-	guard: CallbackGuard,
-	name: string,
-	callback: (value: T) => void,
-): (value: T) => void {
-	return (value) => {
-		try {
-			callback(value);
-		} catch (error) {
-			if (guard.surfacing) throw error;
-			console.error(`[sentio] collab: ${name} callback threw:`, errorLabel(error));
-		}
-	};
+function runGuarded(guard: CallbackGuard, name: string, call: () => void): void {
+	try {
+		call();
+	} catch (error) {
+		if (guard.surfacing) throw error;
+		console.error(`[sentio] collab: ${name} callback threw:`, errorLabel(error));
+	}
 }
 
 /**
@@ -595,7 +687,7 @@ function guarded<T>(
  * Pairing attach with detach here keeps the two lists from drifting apart:
  * previously `connectProvider` registered each listener in one place and removed it
  * in another, so a listener added without a matching `off` would outlive
- * `disconnect()`. Both callbacks run through `guarded`.
+ * `disconnect()`. Both callbacks run through `runGuarded`.
  */
 function bindProviderEvents(
 	provider: WebsocketProvider,
@@ -603,13 +695,20 @@ function bindProviderEvents(
 	onStatusChange?: (status: ProviderStatus) => void,
 	onSync?: (synced: boolean) => void,
 ): () => void {
-	const status = onStatusChange ? guarded(guard, 'onStatusChange', onStatusChange) : undefined;
-	const handleStatus = status
+	const handleStatus = onStatusChange
 		? ({ status: next }: { status: string }) => {
-				status(normaliseStatus(next));
+				runGuarded(guard, 'onStatusChange', () => {
+					onStatusChange(normaliseStatus(next));
+				});
 			}
 		: undefined;
-	const handleSync = onSync ? guarded(guard, 'onSync', onSync) : undefined;
+	const handleSync = onSync
+		? (synced: boolean) => {
+				runGuarded(guard, 'onSync', () => {
+					onSync(synced);
+				});
+			}
+		: undefined;
 	if (handleStatus) provider.on('status', handleStatus);
 	if (handleSync) provider.on('sync', handleSync);
 	return () => {
@@ -621,9 +720,11 @@ function bindProviderEvents(
 /**
  * Starts the first dial. y-websocket emits `'connecting'` synchronously inside
  * `connect()`; a throwing `onStatusChange` there propagates (`guard.surfacing`),
- * the provider is torn down and the error is rethrown to the caller of
- * `connectProvider`. Later throws are logged (`guarded`). Tests:
- * `test/provider-reconnect.test.ts` N8, N13.
+ * the provider is torn down and the caller of `connectProvider` gets a
+ * `ProblemError` of type `COLLAB_START_FAILED_TYPE` with the thrown value as
+ * its `cause`; its `detail` names only the value's label (`errorLabel`). Later
+ * throws are logged (`runGuarded`). Tests: `test/provider-reconnect.test.ts`
+ * N8, N13.
  */
 function startOrTearDown(
 	provider: WebsocketProvider,
@@ -636,12 +737,24 @@ function startOrTearDown(
 	} catch (error) {
 		guard.surfacing = false;
 		teardown();
-		throw error;
+		throw new ProblemError({
+			type: COLLAB_START_FAILED_TYPE,
+			title: 'Collab provider start failed',
+			detail: `the first dial threw (${errorLabel(error)}); the provider was torn down`,
+			cause: error,
+		});
 	} finally {
 		guard.surfacing = false;
 	}
 }
 
+/**
+ * Builds a `WebsocketProvider` for `room` with status normalisation, guarded
+ * callbacks and, when `auth` is set, a token on every dial (`bindProviderAuth`).
+ * Throws a `ProblemError` of type `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` is
+ * set but cannot be bound (`bindOrDestroy`), and one of type
+ * `COLLAB_START_FAILED_TYPE` when the first dial throws (`startOrTearDown`).
+ */
 export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
 	const { url, room, doc, params, protocols, auth, onStatusChange, onSync } = options;
 
@@ -655,7 +768,7 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 		buildProviderOptions(options, callerParams, callerProtocols),
 	);
 
-	const unbindAuth = auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
+	const unbindAuth = auth === undefined ? undefined : bindOrDestroy(provider, auth);
 
 	const guard: CallbackGuard = { surfacing: false };
 	const unbindEvents = bindProviderEvents(provider, guard, onStatusChange, onSync);

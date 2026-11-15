@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { ProblemError } from '@sveltesentio/core/problem';
 import {
 	type AuthBindableProvider,
 	type AuthBinding,
+	COLLAB_AUTH_NOT_BOUND_TYPE,
 	connectProvider,
 	resolveAuthParams,
 	bindProviderAuth,
@@ -130,6 +133,19 @@ describe('resolveAuthParams', () => {
 			protocols: [],
 		});
 	});
+
+	it('keeps a __proto__ param as a query key', () => {
+		const { params } = resolveAuthParams({ token: 'tok', param: '__proto__' });
+		expect(Object.keys(params)).toEqual(['__proto__']);
+		expect(Object.getOwnPropertyDescriptor(params, '__proto__')?.value).toBe('tok');
+		expect(Object.getPrototypeOf(params)).toBe(Object.prototype);
+
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, { token: 'tok', param: '__proto__' });
+		provider.dial();
+		provider.build('ws://x/room?__proto__=stale&a=1', []);
+		expect(provider.urls()).toEqual(['ws://x/room?__proto__=tok', 'ws://x/room?a=1&__proto__=tok']);
+	});
 });
 
 describe('bindProviderAuth', () => {
@@ -202,6 +218,18 @@ describe('bindProviderAuth', () => {
 		bindProviderAuth(provider, { token: 'a b&c', param: 'access token' });
 		provider.dial();
 		expect(provider.urls()).toEqual(['ws://x/room?tokenx=1&access%20token=a%20b%26c']);
+	});
+
+	it('drops a caller pair whose key decodes to the auth key', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok');
+		provider.build('ws://x/room?%74oken=stale&to%6Ben=s2&?token=kept&%zz=1&token%=2', []);
+		bindProviderAuth(provider, { token: 'tok', param: 'access token' });
+		provider.build('ws://x/room?access+token=old&access%20token=old2&access%2Btoken=keep', []);
+		expect(provider.urls()).toEqual([
+			'ws://x/room??token=kept&%zz=1&token%=2&token=tok',
+			'ws://x/room?access%2Btoken=keep&access%20token=tok',
+		]);
 	});
 
 	it('keeps a query pair without a value and drops an empty one', () => {
@@ -685,6 +713,101 @@ describe('bindProviderAuth', () => {
 		expect(provider.dials).toEqual([{ url: 'ws://x/room', protocols: [`bearer.${token}`] }]);
 	});
 
+	it('refuses a token ending in a line terminator', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const issued = ['tok\n', 'tok\r', 'tok ', 'tok ', 'tok\r\n', 'tok'];
+		try {
+			let calls = 0;
+			bindProviderAuth(provider, {
+				token: () => {
+					const next = issued.at(calls) ?? null;
+					calls += 1;
+					return next;
+				},
+				param: null,
+				protocol: 'bearer',
+			});
+			const sockets = issued.map(() => provider.dial());
+			await Promise.resolve();
+			expect(provider.dials).toEqual([{ url: 'ws://x/room', protocols: ['bearer.tok'] }]);
+			expect(sockets.slice(0, -1).every((socket) => socket.readyState === socket.CLOSED)).toBe(
+				true,
+			);
+			expect(errorSpy).toHaveBeenCalledTimes(issued.length - 1);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('cannot be encoded'));
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('refuses a dial over the entry bound', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const query = (count: number): string =>
+			Array.from({ length: count }, (_, i) => `k${String(i)}=v`).join('&');
+		const entries = (count: number): string[] =>
+			Array.from({ length: count }, (_, i) => `p${String(i)}`);
+		try {
+			let resolved = 0;
+			bindProviderAuth(provider, () => {
+				resolved += 1;
+				return 'tok';
+			});
+			provider.build(`ws://x/room?${query(4000)}`, entries(4000));
+			const overQuery = provider.build(`ws://x/room?${query(4001)}`, []);
+			const overProtocols = provider.build('ws://x/room', entries(4001));
+			expect(resolved).toBe(1);
+			expect(provider.dials).toHaveLength(1);
+			expect(provider.dials[0]?.url).toBe(`ws://x/room?${query(4000)}&token=tok`);
+			expect(provider.dials[0]?.protocols).toHaveLength(4000);
+
+			await Promise.resolve();
+			expect(overQuery.readyState).toBe(overQuery.CLOSED);
+			expect(overProtocols.readyState).toBe(overProtocols.CLOSED);
+			expect(errorSpy).toHaveBeenCalledTimes(2);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: dial exceeds the query pair or subprotocol bound; dial refused',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('refuses a dial the socket constructor rejects', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const Recording = provider.original as unknown as typeof NoopSocket;
+		let rejectNext = true;
+		class StrictSocket extends Recording {
+			constructor(url: string, protocols?: string | string[]) {
+				if (rejectNext) {
+					rejectNext = false;
+					throw new SyntaxError(`invalid dial ${url}`);
+				}
+				super(url, protocols);
+			}
+		}
+		provider._WS = StrictSocket as unknown as SocketConstructor;
+		try {
+			bindProviderAuth(provider, 'tok-secret');
+			const refused = provider.dial();
+			expect(provider.dials).toEqual([]);
+			await Promise.resolve();
+			expect(refused.readyState).toBe(refused.CLOSED);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: socket constructor rejected the dial; dial refused:',
+				'SyntaxError',
+			);
+			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
+
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok-secret']);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
 	it('labels a thrown value it cannot read, and the next dial goes through', async () => {
 		const provider = new FakeProvider();
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -1045,5 +1168,51 @@ describe('connectProvider — auth binding', () => {
 		disconnect();
 		expect(provider._WS).toBe(NoopSocket);
 		expect(n).toBe(0);
+	});
+
+	it.each([true, false])('throws instead of connecting without auth (connect: %s)', (connect) => {
+		NoopSocket.last = null;
+		const destroySpy = vi.spyOn(WebsocketProvider.prototype, 'destroy');
+		const BoundSocket = NoopSocket.bind(null) as unknown as typeof WebSocket;
+		try {
+			let thrown: unknown;
+			try {
+				connectProvider({
+					url: 'ws://localhost:1234',
+					room: 'room',
+					doc: new Y.Doc(),
+					connect,
+					disableBc: true,
+					WebSocketPolyfill: BoundSocket,
+					auth: 'sekret',
+				});
+			} catch (error) {
+				thrown = error;
+			}
+			expect(thrown).toBeInstanceOf(ProblemError);
+			expect((thrown as ProblemError).type).toBe(COLLAB_AUTH_NOT_BOUND_TYPE);
+			expect((thrown as ProblemError).detail).toBe(
+				'provider _WS cannot be subclassed (TypeError); the provider was destroyed before any dial',
+			);
+			expect(destroySpy).toHaveBeenCalledTimes(1);
+			expect(NoopSocket.last).toBeNull();
+		} finally {
+			destroySpy.mockRestore();
+		}
+	});
+
+	it('connects through a bound socket constructor when no auth is set', () => {
+		NoopSocket.last = null;
+		const { disconnect } = connectProvider({
+			url: 'ws://localhost:1234',
+			room: 'room',
+			doc: new Y.Doc(),
+			connect: true,
+			disableBc: true,
+			WebSocketPolyfill: NoopSocket.bind(null) as unknown as typeof WebSocket,
+		});
+		expect(NoopSocket.last).not.toBeNull();
+		expect(NoopSocket.last!.url).toBe('ws://localhost:1234/room');
+		disconnect();
 	});
 });

@@ -33,6 +33,8 @@ export {
 	type ResolvedAuth,
 	type ConnectProviderOptions,
 	type ConnectedProvider,
+	COLLAB_AUTH_NOT_BOUND_TYPE,
+	COLLAB_START_FAILED_TYPE,
 	connectProvider,
 	resolveAuthParams,
 	bindProviderAuth,
