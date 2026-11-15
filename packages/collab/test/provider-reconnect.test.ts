@@ -3,9 +3,10 @@
  *
  * Guards provider recovery across real WebSocket disconnects: status transitions,
  * `onSync` resets, offline CRDT edit convergence, a token resolved at every dial
- * (rotation, revocation, resolver failure, a held-back first dial), caller params
- * and subprotocols kept, teardown when the first dial throws, terminal 44xx
- * closes, and backoff capping.
+ * (rotation, revocation, a held-back first dial), a refused dial when the
+ * resolver throws, caller params and subprotocols kept and read at every dial,
+ * teardown when the first dial throws, terminal 44xx closes, backoff capping,
+ * and closed sockets leaving the relay.
  * Uses the deterministic in-memory `y-protocols/sync` relay (`./mem-relay.js`)
  * and Vitest fake timers — no network sockets or wall-clock sleeps.
  */
@@ -233,6 +234,7 @@ describe('connectProvider reconnection — positive', () => {
 		expect(relay.dials).toHaveLength(3);
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-p5?tenant=t1&token=tok2`);
 		expect(requireDial(relay, 2).url).toBe(`${SERVER_URL}/room-p5?tenant=t2&token=tok3`);
+		expect(peerA.provider.params).toEqual({ tenant: 't2' });
 	});
 });
 
@@ -364,10 +366,11 @@ describe('connectProvider reconnection — negative', () => {
 		expect(requireDial(relay, 1).protocols).toEqual(['bearer.tok1', 'bearer.tok2']);
 		expect(requireDial(relay, 2).protocols).toEqual(['bearer.tok1']);
 	});
-	it('N7: dials without credentials and keeps reconnecting when the resolver throws', async () => {
+	it('N7: refuses the dial, sends no anonymous request, and reconnects when the resolver throws', async () => {
 		const relay = createMemRelay();
 		const failure = new Error('token service down');
 		const errors: unknown[] = [];
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		let calls = 0;
 		const peerA = connectPeer(relay, 'room-n7', {
 			params: { tenant: 't1' },
@@ -379,26 +382,29 @@ describe('connectProvider reconnection — negative', () => {
 					return `tok${calls}`;
 				},
 				protocol: 'bearer',
-				onError: (error) => {
-					errors.push(error);
-				},
 			},
 		});
+		peerA.provider.on('connection-error', (event) => {
+			errors.push((event as unknown as { readonly error: unknown }).error);
+		});
 
-		await settle();
-		relay.drop(activeSocket(peerA), 1006);
-		await settle(FAST_BACKOFF_MS);
+		try {
+			await settle();
+			relay.drop(activeSocket(peerA), 1006);
+			await settle(FAST_BACKOFF_MS);
 
-		expect(errors).toEqual([failure]);
-		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n7?tenant=t1`);
-		expect(requireDial(relay, 1).protocols).toEqual(['yjs-v1']);
+			expect(errors).toEqual([failure]);
+			expect(relay.dials).toHaveLength(1);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), failure);
 
-		relay.drop(activeSocket(peerA), 1006);
-		await settle(FAST_BACKOFF_MS);
-
-		expect(relay.dials).toHaveLength(3);
-		expect(requireDial(relay, 2).url).toBe(`${SERVER_URL}/room-n7?tenant=t1&token=tok3`);
-		expect(requireDial(relay, 2).protocols).toEqual(['yjs-v1', 'bearer.tok3']);
+			await settle(FAST_BACKOFF_MS);
+			expect(relay.dials).toHaveLength(2);
+			expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n7?tenant=t1&token=tok3`);
+			expect(requireDial(relay, 1).protocols).toEqual(['yjs-v1', 'bearer.tok3']);
+			expect(peerA.provider.synced).toBe(true);
+		} finally {
+			errorSpy.mockRestore();
+		}
 	});
 
 	it('N8: tears the provider down and rethrows when onStatusChange throws on the first dial', async () => {
@@ -454,6 +460,59 @@ describe('connectProvider reconnection — negative', () => {
 
 		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n10?token=guest`);
 	});
+
+	it('N11: keeps reconnecting when a connection-error listener throws on a refused dial', async () => {
+		const relay = createMemRelay();
+		const listenerFailure = new Error('listener bug');
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		let calls = 0;
+		const peerA = connectPeer(relay, 'room-n11', {
+			auth: () => {
+				calls += 1;
+				if (calls === 2) throw new Error('token service down');
+				return `tok${calls}`;
+			},
+		});
+		peerA.provider.on('connection-error', () => {
+			throw listenerFailure;
+		});
+
+		try {
+			await settle();
+			relay.drop(activeSocket(peerA), 1006);
+			await settle(FAST_BACKOFF_MS);
+			await settle(FAST_BACKOFF_MS);
+
+			expect(relay.dials).toHaveLength(2);
+			expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n11?token=tok3`);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('socket event handler threw'),
+				listenerFailure,
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('N12: sends a caller update under the auth key once the token is revoked', async () => {
+		const relay = createMemRelay();
+		let token: string | null = 'tok1';
+		const peerA = connectPeer(relay, 'room-n12', {
+			params: { token: 'guest' },
+			auth: () => token,
+		});
+
+		await settle();
+		expect(requireDial(relay, 0).url).toBe(`${SERVER_URL}/room-n12?token=tok1`);
+		expect(peerA.provider.params).toEqual({ token: 'guest' });
+
+		peerA.provider.params.token = 'guest2';
+		token = null;
+		relay.drop(activeSocket(peerA), 1006);
+		await settle(FAST_BACKOFF_MS);
+
+		expect(requireDial(relay, 1).url).toBe(`${SERVER_URL}/room-n12?token=guest2`);
+	});
 });
 
 describe('connectProvider held-back connect', () => {
@@ -475,7 +534,7 @@ describe('connectProvider held-back connect', () => {
 		const relay = createMemRelay();
 		let token = 'tok1';
 		const peerA = connectPeer(relay, 'room-p6', { connect: false, auth: () => token });
-		expect(peerA.provider.params.token).toBe('tok1');
+		expect(peerA.provider.params).toEqual({});
 
 		token = 'tok2';
 		await settle(10 * FAST_BACKOFF_MS);
@@ -567,6 +626,9 @@ describe('connectProvider reconnection — boundary', () => {
 		expect(itemsA).toEqual(itemsB);
 		expect(itemsA).toEqual(itemsRelay);
 		expect([...itemsA].sort()).toEqual([...expectedEntries].sort());
+		expect(relay.dials).toHaveLength(CYCLES + 2);
+		// Only the open sockets stay; peer A redialled last, so its socket comes second.
+		expect(relay.sockets).toEqual([activeSocket(peerB), activeSocket(peerA)]);
 	});
 
 	it('B3: caps reconnect backoff at maxBackoffTime across consecutive refusals', async () => {

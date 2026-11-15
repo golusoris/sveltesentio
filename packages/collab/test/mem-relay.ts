@@ -48,7 +48,9 @@ export interface MemDial {
 
 export interface MemRelay {
 	readonly Socket: MemSocketConstructor;
+	/** Sockets not yet closed; a socket leaves on `close()`, a drop or a refusal. */
 	readonly sockets: readonly MemSocket[];
+	/** Every dial, kept as the assertion log of the one test that owns the relay. */
 	readonly dials: readonly MemDial[];
 	docFor(room: string): Y.Doc;
 	drop(socket: MemSocket, code?: number, reason?: string): void;
@@ -132,11 +134,18 @@ function roomDoc(state: RelayState, room: string): Y.Doc {
 	return doc;
 }
 
+/** Marks `socket` closed and removes it from the sockets updates fan out to. */
+function forgetSocket(state: RelayState, socket: MemSocket): void {
+	socket.readyState = socket.CLOSED;
+	const index = state.sockets.indexOf(socket);
+	if (index >= 0) state.sockets.splice(index, 1);
+}
+
 function openOrRefuse(state: RelayState, socket: MemSocket): void {
 	if (socket.readyState !== socket.CONNECTING) return;
 	if (state.pendingRefusals > 0) {
 		state.pendingRefusals -= 1;
-		socket.readyState = socket.CLOSED;
+		forgetSocket(state, socket);
 		socket.onclose?.({ code: 1006, reason: 'refused' });
 		return;
 	}
@@ -193,7 +202,7 @@ class RelaySocket implements MemSocket {
 	}
 
 	close(): void {
-		this.readyState = this.CLOSED;
+		forgetSocket(this.#relay, this);
 	}
 }
 
@@ -214,7 +223,7 @@ export function createMemRelay(): MemRelay {
 
 	function drop(socket: MemSocket, code = 1006, reason = 'drop'): void {
 		if (socket.readyState === socket.CLOSED) return;
-		socket.readyState = socket.CLOSED;
+		forgetSocket(state, socket);
 		socket.onclose?.({ code, reason });
 	}
 

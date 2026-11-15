@@ -13,10 +13,13 @@ export type ProviderStatus = 'disconnected' | 'connecting' | 'connected';
  */
 export interface AuthBinding {
 	/**
-	 * Resolves the current auth token. `connectProvider` calls it at construction
-	 * and again right before every later dial; `bindProviderAuth` calls it at bind
-	 * time and on every `connection-close`. Returning `null` / `undefined` / `''`
-	 * attaches nothing (anonymous connect).
+	 * Resolves the current auth token. It is called as each socket is built, the
+	 * first dial included, so a held-back connect or a dial after a long backoff
+	 * sends the token current at that moment. Returning `null` / `undefined` /
+	 * `''` attaches nothing (anonymous connect). A throw refuses that dial: no
+	 * request goes out, the error is logged and reaches y-websocket's
+	 * `connection-error` event, and the provider dials again after its backoff.
+	 * Tests: `test/provider-reconnect.test.ts` P4, P6, N7.
 	 */
 	readonly token: string | (() => string | null | undefined);
 	/**
@@ -32,14 +35,6 @@ export interface AuthBinding {
 	 * analogue to an `Authorization` header.
 	 */
 	readonly protocol?: string;
-	/**
-	 * Receives an error `token` throws during a refresh; the dial then goes out
-	 * without credentials, as for a revoked token. Without it the error goes to
-	 * `console.error`. A throw during construction or bind still reaches the
-	 * caller. Tests: `test/provider-reconnect.test.ts` N7,
-	 * `test/provider-auth.test.ts` "clears owned entries when the resolver throws".
-	 */
-	readonly onError?: (error: unknown) => void;
 }
 
 export interface ResolvedAuth {
@@ -99,41 +94,33 @@ export function resolveAuthParams(
 	return { params, protocols };
 }
 
+type SocketConstructor = WebsocketProvider['_WS'];
+
 /**
  * The slice of `WebsocketProvider` the auth binding touches.
  *
- * Structural rather than `Pick<WebsocketProvider, …>`: y-websocket types `on` and
- * `off` through its observable base, and a hand-written double cannot satisfy
- * those signatures without reproducing the class. Naming the four members this
- * function actually uses lets a test pass a stand-in, which is what its own
- * fake was already trying to be.
- *
- * A real `WebsocketProvider` remains assignable, so callers are unchanged.
+ * The binding reads and replaces `_WS`, the socket constructor y-websocket calls
+ * for every dial, and writes nothing else. `params`, `protocols`, `on` and `off`
+ * stay in the type so a stand-in written against its earlier shape still
+ * compiles (the public API is append-only); `_WS` is optional for the same
+ * reason, and a provider without it gets a warning and no auth. A real
+ * `WebsocketProvider` remains assignable, so callers are unchanged.
  */
 export interface AuthBindableProvider {
 	params: Record<string, string>;
 	protocols: string[];
 	on(event: 'connection-close', cb: () => void): void;
 	off(event: 'connection-close', cb: () => void): void;
-}
-
-/** The two provider fields auth entries live in. */
-interface AuthSlots {
-	params: Record<string, string>;
-	protocols: string[];
+	_WS?: SocketConstructor;
 }
 
 /**
- * Auth entries a binding placed: each param key with the caller value it
- * shadows, and each subprotocol it appended.
+ * The socket constructor of the binding that injects auth on each provider. A
+ * later `bindProviderAuth` on the same provider replaces the entry, so only one
+ * binding injects. Keyed weakly, so a dropped provider is not retained.
+ * Tests: `test/provider-auth.test.ts` "lets only the latest binding inject".
  */
-interface OwnedAuth {
-	readonly params: ReadonlyMap<string, string | undefined>;
-	readonly protocols: readonly string[];
-}
-
-const NOTHING_OWNED: OwnedAuth = { params: new Map(), protocols: [] };
-const NO_AUTH: ResolvedAuth = { params: {}, protocols: [] };
+const activeBindings = new WeakMap<object, SocketConstructor>();
 
 /**
  * Entries of `next` absent from `present`, each once. Browsers reject a
@@ -144,182 +131,201 @@ function missingEntries(present: readonly string[], next: readonly string[]): st
 	return next.filter((entry, index) => !present.includes(entry) && next.indexOf(entry) === index);
 }
 
-/** The value `params` holds for `key` itself, ignoring inherited keys. */
-function ownValue(
-	params: Readonly<Record<string, string>> | undefined,
-	key: string,
-): string | undefined {
-	return params !== undefined && Object.hasOwn(params, key) ? params[key] : undefined;
+/**
+ * The caller subprotocols y-websocket passed, as a new array, with the auth
+ * entries the caller does not already send appended. The caller's array is
+ * never mutated. Tests: `test/provider-reconnect.test.ts` N4, N6.
+ */
+function dialProtocols(
+	callerProtocols: string | string[] | undefined,
+	authProtocols: readonly string[],
+): string[] {
+	let list: string[] = [];
+	if (typeof callerProtocols === 'string') list = [callerProtocols];
+	else if (callerProtocols !== undefined) list = [...callerProtocols];
+	return [...list, ...missingEntries(list, authProtocols)];
+}
+
+/** The key of one `key=value` query pair, still percent-encoded. */
+function queryKey(pair: string): string {
+	const equals = pair.indexOf('=');
+	return equals >= 0 ? pair.slice(0, equals) : pair;
 }
 
 /**
- * Puts back the caller values `owned` shadowed, then applies `next` in place so
- * a held `provider.params` reference stays live. Tests:
- * `test/provider-reconnect.test.ts` N3, N10, P5.
+ * `url` with the auth query pairs appended, after dropping caller pairs under
+ * the same keys. Keys are compared percent-encoded, the form y-websocket writes
+ * (`encodeQueryParams` in lib0 `url.js`), and the query is the part after the
+ * last `?`, which y-websocket writes only in front of its encoded params. With
+ * no auth pairs the URL is returned as is, so a caller pair the token shadowed
+ * is sent again once the token is revoked. Tests:
+ * `test/provider-reconnect.test.ts` N3, N10, N12.
  */
-function swapOwnedParams(
-	params: Record<string, string>,
-	owned: ReadonlyMap<string, string | undefined>,
-	next: Readonly<Record<string, string>>,
-): Map<string, string | undefined> {
-	for (const [key, callerValue] of owned) {
-		if (callerValue === undefined) Reflect.deleteProperty(params, key);
-		else params[key] = callerValue;
-	}
-	const shadowed = new Map<string, string | undefined>();
-	for (const [key, value] of Object.entries(next)) {
-		shadowed.set(key, ownValue(params, key));
-		params[key] = value;
-	}
-	return shadowed;
+function dialUrl(url: string, authParams: Readonly<Record<string, string>>): string {
+	const authPairs = Object.entries(authParams).map(
+		([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
+	);
+	if (authPairs.length === 0) return url;
+	const replaced = new Set(authPairs.map((pair) => queryKey(pair)));
+	const cut = url.lastIndexOf('?');
+	const base = cut >= 0 ? url.slice(0, cut) : url;
+	const query = cut >= 0 ? url.slice(cut + 1) : '';
+	const kept = query.split('&').filter((pair) => pair !== '' && !replaced.has(queryKey(pair)));
+	return `${base}?${[...kept, ...authPairs].join('&')}`;
 }
 
-/**
- * Removes the owned subprotocols and appends the missing entries of `next`,
- * returning a new array so a caller's (possibly frozen) array is never mutated.
- * An owned entry was absent when it was appended, so its copy is the first one;
- * a copy the caller pushed later stays in place. Tests:
- * `test/provider-reconnect.test.ts` N4, N6; `test/provider-auth.test.ts`
- * "keeps the position of a caller copy of an owned subprotocol".
- */
-function swapOwnedProtocols(
-	current: readonly string[],
-	owned: readonly string[],
-	next: readonly string[],
-): { protocols: string[]; added: string[] } {
-	const kept = [...current];
-	for (const entry of owned) {
-		const index = kept.indexOf(entry);
-		if (index >= 0) kept.splice(index, 1);
-	}
-	const added = missingEntries(kept, next);
-	return { protocols: [...kept, ...added], added };
-}
-
-function swapOwnedAuth(slots: AuthSlots, owned: OwnedAuth, next: ResolvedAuth): OwnedAuth {
-	const params = swapOwnedParams(slots.params, owned.params, next.params);
-	const { protocols, added } = swapOwnedProtocols(slots.protocols, owned.protocols, next.protocols);
-	slots.protocols = protocols;
-	return { params, protocols: added };
-}
-
-function reportAuthError(
-	auth: AuthBinding | string | (() => string | null | undefined),
-	error: unknown,
-): void {
-	const onError = typeof auth === 'object' ? auth.onError : undefined;
-	if (onError !== undefined) onError(error);
-	else
-		console.error(
-			'[sentio] collab: auth token resolver threw; dialling without credentials',
-			error,
-		);
-}
-
-/**
- * Re-resolves `auth` into `slots`. A resolver throw clears the owned entries and
- * is reported instead of escaping into y-websocket's close or dial path, where
- * it would leave the stale token configured and stop the reconnect loop.
- * Tests: `test/provider-reconnect.test.ts` N7.
- */
-function refreshOwnedAuth(
-	slots: AuthSlots,
-	owned: OwnedAuth,
-	auth: AuthBinding | string | (() => string | null | undefined),
-): OwnedAuth {
-	let next = NO_AUTH;
+/** Runs one socket event handler; a throw is logged so the next event still fires. */
+function runHandler(handler: () => void): void {
 	try {
-		next = resolveAuthParams(auth);
+		handler();
 	} catch (error) {
-		reportAuthError(auth, error);
+		console.error('[sentio] collab: socket event handler threw', error);
 	}
-	return swapOwnedAuth(slots, owned, next);
 }
 
 /**
- * Re-resolves `auth` into the live provider's `params` and `protocols` so a
- * rotated or revoked token is picked up on the next reconnect (`y-websocket`
- * re-reads both fields each time it dials). Applies the token at bind time,
- * then refreshes on every `connection-close`.
+ * Socket stand-in for a dial whose token resolver threw. It opens no
+ * connection. On the next microtask it fires `onerror`, carrying the resolver
+ * error as `error`, then `onclose` with code 1006, so y-websocket emits
+ * `connection-error` and `connection-close` and backs off before it dials
+ * again, as for a refused connection. A throwing handler is logged and does not
+ * stop the close, as in a browser. y-websocket attaches handlers through the
+ * `on…` properties only, so listener registration is accepted and never fires.
+ * Tests: `test/provider-reconnect.test.ts` N7, N11; `test/provider-auth.test.ts`
+ * "refuses the dial without building a socket when the resolver throws".
+ */
+class RefusedDial implements WebSocket {
+	readonly CONNECTING = 0;
+	readonly OPEN = 1;
+	readonly CLOSING = 2;
+	readonly CLOSED = 3;
+	readonly bufferedAmount = 0;
+	readonly extensions = '';
+	readonly protocol = '';
+	readonly url: string;
+	binaryType: BinaryType = 'blob';
+	readyState: WebSocket['readyState'] = this.CONNECTING;
+	onclose: WebSocket['onclose'] = null;
+	onerror: WebSocket['onerror'] = null;
+	onmessage: WebSocket['onmessage'] = null;
+	onopen: WebSocket['onopen'] = null;
+
+	constructor(url: string, cause: unknown) {
+		this.url = url;
+		queueMicrotask(() => {
+			this.refuse(cause);
+		});
+	}
+
+	private refuse(cause: unknown): void {
+		if (this.readyState === this.CLOSED) return;
+		this.readyState = this.CLOSED;
+		const error = Object.assign(new Event('error'), { error: cause });
+		const close = Object.assign(new Event('close'), {
+			code: 1006,
+			reason: 'auth token resolver threw',
+			wasClean: false,
+		});
+		runHandler(() => {
+			this.onerror?.(error);
+		});
+		runHandler(() => {
+			this.onclose?.(close);
+		});
+	}
+
+	close(): void {
+		this.readyState = this.CLOSED;
+	}
+
+	send(): void {
+		// Never opens, and y-websocket sends only after `onopen`.
+	}
+
+	addEventListener(): void {
+		// Accepted and never fired: y-websocket uses the `on…` properties.
+	}
+
+	removeEventListener(): void {
+		// addEventListener registers nothing, so there is nothing to remove.
+	}
+
+	dispatchEvent(): boolean {
+		// No listener runs (see addEventListener); the event is not cancelled.
+		return true;
+	}
+}
+
+/** Logs a resolver throw and returns a socket that dials nothing. */
+function refuseDial(url: string, cause: unknown): WebSocket {
+	console.error('[sentio] collab: auth token resolver threw; dial refused', cause);
+	return new RefusedDial(url, cause);
+}
+
+/**
+ * Subclass of `Base` that resolves `auth` as each socket is built, the last
+ * point a fresh token can still reach the dial: y-websocket builds every socket
+ * with `new provider._WS(provider.url, provider.protocols)` (`setupWS` in
+ * y-websocket 3.1.0 `src/y-websocket.js`). Nothing is written to the provider,
+ * so its `params` and `protocols` keep caller entries only. While another
+ * binding on the provider is active, this one passes the dial through.
+ */
+function authSocket(
+	provider: object,
+	Base: SocketConstructor,
+	auth: AuthBinding | string | (() => string | null | undefined),
+): SocketConstructor {
+	const AuthSocket = class extends Base {
+		constructor(url: string | URL, protocols?: string | string[]) {
+			if (activeBindings.get(provider) !== AuthSocket) {
+				super(url, protocols);
+				return;
+			}
+			let resolved: ResolvedAuth;
+			try {
+				resolved = resolveAuthParams(auth);
+			} catch (cause) {
+				return refuseDial(String(url), cause);
+			}
+			super(dialUrl(String(url), resolved.params), dialProtocols(protocols, resolved.protocols));
+		}
+	};
+	return AuthSocket;
+}
+
+/**
+ * Binds `auth` to a provider so every dial carries the token current at that
+ * moment; for callers that construct the provider themselves, and used by
+ * `connectProvider`. The binding wraps `provider._WS` and builds each dial's URL
+ * and subprotocols from the caller's `provider.params` and `provider.protocols`
+ * plus the resolved token, writing neither field. A revoked token therefore
+ * leaves both the URL and the subprotocols, caller entries are read afresh at
+ * every dial, and a caller subprotocol equal to an auth one is sent once. A
+ * resolver throw refuses that dial (see `AuthBinding.token`).
  *
- * Caller entries survive: a caller param under the auth key comes back when the
- * token is revoked, and a caller subprotocol equal to an auth one stays and is
- * sent once. Returns an unbind function. For callers that construct the
- * provider themselves; `connectProvider` refreshes at each dial instead. Tests:
- * the `bindProviderAuth` block in `test/provider-auth.test.ts`.
+ * Binding the same provider again replaces the earlier binding, which then
+ * passes dials through. The returned unbind stops this binding and puts back
+ * the socket constructor it wrapped, unless something has wrapped it since.
+ * Tests: the `bindProviderAuth` block in `test/provider-auth.test.ts`.
  */
 export function bindProviderAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
-	let owned = swapOwnedAuth(provider, NOTHING_OWNED, resolveAuthParams(auth));
-	const rebind = (): void => {
-		owned = refreshOwnedAuth(provider, owned, auth);
+	const Base = provider._WS;
+	if (Base === undefined) {
+		console.warn('[sentio] collab: provider has no _WS socket constructor; auth not bound');
+		return () => {
+			// Nothing was bound.
+		};
+	}
+	const AuthSocket = authSocket(provider, Base, auth);
+	activeBindings.set(provider, AuthSocket);
+	provider._WS = AuthSocket;
+	return () => {
+		if (activeBindings.get(provider) === AuthSocket) activeBindings.delete(provider);
+		if (provider._WS === AuthSocket) provider._WS = Base;
 	};
-	provider.on('connection-close', rebind);
-	return () => provider.off('connection-close', rebind);
-}
-
-/**
- * Caller and construction-time auth entries for the `WebsocketProvider`
- * constructor, so `provider.params` shows the token before the first dial.
- * Tests: `test/provider-reconnect.test.ts` P6; `test/provider-auth.test.ts`
- * "merges auth token with caller-supplied params".
- */
-function mergeInitialAuth(options: ConnectProviderOptions): { slots: AuthSlots; owned: OwnedAuth } {
-	const slots: AuthSlots = {
-		params: { ...options.params },
-		protocols: [...(options.protocols ?? [])],
-	};
-	const resolved = options.auth !== undefined ? resolveAuthParams(options.auth) : NO_AUTH;
-	return { slots, owned: swapOwnedAuth(slots, NOTHING_OWNED, resolved) };
-}
-
-type SocketConstructor = WebsocketProvider['_WS'];
-
-interface DialTarget {
-	readonly url: string;
-	readonly protocols: string[];
-}
-
-/**
- * Subclass of `Base` that asks `beforeDial` for the URL and subprotocols as the
- * socket is built, the last point a refreshed token can still reach the dial
- * (`setupWS` in y-websocket 3.1.0 `src/y-websocket.js` builds the socket with
- * `new provider._WS(provider.url, provider.protocols)`). Tests:
- * `test/provider-auth.test.ts` "resolves a rotating token for every dial, not
- * only at construction"; `test/provider-reconnect.test.ts` P6, N9.
- */
-function dialTimeSocket(Base: SocketConstructor, beforeDial: () => DialTarget): SocketConstructor {
-	return class extends Base {
-		constructor(_url: string | URL, _protocols?: string | string[]) {
-			const target = beforeDial();
-			super(target.url, target.protocols);
-		}
-	};
-}
-
-/**
- * Re-resolves `auth` right before each dial: y-websocket reads `_WS` (typed as a
- * public field in its 3.x declarations) every time `setupWS` opens a socket.
- * A held-back first dial or a dial after a long backoff therefore sends the
- * token current at that moment. The construction-time token serves the first
- * dial only when `connectProvider` starts it itself. Tests:
- * `test/provider-reconnect.test.ts` P4, P6, N9.
- */
-function refreshAtEachDial(
-	provider: WebsocketProvider,
-	auth: AuthBinding | string | (() => string | null | undefined),
-	owned: OwnedAuth,
-	firstDialFresh: boolean,
-): void {
-	let current = owned;
-	let fresh = firstDialFresh;
-	provider._WS = dialTimeSocket(provider._WS, () => {
-		if (fresh) fresh = false;
-		else current = refreshOwnedAuth(provider, current, auth);
-		return { url: provider.url, protocols: provider.protocols };
-	});
 }
 
 /**
@@ -333,14 +339,14 @@ function refreshAtEachDial(
  */
 function buildProviderOptions(
 	options: ConnectProviderOptions,
-	mergedParams: Record<string, string>,
-	mergedProtocols: string[],
+	callerParams: Record<string, string>,
+	callerProtocols: string[],
 ): ConstructorParameters<typeof WebsocketProvider>[3] {
 	const { awareness, WebSocketPolyfill, resyncInterval, maxBackoffTime, disableBc } = options;
 	const providerOptions: ConstructorParameters<typeof WebsocketProvider>[3] = { connect: false };
 	if (awareness !== undefined) providerOptions.awareness = awareness;
-	if (Object.keys(mergedParams).length > 0) providerOptions.params = mergedParams;
-	if (mergedProtocols.length > 0) providerOptions.protocols = mergedProtocols;
+	if (Object.keys(callerParams).length > 0) providerOptions.params = callerParams;
+	if (callerProtocols.length > 0) providerOptions.protocols = callerProtocols;
 	if (WebSocketPolyfill !== undefined) providerOptions.WebSocketPolyfill = WebSocketPolyfill;
 	if (resyncInterval !== undefined) providerOptions.resyncInterval = resyncInterval;
 	if (maxBackoffTime !== undefined) providerOptions.maxBackoffTime = maxBackoffTime;
@@ -390,27 +396,30 @@ function startOrTearDown(provider: WebsocketProvider, teardown: () => void): voi
 }
 
 export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
-	const { url, room, doc, auth, onStatusChange, onSync } = options;
-	const dialsNow = options.connect !== false;
+	const { url, room, doc, params, protocols, auth, onStatusChange, onSync } = options;
 
-	const initial = mergeInitialAuth(options);
+	const callerParams = { ...params };
+	const callerProtocols = [...(protocols ?? [])];
+
 	const provider = new WebsocketProvider(
 		url,
 		room,
 		doc,
-		buildProviderOptions(options, initial.slots.params, initial.slots.protocols),
+		buildProviderOptions(options, callerParams, callerProtocols),
 	);
-	if (auth !== undefined) refreshAtEachDial(provider, auth, initial.owned, dialsNow);
+
+	const unbindAuth = auth !== undefined ? bindProviderAuth(provider, auth) : undefined;
 
 	const unbindEvents = bindProviderEvents(provider, onStatusChange, onSync);
 
 	const disconnect = (): void => {
+		if (unbindAuth) unbindAuth();
 		unbindEvents();
 		provider.disconnect();
 		provider.destroy();
 	};
 
-	if (dialsNow) startOrTearDown(provider, disconnect);
+	if (options.connect !== false) startOrTearDown(provider, disconnect);
 
 	return { provider, disconnect };
 }

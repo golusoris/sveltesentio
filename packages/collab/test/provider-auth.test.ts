@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as Y from 'yjs';
 import {
+	type AuthBindableProvider,
 	type AuthBinding,
 	connectProvider,
 	resolveAuthParams,
@@ -28,27 +29,57 @@ class NoopSocket {
 	}
 }
 
-/** Minimal stand-in for the `WebsocketProvider` surface `bindProviderAuth` touches. */
-class FakeProvider {
+type SocketConstructor = NonNullable<AuthBindableProvider['_WS']>;
+
+interface Dial {
+	readonly url: string;
+	readonly protocols: readonly string[];
+}
+
+function protocolList(protocols: string | string[] | undefined): string[] {
+	if (protocols === undefined) return [];
+	return typeof protocols === 'string' ? [protocols] : [...protocols];
+}
+
+/**
+ * Minimal stand-in for the `WebsocketProvider` surface `bindProviderAuth`
+ * touches. `dial()` builds a socket the way y-websocket's `setupWS` does, and
+ * `dials` records every socket the original constructor built.
+ */
+class FakeProvider implements AuthBindableProvider {
 	params: Record<string, string> = {};
 	protocols: string[] = [];
-	private readonly listeners = new Map<string, Set<(...args: unknown[]) => void>>();
-	on(event: string, cb: (...args: unknown[]) => void): void {
-		let set = this.listeners.get(event);
-		if (!set) {
-			set = new Set();
-			this.listeners.set(event, set);
+	readonly dials: Dial[] = [];
+	readonly original: SocketConstructor;
+	_WS: SocketConstructor;
+	constructor() {
+		const dials = this.dials;
+		class RecordingSocket extends NoopSocket {
+			constructor(url: string, protocols?: string | string[]) {
+				super(url, protocols);
+				dials.push({ url, protocols: protocolList(protocols) });
+			}
 		}
-		set.add(cb);
+		this.original = RecordingSocket as unknown as SocketConstructor;
+		this._WS = this.original;
 	}
-	off(event: string, cb: (...args: unknown[]) => void): void {
-		this.listeners.get(event)?.delete(cb);
+	on(): void {}
+	off(): void {}
+	/** The URL y-websocket dials: `encodeQueryParams` from lib0, no `?` when empty. */
+	url(): string {
+		const query = Object.entries(this.params)
+			.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+			.join('&');
+		return query === '' ? 'ws://x/room' : `ws://x/room?${query}`;
 	}
-	emit(event: string): void {
-		for (const cb of this.listeners.get(event) ?? []) cb();
+	dial(): WebSocket {
+		return this.build(this.url(), this.protocols);
 	}
-	listenerCount(event: string): number {
-		return this.listeners.get(event)?.size ?? 0;
+	build(url: string, protocols?: string | string[]): WebSocket {
+		return new this._WS(url, protocols);
+	}
+	urls(): string[] {
+		return this.dials.map((dial) => dial.url);
 	}
 }
 
@@ -102,201 +133,327 @@ describe('resolveAuthParams', () => {
 });
 
 describe('bindProviderAuth', () => {
-	it('applies the resolved token to the live provider params on bind', () => {
+	it('puts the token in the dial URL and writes nothing to the provider', () => {
 		const provider = new FakeProvider();
 		bindProviderAuth(provider, 'tok');
-		expect(provider.params).toEqual({ token: 'tok' });
-		expect(provider.listenerCount('connection-close')).toBe(1);
+		provider.dial();
+		expect(provider.dials).toEqual([{ url: 'ws://x/room?token=tok', protocols: [] }]);
+		expect(provider.params).toEqual({});
+		expect(provider.protocols).toEqual([]);
 	});
 
-	it('re-resolves a rotating token on reconnect (connection-close)', () => {
+	it('resolves a rotating token once per socket, the first one included', () => {
 		const provider = new FakeProvider();
 		let n = 0;
 		bindProviderAuth(provider, () => `t-${++n}`);
-		expect(provider.params).toEqual({ token: 't-1' });
-
-		provider.emit('connection-close');
-		expect(provider.params).toEqual({ token: 't-2' });
-
-		provider.emit('connection-close');
-		expect(provider.params).toEqual({ token: 't-3' });
+		expect(n).toBe(0);
+		provider.dial();
+		provider.dial();
+		provider.dial();
+		expect(provider.urls()).toEqual([
+			'ws://x/room?token=t-1',
+			'ws://x/room?token=t-2',
+			'ws://x/room?token=t-3',
+		]);
+		expect(n).toBe(3);
 	});
 
-	it('preserves non-auth params already on the provider', () => {
+	it('sends the token current at the first dial, not the one at bind time', () => {
 		const provider = new FakeProvider();
-		provider.params = { room: 'r1' };
-		bindProviderAuth(provider, 'tok');
-		expect(provider.params).toEqual({ room: 'r1', token: 'tok' });
+		let current = 'stale';
+		bindProviderAuth(provider, () => current);
+		current = 'fresh';
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=fresh']);
 	});
 
-	it('sets the subprotocol entry when protocol is configured', () => {
-		const provider = new FakeProvider();
-		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
-		expect(provider.protocols).toEqual(['bearer.tok']);
-	});
-
-	it('unbind removes the reconnect listener and stops rotating', () => {
-		const provider = new FakeProvider();
-		let n = 0;
-		const unbind = bindProviderAuth(provider, () => `t-${++n}`);
-		expect(provider.params).toEqual({ token: 't-1' });
-
-		unbind();
-		expect(provider.listenerCount('connection-close')).toBe(0);
-
-		provider.emit('connection-close');
-		expect(provider.params).toEqual({ token: 't-1' });
-	});
-
-	it('keeps a caller subprotocol that a rotated token later resolves to', () => {
-		const provider = new FakeProvider();
-		provider.protocols = ['bearer.tok2'];
-		const issued = ['tok1', 'tok2', 'tok3'];
-		let n = 0;
-		bindProviderAuth(provider, { token: () => issued[n++] ?? null, protocol: 'bearer' });
-		expect(provider.protocols).toEqual(['bearer.tok2', 'bearer.tok1']);
-
-		provider.emit('connection-close');
-		expect(provider.protocols).toEqual(['bearer.tok2']);
-
-		provider.emit('connection-close');
-		expect(provider.protocols).toEqual(['bearer.tok2', 'bearer.tok3']);
-	});
-
-	it('does not duplicate a caller subprotocol equal to the auth entry', () => {
-		const provider = new FakeProvider();
-		provider.protocols = ['bearer.tok'];
-		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
-		expect(provider.protocols).toEqual(['bearer.tok']);
-
-		provider.emit('connection-close');
-		expect(provider.protocols).toEqual(['bearer.tok']);
-	});
-
-	it('updates params in place so a held reference stays live', () => {
-		const provider = new FakeProvider();
-		const held = provider.params;
-		let n = 0;
-		bindProviderAuth(provider, () => `t-${++n}`);
-		provider.emit('connection-close');
-		expect(provider.params).toBe(held);
-		expect(held).toEqual({ token: 't-2' });
-	});
-
-	it('never mutates a frozen protocols array the caller supplied', () => {
-		const provider = new FakeProvider();
-		const callerProtocols = Object.freeze(['yjs-v1']);
-		provider.protocols = callerProtocols as string[];
-		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
-		provider.emit('connection-close');
-		expect(callerProtocols).toEqual(['yjs-v1']);
-		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok']);
-	});
-
-	it('ignores a stray third argument, so no caller-supplied owned state reaches the rebind', () => {
-		const provider = new FakeProvider();
-		provider.params = { room: 'r1' };
-		const bindLoose = bindProviderAuth as (...args: unknown[]) => () => void;
-		let n = 0;
-		bindLoose(provider, () => `t-${++n}`, { params: null, protocols: null });
-		expect(provider.params).toEqual({ room: 'r1', token: 't-1' });
-
-		expect(() => provider.emit('connection-close')).not.toThrow();
-		expect(provider.params).toEqual({ room: 'r1', token: 't-2' });
-	});
-	it('clears owned entries when the resolver throws, keeping caller entries', () => {
-		const provider = new FakeProvider();
-		provider.params = { room: 'r1' };
-		provider.protocols = ['yjs-v1'];
-		const failure = new Error('token service down');
-		const onError = vi.fn();
-		let calls = 0;
-		bindProviderAuth(provider, {
-			token: () => {
-				calls += 1;
-				if (calls > 1) throw failure;
-				return 'tok1';
-			},
-			protocol: 'bearer',
-			onError,
-		});
-		expect(provider.params).toEqual({ room: 'r1', token: 'tok1' });
-		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok1']);
-
-		expect(() => provider.emit('connection-close')).not.toThrow();
-		expect(onError).toHaveBeenCalledTimes(1);
-		expect(onError).toHaveBeenCalledWith(failure);
-		expect(provider.params).toEqual({ room: 'r1' });
-		expect(provider.protocols).toEqual(['yjs-v1']);
-	});
-
-	it('reports a resolver failure through console.error when no onError is given', () => {
-		const provider = new FakeProvider();
-		const failure = new Error('token expired');
-		let calls = 0;
-		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		try {
-			bindProviderAuth(provider, () => {
-				calls += 1;
-				if (calls > 1) throw failure;
-				return 'tok1';
-			});
-			provider.emit('connection-close');
-			expect(errorSpy).toHaveBeenCalledTimes(1);
-			expect(errorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('auth token resolver threw'),
-				failure,
-			);
-			expect(provider.params).toEqual({});
-		} finally {
-			errorSpy.mockRestore();
-		}
-	});
-
-	it('lets a resolver failure at bind time reach the caller and binds nothing', () => {
-		const provider = new FakeProvider();
-		provider.params = { room: 'r1' };
-		const failure = new Error('token service down');
-		const onError = vi.fn();
-		const bind = (): unknown =>
-			bindProviderAuth(provider, {
-				token: () => {
-					throw failure;
-				},
-				onError,
-			});
-		expect(bind).toThrow(failure);
-		expect(onError).not.toHaveBeenCalled();
-		expect(provider.params).toEqual({ room: 'r1' });
-		expect(provider.listenerCount('connection-close')).toBe(0);
-	});
-
-	it('restores the caller value of a param the token shadowed once the token is revoked', () => {
+	it('keeps caller params and replaces a caller value under the auth key only while a token resolves', () => {
 		const provider = new FakeProvider();
 		provider.params = { token: 'guest', v: '2' };
 		const issued = ['tok1', 'tok2'];
 		let n = 0;
 		bindProviderAuth(provider, () => issued[n++] ?? null);
-		expect(provider.params).toEqual({ token: 'tok1', v: '2' });
-
-		provider.emit('connection-close');
-		expect(provider.params).toEqual({ token: 'tok2', v: '2' });
-
-		provider.emit('connection-close');
+		provider.dial();
+		provider.dial();
+		provider.dial();
+		expect(provider.urls()).toEqual([
+			'ws://x/room?v=2&token=tok1',
+			'ws://x/room?v=2&token=tok2',
+			'ws://x/room?token=guest&v=2',
+		]);
 		expect(provider.params).toEqual({ token: 'guest', v: '2' });
 	});
 
-	it('keeps the position of a caller copy of an owned subprotocol', () => {
+	it('sends a caller update under the auth key once the token is revoked', () => {
+		const provider = new FakeProvider();
+		provider.params = { token: 'guest' };
+		let current: string | null = 'tok1';
+		bindProviderAuth(provider, () => current);
+		provider.dial();
+		provider.params.token = 'guest2';
+		current = null;
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?token=tok1', 'ws://x/room?token=guest2']);
+	});
+
+	it('matches query keys whole and percent-encoded', () => {
+		const provider = new FakeProvider();
+		provider.params = { 'access token': 'caller', tokenx: '1' };
+		bindProviderAuth(provider, { token: 'a b&c', param: 'access token' });
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?tokenx=1&access%20token=a%20b%26c']);
+	});
+
+	it('keeps a query pair without a value and drops an empty one', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok');
+		provider.build('ws://x/room?flag&&token=old', []);
+		expect(provider.urls()).toEqual(['ws://x/room?flag&token=tok']);
+	});
+
+	it('reads the query after the last ?, the one y-websocket writes before its params', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, 'tok');
+		provider.build('ws://x/a?b?token=old', []);
+		expect(provider.urls()).toEqual(['ws://x/a?b?token=tok']);
+	});
+
+	it('appends the auth subprotocol to a copy and never mutates the caller array', () => {
+		const provider = new FakeProvider();
+		const callerProtocols = Object.freeze(['yjs-v1']);
+		provider.protocols = callerProtocols as string[];
+		bindProviderAuth(provider, { token: 'tok', protocol: 'bearer' });
+		provider.dial();
+		expect(provider.dials[0]?.protocols).toEqual(['yjs-v1', 'bearer.tok']);
+		expect(callerProtocols).toEqual(['yjs-v1']);
+		expect(provider.protocols).toBe(callerProtocols);
+	});
+
+	it('sends a caller subprotocol equal to an auth entry once, also when added mid-session', () => {
 		const provider = new FakeProvider();
 		provider.protocols = ['yjs-v1'];
 		const issued = ['tok1', 'tok2'];
 		let n = 0;
 		bindProviderAuth(provider, { token: () => issued[n++] ?? null, protocol: 'bearer' });
-		expect(provider.protocols).toEqual(['yjs-v1', 'bearer.tok1']);
+		provider.dial();
+		provider.protocols.push('bearer.tok1');
+		provider.dial();
+		provider.dial();
+		expect(provider.dials.map((dial) => dial.protocols)).toEqual([
+			['yjs-v1', 'bearer.tok1'],
+			['yjs-v1', 'bearer.tok1', 'bearer.tok2'],
+			['yjs-v1', 'bearer.tok1'],
+		]);
+	});
 
-		provider.protocols.push('x', 'bearer.tok1');
-		provider.emit('connection-close');
-		expect(provider.protocols).toEqual(['yjs-v1', 'x', 'bearer.tok1', 'bearer.tok2']);
+	it('takes a single subprotocol string or none', () => {
+		const provider = new FakeProvider();
+		bindProviderAuth(provider, { token: 'tok', param: null, protocol: 'bearer' });
+		provider.build('ws://x/room', 'bearer.tok');
+		provider.build('ws://x/room', 'yjs-v1');
+		provider.build('ws://x/room');
+		expect(provider.dials).toEqual([
+			{ url: 'ws://x/room', protocols: ['bearer.tok'] },
+			{ url: 'ws://x/room', protocols: ['yjs-v1', 'bearer.tok'] },
+			{ url: 'ws://x/room', protocols: ['bearer.tok'] },
+		]);
+	});
+
+	it('refuses the dial without building a socket when the resolver throws', async () => {
+		const provider = new FakeProvider();
+		const failure = new Error('token service down');
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			let calls = 0;
+			bindProviderAuth(provider, () => {
+				calls += 1;
+				if (calls === 1) throw failure;
+				return `tok${calls}`;
+			});
+			const socket = provider.dial();
+			expect(provider.dials).toEqual([]);
+			expect(socket.url).toBe('ws://x/room');
+			expect(socket.readyState).toBe(socket.CONNECTING);
+			const seen: string[] = [];
+			let errorEvent: Event | undefined;
+			let closeEvent: CloseEvent | undefined;
+			socket.onerror = (event) => {
+				seen.push('error');
+				errorEvent = event;
+			};
+			socket.onclose = (event) => {
+				seen.push('close');
+				closeEvent = event;
+			};
+			expect(seen).toEqual([]);
+
+			await Promise.resolve();
+			expect(seen).toEqual(['error', 'close']);
+			expect(errorEvent).toHaveProperty('error', failure);
+			expect(closeEvent?.code).toBe(1006);
+			expect(closeEvent?.wasClean).toBe(false);
+			expect(socket.readyState).toBe(socket.CLOSED);
+			expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('dial refused'), failure);
+
+			provider.dial();
+			expect(provider.urls()).toEqual(['ws://x/room?token=tok2']);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('still fires the close of a refused dial when its error handler throws', async () => {
+		const provider = new FakeProvider();
+		const handlerFailure = new Error('handler bug');
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			let closes = 0;
+			socket.onerror = () => {
+				throw handlerFailure;
+			};
+			socket.onclose = () => {
+				closes += 1;
+			};
+			await Promise.resolve();
+			expect(closes).toBe(1);
+			expect(errorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('socket event handler threw'),
+				handlerFailure,
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('fires nothing for a refused dial closed before the refusal runs', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			const handler = vi.fn();
+			socket.onerror = handler;
+			socket.onclose = handler;
+			socket.close();
+			await Promise.resolve();
+			expect(handler).not.toHaveBeenCalled();
+			expect(socket.readyState).toBe(socket.CLOSED);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('accepts listeners and sends on a refused dial and never fires them', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => {
+				throw new Error('token service down');
+			});
+			const socket = provider.dial();
+			const listener = vi.fn();
+			socket.addEventListener('close', listener);
+			socket.removeEventListener('close', listener);
+			socket.send('frame');
+			expect(socket.dispatchEvent(new Event('close'))).toBe(true);
+			expect(socket).toMatchObject({
+				binaryType: 'blob',
+				bufferedAmount: 0,
+				extensions: '',
+				protocol: '',
+			});
+			await Promise.resolve();
+			expect(listener).not.toHaveBeenCalled();
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+
+	it('lets only the latest binding inject', () => {
+		const provider = new FakeProvider();
+		const unbindA = bindProviderAuth(provider, { token: 'tokA', param: 'a' });
+		const unbindB = bindProviderAuth(provider, { token: 'tokB', param: 'b' });
+		provider.dial();
+		unbindB();
+		provider.dial();
+		unbindA();
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?b=tokB', 'ws://x/room', 'ws://x/room']);
+		expect(provider._WS).toBe(provider.original);
+	});
+
+	it('unbind puts back the socket constructor it wrapped, once', () => {
+		const provider = new FakeProvider();
+		const unbind = bindProviderAuth(provider, 'tok');
+		expect(provider._WS).not.toBe(provider.original);
+		unbind();
+		expect(provider._WS).toBe(provider.original);
+		unbind();
+		expect(provider._WS).toBe(provider.original);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+
+	it('unbinding a replaced binding leaves the latest one injecting', () => {
+		const provider = new FakeProvider();
+		const unbindA = bindProviderAuth(provider, { token: 'tokA', param: 'a' });
+		bindProviderAuth(provider, { token: 'tokB', param: 'b' });
+		const wrappedByB = provider._WS;
+		unbindA();
+		expect(provider._WS).toBe(wrappedByB);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room?b=tokB']);
+	});
+
+	it('unbind leaves a constructor wrapped since in place and stops injecting', () => {
+		const provider = new FakeProvider();
+		const unbind = bindProviderAuth(provider, 'tok');
+		const Wrapped = class extends provider._WS {};
+		provider._WS = Wrapped;
+		unbind();
+		expect(provider._WS).toBe(Wrapped);
+		provider.dial();
+		expect(provider.urls()).toEqual(['ws://x/room']);
+	});
+
+	it('warns and binds nothing on a provider without a socket constructor', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		try {
+			const bare: AuthBindableProvider = {
+				params: {},
+				protocols: [],
+				on: () => undefined,
+				off: () => undefined,
+			};
+			const unbind = bindProviderAuth(bare, 'tok');
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no _WS'));
+			expect(bare).not.toHaveProperty('_WS');
+			expect(bare.params).toEqual({});
+			expect(() => {
+				unbind();
+			}).not.toThrow();
+		} finally {
+			warnSpy.mockRestore();
+		}
+	});
+
+	it('ignores a stray third argument, so no caller-supplied state reaches a dial', () => {
+		const provider = new FakeProvider();
+		provider.params = { room: 'r1' };
+		const bindLoose = bindProviderAuth as (...args: unknown[]) => () => void;
+		let n = 0;
+		bindLoose(provider, () => `t-${++n}`, {
+			params: { token: 'stale' },
+			protocols: ['bearer.stale'],
+		});
+		provider.dial();
+		expect(provider.dials).toEqual([{ url: 'ws://x/room?room=r1&token=t-1', protocols: [] }]);
 	});
 });
 
@@ -313,29 +470,31 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: 'sekret',
 		});
-		expect(provider.params).toMatchObject({ token: 'sekret' });
 		expect(NoopSocket.last).not.toBeNull();
-		expect(NoopSocket.last!.url).toContain('token=sekret');
+		expect(NoopSocket.last!.url).toBe('ws://localhost:1234/room?token=sekret');
+		expect(provider.params).toEqual({});
 		disconnect();
 	});
 
-	it('merges auth token with caller-supplied params', () => {
+	it('merges auth token with caller-supplied params in the dial only', () => {
+		NoopSocket.last = null;
 		const doc = new Y.Doc();
 		const { provider, disconnect } = connectProvider({
 			url: 'ws://localhost:1234',
 			room: 'room',
 			doc,
-			connect: false,
+			connect: true,
 			disableBc: true,
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			params: { v: '2' },
 			auth: { token: 'abc', param: 'access_token' },
 		});
-		expect(provider.params).toMatchObject({ v: '2', access_token: 'abc' });
+		expect(NoopSocket.last!.url).toBe('ws://localhost:1234/room?v=2&access_token=abc');
+		expect(provider.params).toEqual({ v: '2' });
 		disconnect();
 	});
 
-	it('resolves a rotating token for every dial, not only at construction', () => {
+	it('resolves a rotating token for every dial and none before the first', () => {
 		NoopSocket.last = null;
 		const doc = new Y.Doc();
 		let n = 0;
@@ -348,17 +507,16 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: () => `tok-${++n}`,
 		});
-		// Construction resolves once to fill provider.params; nothing dials yet.
-		expect(provider.params.token).toBe('tok-1');
+		expect(n).toBe(0);
 		expect(NoopSocket.last).toBeNull();
 
 		provider.connect();
-		expect(NoopSocket.last!.url).toContain('token=tok-2');
+		expect(NoopSocket.last!.url).toContain('token=tok-1');
 
 		provider.disconnect();
 		provider.connect();
-		expect(NoopSocket.last!.url).toContain('token=tok-3');
-		expect(n).toBe(3);
+		expect(NoopSocket.last!.url).toContain('token=tok-2');
+		expect(n).toBe(2);
 		disconnect();
 	});
 
@@ -374,13 +532,12 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: { token: 'tok', param: null, protocol: 'bearer' },
 		});
-		const protocols = NoopSocket.last!.protocols;
-		const list = Array.isArray(protocols) ? protocols : protocols ? [protocols] : [];
-		expect(list).toContain('bearer.tok');
+		expect(NoopSocket.last!.protocols).toEqual(['bearer.tok']);
+		expect(NoopSocket.last!.url).toBe('ws://localhost:1234/room');
 		disconnect();
 	});
 
-	it('resolves no further token after disconnect', () => {
+	it('puts back the socket constructor and resolves no token after disconnect', () => {
 		const doc = new Y.Doc();
 		let n = 0;
 		const { provider, disconnect } = connectProvider({
@@ -392,11 +549,9 @@ describe('connectProvider — auth binding', () => {
 			WebSocketPolyfill: NoopSocket as unknown as typeof WebSocket,
 			auth: () => `tok-${++n}`,
 		});
-		expect(provider.params.token).toBe('tok-1');
+		expect(provider._WS).not.toBe(NoopSocket);
 		disconnect();
-		// No listener is left behind, so a stray close event must not rotate.
-		provider.emit('connection-close', [null, provider]);
-		expect(provider.params.token).toBe('tok-1');
-		expect(n).toBe(1);
+		expect(provider._WS).toBe(NoopSocket);
+		expect(n).toBe(0);
 	});
 });
