@@ -839,6 +839,45 @@ describe('bindProviderAuth — encoding refusals, part 3', () => {
 	});
 });
 
+describe('bindProviderAuth — transport recheck', () => {
+	it('refuses a dial whose binding lost its transport after binding', async () => {
+		const provider = new FakeProvider();
+		const binding: { token: string; param: string | null; protocol?: string } = {
+			token: 'tok-secret',
+			param: 'token',
+		};
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, binding);
+			// Positive: the transport checked at bind time carries the token.
+			provider.dial();
+			// Negative: param null and no protocol refuse the dial instead of sending it bare.
+			binding.param = null;
+			const refused = provider.dial();
+			await Promise.resolve();
+			expect(refused.readyState).toBe(refused.CLOSED);
+			expect(provider.shouldConnect).toBe(true);
+			// Boundary: with no token there is nothing to carry, so the dial goes out as is.
+			binding.token = '';
+			provider.dial();
+			// Positive: a subprotocol gives the token a transport again on the next dial.
+			binding.token = 'tok-secret';
+			binding.protocol = 'bearer';
+			provider.dial();
+			expect(provider.dials).toEqual([
+				{ url: 'ws://x/room?token=tok-secret', protocols: [] },
+				{ url: 'ws://x/room', protocols: [] },
+				{ url: 'ws://x/room', protocols: ['bearer.tok-secret'] },
+			]);
+			expect(errorSpy.mock.calls).toEqual([
+				['[sentio] collab: auth binding has no transport for its token; dial refused'],
+			]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
 describe('bindProviderAuth — permanent refusals, part 1', () => {
 	it('refuses a dial over the entry bound, auth entries counted, and stops the provider', async () => {
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -940,7 +979,14 @@ describe('bindProviderAuth — permanent refusals, part 3', () => {
 	it('retries a dial the socket constructor throws on with another error', async () => {
 		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		try {
-			const rejects = [(url: string) => new TypeError(url), (url: string) => new Error(url)];
+			// Negative: an Error that only calls itself SyntaxError, as a polyfill's own error may, is retried.
+			const renamed = (url: string): Error =>
+				Object.assign(new Error(url), { name: 'SyntaxError' });
+			const rejects = [
+				(url: string) => new TypeError(url),
+				(url: string) => new Error(url),
+				renamed,
+			];
 			for (const reject of rejects) {
 				const provider = strictProvider(reject);
 				bindProviderAuth(provider, 'tok-secret');
@@ -955,6 +1001,7 @@ describe('bindProviderAuth — permanent refusals, part 3', () => {
 			expect(errorSpy.mock.calls).toEqual([
 				['[sentio] collab: socket constructor threw; dial refused:', 'TypeError'],
 				['[sentio] collab: socket constructor threw; dial refused:', 'Error'],
+				['[sentio] collab: socket constructor threw; dial refused:', 'SyntaxError'],
 			]);
 			expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('tok-secret');
 
@@ -970,6 +1017,33 @@ describe('bindProviderAuth — permanent refusals, part 3', () => {
 		} finally {
 			errorSpy.mockRestore();
 		}
+	});
+
+	it('retries a constructor DOMException of another name and an unreadable throw (boundary)', () => {
+		const errors = withErrors(() => {
+			// Negative: only a DOMException named SyntaxError is a rejected dial.
+			const network = strictProvider((url) => new DOMException(url, 'NetworkError'));
+			// Boundary: a thrown value whose prototype cannot be read is retried, not raised.
+			const unreadable = strictProvider(
+				(url) =>
+					new Proxy(new Error(url), {
+						getPrototypeOf(): object | null {
+							throw new TypeError('getPrototypeOf trap');
+						},
+					}),
+			);
+			for (const provider of [network, unreadable]) {
+				bindProviderAuth(provider, 'tok');
+				provider.dial();
+				expect(provider.shouldConnect).toBe(true);
+				provider.dial();
+				expect(provider.urls()).toEqual(['ws://x/room?token=tok']);
+			}
+		});
+		expect(errors).toEqual([
+			['[sentio] collab: socket constructor threw; dial refused:', 'custom Error'],
+			['[sentio] collab: socket constructor threw; dial refused:', 'unreadable thrown value'],
+		]);
 	});
 
 	it('counts only non-empty query pairs against the entry bound', () => {

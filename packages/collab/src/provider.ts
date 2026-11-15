@@ -124,19 +124,34 @@ function toAuthBinding(
 export function resolveAuthParams(
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): ResolvedAuth {
+	return readAuth(auth).resolved;
+}
+
+/**
+ * `resolveAuthParams` with `bare` set when a non-empty token has neither a
+ * query key nor a subprotocol to travel in. `param` and `protocol` are read
+ * once each, so a getter that changes between reads cannot split the decision.
+ * Tests: `test/provider-auth.test.ts` "refuses a dial whose binding lost its
+ * transport after binding".
+ */
+function readAuth(auth: AuthBinding | string | (() => string | null | undefined)): {
+	readonly resolved: ResolvedAuth;
+	readonly bare: boolean;
+} {
 	const binding = toAuthBinding(auth);
 	const token = typeof binding.token === 'function' ? binding.token() : binding.token;
 	if (token === null || token === undefined || token === '') {
-		return { params: {}, protocols: [] };
+		return { resolved: { params: {}, protocols: [] }, bare: false };
 	}
-	const key = binding.param === undefined ? 'token' : binding.param;
+	const { param, protocol } = binding;
+	const key = param === undefined ? 'token' : param;
 	// `Object.fromEntries` defines an own property, so a `param` of `'__proto__'`
 	// stays a key instead of setting the prototype (`test/provider-auth.test.ts`
 	// "keeps a __proto__ param as a query key").
 	const params = Object.fromEntries(key === null ? [] : [[key, token]]);
 	const protocols: string[] = [];
-	if (binding.protocol !== undefined) protocols.push(`${binding.protocol}.${token}`);
-	return { params, protocols };
+	if (protocol !== undefined) protocols.push(`${protocol}.${token}`);
+	return { resolved: { params, protocols }, bare: key === null && protocol === undefined };
 }
 
 type SocketConstructor = WebsocketProvider['_WS'];
@@ -203,6 +218,7 @@ function innerSocket(slot: BindingSlot, current: SocketConstructor): SocketConst
 type RefusalReason =
 	| 'auth token resolver threw'
 	| 'auth binding replaced while its token resolved'
+	| 'auth binding has no transport for its token'
 	| 'auth token cannot be encoded for the dial'
 	| 'dial exceeds the query pair or subprotocol bound'
 	| 'socket constructor rejected the dial'
@@ -376,7 +392,10 @@ function haltDials(provider: object): boolean {
  * injects. While it does not, the dial passes through. It refuses the dial when
  * the resolver throws, and when the resolver replaced or removed this binding,
  * so no credentials of a stale binding go out and the next dial, after the
- * backoff, goes through the binding active then. It also refuses a token that
+ * backoff, goes through the binding active then. It refuses a token the
+ * binding no longer gives a query key or subprotocol, as a binding changed
+ * after `bindProviderAuth` checked it can (`readAuth`), so no dial goes out
+ * without the credential, and retries after the backoff. It also refuses a token that
  * cannot go on the wire: a subprotocol entry outside `PROTOCOL_TOKEN`, or a
  * lone surrogate, on which `encodeURIComponent` throws `URIError`, and a dial
  * over `MAX_DIAL_ENTRIES`, checked before resolving anything and again with
@@ -398,9 +417,9 @@ function planDial(
 			refusal: { reason: 'dial exceeds the query pair or subprotocol bound' },
 		};
 	}
-	let resolved: ResolvedAuth;
+	let read: ReturnType<typeof readAuth>;
 	try {
-		resolved = resolveAuthParams(auth);
+		read = readAuth(auth);
 	} catch (cause) {
 		return { kind: 'refuse', refusal: { reason: 'auth token resolver threw', cause } };
 	}
@@ -410,6 +429,10 @@ function planDial(
 			refusal: { reason: 'auth binding replaced while its token resolved' },
 		};
 	}
+	if (read.bare) {
+		return { kind: 'refuse', refusal: { reason: 'auth binding has no transport for its token' } };
+	}
+	const { resolved } = read;
 	if (!resolved.protocols.every((entry) => PROTOCOL_TOKEN.test(entry))) {
 		return { kind: 'refuse', refusal: { reason: 'auth token cannot be encoded for the dial' } };
 	}
@@ -843,7 +866,10 @@ function startOrTearDown(
  * Throws a `ProblemError` of type `COLLAB_AUTH_NOT_BOUND_TYPE` when `auth` is
  * set but cannot be bound (`bindOrDestroy`), and one of type
  * `COLLAB_START_FAILED_TYPE` when the first dial throws or is refused
- * permanently (`startOrTearDown`).
+ * permanently (`startOrTearDown`). Turning a socket constructor throw on a
+ * reconnect into a refused dial (`RefusedDial`, `PERMANENT_REFUSALS`) is part
+ * of the auth binding, so it covers auth-bound providers only; without `auth`
+ * the socket constructor is y-websocket's own, as without this package.
  */
 export function connectProvider(options: ConnectProviderOptions): ConnectedProvider {
 	const { url, room, doc, params, protocols, auth, onStatusChange, onSync } = options;

@@ -46,11 +46,24 @@ export function errorLabel(error: unknown): string {
  * throw for a URL that does not parse, has another scheme or a fragment, and
  * for a subprotocol that occurs more than once or is not a
  * `Sec-WebSocket-Protocol` element, as Node's global `WebSocket` and `ws`
- * 8.22.0 (`lib/websocket.js`) do. A network failure reaches the socket's
- * `error` and `close` events instead, so any other throw may pass. Tests:
+ * 8.22.0 (`lib/websocket.js`) do. Browsers and Node throw it as a
+ * `DOMException` named `SyntaxError`, `ws` as a native `SyntaxError`; the
+ * check reads the type, not the loggable name, so a polyfill error that only
+ * calls itself `SyntaxError` is retried. A network failure reaches the
+ * socket's `error` and `close` events instead, so any other throw may pass.
+ * Reading the value cannot throw out of here. Tests:
  * `test/provider-auth.test.ts` "retries a dial the socket constructor throws
  * on with another error".
  */
 export function rejectsDial(cause: unknown): boolean {
-	return errorLabel(cause) === 'SyntaxError';
+	try {
+		if (cause instanceof SyntaxError) return true;
+		return (
+			typeof DOMException === 'function' &&
+			cause instanceof DOMException &&
+			cause.name === 'SyntaxError'
+		);
+	} catch {
+		return false;
+	}
 }
