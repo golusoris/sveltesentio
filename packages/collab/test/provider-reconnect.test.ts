@@ -579,6 +579,188 @@ describe('connectProvider reconnection — negative — first dial, part 3', () 
 	});
 });
 
+describe('connectProvider reconnection — negative — after disconnect', () => {
+	it.each([
+		['after the first dial', true, 1],
+		['held back, before any dial (boundary)', false, 0],
+	] as const)(
+		'N21: sends nothing when provider.connect() runs after disconnect() on an auth-bound provider (%s)',
+		async (_label, connect, dials) => {
+			const relay = createMemRelay();
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			try {
+				const peerA = connectPeer(relay, 'room-n21', { auth: 'tok', connect });
+				await settle();
+				expect(relay.dials).toHaveLength(dials);
+
+				peerA.disconnect();
+				await settle(10 * FAST_BACKOFF_MS);
+				peerA.provider.connect();
+				await settle(10 * FAST_BACKOFF_MS);
+
+				expect(relay.dials).toHaveLength(dials);
+				expect(relay.sockets).toEqual([]);
+				expect(peerA.provider.shouldConnect).toBe(false);
+				expect(errorSpy).toHaveBeenCalledTimes(1);
+				expect(errorSpy).toHaveBeenCalledWith(
+					'[sentio] collab: provider disconnected by connectProvider; dial refused, provider stopped until connect() is called',
+				);
+			} finally {
+				errorSpy.mockRestore();
+			}
+		},
+	);
+});
+
+/** A socket that accepts the dial and throws on `close()`, as a broken polyfill can. */
+class CloseThrowsSocket {
+	static dials = 0;
+	readonly CONNECTING = 0;
+	readonly OPEN = 1;
+	readonly CLOSING = 2;
+	readonly CLOSED = 3;
+	readyState = 0;
+	binaryType = 'blob';
+	onopen: unknown = null;
+	onclose: unknown = null;
+	onerror: unknown = null;
+	onmessage: unknown = null;
+	constructor(readonly url: string) {
+		CloseThrowsSocket.dials += 1;
+	}
+	send(): void {}
+	close(): void {
+		throw new RangeError('close failed');
+	}
+}
+
+describe('connectProvider reconnection — negative — teardown that throws', () => {
+	it('N22: names a throwing teardown in the start error and still destroys the provider', () => {
+		const destroySpy = vi.spyOn(WebsocketProvider.prototype, 'destroy');
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const doc = new Y.Doc();
+		CloseThrowsSocket.dials = 0;
+		let caught: unknown = null;
+		let destroyed: number;
+		try {
+			connectProvider({
+				url: SERVER_URL,
+				room: 'room-n22',
+				doc,
+				disableBc: true,
+				WebSocketPolyfill: CloseThrowsSocket as unknown as typeof WebSocket,
+				onStatusChange: (status) => {
+					if (status === 'connecting') throw new TypeError('connecting');
+				},
+			});
+		} catch (error) {
+			caught = error;
+		} finally {
+			destroyed = destroySpy.mock.calls.length;
+			errorSpy.mockRestore();
+			destroySpy.mockRestore();
+			doc.destroy();
+		}
+
+		expect(caught).toBeInstanceOf(ProblemError);
+		const problem = caught as ProblemError;
+		expect(problem.type).toBe(COLLAB_START_FAILED_TYPE);
+		expect(problem.detail).toBe(
+			'the first dial threw (TypeError); tearing the provider down threw (RangeError)',
+		);
+		expect(destroyed).toBe(1);
+		expect(CloseThrowsSocket.dials).toBe(1);
+	});
+
+	it('N22: destroys the provider when disconnect() meets a socket close() that throws (negative)', async () => {
+		const destroySpy = vi.spyOn(WebsocketProvider.prototype, 'destroy');
+		const doc = new Y.Doc();
+		CloseThrowsSocket.dials = 0;
+		try {
+			const { provider, disconnect } = connectProvider({
+				url: SERVER_URL,
+				room: 'room-n22b',
+				doc,
+				disableBc: true,
+				maxBackoffTime: FAST_BACKOFF_MS,
+				WebSocketPolyfill: CloseThrowsSocket as unknown as typeof WebSocket,
+			});
+			expect(disconnect).toThrow(RangeError);
+			expect(destroySpy).toHaveBeenCalledTimes(1);
+			expect(provider.shouldConnect).toBe(false);
+			await settle(10 * FAST_BACKOFF_MS);
+			expect(CloseThrowsSocket.dials).toBe(1);
+		} finally {
+			destroySpy.mockRestore();
+			doc.destroy();
+		}
+	});
+});
+
+describe('connectProvider reconnection — negative — fixed token that cannot be encoded', () => {
+	it.each([
+		['a lone surrogate in the query token', 'tok\uD800'],
+		['a subprotocol token outside RFC 6455', { token: 'a b', param: null, protocol: 'bearer' }],
+	] as const)(
+		'N23: tears the provider down and throws a problem error on a fixed token with %s',
+		async (_label, auth) => {
+			const relay = createMemRelay();
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			const doc = new Y.Doc();
+			teardowns.push(() => {
+				doc.destroy();
+			});
+			let caught: unknown = null;
+			try {
+				connectProvider({
+					url: SERVER_URL,
+					room: 'room-n23',
+					doc,
+					disableBc: true,
+					maxBackoffTime: FAST_BACKOFF_MS,
+					WebSocketPolyfill: relay.Socket as unknown as typeof WebSocket,
+					auth,
+				});
+			} catch (error) {
+				caught = error;
+			} finally {
+				errorSpy.mockRestore();
+			}
+
+			expect(caught).toBeInstanceOf(ProblemError);
+			const problem = caught as ProblemError;
+			expect(problem.type).toBe(COLLAB_START_FAILED_TYPE);
+			expect(problem.detail).toBe(
+				'the first dial was refused (fixed auth token cannot be encoded for the dial); the provider was torn down',
+			);
+			await settle(10 * FAST_BACKOFF_MS);
+			expect(relay.dials).toHaveLength(0);
+		},
+	);
+
+	it('N23: keeps retrying a resolver whose token cannot be encoded, and dials once it can (boundary)', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		let token = 'tok\uD800';
+		try {
+			const peerA = connectPeer(relay, 'room-n23b', { auth: () => token });
+			await settle();
+			expect(relay.dials).toHaveLength(0);
+			expect(peerA.provider.shouldConnect).toBe(true);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: auth token cannot be encoded for the dial; dial refused:',
+				'URIError',
+			);
+
+			token = 'tok';
+			await settle(FAST_BACKOFF_MS);
+			expect(relay.dials.map((dial) => dial.url)).toEqual([`${SERVER_URL}/room-n23b?token=tok`]);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
 describe('connectProvider reconnection — negative — caller fallback, part 1', () => {
 	it('N10: falls back to the caller value of a param the token shadowed once the token is revoked', async () => {
 		const relay = createMemRelay();
@@ -781,6 +963,33 @@ describe('connectProvider reconnection — negative — own close and early dial
 			}
 		},
 	);
+});
+
+describe('connectProvider reconnection — negative — own close and early dial, part 2', () => {
+	it('N17: dials with the token when connect() runs right after bindProviderAuth, before the stopped socket closes (boundary)', async () => {
+		const relay = createMemRelay();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const provider = autoConnectedProvider(relay, 'room-n17b');
+		try {
+			await settle();
+			bindProviderAuth(provider, 'tok');
+			// The stopped socket is still `provider.ws` until its close event runs,
+			// so this connect() dials nothing itself; y-websocket's onclose then
+			// schedules `setupWS`, which dials once `shouldConnect` is set again.
+			provider.connect();
+			expect(relay.dials).toHaveLength(1);
+
+			await settle(10 * FAST_BACKOFF_MS);
+			expect(relay.dials.map((dial) => dial.url)).toEqual([
+				`${SERVER_URL}/room-n17b`,
+				`${SERVER_URL}/room-n17b?token=tok`,
+			]);
+			expect(provider.wsconnected).toBe(true);
+			expect(provider.shouldConnect).toBe(true);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
 });
 
 describe('connectProvider held-back connect — status', () => {

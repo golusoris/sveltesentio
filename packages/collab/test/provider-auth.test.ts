@@ -767,8 +767,60 @@ describe('bindProviderAuth — encoding refusals, part 1', () => {
 			await Promise.resolve();
 			expect(provider.dials).toEqual([]);
 			expect(socket.readyState).toBe(socket.CLOSED);
+			// A fixed token's param key fails every dial the same way, so the refusal stops the provider.
+			expect(provider.shouldConnect).toBe(false);
 			expect(errorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('cannot be encoded'),
+				'[sentio] collab: fixed auth token cannot be encoded for the dial; dial refused, provider stopped until connect() is called:',
+				'URIError',
+			);
+		} finally {
+			errorSpy.mockRestore();
+		}
+	});
+});
+
+describe('bindProviderAuth — encoding refusals, fixed token', () => {
+	it.each([
+		['a lone surrogate in the query token', 'tok\uD800', 'URIError'],
+		[
+			'a subprotocol token outside RFC 6455',
+			{ token: 'a b', param: null, protocol: 'bearer' },
+			null,
+		],
+	] as const)(
+		'stops the provider on a fixed token that cannot be encoded (%s)',
+		async (_label, auth, cause) => {
+			const provider = new FakeProvider();
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			try {
+				bindProviderAuth(provider, auth);
+				const socket = provider.dial();
+				const reasons: string[] = [];
+				socket.onclose = (event) => reasons.push(event.reason);
+				await Promise.resolve();
+				expect(provider.dials).toEqual([]);
+				expect(reasons).toEqual(['fixed auth token cannot be encoded for the dial']);
+				expect(provider.shouldConnect).toBe(false);
+				const line =
+					'[sentio] collab: fixed auth token cannot be encoded for the dial; dial refused, provider stopped until connect() is called';
+				expect(errorSpy.mock.calls).toEqual([cause === null ? [line] : [`${line}:`, cause]]);
+			} finally {
+				errorSpy.mockRestore();
+			}
+		},
+	);
+
+	it('keeps the provider running on a resolved token that cannot be encoded (negative)', async () => {
+		const provider = new FakeProvider();
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			bindProviderAuth(provider, () => 'tok\uD800');
+			provider.dial();
+			await Promise.resolve();
+			expect(provider.dials).toEqual([]);
+			expect(provider.shouldConnect).toBe(true);
+			expect(errorSpy).toHaveBeenCalledWith(
+				'[sentio] collab: auth token cannot be encoded for the dial; dial refused:',
 				'URIError',
 			);
 		} finally {
@@ -1794,18 +1846,30 @@ describe('connectProvider — token lifetime', () => {
 		disconnect();
 	});
 
-	it('puts back the socket constructor and resolves no token after disconnect', () => {
+	it('keeps the binding after disconnect, so a later connect() resolves no token and dials nothing', () => {
 		let n = 0;
 		const { provider, disconnect } = connectNoop({ connect: false, auth: () => `tok-${++n}` });
-		expect(provider._WS).not.toBe(NoopSocket);
+		const AuthSocket = provider._WS;
+		expect(AuthSocket).not.toBe(NoopSocket);
 		disconnect();
-		expect(provider._WS).toBe(NoopSocket);
+		expect(provider._WS).toBe(AuthSocket);
+
+		const errors = withErrors(() => {
+			provider.connect();
+		});
+		expect(NoopSocket.last).toBeNull();
 		expect(n).toBe(0);
+		expect(provider.shouldConnect).toBe(false);
+		expect(errors).toEqual([
+			[
+				'[sentio] collab: provider disconnected by connectProvider; dial refused, provider stopped until connect() is called',
+			],
+		]);
 	});
 });
 
 describe('connectProvider — teardown', () => {
-	it('disconnect destroys the provider even when unbinding throws', () => {
+	it('disconnect writes nothing back, so a _WS that throws on write still tears down', () => {
 		const { provider, disconnect } = connectNoop({ auth: 'tok-secret', connect: false });
 		const AuthSocket = provider._WS;
 		Object.defineProperty(provider, '_WS', {
@@ -1816,10 +1880,10 @@ describe('connectProvider — teardown', () => {
 			},
 		});
 		const destroySpy = vi.spyOn(provider, 'destroy');
-		const errors = withErrors(disconnect);
-		expect(errors).toEqual([['[sentio] collab: unbind threw (TypeError); no token is added']]);
+		expect(withErrors(disconnect)).toEqual([]);
 		expect(destroySpy).toHaveBeenCalledTimes(1);
 		expect(provider.shouldConnect).toBe(false);
+		expect(provider._WS).toBe(AuthSocket);
 	});
 
 	it('disconnect destroys the provider and rethrows when removing a listener throws', () => {

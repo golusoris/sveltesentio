@@ -42,9 +42,13 @@ export interface AuthBinding {
 	 * for a refused connection, and the provider dials again after its backoff.
 	 * A token that cannot go on the wire refuses the dial the same way: one with
 	 * a lone UTF-16 surrogate, which `encodeURIComponent` rejects, or a
-	 * subprotocol entry outside the RFC 6455 token characters. Tests:
-	 * `test/provider-reconnect.test.ts` P4, P6, N7; `test/provider-auth.test.ts`
-	 * "refuses a dial whose token cannot be encoded".
+	 * subprotocol entry outside the RFC 6455 token characters. A string token
+	 * is fixed, so every dial would meet the same refusal: it also stops the
+	 * provider until `connect()` is called, and `connectProvider` throws a
+	 * `ProblemError` of type `COLLAB_START_FAILED_TYPE` on the first dial.
+	 * Tests: `test/provider-reconnect.test.ts` P4, P6, N7, N23;
+	 * `test/provider-auth.test.ts` "refuses a dial whose token cannot be
+	 * encoded" and "stops the provider on a fixed token that cannot be encoded".
 	 */
 	readonly token: string | (() => string | null | undefined);
 	/**
@@ -105,6 +109,13 @@ export interface ConnectProviderOptions {
 
 export interface ConnectedProvider {
 	readonly provider: WebsocketProvider;
+	/**
+	 * Detaches the callbacks, then disconnects and destroys the provider; the
+	 * destroy runs even when an earlier step throws, and the throw still reaches
+	 * the caller. With `auth` set the binding then refuses every dial, so a
+	 * `provider.connect()` after `disconnect` sends nothing, with or without
+	 * the token. Tests: `test/provider-reconnect.test.ts` N21, N22.
+	 */
 	readonly disconnect: () => void;
 }
 
@@ -138,11 +149,14 @@ export function resolveAuthParams(
 function readAuth(auth: AuthBinding | string | (() => string | null | undefined)): {
 	readonly resolved: ResolvedAuth;
 	readonly bare: boolean;
+	readonly fixed: boolean;
 } {
 	const binding = toAuthBinding(auth);
-	const token = typeof binding.token === 'function' ? binding.token() : binding.token;
+	const source = binding.token;
+	const fixed = typeof source !== 'function';
+	const token = fixed ? source : source();
 	if (token === null || token === undefined || token === '') {
-		return { resolved: { params: {}, protocols: [] }, bare: false };
+		return { resolved: { params: {}, protocols: [] }, bare: false, fixed };
 	}
 	const { param, protocol } = binding;
 	const key = param === undefined ? 'token' : param;
@@ -152,7 +166,7 @@ function readAuth(auth: AuthBinding | string | (() => string | null | undefined)
 	const params = Object.fromEntries(key === null ? [] : [[key, token]]);
 	const protocols: string[] = [];
 	if (protocol !== undefined) protocols.push(`${protocol}.${token}`);
-	return { resolved: { params, protocols }, bare: key === null && protocol === undefined };
+	return { resolved: { params, protocols }, bare: key === null && protocol === undefined, fixed };
 }
 
 type SocketConstructor = WebsocketProvider['_WS'];
@@ -221,23 +235,30 @@ type RefusalReason =
 	| 'auth binding replaced while its token resolved'
 	| 'auth binding has no transport for its token'
 	| 'auth token cannot be encoded for the dial'
+	| 'fixed auth token cannot be encoded for the dial'
 	| 'dial exceeds the query pair or subprotocol bound'
 	| 'socket constructor rejected the dial'
-	| 'socket constructor threw';
+	| 'socket constructor threw'
+	| 'provider disconnected by connectProvider';
 
 /**
  * Refusals the next dial would meet again, so y-websocket's reconnect would
  * retry them forever: a socket constructor rejecting the caller's URL or
- * subprotocols with a `SyntaxError` (`rejectsDial`), and a dial over the entry
- * bound. Such a refusal stops the provider (`haltDials`). The others depend on
- * the token, the binding or the moment, a socket constructor throwing anything
- * else included, and are retried after the backoff. Tests:
- * `test/provider-auth.test.ts` "stops the provider on a dial the socket
- * constructor rejects" and "retries a dial the socket constructor throws on
- * with another error".
+ * subprotocols with a `SyntaxError` (`rejectsDial`), a dial over the entry
+ * bound, a fixed (string) token that cannot go on the wire, and any dial after
+ * `connectProvider`'s `disconnect`. Such a refusal stops the provider
+ * (`haltDials`). The others depend on the token, the binding or the moment, a
+ * resolver's token and a socket constructor throwing anything else included,
+ * and are retried after the backoff. Tests: `test/provider-auth.test.ts`
+ * "stops the provider on a dial the socket constructor rejects", "retries a
+ * dial the socket constructor throws on with another error" and "stops the
+ * provider on a fixed token that cannot be encoded";
+ * `test/provider-reconnect.test.ts` N21.
  */
 const PERMANENT_REFUSALS: ReadonlySet<RefusalReason> = new Set<RefusalReason>([
 	'dial exceeds the query pair or subprotocol bound',
+	'fixed auth token cannot be encoded for the dial',
+	'provider disconnected by connectProvider',
 	'socket constructor rejected the dial',
 ]);
 
@@ -385,10 +406,13 @@ function refuseDial(provider: object, url: string, refusal: Refusal): WebSocket 
  * cannot go on the wire: a subprotocol entry outside `PROTOCOL_TOKEN`, or a
  * lone surrogate, on which `encodeURIComponent` throws `URIError`, and a dial
  * over `MAX_DIAL_ENTRIES`, checked before resolving anything and again with
- * the auth entries added. Otherwise it dials with the resolved auth added.
+ * the auth entries added. A fixed (string) token that cannot go on the wire
+ * gets its own reason, a permanent refusal, since every later dial would
+ * carry the same token. Otherwise it dials with the resolved auth added.
  * Tests: `test/provider-auth.test.ts` "refuses the dial when the resolver
- * replaces its binding", "refuses a dial whose token cannot be encoded" and
- * "refuses a dial over the entry bound".
+ * replaces its binding", "refuses a dial whose token cannot be encoded",
+ * "stops the provider on a fixed token that cannot be encoded" and "refuses a
+ * dial over the entry bound".
  */
 function planDial(
 	active: () => boolean,
@@ -419,17 +443,21 @@ function planDial(
 		return { kind: 'refuse', refusal: { reason: 'auth binding has no transport for its token' } };
 	}
 	const { resolved } = read;
+	const unencodable: RefusalReason = read.fixed
+		? 'fixed auth token cannot be encoded for the dial'
+		: 'auth token cannot be encoded for the dial';
 	if (!resolved.protocols.every((entry) => PROTOCOL_TOKEN.test(entry))) {
-		return { kind: 'refuse', refusal: { reason: 'auth token cannot be encoded for the dial' } };
+		return { kind: 'refuse', refusal: { reason: unencodable } };
 	}
-	return authDial(url, protocols, resolved);
+	return authDial(url, protocols, resolved, unencodable);
 }
 
 /**
  * The dial with `resolved` added, or a refusal: a key or value that
- * `encodeURIComponent` rejects, or auth entries that take the query pairs or
- * the subprotocols over `MAX_DIAL_ENTRIES`, as an auth pair or subprotocol
- * added to a caller list already at the bound does. Tests:
+ * `encodeURIComponent` rejects (refused with `unencodable`), or auth entries
+ * that take the query pairs or the subprotocols over `MAX_DIAL_ENTRIES`, as
+ * an auth pair or subprotocol added to a caller list already at the bound
+ * does. Tests:
  * `test/provider-auth.test.ts` "refuses a dial over the entry bound, auth
  * entries counted".
  */
@@ -437,15 +465,13 @@ function authDial(
 	url: string,
 	protocols: string | string[] | undefined,
 	resolved: ResolvedAuth,
+	unencodable: RefusalReason,
 ): DialPlan {
 	let dial: string;
 	try {
 		dial = dialUrl(url, resolved.params);
 	} catch (cause) {
-		return {
-			kind: 'refuse',
-			refusal: { reason: 'auth token cannot be encoded for the dial', cause },
-		};
+		return { kind: 'refuse', refusal: { reason: unencodable, cause } };
 	}
 	const list = dialProtocols(protocols, resolved.protocols);
 	if (exceedsEntryBound(dial, list)) {
@@ -455,6 +481,22 @@ function authDial(
 		};
 	}
 	return { kind: 'dial', url: dial, protocols: list };
+}
+
+/** Whether a binding still injects (`active`) and whether it refuses every dial (`closed`). */
+interface BindingState {
+	active: boolean;
+	closed: boolean;
+}
+
+/**
+ * A made binding: `unbind` stops it and puts the wrapped socket constructor
+ * back (`bindProviderAuth`); `close` keeps it installed and makes it refuse
+ * every later dial (`connectProvider`'s `disconnect`). Neither throws.
+ */
+interface BoundAuth {
+	readonly unbind: () => void;
+	readonly close: () => void;
 }
 
 /**
@@ -471,18 +513,26 @@ function authDial(
  * without the binding.
  * The binding injects while `state.active` is set and it holds the provider's
  * active-binding slot; unbind clears `state.active`, so it stops also on a
- * provider frozen after binding. Tests: `test/provider-auth.test.ts` "stops
- * the provider on a dial the socket constructor rejects" and "stops injecting
- * after unbind on a provider frozen after binding".
+ * provider frozen after binding. Once `state.closed` is set (`connectProvider`'s
+ * `disconnect`) every dial is refused and stops the provider, so a
+ * `provider.connect()` after teardown sends nothing, with or without the
+ * token. Tests: `test/provider-auth.test.ts` "stops the provider on a dial the
+ * socket constructor rejects" and "stops injecting after unbind on a provider
+ * frozen after binding"; `test/provider-reconnect.test.ts` N21.
  */
 function authSocket(
 	slot: BindingSlot,
 	Base: SocketConstructor,
 	auth: AuthBinding | string | (() => string | null | undefined),
-	state: { active: boolean },
+	state: BindingState,
 ): SocketConstructor {
 	const AuthSocket = class extends Base {
 		constructor(url: string | URL, protocols?: string | string[]) {
+			if (state.closed) {
+				return refuseDial(slot, String(url), {
+					reason: 'provider disconnected by connectProvider',
+				});
+			}
 			const active = (): boolean => state.active && isActive(slot, AuthSocket);
 			const plan = planDial(active, auth, String(url), protocols);
 			if (plan.kind === 'refuse') return refuseDial(slot, String(url), plan.refusal);
@@ -541,7 +591,7 @@ export function bindProviderAuth(
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
 	const bound = tryBind(provider, auth);
-	if (typeof bound !== 'string') return bound;
+	if (typeof bound !== 'string') return bound.unbind;
 	const left = stopProvider(provider);
 	const outcome = left === undefined ? 'provider stopped' : `provider not stopped: ${left}`;
 	console.error(`[sentio] collab: ${bound}; auth not bound, ${outcome}`);
@@ -560,7 +610,7 @@ export function bindProviderAuth(
 function tryBind(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
-): (() => void) | string {
+): BoundAuth | string {
 	try {
 		return bindAuth(provider, auth);
 	} catch (error) {
@@ -569,22 +619,24 @@ function tryBind(
 }
 
 /**
- * Binds `auth` as `bindProviderAuth` documents and returns the unbind, or
- * returns why nothing was bound: the binding has no transport, `_WS` is
- * missing, cannot be subclassed or is read-only, or the provider takes no
- * binding slot. The unbind clears the binding's `state.active` first, then
- * writes the slot and `_WS` back with `Reflect.set`, which on a provider
- * frozen since returns `false` instead of throwing. The unbind never throws:
- * a getter, setter or proxy trap that throws while it writes back is logged
- * with `console.error`, and the binding adds no token either way, so a
- * caller's teardown after it (`connectProvider`'s `disconnect`) still runs.
- * Tests: `test/provider-auth.test.ts` "unbind does not throw when writing the
- * provider back throws".
+ * Binds `auth` as `bindProviderAuth` documents and returns its unbind and
+ * close (`BoundAuth`), or returns why nothing was bound: the binding has no
+ * transport, `_WS` is missing, cannot be subclassed or is read-only, or the
+ * provider takes no binding slot. The unbind clears the binding's
+ * `state.active` first, then writes the slot and `_WS` back with
+ * `Reflect.set`, which on a provider frozen since returns `false` instead of
+ * throwing. The unbind never throws: a getter, setter or proxy trap that
+ * throws while it writes back is logged with `console.error`, and the binding
+ * adds no token either way, so a caller's teardown after it still runs. The
+ * close only sets `state.closed`, writing nothing to the provider, so it holds
+ * on a provider frozen since. Tests: `test/provider-auth.test.ts` "unbind does
+ * not throw when writing the provider back throws";
+ * `test/provider-reconnect.test.ts` N21.
  */
 function bindAuth(
 	provider: AuthBindableProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
-): (() => void) | string {
+): BoundAuth | string {
 	const binding = toAuthBinding(auth);
 	if (binding.param === null && binding.protocol === undefined) {
 		return 'auth binding has no transport (param is null and protocol is unset)';
@@ -593,7 +645,7 @@ function bindAuth(
 	if (typeof current !== 'function') return 'provider has no _WS socket constructor';
 	const slot = provider as AuthBindableProvider & BindingSlot;
 	const Base = innerSocket(slot, current as SocketConstructor);
-	const state = { active: true };
+	const state: BindingState = { active: true, closed: false };
 	let AuthSocket: SocketConstructor;
 	try {
 		AuthSocket = authSocket(slot, Base, auth, state);
@@ -602,7 +654,7 @@ function bindAuth(
 	}
 	const refused = installBinding(slot, AuthSocket);
 	if (refused !== undefined) return refused;
-	return () => {
+	const unbind = (): void => {
 		state.active = false;
 		try {
 			if (isActive(slot, AuthSocket)) Reflect.set(slot, ACTIVE_BINDING, undefined);
@@ -611,6 +663,10 @@ function bindAuth(
 			console.error(`[sentio] collab: unbind threw (${errorLabel(error)}); no token is added`);
 		}
 	};
+	const close = (): void => {
+		state.closed = true;
+	};
+	return { unbind, close };
 }
 
 /**
@@ -659,15 +715,17 @@ function writeSocket(slot: object, AuthSocket: SocketConstructor): string | unde
  * no binding can be made (a `WebSocketPolyfill` that cannot be subclassed) the
  * provider is destroyed before any dial and a `ProblemError` of type
  * `COLLAB_AUTH_NOT_BOUND_TYPE` is thrown, also with `connect: false`, so no
- * later `provider.connect()` dials without the token. Tests:
- * `test/provider-auth.test.ts` "throws instead of connecting without auth".
+ * later `provider.connect()` dials without the token. Returns the binding's
+ * close, which `connectProvider`'s `disconnect` calls so no dial follows the
+ * teardown. Tests: `test/provider-auth.test.ts` "throws instead of connecting
+ * without auth"; `test/provider-reconnect.test.ts` N21.
  */
 function bindOrDestroy(
 	provider: WebsocketProvider,
 	auth: AuthBinding | string | (() => string | null | undefined),
 ): () => void {
 	const bound = tryBind(provider, auth);
-	if (typeof bound !== 'string') return bound;
+	if (typeof bound !== 'string') return bound.close;
 	provider.destroy();
 	throw new ProblemError({
 		type: COLLAB_AUTH_NOT_BOUND_TYPE,
@@ -774,8 +832,9 @@ function bindProviderEvents(
  * throws are logged (`runGuarded`). A first dial refused permanently, which
  * stopped the provider (`PERMANENT_REFUSALS`), tears it down the same way and
  * throws a `ProblemError` of that type naming the refusal, so a configuration
- * every dial would fail on surfaces to the caller. Tests:
- * `test/provider-reconnect.test.ts` N8, N13, N18, N20.
+ * every dial would fail on surfaces to the caller. A throw while tearing down
+ * is named in that error's detail (`tearDown`). Tests:
+ * `test/provider-reconnect.test.ts` N8, N13, N18, N20, N22.
  */
 function startOrTearDown(
 	provider: WebsocketProvider,
@@ -787,11 +846,11 @@ function startOrTearDown(
 		provider.connect();
 	} catch (error) {
 		guard.surfacing = false;
-		teardown();
+		const torn = tearDown(teardown);
 		throw new ProblemError({
 			type: COLLAB_START_FAILED_TYPE,
 			title: 'Collab provider start failed',
-			detail: `the first dial threw (${errorLabel(error)}); the provider was torn down`,
+			detail: `the first dial threw (${errorLabel(error)}); ${torn}`,
 			cause: error,
 		});
 	} finally {
@@ -799,12 +858,26 @@ function startOrTearDown(
 	}
 	const { ws } = provider;
 	if (!(ws instanceof RefusedDial) || !ws.halted) return;
-	teardown();
+	const torn = tearDown(teardown);
 	throw new ProblemError({
 		type: COLLAB_START_FAILED_TYPE,
 		title: 'Collab provider start failed',
-		detail: `the first dial was refused (${ws.reason}); the provider was torn down`,
+		detail: `the first dial was refused (${ws.reason}); ${torn}`,
 	});
+}
+
+/**
+ * Runs `teardown` and says how it went, so a throw while tearing down after a
+ * failed start lands in the `ProblemError` detail, by its label, instead of
+ * replacing that error. Tests: `test/provider-reconnect.test.ts` N22.
+ */
+function tearDown(teardown: () => void): string {
+	try {
+		teardown();
+		return 'the provider was torn down';
+	} catch (error) {
+		return `tearing the provider down threw (${errorLabel(error)})`;
+	}
 }
 
 /**
@@ -831,20 +904,24 @@ export function connectProvider(options: ConnectProviderOptions): ConnectedProvi
 		buildProviderOptions(options, callerParams, callerProtocols),
 	);
 
-	const unbindAuth = auth === undefined ? undefined : bindOrDestroy(provider, auth);
+	const closeAuth = auth === undefined ? undefined : bindOrDestroy(provider, auth);
 
 	const guard: CallbackGuard = { surfacing: false };
 	const unbindEvents = bindProviderEvents(provider, guard, onStatusChange, onSync);
 
-	// The provider is destroyed even when an unbind throws, so it never stays live
-	// with a binding that adds no token.
+	// The binding is closed first, so any later dial is refused, and the provider
+	// is destroyed even when detaching the events or `provider.disconnect()`
+	// throws (a socket `close()` that throws, a listener that throws).
 	const disconnect = (): void => {
 		try {
-			if (unbindAuth) unbindAuth();
+			if (closeAuth) closeAuth();
 			unbindEvents();
 		} finally {
-			provider.disconnect();
-			provider.destroy();
+			try {
+				provider.disconnect();
+			} finally {
+				provider.destroy();
+			}
 		}
 	};
 
