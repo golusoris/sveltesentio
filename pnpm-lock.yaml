@@ -598,6 +598,9 @@ importers:
         specifier: '>=13.6.0'
         version: 13.6.32
     devDependencies:
+      lib0:
+        specifier: ^0.2.117
+        version: 0.2.117
       svelte:
         specifier: ^5.57.0
         version: 5.57.2(@typescript-eslint/types@8.71.2)
