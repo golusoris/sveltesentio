@@ -21,9 +21,17 @@ const REFLOW_SLUGS = [
 const CODE_SLUG = 'compose/progressive-enhancement';
 /** Layout boxes land on fractional pixels; allow half a pixel of rounding. */
 const SUBPIXEL = 0.5;
+/** Explicit deadline for each navigation and poll (HISS-02); the local preview answers in well under 1 s. */
+const NAV_TIMEOUT_MS = 15_000;
 
 function docLink(page: Page, slug: string): Locator {
 	return page.locator(`aside.sidebar a[href$="/docs/${slug}"]`);
+}
+
+/** Opens a reader page and fails if the slug no longer resolves, so layout checks never run on the 404 page. */
+async function openDoc(page: Page, slug: string): Promise<void> {
+	const response = await page.goto(`/docs/${slug}`, { timeout: NAV_TIMEOUT_MS });
+	expect(response?.status(), `/docs/${slug} loads`).toBe(200);
 }
 
 async function styleOf(locator: Locator, property: string): Promise<string> {
@@ -42,7 +50,7 @@ async function boxOf(locator: Locator): Promise<{ x: number; width: number }> {
 test.describe('apps/docs markdown reader (C15-2)', () => {
 	test('code blocks render as scrollable monospace text (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
-		await page.goto(`/docs/${CODE_SLUG}`);
+		await openDoc(page, CODE_SLUG);
 
 		const blocks = page.locator('article.prose pre');
 		const total = await blocks.count();
@@ -55,14 +63,15 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		expect(await styleOf(first.locator('code'), 'font-family')).toContain('ui-monospace');
 		expect(await styleOf(first, 'overflow-x')).toBe('auto');
 
-		// Svelte markup inside a code fence stays text instead of becoming live DOM.
-		await expect(blocks.filter({ hasText: '<form method="POST"' }).first()).toBeVisible();
+		// Svelte markup inside a code fence stays text instead of becoming live DOM: a live
+		// <form> would not render its attributes as text.
+		await expect(blocks.filter({ hasText: 'form method="POST"' }).first()).toBeVisible();
 		await expect(page.locator('article.prose pre form, article.prose pre aside')).toHaveCount(0);
 	});
 
 	test('callout keeps its left border inside the article (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
-		await page.goto(`/docs/${CODE_SLUG}`);
+		await openDoc(page, CODE_SLUG);
 
 		const callout = page.locator('article.prose blockquote').first();
 		await expect(callout).toBeVisible();
@@ -78,7 +87,7 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 
 	test('sidebar marks the current page and follows navigation (positive)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
-		await page.goto('/docs/principles');
+		await openDoc(page, 'principles');
 
 		const sidebar = page.getByRole('complementary', { name: 'Documentation navigation' });
 		await expect(sidebar).toBeVisible();
@@ -102,10 +111,14 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		page,
 	}) => {
 		await page.setViewportSize(DESKTOP);
-		await page.goto('/docs/principles');
+		await openDoc(page, 'principles');
 
-		await page.evaluate(() => window.scrollTo(0, 2000));
-		await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+		await page.evaluate(() => {
+			window.scrollTo(0, 2000);
+		});
+		await expect
+			.poll(() => page.evaluate(() => window.scrollY), { timeout: NAV_TIMEOUT_MS })
+			.toBeGreaterThan(0);
 
 		const aside = await page.locator('aside.sidebar').evaluate((element) => {
 			const rect = element.getBoundingClientRect();
@@ -121,7 +134,9 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 
 	test('an unknown slug marks no sidebar link as current (negative)', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
-		const response = await page.goto('/docs/this-slug-does-not-exist-ever');
+		const response = await page.goto('/docs/this-slug-does-not-exist-ever', {
+			timeout: NAV_TIMEOUT_MS,
+		});
 		expect(response?.status()).toBe(404);
 
 		const sidebar = page.locator('aside.sidebar');
@@ -136,7 +151,7 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 		}) => {
 			await page.setViewportSize({ width, height: VIEW_HEIGHT });
 			for (const slug of REFLOW_SLUGS) {
-				await page.goto(`/docs/${slug}`);
+				await openDoc(page, slug);
 				const overflow = await page.evaluate(
 					() => document.documentElement.scrollWidth - window.innerWidth,
 				);
@@ -147,16 +162,19 @@ test.describe('apps/docs markdown reader (C15-2)', () => {
 
 	test('code blocks scroll inside their own box at 320 px (boundary)', async ({ page }) => {
 		await page.setViewportSize({ width: MIN_WIDTH, height: VIEW_HEIGHT });
-		await page.goto(`/docs/${CODE_SLUG}`);
+		await openDoc(page, CODE_SLUG);
 
 		const blocks = await page.locator('article.prose pre').evaluateAll((nodes) =>
 			nodes.map((node) => ({
 				scrolls: node.scrollWidth > node.clientWidth,
+				overflowX: getComputedStyle(node).overflowX,
 				right: node.getBoundingClientRect().right,
 			})),
 		);
 		expect(blocks.length).toBeGreaterThanOrEqual(1);
 		expect(blocks.some((block) => block.scrolls)).toBe(true);
+		// scrollWidth > clientWidth also holds for overflow-x: hidden, which clips instead of scrolling.
+		expect(blocks.filter((block) => block.overflowX !== 'auto')).toEqual([]);
 		const widestRight = Math.max(...blocks.map((block) => block.right));
 		expect(widestRight).toBeLessThanOrEqual(MIN_WIDTH + SUBPIXEL);
 	});
