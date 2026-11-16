@@ -2,15 +2,20 @@ import { defineConfig } from '@playwright/test';
 
 const PORT = 4174;
 const BASE_URL = `http://localhost:${PORT}`;
+/** Upper bound for parallel browser workers (HISS-06); unset, Playwright starts one per two host cores. */
+const MAX_WORKERS = 4;
 
 export default defineConfig({
 	testDir: './e2e',
 	fullyParallel: true,
+	workers: MAX_WORKERS,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
 	use: {
 		baseURL: BASE_URL,
+		// Playwright records no trace by default; keep one for the CI retry of a failing test.
+		trace: 'on-first-retry',
 	},
 	projects: [
 		{

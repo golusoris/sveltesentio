@@ -20,6 +20,11 @@
 </article>
 
 <style>
+	/* Long inline code and bare links wrap instead of widening the page at 320 px. */
+	.prose {
+		overflow-wrap: break-word;
+	}
+
 	.prose :global(h1) {
 		font-size: clamp(1.8rem, 4vw, 2.4rem);
 		margin-top: 0;

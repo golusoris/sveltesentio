@@ -167,11 +167,18 @@ const config: Linter.Config[] = [
 	// only), so on this repository its invariant scan reads 3 files and skips 482.
 	// HISS-04 is therefore enforced here, in the linter the repo actually runs.
 	//
-	// Scoped to `packages/*/src`: test files legitimately carry long `describe`
-	// arrows, and a cap there would measure the suite's shape rather than the
-	// shipped code's.
+	// Scoped to `packages/*/src` and `apps/`: package test files legitimately
+	// carry long `describe` arrows, and a cap there would measure the suite's
+	// shape rather than the shipped code's. The apps are in scope because their
+	// code gates merges too: the docs e2e helpers (`apps/docs/e2e/drawn.ts`) decide
+	// what the reader spec passes, and every apps file fits the caps.
 	{
-		files: ['packages/*/src/**/*.ts', 'packages/*/src/**/*.svelte'],
+		files: [
+			'packages/*/src/**/*.ts',
+			'packages/*/src/**/*.svelte',
+			'apps/**/*.ts',
+			'apps/**/*.svelte',
+		],
 		// Flat config resolves a rule's plugin from the same object the rule is in,
 		// so this block declares @typescript-eslint even though the block above
 		// already does.
