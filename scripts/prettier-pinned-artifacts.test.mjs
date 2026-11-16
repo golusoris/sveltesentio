@@ -33,19 +33,59 @@ const REPO_FORMATTED_FILES = [
 	'scripts/node-test.mjs',
 ];
 
+// `.prettierignore`'s managed block is written by `praetorctl adopt` and verified
+// locally by `praetorctl audit`; CI does not run `praetorctl`, so this list is the
+// CI-side copy. Update it in the same change whenever Praetor updates that block.
+const RECORDED_MANAGED = Object.freeze([
+	'.agents/agents/repo-auditor.md',
+	'.agents/agents/repo-gatekeeper.md',
+	'.config/agent/hooks/block_evasion.py',
+	'.config/labels.yaml',
+	'.devcontainer/devcontainer.json',
+	'.github/rulesets/main.json',
+	'.github/workflows/praetor-docs.yml',
+	'.paperclip/harness.json',
+	'.standards-baseline.json',
+	'.standards.lock',
+	'.standards.yaml',
+	'AGENTS.md',
+	'lefthook.yml',
+	'tools/figures/README.md',
+	'tools/figures/astro.mjs',
+	'tools/figures/build.mjs',
+	'tools/figures/checks.mjs',
+	'tools/figures/core.mjs',
+	'tools/figures/eslint.figures.mjs',
+	'tools/figures/figures.css',
+	'tools/figures/mkdocs_hook.py',
+	'tools/figures/serve.mjs',
+	'tools/figures/third_party/interfig/VENDOR.md',
+	'tools/figures/third_party/interfig/upstream/LICENSE',
+	'tools/figures/third_party/interfig/upstream/src/geometry.ts',
+	'tools/figures/third_party/interfig/upstream/src/model.ts',
+	'tools/figures/third_party/interfig/upstream/src/svg.ts',
+	'tools/figures/third_party/interfig/vendor.json',
+	'tools/figures/types.ts',
+	'tools/markdownlint/markdownlint-cli2.yaml',
+	'tools/markdownlint/no-private-scratch-links.mjs',
+	'tools/markdownlint/package-lock.json',
+	'tools/markdownlint/package.json',
+	'tools/markdownlint/verify.mjs',
+]);
+
 /**
  * Lists tracked repository files matching optional git pathspecs.
  * @param {...string} globs
  * @returns {string[]}
  */
 function tracked(...globs) {
-	const args = globs.length > 0 ? ['ls-files', '--', ...globs] : ['ls-files'];
+	const args = globs.length > 0 ? ['ls-files', '-z', '--', ...globs] : ['ls-files', '-z'];
 	const out = execFileSync('git', args, {
 		cwd: root,
 		encoding: 'utf8',
 		timeout: IO_TIMEOUT_MS,
 	});
-	const files = out.split(/\r?\n/).filter((file) => file !== '');
+	const files = out.split('\0').filter((file) => file !== '');
 	assert.ok(files.length <= TRACKED_CAP, `git ls-files exceeded cap ${TRACKED_CAP}`);
 	return files;
 }
@@ -76,6 +116,7 @@ function discoverPinnedClasses() {
 	const ignoreText = readFileSync(join(root, '.prettierignore'), 'utf8');
 	const allTracked = tracked();
 	const managed = parseManagedBlock(ignoreText);
+	const recorded = [...RECORDED_MANAGED];
 	const projection = allTracked.filter((file) =>
 		PROJECTION_LINE.test(readFileSync(join(root, file), 'utf8')),
 	);
@@ -83,7 +124,7 @@ function discoverPinnedClasses() {
 	const persona = allTracked.filter((file) => PERSONA_PATH.test(file));
 	const rootStandards = allTracked.filter((file) => STANDARDS_ROOT_PATH.test(file));
 	const standards = [...new Set([...rootStandards, '.standards-receipt.json'])].sort();
-	return { managed, projection, archetype, persona, standards };
+	return { managed, recorded, projection, archetype, persona, standards };
 }
 
 /**
@@ -144,6 +185,17 @@ describe('pinned artifact discovery', () => {
 		const selfText = readFileSync(thisFile, 'utf8');
 		assert.ok(!PROJECTION_LINE.test(selfText), `${selfPath} matched projection regex`);
 		assert.ok(!classes.projection.includes(selfPath), `${selfPath} in projection class`);
+	});
+
+	it('keeps RECORDED_MANAGED unique and tracked in git', () => {
+		const trackedSet = new Set(tracked());
+		const missing = RECORDED_MANAGED.filter((file) => !trackedSet.has(file));
+		assert.deepEqual(missing, [], `RECORDED_MANAGED untracked: ${missing.join(', ')}`);
+		assert.equal(
+			new Set(RECORDED_MANAGED).size,
+			RECORDED_MANAGED.length,
+			'RECORDED_MANAGED contains duplicate entries',
+		);
 	});
 });
 
