@@ -346,6 +346,7 @@ const config: Linter.Config[] = [
 		languageOptions: {
 			parserOptions: { project: false },
 			globals: {
+				AbortController: 'readonly',
 				AbortSignal: 'readonly',
 				Buffer: 'readonly',
 				TextDecoder: 'readonly',
