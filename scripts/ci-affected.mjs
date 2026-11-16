@@ -20,6 +20,8 @@ export const SHARED_SURFACE_PATTERNS = [
 	/^tsconfig(\..*)?\.json$/,
 	/^eslint\.config\.(ts|js|mjs|cjs)$/,
 	/^prettier\.config\.(js|mjs|cjs)$/,
+	// The pinned-artifact test in the lint job reads it.
+	/^\.prettierignore$/,
 	/^commitlint\.config\.(js|mjs|cjs)$/,
 	/^vitest\.shared\.ts$/,
 	/^Makefile$/,
