@@ -3,6 +3,10 @@
 // container image that drifts from the lockfile Playwright version, lacks
 // a sha256 digest, lacks --user 1001 in options, lacks PLAYWRIGHT_BROWSERS_PATH
 // set to /ms-playwright, or if a step still runs `playwright install --with-deps`.
+// Also refuses a lockfile importer declaring `@playwright/test`, `playwright`,
+// or `playwright-core` with anything other than the exact resolved version,
+// because lock file maintenance re-resolves a range to a version the container
+// image does not carry (PR 400).
 //
 // Playwright container images include browser binaries and OS dependencies.
 // The image version must equal the project's Playwright version so tests find
@@ -14,7 +18,18 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parse, parseAllDocuments } from 'yaml';
+import { parse } from 'yaml';
+import { getPlaywrightLockVersion, isMapping } from './check-playwright-image.lockfile.mjs';
+
+export {
+	EXACT_VERSION_REGEX,
+	findPlaywrightSpecifierViolations,
+	getPlaywrightLockVersion,
+	IMPORTER_LIMIT,
+	LOCK_DOC_LIMIT,
+	LOCK_PACKAGE_LIMIT,
+	PLAYWRIGHT_PACKAGES,
+} from './check-playwright-image.lockfile.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
@@ -26,11 +41,9 @@ export const PLAYWRIGHT_IMAGE_PREFIX = 'mcr.microsoft.com/playwright:',
 	DIGEST_REGEX = /@sha256:[0-9a-fA-F]{64}$/;
 
 // Upper bounds (HISS-02): directory entries one scan reads, jobs per workflow,
-// documents/packages in lockfile, steps per job, and I/O deadline.
+// steps per job, and I/O deadline.
 export const ENTRY_LIMIT = 1_000,
 	JOB_LIMIT = 100,
-	LOCK_DOC_LIMIT = 10,
-	LOCK_PACKAGE_LIMIT = 10_000,
 	STEP_LIMIT = 100,
 	IO_TIMEOUT_MS = 10_000;
 
@@ -62,71 +75,6 @@ export async function withTimeout(
 	}
 }
 
-function isMapping(value) {
-	return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * Adds resolved playwright versions found in a packages dictionary.
- */
-function extractPkgVersions(pkgs, versions) {
-	for (const key of Object.keys(pkgs)) {
-		if (key.startsWith('playwright@')) {
-			versions.add(key.slice('playwright@'.length).split('(')[0]);
-		}
-	}
-}
-
-function collectPlaywrightVersions(
-	docs,
-	docLimit = LOCK_DOC_LIMIT,
-	packageLimit = LOCK_PACKAGE_LIMIT,
-) {
-	if (docs.length > docLimit) {
-		throw new Error(`pnpm-lock.yaml exceeds limit of ${docLimit} documents, got ${docs.length}`);
-	}
-	const versions = new Set();
-	let totalPackages = 0;
-	for (const doc of docs) {
-		if (doc.errors?.length > 0) throw doc.errors[0];
-		const pkgs = doc.toJSON()?.packages;
-		if (isMapping(pkgs)) {
-			totalPackages += Object.keys(pkgs).length;
-			if (totalPackages > packageLimit) {
-				throw new Error(
-					`pnpm-lock.yaml exceeds limit of ${packageLimit} packages, got ${totalPackages}`,
-				);
-			}
-			extractPkgVersions(pkgs, versions);
-		}
-	}
-	return versions;
-}
-
-/**
- * Parses lockfile source and returns the resolved playwright version or a finding.
- */
-export function getPlaywrightLockVersion(lockfileSource, limits = {}) {
-	const docLimit = typeof limits === 'number' ? limits : (limits.docLimit ?? LOCK_DOC_LIMIT);
-	const packageLimit = limits.packageLimit ?? LOCK_PACKAGE_LIMIT;
-	let versions;
-	try {
-		const docs = parseAllDocuments(lockfileSource, { uniqueKeys: true });
-		versions = collectPlaywrightVersions(docs, docLimit, packageLimit);
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
-	}
-	if (versions.size !== 1) {
-		const msg =
-			versions.size === 0
-				? 'no resolved playwright package found in pnpm-lock.yaml'
-				: `expected exactly one playwright version in pnpm-lock.yaml, found ${Array.from(versions).sort().join(', ')}`;
-		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
-	}
-	return { version: Array.from(versions)[0], finding: null };
-}
-
 async function readTextFile(path) {
 	try {
 		const content = await readFile(path, {
@@ -149,6 +97,7 @@ export async function readLockfileVersion(rootDir, limits = {}) {
 		return {
 			version: null,
 			finding: { file: 'pnpm-lock.yaml', message: `failed to read ${lockfilePath}: ${error}` },
+			specifierFindings: [],
 		};
 	}
 	return getPlaywrightLockVersion(content, limits);
@@ -480,6 +429,7 @@ function reportFindings(files, findings, where, lockfileVersion) {
 export async function main(rootDir = root) {
 	const lockResult = await readLockfileVersion(rootDir);
 	const findings = lockResult.finding ? [lockResult.finding] : [];
+	findings.push(...(lockResult.specifierFindings ?? []));
 
 	let workflowResult;
 	try {
