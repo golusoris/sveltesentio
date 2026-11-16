@@ -133,6 +133,7 @@ describe('ci-affected: analyzeChanges', () => {
 			'tsconfig.json',
 			'eslint.config.js',
 			'prettier.config.js',
+			'.prettierignore',
 			'commitlint.config.js',
 			'vitest.shared.ts',
 			'Makefile',
