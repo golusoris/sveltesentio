@@ -3,6 +3,10 @@
 // container image that drifts from the lockfile Playwright version, lacks
 // a sha256 digest, lacks --user 1001 in options, lacks PLAYWRIGHT_BROWSERS_PATH
 // set to /ms-playwright, or if a step still runs `playwright install --with-deps`.
+// Also refuses a lockfile importer declaring `@playwright/test`, `playwright`,
+// or `playwright-core` with anything other than the exact resolved version,
+// because lock file maintenance re-resolves a range to a version the container
+// image does not carry (PR 400).
 //
 // Playwright container images include browser binaries and OS dependencies.
 // The image version must equal the project's Playwright version so tests find
@@ -23,16 +27,21 @@ export const PLAYWRIGHT_IMAGE_PREFIX = 'mcr.microsoft.com/playwright:',
 	CONTAINER_USER_REGEX = /(^|\s)--user[=\s]+1001(:\S+)?(?=\s|$)/,
 	REQUIRED_BROWSERS_PATH = '/ms-playwright',
 	REDUNDANT_INSTALL_CMD = 'playwright install --with-deps',
-	DIGEST_REGEX = /@sha256:[0-9a-fA-F]{64}$/;
+	DIGEST_REGEX = /@sha256:[0-9a-fA-F]{64}$/,
+	PLAYWRIGHT_PACKAGES = new Set(['@playwright/test', 'playwright', 'playwright-core']),
+	EXACT_VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 
 // Upper bounds (HISS-02): directory entries one scan reads, jobs per workflow,
-// documents/packages in lockfile, steps per job, and I/O deadline.
+// documents/importers/packages in lockfile, steps per job, and I/O deadline.
 export const ENTRY_LIMIT = 1_000,
+	IMPORTER_LIMIT = 1_000,
 	JOB_LIMIT = 100,
 	LOCK_DOC_LIMIT = 10,
 	LOCK_PACKAGE_LIMIT = 10_000,
 	STEP_LIMIT = 100,
 	IO_TIMEOUT_MS = 10_000;
+
+const IMPORTER_DEP_SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies'];
 
 /** GitHub reads workflow files with either extension. */
 export const WORKFLOW_FILE = /\.ya?ml$/;
@@ -66,6 +75,26 @@ function isMapping(value) {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function stripPeerSuffix(version) {
+	return typeof version === 'string' ? version.split('(')[0] : null;
+}
+
+function resolveLockLimits(limits = {}) {
+	if (typeof limits === 'number') {
+		return {
+			docLimit: limits,
+			importerLimit: IMPORTER_LIMIT,
+			packageLimit: LOCK_PACKAGE_LIMIT,
+		};
+	}
+	const cfg = isMapping(limits) ? limits : {};
+	return {
+		docLimit: cfg.docLimit ?? LOCK_DOC_LIMIT,
+		importerLimit: cfg.importerLimit ?? IMPORTER_LIMIT,
+		packageLimit: cfg.packageLimit ?? LOCK_PACKAGE_LIMIT,
+	};
+}
+
 /**
  * Adds resolved playwright versions found in a packages dictionary.
  */
@@ -77,19 +106,23 @@ function extractPkgVersions(pkgs, versions) {
 	}
 }
 
-function collectPlaywrightVersions(
-	docs,
-	docLimit = LOCK_DOC_LIMIT,
-	packageLimit = LOCK_PACKAGE_LIMIT,
-) {
+function collectDocsJson(docs, docLimit = LOCK_DOC_LIMIT) {
 	if (docs.length > docLimit) {
 		throw new Error(`pnpm-lock.yaml exceeds limit of ${docLimit} documents, got ${docs.length}`);
 	}
-	const versions = new Set();
-	let totalPackages = 0;
+	const docsJson = [];
 	for (const doc of docs) {
 		if (doc.errors?.length > 0) throw doc.errors[0];
-		const pkgs = doc.toJSON()?.packages;
+		docsJson.push(doc.toJSON());
+	}
+	return docsJson;
+}
+
+function collectPlaywrightVersions(docsJson, packageLimit = LOCK_PACKAGE_LIMIT) {
+	const versions = new Set();
+	let totalPackages = 0;
+	for (const doc of docsJson) {
+		const pkgs = isMapping(doc) ? doc.packages : null;
 		if (isMapping(pkgs)) {
 			totalPackages += Object.keys(pkgs).length;
 			if (totalPackages > packageLimit) {
@@ -103,28 +136,133 @@ function collectPlaywrightVersions(
 	return versions;
 }
 
+function isValidPlaywrightEntry(specifier, entryVersion, resolvedVersion) {
+	if (typeof specifier !== 'string' || !EXACT_VERSION_REGEX.test(specifier)) return false;
+	if (entryVersion !== specifier) return false;
+	return typeof resolvedVersion !== 'string' || specifier === resolvedVersion;
+}
+
+function checkPlaywrightEntry(importerPath, section, pkgName, entry, resolvedVersion) {
+	const specifier = isMapping(entry) ? entry.specifier : undefined;
+	const entryVersion = isMapping(entry) ? stripPeerSuffix(entry.version) : null;
+	if (isValidPlaywrightEntry(specifier, entryVersion, resolvedVersion)) return null;
+	const specDesc =
+		typeof specifier === 'string' ? `'${specifier}'` : `${String(specifier)} (${typeof specifier})`;
+	const expected =
+		typeof resolvedVersion === 'string'
+			? `exact lockfile version '${resolvedVersion}'`
+			: 'an exact X.Y.Z version matching its resolved version';
+	return {
+		file: 'pnpm-lock.yaml',
+		job: null,
+		message: `importer '${importerPath}' ${section} '${pkgName}' declares specifier ${specDesc} (resolved '${entryVersion ?? 'none'}'), expected ${expected}; a range or mismatched pin lets lockfile maintenance resolve a Playwright version the container image does not carry`,
+	};
+}
+
+function scanImporterSection(
+	importerPath,
+	section,
+	sectionMap,
+	resolvedVersion,
+	packageLimit,
+	findings,
+) {
+	if (!isMapping(sectionMap)) return;
+	const entries = Object.entries(sectionMap);
+	if (entries.length > packageLimit) {
+		throw new Error(
+			`pnpm-lock.yaml exceeds limit of ${packageLimit} packages in ${importerPath}.${section}, got ${entries.length}`,
+		);
+	}
+	for (const [pkgName, entry] of entries) {
+		if (!PLAYWRIGHT_PACKAGES.has(pkgName)) continue;
+		const finding = checkPlaywrightEntry(importerPath, section, pkgName, entry, resolvedVersion);
+		if (finding !== null) findings.push(finding);
+	}
+}
+
+function scanImporter(importerPath, importerDef, resolvedVersion, packageLimit, findings) {
+	if (!isMapping(importerDef)) return;
+	for (const section of IMPORTER_DEP_SECTIONS) {
+		scanImporterSection(
+			importerPath,
+			section,
+			importerDef[section],
+			resolvedVersion,
+			packageLimit,
+			findings,
+		);
+	}
+}
+
+function getImporterEntries(doc) {
+	const importers = isMapping(doc) ? doc.importers : null;
+	return isMapping(importers) ? Object.entries(importers) : null;
+}
+
+/**
+ * Scans parsed lockfile documents (`doc.toJSON()`) for non-exact or drifted
+ * Playwright importer specifiers.
+ */
+export function findPlaywrightSpecifierViolations(docsJson, resolvedVersion, limits = {}) {
+	if (!Array.isArray(docsJson)) return [];
+	const { docLimit, importerLimit, packageLimit } = resolveLockLimits(limits);
+	if (docsJson.length > docLimit) {
+		throw new Error(
+			`pnpm-lock.yaml exceeds limit of ${docLimit} documents, got ${docsJson.length}`,
+		);
+	}
+	const findings = [];
+	let totalImporters = 0;
+	for (const doc of docsJson) {
+		const entries = getImporterEntries(doc);
+		if (entries === null) continue;
+		totalImporters += entries.length;
+		if (totalImporters > importerLimit) {
+			throw new Error(
+				`pnpm-lock.yaml exceeds limit of ${importerLimit} importers, got ${totalImporters}`,
+			);
+		}
+		for (const [importerPath, importerDef] of entries) {
+			scanImporter(importerPath, importerDef, resolvedVersion, packageLimit, findings);
+		}
+	}
+	return findings;
+}
+
+function formatVersionCountFinding(versions) {
+	const msg =
+		versions.size === 0
+			? 'no resolved playwright package found in pnpm-lock.yaml'
+			: `expected exactly one playwright version in pnpm-lock.yaml, found ${Array.from(versions).sort().join(', ')}`;
+	return { file: 'pnpm-lock.yaml', message: msg };
+}
+
 /**
  * Parses lockfile source and returns the resolved playwright version or a finding.
  */
 export function getPlaywrightLockVersion(lockfileSource, limits = {}) {
-	const docLimit = typeof limits === 'number' ? limits : (limits.docLimit ?? LOCK_DOC_LIMIT);
-	const packageLimit = limits.packageLimit ?? LOCK_PACKAGE_LIMIT;
+	const cfg = resolveLockLimits(limits);
 	let versions;
+	let specifierFindings;
 	try {
 		const docs = parseAllDocuments(lockfileSource, { uniqueKeys: true });
-		versions = collectPlaywrightVersions(docs, docLimit, packageLimit);
+		const docsJson = collectDocsJson(docs, cfg.docLimit);
+		versions = collectPlaywrightVersions(docsJson, cfg.packageLimit);
+		const resolvedVersion = versions.size === 1 ? Array.from(versions)[0] : null;
+		specifierFindings = findPlaywrightSpecifierViolations(docsJson, resolvedVersion, cfg);
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
-		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
+		return {
+			version: null,
+			finding: { file: 'pnpm-lock.yaml', message: msg },
+			specifierFindings: [],
+		};
 	}
 	if (versions.size !== 1) {
-		const msg =
-			versions.size === 0
-				? 'no resolved playwright package found in pnpm-lock.yaml'
-				: `expected exactly one playwright version in pnpm-lock.yaml, found ${Array.from(versions).sort().join(', ')}`;
-		return { version: null, finding: { file: 'pnpm-lock.yaml', message: msg } };
+		return { version: null, finding: formatVersionCountFinding(versions), specifierFindings };
 	}
-	return { version: Array.from(versions)[0], finding: null };
+	return { version: Array.from(versions)[0], finding: null, specifierFindings };
 }
 
 async function readTextFile(path) {
@@ -149,6 +287,7 @@ export async function readLockfileVersion(rootDir, limits = {}) {
 		return {
 			version: null,
 			finding: { file: 'pnpm-lock.yaml', message: `failed to read ${lockfilePath}: ${error}` },
+			specifierFindings: [],
 		};
 	}
 	return getPlaywrightLockVersion(content, limits);
@@ -480,6 +619,7 @@ function reportFindings(files, findings, where, lockfileVersion) {
 export async function main(rootDir = root) {
 	const lockResult = await readLockfileVersion(rootDir);
 	const findings = lockResult.finding ? [lockResult.finding] : [];
+	findings.push(...(lockResult.specifierFindings ?? []));
 
 	let workflowResult;
 	try {

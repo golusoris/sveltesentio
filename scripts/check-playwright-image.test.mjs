@@ -319,6 +319,7 @@ describe('check-playwright-image', () => {
 		it('passes on all real workflows in .github/workflows with root pnpm-lock.yaml', async () => {
 			const lockResult = await readLockfileVersion(root);
 			assert.equal(lockResult.finding, null);
+			assert.deepEqual(lockResult.specifierFindings, []);
 			assert.ok(lockResult.version, 'resolved lockfile version must exist');
 			const { files, findings } = await scanWorkflows(root, lockResult.version);
 			assert.ok(files.length > 0, 'at least one workflow was read');
