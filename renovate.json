@@ -45,8 +45,7 @@
 				"@eslint/**",
 				"@typescript-eslint/**",
 				"prettier**",
-				"@commitlint/**",
-				"lint-staged"
+				"@commitlint/**"
 			],
 			"groupName": "linters and formatters"
 		},

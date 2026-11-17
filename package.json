@@ -51,8 +51,6 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-sonarjs": "4.2.2",
 		"eslint-plugin-svelte": "^3.23.0",
-		"husky": "^9.1.7",
-		"lint-staged": "^17.5.0",
 		"prettier": "^3.9.6",
 		"prettier-plugin-svelte": "^4.1.1",
 		"publint": "^0.3.25",
@@ -64,15 +62,6 @@
 		"typescript": "^6.0.3",
 		"web-vitals": "^6.2.3",
 		"yaml": "2.9.1"
-	},
-	"lint-staged": {
-		"*.{ts,svelte,js}": [
-			"eslint --fix",
-			"prettier --write"
-		],
-		"*.{json,md,yaml,yml,css,html}": [
-			"prettier --write"
-		]
 	},
 	"engines": {
 		"node": ">=24",
