@@ -392,6 +392,53 @@ describe('check-package-archives', () => {
 		});
 	});
 
+	describe('readArchive branches', () => {
+		it('stops at tar end when no zero-filled trailer block is present', () => {
+			assert.equal(readArchive(gzipSync(Buffer.alloc(0))).size, 0);
+			assert.equal(readArchive(gzipSync(Buffer.alloc(511, 1))).size, 0);
+			const exact = entry('package/exact.txt', Buffer.from('ok'));
+			const files = readArchive(gzipSync(exact));
+			assert.equal(files.get('package/exact.txt').toString('utf8'), 'ok');
+		});
+
+		it('accepts 10000 entries and refuses 10001 entries at ENTRY_LIMIT', () => {
+			const unit = entry('package/f.txt', Buffer.alloc(0));
+			const atLimit = gzipSync(Buffer.concat(Array(10_000).fill(unit)));
+			assert.equal(readArchive(atLimit).size, 1);
+
+			const overLimit = gzipSync(Buffer.concat(Array(10_001).fill(unit)));
+			assert.throws(() => readArchive(overLimit), /archive holds more than 10000 entries/);
+		});
+
+		it('treats a blank or NUL size field as zero bytes', () => {
+			const blankSize = Buffer.alloc(512);
+			blankSize.write('package/zero.txt', 0, 100, 'utf8');
+			blankSize.write('   ', 124, 12, 'utf8');
+			blankSize.write('0', 156, 1, 'utf8');
+			const files = readArchive(gzipSync(blankSize));
+			assert.equal(files.get('package/zero.txt').length, 0);
+		});
+
+		it('refuses non-octal and negative entry sizes', () => {
+			const badOctal = entry('package/a.txt', Buffer.alloc(0));
+			badOctal.write('not-octal   ', 124, 12, 'utf8');
+			const rawBad = gzipSync(badOctal);
+			assert.throws(() => readArchive(rawBad), /entry at byte 0 has no readable size/);
+
+			const negative = entry('package/a.txt', Buffer.alloc(0));
+			negative.write('-00000000001', 124, 12, 'utf8');
+			const rawNeg = gzipSync(negative);
+			assert.throws(() => readArchive(rawNeg), /entry at byte 0 has no readable size/);
+		});
+
+		it('reads a regular file marked with a NUL typeflag byte', () => {
+			const v7 = entry('package/v7.txt', Buffer.from('legacy'));
+			v7[156] = 0;
+			const files = readArchive(gzipSync(v7));
+			assert.equal(files.get('package/v7.txt').toString('utf8'), 'legacy');
+		});
+	});
+
 	// Packs this workspace with pnpm, as the release workflow's publish does.
 	it('finds nothing missing in the archives of this repository', { timeout: 300_000 }, async () => {
 		assert.equal(await main(), 0);

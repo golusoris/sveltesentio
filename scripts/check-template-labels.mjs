@@ -98,8 +98,8 @@ function parseLabelArray(items, where) {
 	return trimmed;
 }
 
-/** The labels one issue form names; throws on an invalid form, doc, or label item. */
-export function templateLabels(source, where = 'template') {
+/** Returns the parsed YAML mapping for an issue template, throwing on syntax errors or non-mappings. */
+function parseTemplateMapping(source, where) {
 	let doc;
 	try {
 		doc = parse(source, { uniqueKeys: true });
@@ -111,6 +111,12 @@ export function templateLabels(source, where = 'template') {
 	if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
 		throw new Error(`${where}: template must be a YAML mapping`);
 	}
+	return doc;
+}
+
+/** The labels one issue form names; throws on an invalid form, doc, or label item. */
+export function templateLabels(source, where = 'template') {
+	const doc = parseTemplateMapping(source, where);
 	if (!('labels' in doc)) {
 		return [];
 	}
@@ -120,9 +126,8 @@ export function templateLabels(source, where = 'template') {
 	if (Array.isArray(doc.labels)) {
 		return parseLabelArray(doc.labels, where);
 	}
-	throw new Error(
-		`${where}: labels must be an array or comma-delimited string, got ${doc.labels === null ? 'null' : typeof doc.labels}`,
-	);
+	const kind = doc.labels === null ? 'null' : typeof doc.labels;
+	throw new Error(`${where}: labels must be an array or comma-delimited string, got ${kind}`);
 }
 
 /** Labels named by a template that are not in `repoLabels`, compared as GitHub does, ignoring case. */
@@ -162,37 +167,48 @@ export async function readTemplates(dir) {
 	return templates;
 }
 
+/** Returns the request URL and parsed label array for one GitHub API page, throwing on HTTP or shape errors. */
+async function fetchLabelsPage(repository, token, page, fetchImpl) {
+	const query = `per_page=${PAGE_SIZE}&page=${page}`;
+	const url = `https://api.github.com/repos/${repository}/labels?${query}`;
+	const response = await fetchImpl(url, {
+		headers: {
+			accept: 'application/vnd.github+json',
+			authorization: `Bearer ${token}`,
+			'x-github-api-version': '2022-11-28',
+		},
+		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+	});
+	if (!response.ok) throw new Error(`GET ${url}: HTTP ${response.status}`);
+	const batch = await response.json();
+	if (!Array.isArray(batch)) throw new Error(`GET ${url}: response is not a list`);
+	return { url, batch };
+}
+
+/** Returns validated label names from one API page batch, throwing when an item lacks a string `name`. */
+function extractBatchNames(batch, url) {
+	const pageNames = [];
+	for (let i = 0; i < batch.length; i++) {
+		const item = batch[i];
+		if (!item || typeof item.name !== 'string') {
+			const kind = typeof item?.name;
+			throw new Error(`GET ${url}: label at index ${i} has invalid name, got ${kind}`);
+		}
+		pageNames.push(item.name);
+	}
+	return pageNames;
+}
+
 /** Every label name of `repository` (owner/name), read page by page from the REST API. */
 export async function fetchRepoLabels(repository, token, fetchImpl = fetch) {
 	const names = [];
 	for (let page = 1; page <= PAGE_LIMIT + 1; page++) {
-		const url = `https://api.github.com/repos/${repository}/labels?per_page=${PAGE_SIZE}&page=${page}`;
-		const response = await fetchImpl(url, {
-			headers: {
-				accept: 'application/vnd.github+json',
-				authorization: `Bearer ${token}`,
-				'x-github-api-version': '2022-11-28',
-			},
-			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-		});
-		if (!response.ok) throw new Error(`GET ${url}: HTTP ${response.status}`);
-		const batch = await response.json();
-		if (!Array.isArray(batch)) throw new Error(`GET ${url}: response is not a list`);
-
+		const { url, batch } = await fetchLabelsPage(repository, token, page, fetchImpl);
 		if (page === PAGE_LIMIT + 1) {
 			if (batch.length === 0) return names;
 			throw new Error(`${repository} has more than ${PAGE_LIMIT * PAGE_SIZE} labels`);
 		}
-
-		for (let i = 0; i < batch.length; i++) {
-			const item = batch[i];
-			if (!item || typeof item.name !== 'string') {
-				throw new Error(
-					`GET ${url}: label at index ${i} has invalid name, got ${typeof item?.name}`,
-				);
-			}
-			names.push(item.name);
-		}
+		names.push(...extractBatchNames(batch, url));
 		if (batch.length < PAGE_SIZE) return names;
 	}
 	return names;
@@ -270,6 +286,31 @@ async function repoLabels(argv, env, fetchImpl = fetch) {
 	throw new Error('no label source: set GITHUB_REPOSITORY and GITHUB_TOKEN, or pass --labels-file');
 }
 
+/** Returns template labels missing from the configured label source, revalidating API misses once. */
+async function resolveMissingLabels(templates, argv, env, fetchImpl) {
+	const labels = await repoLabels(argv, env, fetchImpl);
+	const missing = missingLabels(templates, labels);
+	const isApiSource =
+		argv.indexOf('--labels-file') === -1 && Boolean(env.GITHUB_REPOSITORY && env.GITHUB_TOKEN);
+	if (missing.length === 0 || !isApiSource) return missing;
+	return revalidateMissing(env.GITHUB_REPOSITORY, env.GITHUB_TOKEN, missing, fetchImpl);
+}
+
+/** Logs the outcome for `templates` in `where` and returns the CLI exit code. */
+function reportResult(templates, missing, where) {
+	if (missing.length > 0) {
+		console.error(`Issue forms in ${where} name labels the repository does not have:\n`);
+		for (const { file, label } of missing) console.error(`  ${file}: ${label}`);
+		console.error('\nCreate the label, or drop it from the form.');
+		return 1;
+	}
+	const count = templates.reduce((sum, t) => sum + t.labels.length, 0);
+	console.log(
+		`OK: ${count} labels named by ${templates.length} issue forms in ${where} all exist.`,
+	);
+	return 0;
+}
+
 /** Returns the exit code: 0 when every label an issue form names exists. */
 export async function main({
 	argv = process.argv.slice(2),
@@ -283,24 +324,8 @@ export async function main({
 		console.error(`No issue form found in ${where}; nothing was checked.`);
 		return 1;
 	}
-	const labels = await repoLabels(argv, env, fetchImpl);
-	let missing = missingLabels(templates, labels);
-	const isApiSource =
-		argv.indexOf('--labels-file') === -1 && Boolean(env.GITHUB_REPOSITORY && env.GITHUB_TOKEN);
-	if (missing.length > 0 && isApiSource) {
-		missing = await revalidateMissing(env.GITHUB_REPOSITORY, env.GITHUB_TOKEN, missing, fetchImpl);
-	}
-	if (missing.length > 0) {
-		console.error(`Issue forms in ${where} name labels the repository does not have:\n`);
-		for (const { file, label } of missing) console.error(`  ${file}: ${label}`);
-		console.error('\nCreate the label, or drop it from the form.');
-		return 1;
-	}
-	const count = templates.reduce((sum, t) => sum + t.labels.length, 0);
-	console.log(
-		`OK: ${count} labels named by ${templates.length} issue forms in ${where} all exist.`,
-	);
-	return 0;
+	const missing = await resolveMissingLabels(templates, argv, env, fetchImpl);
+	return reportResult(templates, missing, where);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
