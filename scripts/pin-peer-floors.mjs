@@ -26,8 +26,20 @@ import semver from 'semver';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
-/** The peers pinned to their floor. Each must be declared with one range. */
-export const FLOORED_PEERS = Object.freeze(['svelte', '@sveltejs/kit', 'vite', 'typescript']);
+/**
+ * The peers pinned to their floor. Each must be declared with one range.
+ * layerchart is floored with svelte: left unpinned, the job installs the
+ * newest layerchart, whose own svelte peer can sit above the svelte floor
+ * (layerchart 2.10.0 needs svelte ^5.57.0), and tests a pair no consumer
+ * can install.
+ */
+export const FLOORED_PEERS = Object.freeze([
+	'svelte',
+	'@sveltejs/kit',
+	'vite',
+	'typescript',
+	'layerchart',
+]);
 
 const WORKSPACE_FILE = 'pnpm-workspace.yaml';
 const OVERRIDES_LINE = 'overrides:';
