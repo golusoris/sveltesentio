@@ -17,7 +17,55 @@ const SOURCE_EXT = ['.ts', '.svelte.ts', '.svelte'];
 const WALK_LIMIT = 100_000;
 const CRUISE_TIMEOUT_MS = 60_000;
 
-export async function walk(dir, out = []) {
+/** Returns whether `entry` has a recognised source file extension. */
+function isSourceEntry(entry) {
+	return SOURCE_EXT.some((ext) => entry.name.endsWith(ext));
+}
+
+/** Returns true so the default walk enters every child directory. */
+function allowAllDirs() {
+	return true;
+}
+
+/** Returns the active file and directory predicates for `walk`. */
+function resolveWalkOptions(options) {
+	return {
+		keepFile: options?.keepFile ?? isSourceEntry,
+		enterDir: options?.enterDir ?? allowAllDirs,
+	};
+}
+
+/** Returns whether `error` is a missing-path or non-directory error that `walk` skips. */
+function isIgnorableWalkError(error) {
+	return error?.code === 'ENOENT' || error?.code === 'ENOTDIR';
+}
+
+/** Returns the directory entries for `dirPath`, or `[]` when `dirPath` cannot be walked. */
+async function readDirEntries(dirPath) {
+	try {
+		return await readdir(dirPath, { withFileTypes: true });
+	} catch (error) {
+		if (isIgnorableWalkError(error)) return [];
+		throw error;
+	}
+}
+
+/** Pushes matching children of `dirPath` onto `stack` in reverse order (returns nothing). */
+function pushDirChildren(stack, dirPath, entries, filter) {
+	for (let i = entries.length - 1; i >= 0; i -= 1) {
+		const entry = entries[i];
+		const full = join(dirPath, entry.name);
+		if (entry.isDirectory()) {
+			if (filter.enterDir(entry)) stack.push({ isDir: true, path: full });
+		} else if (filter.keepFile(entry)) {
+			stack.push({ isDir: false, path: full });
+		}
+	}
+}
+
+/** Walks `dir` up to `WALK_LIMIT` steps and returns `out` with matching file paths appended. */
+export async function walk(dir, out = [], options) {
+	const filter = resolveWalkOptions(options);
 	const stack = [{ isDir: true, path: dir }];
 
 	for (let step = 0; step < WALK_LIMIT; step += 1) {
@@ -29,25 +77,8 @@ export async function walk(dir, out = []) {
 			continue;
 		}
 
-		let entries;
-		try {
-			entries = await readdir(item.path, { withFileTypes: true });
-		} catch (error) {
-			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-				continue;
-			}
-			throw error;
-		}
-
-		for (let i = entries.length - 1; i >= 0; i -= 1) {
-			const entry = entries[i];
-			const full = join(item.path, entry.name);
-			if (entry.isDirectory()) {
-				stack.push({ isDir: true, path: full });
-			} else if (SOURCE_EXT.some((e) => entry.name.endsWith(e))) {
-				stack.push({ isDir: false, path: full });
-			}
-		}
+		const entries = await readDirEntries(item.path);
+		pushDirChildren(stack, item.path, entries, filter);
 	}
 
 	if (stack.length > 0) {

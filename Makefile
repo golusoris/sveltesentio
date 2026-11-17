@@ -83,6 +83,7 @@ verify-all:
 	@pnpm check:migration-codemods
 	@pnpm check:renovate-config
 	@pnpm check:workflows
+	@pnpm lint:scripts
 	@pnpm test:scripts
 	@pnpm audit --audit-level=high
 	@$(PRAETORCTL) audit

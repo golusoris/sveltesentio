@@ -175,3 +175,79 @@ describe('scorecard.yml issue step', () => {
 		assert.deepEqual(runIssueStep('success', ''), []);
 	});
 });
+
+describe('runThreshold: branches', () => {
+	it('boundary: accepts THRESHOLD 0 and 10 and rejects values outside 0..10', async () => {
+		const atZero = await run([published(0)], '0');
+		assert.equal(atZero.code, 0);
+
+		const atTen = await run([published(10)], '10');
+		assert.equal(atTen.code, 0);
+
+		const msg = 'scorecard-threshold: REPOSITORY, COMMIT and THRESHOLD (0..10) are required';
+		for (const bad of ['-0.1', '10.1']) {
+			const lines = [];
+			const code = await runThreshold(env(bad), {
+				fetchResult: () => assert.fail('no fetch for out-of-range threshold'),
+				log: (line) => lines.push(line),
+			});
+			assert.equal(code, 2);
+			assert.deepEqual(lines, [msg]);
+		}
+	});
+
+	it('negative: missing COMMIT or empty REPOSITORY exits 2 without fetching', async () => {
+		for (const bad of [
+			{ ...env(), COMMIT: undefined },
+			{ ...env(), REPOSITORY: '' },
+			{ ...env(), REPOSITORY: undefined },
+		]) {
+			const lines = [];
+			const code = await runThreshold(bad, {
+				fetchResult: () => assert.fail('no fetch without repository and commit'),
+				log: (line) => lines.push(line),
+			});
+			assert.equal(code, 2);
+			assert.equal(lines.length, 1);
+		}
+	});
+
+	it('negative: non-stale fail verdict stops after first attempt without retry', async () => {
+		const { code, urls, lines } = await run([published(6.5)], '7');
+		assert.equal(code, 1);
+		assert.equal(urls.length, 1);
+		const expected = `scorecard-threshold: Scorecard score 6.5 is below 7 at ${SHA}`;
+		assert.deepEqual(lines, [expected]);
+	});
+
+	it('boundary: stale verdict logs all six attempts before returning 1', async () => {
+		const { code, urls, lines } = await run([published(9, OLD)], '7');
+		assert.equal(code, 1);
+		assert.equal(urls.length, 6);
+		assert.equal(lines.length, 7);
+		assert.match(lines[0], /^scorecard-threshold: attempt 1 of 6:/);
+		assert.match(lines[5], /^scorecard-threshold: attempt 6 of 6:/);
+	});
+
+	it('positive: omitted io uses console.error logger and defaultFetch', async () => {
+		const logged = [];
+		const fetched = [];
+		const origError = console.error;
+		const origFetch = globalThis.fetch;
+		console.error = (line) => logged.push(String(line));
+		globalThis.fetch = async (url) => {
+			fetched.push(String(url));
+			return { ok: true, json: async () => published(8) };
+		};
+		try {
+			const code = await runThreshold(env('7'));
+			assert.equal(code, 0);
+			assert.deepEqual(fetched, ['https://api.scorecard.dev/projects/github.com/o/r']);
+			const expected = `scorecard-threshold: Scorecard score 8 meets 7 at ${SHA}`;
+			assert.deepEqual(logged, [expected]);
+		} finally {
+			console.error = origError;
+			globalThis.fetch = origFetch;
+		}
+	});
+});

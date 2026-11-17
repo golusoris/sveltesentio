@@ -56,6 +56,46 @@ export function judge(result, { commit, threshold }) {
 }
 
 /**
+ * Returns the numeric threshold when `raw` is in 0..10, or null otherwise.
+ *
+ * @param {string | undefined} raw
+ * @returns {number | null}
+ */
+function parseThresholdValue(raw) {
+	if (raw === undefined || raw === '') return null;
+	const value = Number(raw);
+	if (value >= 0 && value <= 10) return value;
+	return null;
+}
+
+/**
+ * Returns the validated repository, commit, and threshold from `env`, or null when invalid.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @returns {{ repository: string, commit: string, threshold: number } | null}
+ */
+function parseThresholdEnv(env) {
+	const { REPOSITORY: repository, COMMIT: commit, THRESHOLD: raw } = env;
+	const threshold = parseThresholdValue(raw);
+	if (!repository || !commit || threshold === null) return null;
+	return { repository, commit, threshold };
+}
+
+/**
+ * Returns the fetch, retry delay, and logger callbacks with defaults applied.
+ *
+ * @param {{ fetchResult?: (url: string) => Promise<unknown>, delayMs?: number, log?: (line: string) => void }} io
+ * @returns {{ fetchResult: (url: string) => Promise<unknown>, delayMs: number, log: (line: string) => void }}
+ */
+function resolveThresholdIo(io) {
+	return {
+		fetchResult: io.fetchResult ?? defaultFetch,
+		delayMs: io.delayMs ?? RETRY_DELAY_MS,
+		log: io.log ?? ((line) => console.error(line)),
+	};
+}
+
+/**
  * Reads the environment, fetches the published result and judges it.
  *
  * @param {Record<string, string | undefined>} env
@@ -63,21 +103,13 @@ export function judge(result, { commit, threshold }) {
  * @returns {Promise<0 | 1 | 2>} 0 pass, 1 fail, 2 unusable input
  */
 export async function runThreshold(env, io = {}) {
-	const log = io.log ?? ((line) => console.error(line));
-	const { REPOSITORY: repository, COMMIT: commit, THRESHOLD: raw } = env;
-	const threshold = Number(raw);
-	if (
-		!repository ||
-		!commit ||
-		raw === undefined ||
-		raw === '' ||
-		!(threshold >= 0 && threshold <= 10)
-	) {
+	const { fetchResult, delayMs, log } = resolveThresholdIo(io);
+	const config = parseThresholdEnv(env);
+	if (config === null) {
 		log('scorecard-threshold: REPOSITORY, COMMIT and THRESHOLD (0..10) are required');
 		return 2;
 	}
-	const fetchResult = io.fetchResult ?? defaultFetch;
-	const delayMs = io.delayMs ?? RETRY_DELAY_MS;
+	const { repository, commit, threshold } = config;
 	let outcome = { verdict: 'fail', message: 'no attempt made' };
 	for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
 		outcome = judge(await fetchResult(`${API}${repository}`), { commit, threshold });

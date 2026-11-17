@@ -63,3 +63,36 @@ describe('semgrep report', () => {
 		}
 	});
 });
+
+describe('judge: branches', () => {
+	it('negative: null report or non-array results or errors fails early', () => {
+		const expected = ['the report has no results or errors list'];
+		assert.deepEqual(judge(null, files, before), expected);
+		assert.deepEqual(judge(undefined, files, before), expected);
+		assert.deepEqual(judge({ results: 'bad', errors: [] }, files, before), expected);
+		assert.deepEqual(judge({ results: [], errors: null }, files, before), expected);
+	});
+
+	it('boundary: finding without start location formats undefined line', () => {
+		const result = { check_id: 'no-eval', path: 'a.ts' };
+		const problems = judge(report({ results: [result] }), files, before);
+		assert.deepEqual(problems, ['a.ts:undefined: no-eval']);
+	});
+
+	it('negative and boundary: untolerated error uses path and message or fallbacks', () => {
+		const withFields = { type: 'Timeout', path: 'a.ts', spans: [], message: 'timed out' };
+		const problems1 = judge(report({ errors: [withFields] }), files, before);
+		assert.deepEqual(problems1, ['semgrep error Timeout in a.ts: timed out']);
+
+		const bare = { type: 'SyntaxError', spans: [] };
+		const problems2 = judge(report({ errors: [bare] }), files, before);
+		assert.deepEqual(problems2, ['semgrep error SyntaxError in no file:']);
+	});
+
+	it('negative and boundary: missing paths or scanned list marks selected files unscanned', () => {
+		const expected = ['2 selected files were not scanned, first a.ts'];
+		assert.deepEqual(judge(report({ paths: undefined }), files, before), expected);
+		assert.deepEqual(judge(report({ paths: {} }), files, before), expected);
+		assert.deepEqual(judge(report({ paths: undefined }), [], before), []);
+	});
+});

@@ -12,9 +12,12 @@ import {
 	SHARED_SURFACE_PATTERNS,
 	analyzeChanges,
 	getGitDiffFiles,
+	hasAffectedStories,
 	isFullEvent,
+	isPrettierHandled,
 	loadRootReaders,
 	loadStoryPackages,
+	pickPrettierGetFileInfo,
 	resolvePrettierFiles,
 	runCiAffected,
 } from './ci-affected.mjs';
@@ -567,5 +570,342 @@ describe('ci-affected: runCiAffected and scope detection', () => {
 			'does-not-exist.ts',
 		]);
 		assert.equal(res, 'packages/forms/src/index.ts');
+	});
+});
+
+describe('ci-affected: resolvePrettierFiles branches', () => {
+	/**
+	 * Returns a temporary root directory populated with .prettierrc.json and entries.
+	 * @param {Record<string, string>} entries
+	 */
+	function makePrettierRoot(entries) {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-prettier-'));
+		writeFileSync(join(dir, '.prettierrc.json'), '{}\n');
+		for (const [rel, text] of Object.entries(entries)) {
+			const target = join(dir, rel);
+			mkdirSync(join(target, '..'), { recursive: true });
+			writeFileSync(target, text);
+		}
+		return dir;
+	}
+
+	it('boundary: empty files array returns empty string', async () => {
+		assert.equal(await resolvePrettierFiles([]), '');
+	});
+
+	it('negative: null or undefined files returns empty string', async () => {
+		assert.equal(await resolvePrettierFiles(null), '');
+		assert.equal(await resolvePrettierFiles(undefined), '');
+	});
+
+	it('positive: missing .prettierignore formats files and normalizes paths', async () => {
+		const dir = makePrettierRoot({
+			'a.js': 'export const a = 1;\n',
+			'sub/b.json': '{}\n',
+		});
+		try {
+			const res = await resolvePrettierFiles(['./a.js', 'sub\\b.json'], dir);
+			assert.equal(res, 'a.js sub/b.json');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('negative: present .prettierignore excludes ignored files', async () => {
+		const dir = makePrettierRoot({
+			'.prettierignore': 'ignored.js\n',
+			'ignored.js': 'export const x = 1;\n',
+			'kept.js': 'export const y = 2;\n',
+		});
+		try {
+			const res = await resolvePrettierFiles(['ignored.js', 'kept.js'], dir);
+			assert.equal(res, 'kept.js');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('negative: file with null inferredParser is excluded', async () => {
+		const dir = makePrettierRoot({
+			'blob.unknownext': 'raw bytes\n',
+			'kept.js': 'export const z = 3;\n',
+		});
+		try {
+			assert.equal(await resolvePrettierFiles(['blob.unknownext'], dir), '');
+			assert.equal(await resolvePrettierFiles(['blob.unknownext', 'kept.js'], dir), 'kept.js');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('negative: getFileInfo ENOENT and ENOTDIR errors are skipped', async () => {
+		const enoent = () => Promise.reject(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+		const enotdir = () => Promise.reject(Object.assign(new Error('bad'), { code: 'ENOTDIR' }));
+		assert.equal(await isPrettierHandled(enoent, '/x/a.js', 'a.js', undefined), false);
+		assert.equal(await isPrettierHandled(enotdir, '/x/a.js', 'a.js', undefined), false);
+	});
+
+	it('negative: ignored file is excluded even when getFileInfo infers a parser', async () => {
+		const ignoredWithParser = async () => ({ ignored: true, inferredParser: 'babel' });
+		const kept = async () => ({ ignored: false, inferredParser: 'babel' });
+		assert.equal(await isPrettierHandled(ignoredWithParser, '/x/a.js', 'a.js', undefined), false);
+		assert.equal(await isPrettierHandled(kept, '/x/a.js', 'a.js', undefined), true);
+	});
+
+	it('negative: unexpected getFileInfo error rethrows with cause', async () => {
+		const dir = makePrettierRoot({
+			'.prettierrc.json': '{ invalid json',
+			'a.js': 'export const a = 1;\n',
+		});
+		try {
+			await assert.rejects(
+				() => resolvePrettierFiles(['a.js'], dir),
+				/ci-affected: prettier getFileInfo failed for a\.js:/,
+			);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+
+		const rawFail = () => Promise.reject('raw-boom');
+		let caught;
+		try {
+			await isPrettierHandled(rawFail, '/x/a.js', 'a.js', undefined);
+		} catch (error) {
+			caught = error;
+		}
+		assert.ok(caught instanceof Error);
+		assert.equal(caught.message, 'ci-affected: prettier getFileInfo failed for a.js: raw-boom');
+		assert.equal(caught.cause, 'raw-boom');
+	});
+
+	it('positive: pickPrettierGetFileInfo reads named or default export', () => {
+		const stub = async () => ({ ignored: false, inferredParser: 'babel' });
+		assert.equal(pickPrettierGetFileInfo({ getFileInfo: stub }), stub);
+		assert.equal(pickPrettierGetFileInfo({ default: { getFileInfo: stub } }), stub);
+		assert.equal(pickPrettierGetFileInfo({}), undefined);
+	});
+});
+
+describe('ci-affected: runCiAffected branches', () => {
+	const ENV_KEYS = ['CI_EVENT', 'GITHUB_OUTPUT', 'BASE_REF', 'HEAD_REF'];
+
+	/**
+	 * Runs `fn` with isolated CI env vars and returns its result.
+	 * @template T
+	 * @param {Record<string, string | undefined>} overrides
+	 * @param {(stderrLines: string[]) => Promise<T>} fn
+	 * @returns {Promise<T>}
+	 */
+	async function withCiEnv(overrides, fn) {
+		const saved = new Map(ENV_KEYS.map((key) => [key, process.env[key]]));
+		const stderrLines = [];
+		const origWrite = process.stderr.write.bind(process.stderr);
+		process.stderr.write = (chunk) => {
+			stderrLines.push(String(chunk));
+			return true;
+		};
+		for (const key of ENV_KEYS) {
+			if (overrides[key] === undefined) delete process.env[key];
+			else process.env[key] = overrides[key];
+		}
+		try {
+			return await fn(stderrLines);
+		} finally {
+			process.stderr.write = origWrite;
+			for (const [key, val] of saved) {
+				if (val === undefined) delete process.env[key];
+				else process.env[key] = val;
+			}
+		}
+	}
+
+	it('positive: full event branch runs for each accepted CI event', async () => {
+		for (const event of ['push', 'schedule', 'workflow_dispatch', 'merge_group']) {
+			await withCiEnv({}, async (stderrLines) => {
+				const res = await runCiAffected({
+					ciEvent: event,
+					baseRef: 'refs/heads/no-such-branch',
+				});
+				assert.equal(res.allAffected, true);
+				assert.equal(res.hasCodeChanges, true);
+				assert.equal(res.changedFiles, 0);
+				assert.equal(res.prettierFiles, '');
+				assert.equal(res.hasStories, true);
+				assert.equal(res.turboFilter, '');
+				assert.equal(stderrLines.at(-1), `ci-scope: full (${event} event)\n`);
+			});
+		}
+	});
+
+	it('positive and boundary: explicitFiles array skips git diff', async () => {
+		await withCiEnv({}, async () => {
+			const one = await runCiAffected({
+				ciEvent: 'pull_request',
+				baseRef: 'refs/heads/no-such-branch',
+				explicitFiles: ['packages/forms/src/index.ts'],
+			});
+			assert.equal(one.changedFiles, 1);
+			assert.deepEqual(one.affectedPackages, ['@sveltesentio/forms']);
+
+			const empty = await runCiAffected({
+				ciEvent: 'pull_request',
+				baseRef: 'refs/heads/no-such-branch',
+				explicitFiles: [],
+			});
+			assert.equal(empty.changedFiles, 0);
+			assert.equal(empty.hasCodeChanges, false);
+			assert.deepEqual(empty.affectedPackages, []);
+		});
+	});
+
+	it('negative: explicitFiles null or undefined takes git diff branch', async () => {
+		await withCiEnv({}, async () => {
+			for (const explicitFiles of [null, undefined]) {
+				const ok = await runCiAffected({
+					ciEvent: 'pull_request',
+					baseRef: 'HEAD',
+					headRef: 'HEAD',
+					explicitFiles,
+				});
+				assert.equal(ok.changedFiles, 0);
+
+				const badOpts = {
+					ciEvent: 'pull_request',
+					baseRef: 'refs/heads/no-such-branch',
+					explicitFiles,
+				};
+				await assert.rejects(
+					() => runCiAffected(badOpts),
+					/ci-affected: git diff refs\/heads\/no-such-branch\.\.\.HEAD failed/,
+				);
+			}
+		});
+	});
+
+	it('positive: allAffected skips prettier and sets hasStories true', async () => {
+		await withCiEnv({}, async () => {
+			const res = await runCiAffected({
+				ciEvent: 'pull_request',
+				explicitFiles: ['package.json'],
+			});
+			assert.equal(res.allAffected, true);
+			assert.equal(res.prettierFiles, '');
+			assert.equal(res.hasStories, true);
+			const emptyAll = { allAffected: true, affectedPackages: [] };
+			assert.equal(hasAffectedStories(emptyAll, root), true);
+		});
+	});
+
+	it('positive and negative: package with and without stories sets hasStories', async () => {
+		await withCiEnv({}, async () => {
+			const withStories = await runCiAffected({
+				ciEvent: 'pull_request',
+				explicitFiles: ['packages/ui/src/index.ts'],
+			});
+			assert.equal(withStories.allAffected, false);
+			assert.equal(withStories.hasStories, true);
+
+			const withoutStories = await runCiAffected({
+				ciEvent: 'pull_request',
+				explicitFiles: ['packages/forms/src/index.ts'],
+			});
+			assert.equal(withoutStories.allAffected, false);
+			assert.equal(withoutStories.hasStories, false);
+		});
+	});
+
+	it('positive and negative: githubOutput writes when set and skips when unset', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-gh-out-'));
+		const outFile = join(dir, 'github_output');
+		writeFileSync(outFile, '');
+		try {
+			await withCiEnv({}, async () => {
+				await runCiAffected({
+					ciEvent: 'pull_request',
+					explicitFiles: ['packages/forms/src/index.ts'],
+				});
+				assert.equal(readFileSync(outFile, 'utf8'), '');
+
+				await runCiAffected({
+					ciEvent: 'pull_request',
+					explicitFiles: ['packages/forms/src/index.ts'],
+					githubOutput: outFile,
+				});
+				const written = readFileSync(outFile, 'utf8');
+				assert.match(written, /all_affected=false/);
+				assert.match(written, /changed_files=1/);
+			});
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('positive: option defaults read env vars when options omit them', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-env-defaults-'));
+		const outFile = join(dir, 'github_output');
+		writeFileSync(outFile, '');
+		try {
+			const envPush = { CI_EVENT: 'schedule', GITHUB_OUTPUT: outFile };
+			await withCiEnv(envPush, async (stderrLines) => {
+				const res = await runCiAffected();
+				assert.equal(res.allAffected, true);
+				assert.equal(stderrLines.at(-1), 'ci-scope: full (schedule event)\n');
+				assert.match(readFileSync(outFile, 'utf8'), /all_affected=true/);
+			});
+
+			await withCiEnv({ BASE_REF: 'refs/heads/env-base' }, async (stderrLines) => {
+				await runCiAffected({ ciEvent: 'pull_request', explicitFiles: [] });
+				const expected = 'ci-scope: diff-aware, 0 changed files vs refs/heads/env-base\n';
+				assert.equal(stderrLines.at(-1), expected);
+			});
+
+			await withCiEnv({ BASE_REF: 'HEAD', HEAD_REF: 'refs/heads/env-head' }, async () => {
+				await assert.rejects(
+					() => runCiAffected({ ciEvent: 'pull_request' }),
+					/ci-affected: git diff HEAD\.\.\.refs\/heads\/env-head failed/,
+				);
+			});
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('boundary: option defaults use fallbacks when options and env are unset', async () => {
+		await withCiEnv({}, async (stderrLines) => {
+			const res = await runCiAffected({
+				explicitFiles: ['packages/forms/src/index.ts'],
+			});
+			assert.equal(res.allAffected, false);
+			assert.equal(res.prettierFiles, 'packages/forms/src/index.ts');
+			const expected = 'ci-scope: diff-aware, 1 changed files vs origin/main\n';
+			assert.equal(stderrLines.at(-1), expected);
+
+			await assert.rejects(
+				() => runCiAffected({ baseRef: 'refs/heads/no-such-base' }),
+				/ci-affected: git diff refs\/heads\/no-such-base\.\.\.HEAD failed/,
+			);
+		});
+	});
+
+	it('positive: explicit rootDir and readers options override defaults', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ci-rootdir-'));
+		writeFileSync(join(dir, '.prettierrc.json'), '{}\n');
+		writeFileSync(join(dir, '.prettierignore'), 'README.md\n');
+		writeFileSync(join(dir, 'README.md'), '# doc\n');
+		try {
+			await withCiEnv({}, async () => {
+				const res = await runCiAffected({
+					rootDir: dir,
+					ciEvent: 'pull_request',
+					explicitFiles: ['README.md'],
+					readers: [{ glob: 'README.md', pkg: '@sveltesentio/forms' }],
+				});
+				assert.deepEqual(res.affectedPackages, ['@sveltesentio/forms']);
+				assert.equal(res.prettierFiles, '');
+				assert.equal(res.hasStories, false);
+			});
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });

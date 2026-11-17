@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { afterEach, describe, it, mock } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
 	CODEMOD_LIMIT,
 	ENTRY_LIMIT,
@@ -416,5 +417,66 @@ describe('main', () => {
 		assert.equal(await main(await tree({ 'docs/migrations/v0.9.md': guide(2) })), 1);
 		const printed = error.mock.calls.map((c) => String(c.arguments[0])).join('\n');
 		assert.match(printed, /docs\/migrations\/v0.9.md: declares codemods: 2/);
+	});
+});
+
+describe('runCheck branches', () => {
+	it('uses default options when called with no arguments', async () => {
+		const result = await runCheck();
+		assert.deepEqual(result.findings, []);
+		assert.ok(result.guides >= 1);
+	});
+
+	it('combines a live caller signal without aborting fixture checks', async () => {
+		const { run, steps } = stubRunner();
+		const files = { ...goodTree(), [`${CODEMOD}/fixtures/basic.output.ts`]: 'foo(1);\n' };
+		const result = await runCheck({
+			root: await tree(files),
+			signal: AbortSignal.any([]),
+			run,
+		});
+		assert.deepEqual(result, { guides: 1, codemods: 1, findings: [] });
+		assert.equal(steps.length, 3);
+	});
+
+	it('skips checkVersions and notes deadline when caller signal is aborted', async () => {
+		const { run, steps } = stubRunner();
+		const result = await runCheck({
+			root: await tree(goodTree()),
+			suiteTimeoutMs: 1_234,
+			signal: AbortSignal.abort(),
+			run,
+		});
+		assert.equal(result.codemods, 0);
+		assert.equal(steps.length, 0);
+		assertOne(result.findings, 'tools/migrations', /suite deadline of 1234 ms reached/);
+	});
+
+	it('wraps unexpected runner errors thrown while suite signal is live', async () => {
+		/** @type {import('./check-migration-codemods.mjs').Runner} */
+		const run = async () => {
+			throw new Error('worker crash');
+		};
+		await assert.rejects(runCheck({ root: await tree(goodTree()), run }), (err) => {
+			assert.ok(err instanceof Error);
+			assert.match(err.message, /migration codemod check failed: worker crash/);
+			assert.ok(err.cause instanceof Error);
+			return true;
+		});
+	});
+
+	it('suppresses thrown runner error and reports suite deadline once aborted', async () => {
+		/** @type {import('./check-migration-codemods.mjs').Runner} */
+		const run = async () => {
+			await delay(40);
+			throw new Error('interrupted');
+		};
+		const result = await runCheck({
+			root: await tree(goodTree()),
+			suiteTimeoutMs: 15,
+			run,
+		});
+		assert.equal(result.codemods, 0);
+		assertOne(result.findings, 'tools/migrations', /suite deadline of 15 ms reached/);
 	});
 });

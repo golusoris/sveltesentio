@@ -76,6 +76,28 @@ function field(header, start, length) {
 	return raw.toString('utf8', 0, end === -1 ? length : end);
 }
 
+/** Returns the validated byte size of the tar entry at `offset`, throwing when unreadable or out of bounds. */
+function parseEntrySize(header, offset, tarLength) {
+	const size = Number.parseInt(field(header, 124, 12).trim() || '0', 8);
+	if (!Number.isInteger(size) || size < 0 || offset + BLOCK + size > tarLength) {
+		throw new Error(`archive entry at byte ${offset} has no readable size`);
+	}
+	return size;
+}
+
+/** Returns true when a tar header's typeflag marks a regular file (NUL or ASCII '0'). */
+function isRegularEntry(header) {
+	const type = header[156];
+	return type === 0 || type === 0x30;
+}
+
+/** Returns the archive path from a ustar header's `prefix` and `name` fields. */
+function entryPath(header) {
+	const prefix = field(header, 345, 155);
+	const name = field(header, 0, 100);
+	return prefix ? `${prefix}/${name}` : name;
+}
+
 /**
  * Reads the regular files of a gzipped tar archive into a map of path to bytes.
  * Only the classic header fields are read; a path longer than they hold (a pax
@@ -89,16 +111,10 @@ export function readArchive(gzipped) {
 		if (count >= ENTRY_LIMIT) throw new Error(`archive holds more than ${ENTRY_LIMIT} entries`);
 		const header = tar.subarray(offset, offset + BLOCK);
 		if (header.every((byte) => byte === 0)) break;
-		const size = Number.parseInt(field(header, 124, 12).trim() || '0', 8);
+		const size = parseEntrySize(header, offset, tar.length);
 		const body = offset + BLOCK;
-		if (!Number.isInteger(size) || size < 0 || body + size > tar.length) {
-			throw new Error(`archive entry at byte ${offset} has no readable size`);
-		}
-		const prefix = field(header, 345, 155);
-		const name = field(header, 0, 100);
-		const type = header[156];
-		if (type === 0 || type === 0x30) {
-			files.set(prefix ? `${prefix}/${name}` : name, tar.subarray(body, body + size));
+		if (isRegularEntry(header)) {
+			files.set(entryPath(header), tar.subarray(body, body + size));
 		}
 		offset = body + Math.ceil(size / BLOCK) * BLOCK;
 	}

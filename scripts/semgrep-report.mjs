@@ -37,27 +37,42 @@ function tolerance(error, today) {
 	);
 }
 
-/** The reasons the report fails, empty when it passes. */
-export function judge(report, files, today) {
-	const problems = [];
-	if (!report || !Array.isArray(report.results) || !Array.isArray(report.errors)) {
-		return ['the report has no results or errors list'];
-	}
-	for (const result of report.results) {
-		problems.push(`${result.path}:${result.start?.line}: ${result.check_id}`);
-	}
-	for (const error of report.errors) {
-		if (!tolerance(error, today)) {
-			problems.push(
-				`semgrep error ${errorType(error)} in ${error.path ?? 'no file'}: ${error.message ?? ''}`.trim(),
-			);
-		}
-	}
+/** Returns true when `report` carries `results` and `errors` arrays. */
+function hasReportLists(report) {
+	return Boolean(report && Array.isArray(report.results) && Array.isArray(report.errors));
+}
+
+/** Returns one formatted finding line from a Semgrep result entry. */
+function formatFinding(result) {
+	return `${result.path}:${result.start?.line}: ${result.check_id}`;
+}
+
+/** Returns one formatted problem line from an untolerated Semgrep error. */
+function formatSemgrepError(error) {
+	const where = error.path ?? 'no file';
+	const message = error.message ?? '';
+	return `semgrep error ${errorType(error)} in ${where}: ${message}`.trim();
+}
+
+/** Returns the unscanned-files problem line, or null when every selected file was scanned. */
+function missingScannedProblem(report, files) {
 	const scanned = new Set(report.paths?.scanned ?? []);
 	const missing = files.filter((file) => !scanned.has(file));
-	if (missing.length > 0) {
-		problems.push(`${missing.length} selected files were not scanned, first ${missing[0]}`);
+	if (missing.length === 0) return null;
+	return `${missing.length} selected files were not scanned, first ${missing[0]}`;
+}
+
+/** The reasons the report fails, empty when it passes. */
+export function judge(report, files, today) {
+	if (!hasReportLists(report)) {
+		return ['the report has no results or errors list'];
 	}
+	const problems = report.results.map(formatFinding);
+	for (const error of report.errors) {
+		if (!tolerance(error, today)) problems.push(formatSemgrepError(error));
+	}
+	const unscanned = missingScannedProblem(report, files);
+	if (unscanned !== null) problems.push(unscanned);
 	return problems;
 }
 
