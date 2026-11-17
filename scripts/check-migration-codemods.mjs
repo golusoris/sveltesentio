@@ -401,31 +401,24 @@ async function checkVersions(/** @type {Context} */ ctx, /** @type {CodemodVersi
 }
 
 /**
- * Every finding for the guides in `root`/docs/migrations/ and the codemods in
- * `root`/tools/migrations/.
- * `run` takes the place of the Worker that imports and calls each transform; tests of the
- * discovery limits pass a stub so their result does not wait on Worker start or import
- * (the per-step deadline stays on the real runner).
- * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number,
- * signal?: AbortSignal, run?: Runner }} [options]
- * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
+ * Returns the suite AbortSignal combining `suiteTimeoutMs` with an optional caller `signal`.
+ * @param {number} suiteTimeoutMs
+ * @param {AbortSignal} [signal]
+ * @returns {AbortSignal}
  */
-export async function runCheck({
-	root = repoRoot,
-	timeoutMs = TRANSFORM_TIMEOUT_MS,
-	suiteTimeoutMs = SUITE_TIMEOUT_MS,
-	signal,
-	run = runCodemod,
-} = {}) {
+function createSuiteSignal(suiteTimeoutMs, signal) {
 	const suite = AbortSignal.timeout(suiteTimeoutMs);
-	/** @type {Context} */
-	const ctx = {
-		root,
-		timeoutMs,
-		run,
-		suite: signal ? AbortSignal.any([suite, signal]) : suite,
-		findings: [],
-	};
+	return signal ? AbortSignal.any([suite, signal]) : suite;
+}
+
+/**
+ * Discovers guides and codemods, compares counts, and checks fixtures under `ctx`,
+ * returning `{ guides, codemods }`.
+ * @param {Context} ctx
+ * @param {number} suiteTimeoutMs
+ * @returns {Promise<{ guides: number, codemods: number }>}
+ */
+async function executeSuite(ctx, suiteTimeoutMs) {
 	let docs = new Map();
 	let codemods = 0;
 	try {
@@ -443,11 +436,40 @@ export async function runCheck({
 	if (ctx.suite.aborted) {
 		note(
 			ctx,
-			join(root, 'tools', 'migrations'),
+			join(ctx.root, 'tools', 'migrations'),
 			`suite deadline of ${suiteTimeoutMs} ms reached; the remaining codemods and fixtures were not checked`,
 		);
 	}
-	return { guides: docs.size, codemods, findings: ctx.findings };
+	return { guides: docs.size, codemods };
+}
+
+/**
+ * Every finding for the guides in `root`/docs/migrations/ and the codemods in
+ * `root`/tools/migrations/.
+ * `run` takes the place of the Worker that imports and calls each transform; tests of the
+ * discovery limits pass a stub so their result does not wait on Worker start or import
+ * (the per-step deadline stays on the real runner).
+ * @param {{ root?: string, timeoutMs?: number, suiteTimeoutMs?: number,
+ * signal?: AbortSignal, run?: Runner }} [options]
+ * @returns {Promise<{ guides: number, codemods: number, findings: Finding[] }>}
+ */
+export async function runCheck({
+	root = repoRoot,
+	timeoutMs = TRANSFORM_TIMEOUT_MS,
+	suiteTimeoutMs = SUITE_TIMEOUT_MS,
+	signal,
+	run = runCodemod,
+} = {}) {
+	/** @type {Context} */
+	const ctx = {
+		root,
+		timeoutMs,
+		run,
+		suite: createSuiteSignal(suiteTimeoutMs, signal),
+		findings: [],
+	};
+	const { guides, codemods } = await executeSuite(ctx, suiteTimeoutMs);
+	return { guides, codemods, findings: ctx.findings };
 }
 
 /** Returns the exit code: 0 when every guide's count matches and every codemod passes its fixtures. */

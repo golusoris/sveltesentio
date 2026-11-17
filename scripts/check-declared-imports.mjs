@@ -78,19 +78,34 @@ export function rangeProblem(range, version) {
 	return undefined;
 }
 
+/** Returns the workspace-range problem for one dependency entry, or `undefined` when valid. */
+function internalDepProblem(dep, range, versions) {
+	if (!dep.startsWith('@sveltesentio/')) return undefined;
+	const version = versions.get(dep);
+	if (version === undefined) return 'names no workspace package';
+	return rangeProblem(range, version);
+}
+
+/** Returns `@sveltesentio/*` range violation strings for `field` of `manifest`. */
+function fieldRangeViolations(manifest, field, versions) {
+	const entries = manifest[field];
+	if (!entries) return [];
+
+	const violations = [];
+	for (const [dep, range] of Object.entries(entries)) {
+		const problem = internalDepProblem(dep, range, versions);
+		if (problem) violations.push(`${manifest.name} ${field} ${dep}: ${problem}`);
+	}
+	return violations;
+}
+
 /** Lists @sveltesentio/* entries whose range excludes the workspace version. */
 export function internalRangeViolations(manifests) {
 	const versions = new Map(manifests.map((m) => [m.name, m.version]));
 	const violations = [];
 	for (const manifest of manifests) {
 		for (const field of DEPENDENCY_FIELDS) {
-			for (const [dep, range] of Object.entries(manifest[field] ?? {})) {
-				if (!dep.startsWith('@sveltesentio/')) continue;
-				const version = versions.get(dep);
-				const problem =
-					version === undefined ? 'names no workspace package' : rangeProblem(range, version);
-				if (problem) violations.push(`${manifest.name} ${field} ${dep}: ${problem}`);
-			}
+			violations.push(...fieldRangeViolations(manifest, field, versions));
 		}
 	}
 	return violations;

@@ -261,28 +261,47 @@ function taskHasVar(taskDef, varName) {
 	);
 }
 
+/** Returns true when a CLI token is a literal turbo task name rather than a flag or variable. */
+function isTurboTaskToken(tok) {
+	return !tok.startsWith('-') && !tok.startsWith('$') && /^[a-zA-Z0-9_:-]+$/.test(tok);
+}
+
+/**
+ * Returns the number of tokens consumed starting at `tok` when `tok` is a turbo value flag,
+ * or 0 when `tok` is not one.
+ */
+function consumeTurboFlag(tok, next) {
+	if (TURBO_VALUE_FLAGS.has(tok)) return 2;
+	if (!TURBO_OPTIONAL_VALUE_FLAGS.has(tok)) return 0;
+	return next !== undefined && !next.startsWith('-') ? 2 : 1;
+}
+
+/** Returns the turbo task names parsed from the arguments of a single `turbo run` invocation. */
+function parseTurboRunTokens(argString) {
+	const toks = argString.trim().split(/\s+/);
+	const tasks = [];
+	for (let i = 0; i < toks.length; i++) {
+		const tok = toks[i];
+		if (tok === '--') break;
+		const consumed = consumeTurboFlag(tok, toks[i + 1]);
+		if (consumed > 0) {
+			i += consumed - 1;
+			continue;
+		}
+		if (isTurboTaskToken(tok)) {
+			tasks.push(tok);
+		}
+	}
+	return tasks;
+}
+
+/** Returns every turbo task name invoked by `turbo run` commands in `run`. */
 export function extractTurboTasks(run) {
 	if (typeof run !== 'string') return [];
 	const tasks = [];
 	let match;
 	while ((match = TURBO_RUN_REGEX.exec(run)) !== null) {
-		const toks = match[1].trim().split(/\s+/);
-		for (let i = 0; i < toks.length; i++) {
-			const tok = toks[i];
-			if (tok === '--') break;
-			if (TURBO_VALUE_FLAGS.has(tok)) {
-				i++;
-				continue;
-			}
-			if (TURBO_OPTIONAL_VALUE_FLAGS.has(tok)) {
-				const next = toks[i + 1];
-				if (next !== undefined && !next.startsWith('-')) i++;
-				continue;
-			}
-			if (!tok.startsWith('-') && !tok.startsWith('$') && /^[a-zA-Z0-9_:-]+$/.test(tok)) {
-				tasks.push(tok);
-			}
-		}
+		tasks.push(...parseTurboRunTokens(match[1]));
 	}
 	return tasks;
 }
