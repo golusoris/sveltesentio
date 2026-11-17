@@ -97,4 +97,72 @@ describe('check-export-tests', () => {
 		assert.deepEqual(result.failures, []);
 		assert.ok(result.checked > 400, `checked only ${result.checked} exported values`);
 	});
+
+	describe('findUntestedExports branches', () => {
+		it('skips non-directory entries at top level of packagesDir', async () => {
+			const packages = join(dir, 'non-dir-entry');
+			await writeTree(packages, {
+				'README.txt': 'workspace notes\n',
+			});
+			assert.deepEqual(await findUntestedExports(packages), { checked: 0, failures: [] });
+		});
+
+		it('skips packages with missing or invalid JSON package.json', async () => {
+			const packages = join(dir, 'invalid-manifest');
+			await writeTree(packages, {
+				'no-manifest/src/index.ts': 'export const a = 1;\n',
+				'bad-json/package.json': '{ invalid json',
+				'bad-json/src/index.ts': 'export const b = 2;\n',
+			});
+			assert.deepEqual(await findUntestedExports(packages), { checked: 0, failures: [] });
+		});
+
+		it('skips packages with no TypeScript source targets in exports (boundary)', async () => {
+			const packages = join(dir, 'no-ts-targets');
+			await writeTree(packages, {
+				'dist-only/package.json': manifest('@fixture/dist-only', {
+					'.': './dist/index.js',
+					'./types': './src/index.d.ts',
+				}),
+				'dist-only/src/index.ts': 'export const ignored = 1;\n',
+			});
+			assert.deepEqual(await findUntestedExports(packages), { checked: 0, failures: [] });
+		});
+
+		it('reports failure when an exported source file is missing or not a module', async () => {
+			const packages = join(dir, 'unreadable-module');
+			await writeTree(packages, {
+				'broken/package.json': manifest('@fixture/broken', {
+					'.': './src/missing.ts',
+					'./script': './src/script.ts',
+				}),
+				'broken/src/script.ts': 'const localOnly = 1;\n',
+			});
+			const result = await findUntestedExports(packages);
+			assert.deepEqual(result, {
+				checked: 0,
+				failures: [
+					`@fixture/broken: cannot read exports of ${join('src', 'missing.ts')}`,
+					`@fixture/broken: cannot read exports of ${join('src', 'script.ts')}`,
+				],
+			});
+		});
+
+		it('keeps first entry for duplicate value across sub-exports (boundary)', async () => {
+			const packages = join(dir, 'duplicate-subexport');
+			await writeTree(packages, {
+				'dup/package.json': manifest('@f/d', {
+					'.': './src/index.ts',
+					'./sub': './src/sub.ts',
+				}),
+				'dup/src/sub.ts': 'export const v = 1;\n',
+				'dup/src/index.ts': "export { v } from './sub.js';\n",
+			});
+			const result = await findUntestedExports(packages);
+			assert.deepEqual(result, {
+				checked: 1,
+				failures: [`@f/d: v (exported from ${join('src', 'index.ts')}) is named in no test file`],
+			});
+		});
+	});
 });

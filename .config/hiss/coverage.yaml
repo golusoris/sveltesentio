@@ -136,7 +136,12 @@ rules:
           packages/core/src. `sonarjs/cognitive-complexity: ['error', 12]`
           (eslint-plugin-sonarjs, devDependency only) bounds cognitive
           complexity at the harness cap; positive/cognitive-over-twelve.ts
-          (cognitive 15) planted the same way exits 1.
+          (cognitive 15) planted the same way exits 1. The same block matches
+          scripts/**/*.mjs except scripts/**/*.test.mjs, and `pnpm lint:scripts`
+          runs in `make verify-all` as well as in CI; scripts/eslint-caps.test.mjs
+          (`pnpm test:scripts`) lints a planted function over and at each of the
+          four caps under a scripts/ path, and a planted test file to show the
+          test files stay out.
         rationale: >-
           Cyclomatic complexity is enforced and the tree is clean at 10: thirteen
           functions were over it and all thirteen were refactored, not exempted.
@@ -171,6 +176,14 @@ rules:
 
           The cognitive cap went on at 12 with no finding to fix: linting every
           package's src/ with the rule on reports none.
+
+          The caps reached scripts/ later (#599). With them on, ESLint reported
+          nineteen functions over the cyclomatic or cognitive cap; Lizard had
+          reported seven, because ESLint also counts `??`, `?.` and default
+          parameter values. All nineteen were split behind tests for each branch,
+          not exempted, and the two copies of the stack directory walker became
+          one. scripts/*.test.mjs is the same class as the package tests and
+          waits on #588.
       - language: svelte
         state: partial
         runner: eslint

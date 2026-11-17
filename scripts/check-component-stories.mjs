@@ -8,57 +8,25 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { basename, dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { walk as walkDirectory } from './check-import-cycles.mjs';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const packagesDir = join(root, 'packages');
 
-const WALK_LIMIT = 100_000;
+const SVELTE_WALK_OPTIONS = {
+	keepFile: (entry) => entry.name.endsWith('.svelte'),
+	enterDir: (entry) => entry.name !== 'node_modules',
+};
 
 /**
- * Walk a directory tree recursively up to WALK_LIMIT entries (HISS-02).
+ * Walk a directory tree and return `.svelte` file paths outside `node_modules`.
  *
  * @param {string} dir
- * @param {string[]} out
+ * @param {string[]} [out]
  * @returns {Promise<string[]>}
  */
 export async function walk(dir, out = []) {
-	const stack = [{ isDir: true, path: dir }];
-
-	for (let step = 0; step < WALK_LIMIT; step += 1) {
-		const item = stack.pop();
-		if (item === undefined) break;
-
-		if (!item.isDir) {
-			out.push(item.path);
-			continue;
-		}
-
-		let entries;
-		try {
-			entries = await readdir(item.path, { withFileTypes: true });
-		} catch (error) {
-			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-				continue;
-			}
-			throw error;
-		}
-
-		for (let i = entries.length - 1; i >= 0; i -= 1) {
-			const entry = entries[i];
-			if (entry.name === 'node_modules') continue;
-			const full = join(item.path, entry.name);
-			if (entry.isDirectory()) {
-				stack.push({ isDir: true, path: full });
-			} else if (entry.name.endsWith('.svelte')) {
-				stack.push({ isDir: false, path: full });
-			}
-		}
-	}
-
-	if (stack.length > 0) {
-		throw new Error(`walk exceeded limit of ${WALK_LIMIT} steps`);
-	}
-	return out;
+	return walkDirectory(dir, out, SVELTE_WALK_OPTIONS);
 }
 
 /**
@@ -80,6 +48,32 @@ function collectExportTargets(exportsField) {
 	return targets;
 }
 
+/** Returns an error's message string, or the thrown value when it has no message. */
+function errorDetail(error) {
+	return error?.message ?? error;
+}
+
+/** Returns the UTF-8 text of `pkgJsonPath`, or `undefined` when the file is absent. */
+async function readPackageJsonText(pkgJsonPath) {
+	try {
+		return await readFile(pkgJsonPath, 'utf8');
+	} catch (error) {
+		if (error?.code === 'ENOENT') return undefined;
+		const message = `Failed to read package.json at ${pkgJsonPath}: ${errorDetail(error)}`;
+		throw new Error(message, { cause: error });
+	}
+}
+
+/** Returns the parsed JSON value of `raw`, throwing with `pkgJsonPath` and cause on failure. */
+function parsePackageManifest(raw, pkgJsonPath) {
+	try {
+		return JSON.parse(raw);
+	} catch (error) {
+		const message = `Failed to parse package.json at ${pkgJsonPath}: ${errorDetail(error)}`;
+		throw new Error(message, { cause: error });
+	}
+}
+
 /**
  * Read package.json and extract exported target paths.
  * Only ENOENT may skip (returns empty Set). Read/parse failures throw with path and cause.
@@ -89,31 +83,12 @@ function collectExportTargets(exportsField) {
  */
 export async function readPackageExportTargets(pkgPath) {
 	const pkgJsonPath = join(pkgPath, 'package.json');
-	let raw;
-	try {
-		raw = await readFile(pkgJsonPath, 'utf8');
-	} catch (error) {
-		if (error && error.code === 'ENOENT') {
-			return new Set();
-		}
-		throw new Error(`Failed to read package.json at ${pkgJsonPath}: ${error?.message ?? error}`, {
-			cause: error,
-		});
-	}
+	const raw = await readPackageJsonText(pkgJsonPath);
+	if (raw === undefined) return new Set();
 
-	let manifest;
-	try {
-		manifest = JSON.parse(raw);
-	} catch (error) {
-		throw new Error(`Failed to parse package.json at ${pkgJsonPath}: ${error?.message ?? error}`, {
-			cause: error,
-		});
-	}
-
-	if (manifest && manifest.exports) {
-		return collectExportTargets(manifest.exports);
-	}
-	return new Set();
+	const manifest = parsePackageManifest(raw, pkgJsonPath);
+	if (!manifest?.exports) return new Set();
+	return collectExportTargets(manifest.exports);
 }
 
 /**
@@ -222,6 +197,63 @@ export function hasStoryCovers(source, componentName) {
 	return false;
 }
 
+/** Returns directory entries under `dir`, or `[]` when `dir` does not exist. */
+async function readPackageDirs(dir) {
+	try {
+		const entries = await readdir(dir, { withFileTypes: true });
+		return entries.filter((entry) => entry.isDirectory());
+	} catch (error) {
+		if (error?.code === 'ENOENT') return [];
+		throw error;
+	}
+}
+
+/** Returns whether `srcPath` is an existing directory, throwing on unexpected `stat` errors. */
+async function hasSourceDirectory(srcPath) {
+	try {
+		const srcStat = await stat(srcPath);
+		return srcStat.isDirectory();
+	} catch (error) {
+		if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return false;
+		const message = `Failed to stat src at ${srcPath}: ${errorDetail(error)}`;
+		throw new Error(message, { cause: error });
+	}
+}
+
+/** Returns whether `file` is outside `src/internal` or listed in `exportedTargets`. */
+function isEligible(file, pkgPath, exportedTargets) {
+	if (!file.startsWith(join(pkgPath, 'src', 'internal'))) return true;
+	return exportedTargets.has('.' + file.slice(pkgPath.length));
+}
+
+/** Returns whether `compFile` has a sibling story or is covered by `storyContents`. */
+async function isCoveredByPackageStories(compFile, storyContents) {
+	if (await hasSiblingStory(compFile)) return true;
+	const name = basename(compFile, '.svelte');
+	return storyContents.some((c) => hasComponentImport(c, name) || hasStoryCovers(c, name));
+}
+
+/** Returns eligible Svelte component paths in `pkgPath` that lack story coverage. */
+async function findMissingInPackage(pkgPath) {
+	const srcPath = join(pkgPath, 'src');
+	if (!(await hasSourceDirectory(srcPath))) return [];
+
+	const exportedTargets = await readPackageExportTargets(pkgPath);
+	const svelteFiles = await walk(srcPath);
+	const storyFiles = svelteFiles.filter((f) => f.endsWith('.stories.svelte'));
+	const componentFiles = svelteFiles.filter((f) => !f.endsWith('.stories.svelte'));
+	const eligible = componentFiles.filter((f) => isEligible(f, pkgPath, exportedTargets));
+
+	const storyContents = await readStoryFiles(storyFiles);
+	const missing = [];
+	for (const compFile of eligible) {
+		if (!(await isCoveredByPackageStories(compFile, storyContents))) {
+			missing.push(compFile);
+		}
+	}
+	return missing;
+}
+
 /**
  * Lists every Svelte component under `dir` that lacks a Storybook story.
  *
@@ -230,59 +262,11 @@ export function hasStoryCovers(source, componentName) {
  */
 export async function findComponentsWithoutStory(dir = packagesDir) {
 	const missing = [];
-	let packageEntries;
-	try {
-		packageEntries = await readdir(dir, { withFileTypes: true });
-	} catch (error) {
-		if (error && error.code === 'ENOENT') return [];
-		throw error;
-	}
-
+	const packageEntries = await readPackageDirs(dir);
 	for (const pkgEntry of packageEntries) {
-		if (!pkgEntry.isDirectory()) continue;
-		const pkgPath = join(dir, pkgEntry.name);
-		const srcPath = join(pkgPath, 'src');
-
-		let srcStat;
-		try {
-			srcStat = await stat(srcPath);
-		} catch (error) {
-			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-				continue;
-			}
-			throw new Error(`Failed to stat src at ${srcPath}: ${error?.message ?? error}`, {
-				cause: error,
-			});
-		}
-		if (!srcStat.isDirectory()) continue;
-
-		const exportedTargets = await readPackageExportTargets(pkgPath);
-		const svelteFiles = await walk(srcPath);
-		const storyFiles = svelteFiles.filter((f) => f.endsWith('.stories.svelte'));
-		const componentFiles = svelteFiles.filter((f) => !f.endsWith('.stories.svelte'));
-
-		const internalPrefix = join(srcPath, 'internal');
-		const eligible = componentFiles.filter((file) => {
-			if (file.startsWith(internalPrefix)) {
-				const rel = '.' + file.slice(pkgPath.length);
-				return exportedTargets.has(rel);
-			}
-			return true;
-		});
-
-		const storyContents = await readStoryFiles(storyFiles);
-		for (const compFile of eligible) {
-			const compName = basename(compFile, '.svelte');
-			if (await hasSiblingStory(compFile)) continue;
-			const isCovered = storyContents.some(
-				(content) => hasComponentImport(content, compName) || hasStoryCovers(content, compName),
-			);
-			if (!isCovered) {
-				missing.push(compFile);
-			}
-		}
+		const pkgMissing = await findMissingInPackage(join(dir, pkgEntry.name));
+		missing.push(...pkgMissing);
 	}
-
 	return missing;
 }
 

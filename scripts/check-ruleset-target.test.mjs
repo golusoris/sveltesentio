@@ -126,3 +126,33 @@ describe('refPatternMatches', () => {
 		assert.doesNotMatch(source, /new RegExp\(/);
 	});
 });
+
+describe('checkTargetsMain branches', () => {
+	it('accepts conditions.ref_name when exclude key is omitted', async () => {
+		const ruleset = makeRuleset({ conditions: { ref_name: { include: [MAIN_REF] } } });
+		assert.deepEqual(await checkRuleset(await fixture({ ruleset })), { findings: [] });
+	});
+
+	it('refuses missing ref_name, non-array include, and empty include', async () => {
+		const cases = [
+			{ conditions: {} },
+			{ conditions: { ref_name: { include: MAIN_REF, exclude: [] } } },
+			{ conditions: { ref_name: { include: [], exclude: [] } } },
+		];
+		for (let i = 0; i < cases.length; i++) {
+			const ruleset = makeRuleset(cases[i]);
+			const { findings } = await checkRuleset(await fixture({ ruleset }));
+			assert.equal(findings.length, 1);
+			assert.match(findings[0], includeFinding);
+		}
+	});
+
+	it('checks every entry in conditions.ref_name.exclude beyond index 0', async () => {
+		const overrides = withRefs([MAIN_REF], ['refs/heads/lts-*', MAIN_REF, '~ALL']);
+		const ruleset = makeRuleset(overrides);
+		const { findings } = await checkRuleset(await fixture({ ruleset }));
+		assert.equal(findings.length, 2);
+		assert.match(findings[0], matchesFinding);
+		assert.match(findings[1], matchesFinding);
+	});
+});

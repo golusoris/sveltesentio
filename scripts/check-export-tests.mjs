@@ -80,6 +80,76 @@ function isTestFile(pkgDir, file) {
 	return /\.(test|spec)\.[cm]?[jt]s$/.test(file);
 }
 
+/** Returns parsed `package.json` in `pkgDir`, or `undefined` when missing or invalid JSON. */
+async function readPackageManifest(pkgDir) {
+	try {
+		return JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf8'));
+	} catch {
+		return undefined;
+	}
+}
+
+/** Records non-default value export names from `moduleSymbol` into `names` (returns nothing). */
+function collectEntryValueExports(checker, moduleSymbol, entryRel, names) {
+	for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
+		if (symbol.name === 'default' || !isValueSymbol(checker, symbol)) continue;
+		if (!names.has(symbol.name)) names.set(symbol.name, entryRel);
+	}
+}
+
+/** Returns value export names across `entries` and failures for unreadable entry modules. */
+function collectPackageExports(pkgDir, pkgName, entries) {
+	const program = ts.createProgram(entries, compilerOptions);
+	const checker = program.getTypeChecker();
+	const names = new Map();
+	const entryFailures = [];
+
+	for (const entry of entries) {
+		const entryRel = relative(pkgDir, entry);
+		const source = program.getSourceFile(entry);
+		const moduleSymbol = source ? checker.getSymbolAtLocation(source) : undefined;
+		if (!moduleSymbol) {
+			entryFailures.push(`${pkgName}: cannot read exports of ${entryRel}`);
+			continue;
+		}
+		collectEntryValueExports(checker, moduleSymbol, entryRel, names);
+	}
+	return { names, entryFailures };
+}
+
+/** Returns the newline-joined contents of every test file inside `pkgDir`. */
+async function readPackageTestText(pkgDir) {
+	const testFiles = (await listFiles(pkgDir)).filter((file) => isTestFile(pkgDir, file));
+	const contents = await Promise.all(testFiles.map((file) => readFile(file, 'utf8')));
+	return contents.join('\n');
+}
+
+/** Returns whether identifier `name` appears as a whole word in `testText`. */
+function isNamedInTests(name, testText) {
+	const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return new RegExp(`(?<![\\w$])${escaped}(?![\\w$])`).test(testText);
+}
+
+/** Returns `{ checked, failures }` for exported values of a single package in `pkgDir`. */
+async function checkPackageExportTests(pkgDir) {
+	const pkg = await readPackageManifest(pkgDir);
+	if (!pkg?.exports) return { checked: 0, failures: [] };
+
+	const entries = [...collectSourceTargets(pkg.exports)].map((target) => join(pkgDir, target));
+	if (entries.length === 0) return { checked: 0, failures: [] };
+
+	const { names, entryFailures } = collectPackageExports(pkgDir, pkg.name, entries);
+	const failures = [...entryFailures];
+	const testText = await readPackageTestText(pkgDir);
+
+	for (const [name, entry] of names) {
+		if (!isNamedInTests(name, testText)) {
+			failures.push(`${pkg.name}: ${name} (exported from ${entry}) is named in no test file`);
+		}
+	}
+	return { checked: names.size, failures };
+}
+
 /**
  * Lists every exported value under `packagesDir` that no test file of its own
  * package names.
@@ -93,44 +163,9 @@ export async function findUntestedExports(packagesDir) {
 	const dirents = await readdir(packagesDir, { withFileTypes: true });
 	for (const dirent of dirents) {
 		if (!dirent.isDirectory()) continue;
-		const pkgDir = join(packagesDir, dirent.name);
-		let pkg;
-		try {
-			pkg = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf8'));
-		} catch {
-			continue;
-		}
-		if (!pkg.exports) continue;
-		const entries = [...collectSourceTargets(pkg.exports)].map((target) => join(pkgDir, target));
-		if (entries.length === 0) continue;
-
-		const program = ts.createProgram(entries, compilerOptions);
-		const checker = program.getTypeChecker();
-		const names = new Map();
-		for (const entry of entries) {
-			const source = program.getSourceFile(entry);
-			const moduleSymbol = source && checker.getSymbolAtLocation(source);
-			if (!moduleSymbol) {
-				failures.push(`${pkg.name}: cannot read exports of ${relative(pkgDir, entry)}`);
-				continue;
-			}
-			for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
-				if (symbol.name === 'default' || !isValueSymbol(checker, symbol)) continue;
-				if (!names.has(symbol.name)) names.set(symbol.name, relative(pkgDir, entry));
-			}
-		}
-
-		const testFiles = (await listFiles(pkgDir)).filter((file) => isTestFile(pkgDir, file));
-		const testText = (await Promise.all(testFiles.map((file) => readFile(file, 'utf8')))).join(
-			'\n',
-		);
-		for (const [name, entry] of names) {
-			checked += 1;
-			const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			if (!new RegExp(`(?<![\\w$])${escaped}(?![\\w$])`).test(testText)) {
-				failures.push(`${pkg.name}: ${name} (exported from ${entry}) is named in no test file`);
-			}
-		}
+		const result = await checkPackageExportTests(join(packagesDir, dirent.name));
+		checked += result.checked;
+		failures.push(...result.failures);
 	}
 	return { checked, failures };
 }

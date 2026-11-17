@@ -470,3 +470,124 @@ describe('check-template-labels main', () => {
 		assert.ok(templates.every((t) => t.labels.length > 0));
 	});
 });
+
+describe('templateLabels branches', () => {
+	it('uses default template location in error messages when where is omitted', () => {
+		assert.throws(() => templateLabels(''), /template: template must be a YAML mapping/);
+	});
+
+	it('refuses scalar YAML documents as non-mappings', () => {
+		assert.throws(() => templateLabels('scalar-value\n', 'x.yml'), /x\.yml: template must be/);
+	});
+
+	it('names null vs typeof in invalid labels type error message', () => {
+		assert.throws(() => templateLabels('labels: null\n', 'x.yml'), /got null$/);
+		assert.throws(() => templateLabels('labels: 42\n', 'x.yml'), /got number$/);
+		assert.throws(() => templateLabels('labels: { a: 1 }\n', 'x.yml'), /got object$/);
+	});
+});
+
+describe('fetchRepoLabels branches', () => {
+	const reply = (status, body) =>
+		Promise.resolve({ ok: status === 200, status, json: () => Promise.resolve(body) });
+
+	it('throws when API returns a non-array JSON payload', async () => {
+		await assert.rejects(
+			fetchRepoLabels('o/r', 't', () => reply(200, { message: 'not-a-list' })),
+			/response is not a list/,
+		);
+	});
+
+	it('throws naming undefined when batch contains a null item', async () => {
+		await assert.rejects(
+			fetchRepoLabels('o/r', 't', () => reply(200, [null])),
+			/label at index 0 has invalid name, got undefined/,
+		);
+	});
+
+	it('returns empty list after one request when first page is empty', async () => {
+		let calls = 0;
+		const labels = await fetchRepoLabels('o/r', 't', () => {
+			calls += 1;
+			return reply(200, []);
+		});
+		assert.deepEqual(labels, []);
+		assert.equal(calls, 1);
+	});
+});
+
+describe('main branches', () => {
+	let dir;
+	let emptyDir;
+
+	before(async () => {
+		dir = await mkdtemp(join(tmpdir(), 'ctl-branches-'));
+		await writeFile(join(dir, 'bug.yml'), "name: Bug\nlabels: ['bug', 'triage']\n");
+		await writeFile(join(dir, 'labels.json'), JSON.stringify(['bug']));
+
+		emptyDir = await mkdtemp(join(tmpdir(), 'ctl-empty-'));
+		await writeFile(join(emptyDir, 'config.yml'), 'blank_issues_enabled: false\n');
+	});
+
+	after(async () => {
+		if (dir) await rm(dir, { recursive: true, force: true });
+		if (emptyDir) await rm(emptyDir, { recursive: true, force: true });
+	});
+
+	it('exits 1 when directory contains no issue forms', async () => {
+		const lines = [];
+		const { error } = console;
+		console.error = (msg) => lines.push(String(msg));
+		try {
+			const code = await main({ argv: [], env: {}, dir: emptyDir });
+			assert.equal(code, 1);
+			assert.match(lines.join('\n'), /No issue form found in .*; nothing was checked\./);
+		} finally {
+			console.error = error;
+		}
+	});
+
+	it('skips API revalidation when --labels-file is used with GitHub env vars set', async () => {
+		const { error } = console;
+		console.error = quiet.error;
+		try {
+			const code = await main({
+				argv: ['--labels-file', join(dir, 'labels.json')],
+				env: { GITHUB_REPOSITORY: 'owner/repo', GITHUB_TOKEN: 'fake' },
+				dir,
+				fetchImpl: () => {
+					throw new Error('unexpected API call');
+				},
+			});
+			assert.equal(code, 1);
+		} finally {
+			console.error = error;
+		}
+	});
+
+	it('exits 0 without revalidation when API page scan finds all template labels', async () => {
+		const fetchStub = (url) => {
+			if (!url.includes('?per_page=')) {
+				throw new Error(`unexpected revalidation call: ${url}`);
+			}
+			return Promise.resolve({
+				ok: true,
+				status: 200,
+				json: () => Promise.resolve([{ name: 'bug' }, { name: 'triage' }]),
+			});
+		};
+		const { log } = console;
+		console.log = quiet.log;
+		try {
+			const code = await main({
+				argv: [],
+				env: { GITHUB_REPOSITORY: 'owner/repo', GITHUB_TOKEN: 'fake' },
+				dir,
+				fetchImpl: fetchStub,
+			});
+			assert.equal(code, 0);
+		} finally {
+			console.log = log;
+		}
+	});
+});

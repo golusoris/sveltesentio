@@ -206,4 +206,27 @@ describe('check-playwright-image turbo passthrough checks', () => {
 			assert.equal(await main(dir), 1);
 		});
 	});
+
+	describe('extractTurboTasks branches', () => {
+		it('extracts tasks across multiple chained turbo run invocations', () => {
+			const cmd = 'pnpm turbo run build && npx turbo run test:e2e; yarn turbo run lint';
+			assert.deepEqual(extractTurboTasks(cmd), ['build', 'test:e2e', 'lint']);
+		});
+
+		it('skips short -F value flag and tolerates a trailing value flag', () => {
+			const cmd = 'turbo run -F docs test:e2e --filter';
+			assert.deepEqual(extractTurboTasks(cmd), ['test:e2e']);
+		});
+
+		it('handles bare --env-mode at end of command and before another value flag', () => {
+			assert.deepEqual(extractTurboTasks('turbo run test:e2e --env-mode'), ['test:e2e']);
+			const beforeFlag = 'turbo run --env-mode -F docs test:e2e';
+			assert.deepEqual(extractTurboTasks(beforeFlag), ['test:e2e']);
+		});
+
+		it('accepts valid task characters and skips non-matching non-flag tokens', () => {
+			const cmd = 'turbo run CI=1 ./script build_1-all:check';
+			assert.deepEqual(extractTurboTasks(cmd), ['build_1-all:check']);
+		});
+	});
 });

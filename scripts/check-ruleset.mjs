@@ -300,24 +300,34 @@ function checkMainExclude(entry, findings) {
 	}
 }
 
+/** Returns true when `refs` names an allowed main-covering ref in `include`. */
+function includesMainRef(refs) {
+	return Array.isArray(refs?.include) && refs.include.some((ref) => MAIN_INCLUDES.includes(ref));
+}
+
+/** Returns findings for `refs.exclude` when `refs` declares an `exclude` property. */
+function mainExcludeFindings(refs) {
+	if (!refs || !Object.hasOwn(refs, 'exclude')) return [];
+	if (!Array.isArray(refs.exclude)) {
+		return [`${RULESET_PATH}: conditions.ref_name.exclude must be an array`];
+	}
+	const findings = [];
+	for (let i = 0; i < refs.exclude.length; i++) checkMainExclude(refs.exclude[i], findings);
+	return findings;
+}
+
 function checkTargetsMain(doc, findings) {
 	if (Object.hasOwn(doc, 'target') && doc.target !== 'branch') {
 		findings.push(`${RULESET_PATH}: target is '${doc.target}', not branch`);
 	}
 	const refs = doc.conditions?.ref_name;
-	if (!Array.isArray(refs?.include) || !refs.include.some((ref) => MAIN_INCLUDES.includes(ref))) {
+	if (!includesMainRef(refs)) {
 		findings.push(
 			`${RULESET_PATH}: conditions.ref_name.include must name ` +
 				'refs/heads/main, ~DEFAULT_BRANCH or ~ALL',
 		);
 	}
-	if (refs && Object.hasOwn(refs, 'exclude')) {
-		if (!Array.isArray(refs.exclude)) {
-			findings.push(`${RULESET_PATH}: conditions.ref_name.exclude must be an array`);
-			return;
-		}
-		for (let i = 0; i < refs.exclude.length; i++) checkMainExclude(refs.exclude[i], findings);
-	}
+	findings.push(...mainExcludeFindings(refs));
 }
 
 function checkIntegration(check, findings) {

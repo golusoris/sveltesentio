@@ -101,6 +101,26 @@ function parseWorkflowJobs(source, file) {
 	return { entries };
 }
 
+/** Returns true when a job definition calls a reusable workflow via a non-blank `uses` string. */
+function isReusableWorkflowCall(jobDef) {
+	return typeof jobDef.uses === 'string' && jobDef.uses.trim().length > 0;
+}
+
+/** Returns the timeout-minutes violation message for a standard job, or null when valid. */
+function standardTimeoutMessage(file, jobId, timeout) {
+	if (timeout === null || timeout === undefined) {
+		return `${file}: job '${jobId}' missing required integer 'timeout-minutes' (${MIN_TIMEOUT_MINUTES}..${MAX_TIMEOUT_MINUTES})`;
+	}
+	if (!Number.isInteger(timeout)) {
+		const repr = typeof timeout === 'string' ? JSON.stringify(timeout) : String(timeout);
+		return `${file}: job '${jobId}' timeout-minutes must be an integer, got ${repr}`;
+	}
+	if (timeout < MIN_TIMEOUT_MINUTES || timeout > MAX_TIMEOUT_MINUTES) {
+		return `${file}: job '${jobId}' timeout-minutes must be between ${MIN_TIMEOUT_MINUTES} and ${MAX_TIMEOUT_MINUTES}, got ${timeout}`;
+	}
+	return null;
+}
+
 /**
  * Returns the finding message for one job, or null when the job is valid.
  * A job calling a reusable workflow (`uses:`) cannot take timeout-minutes
@@ -111,24 +131,12 @@ function jobTimeoutMessage(file, jobId, jobDef) {
 	if (!isMapping(jobDef)) {
 		return `${file}: job '${jobId}' must be a YAML mapping`;
 	}
-	const isReusableCall = typeof jobDef.uses === 'string' && jobDef.uses.trim().length > 0;
-	if (isReusableCall) {
+	if (isReusableWorkflowCall(jobDef)) {
 		return 'timeout-minutes' in jobDef
 			? `${file}: job '${jobId}' calls a reusable workflow and cannot declare timeout-minutes (unsupported key per GitHub Actions syntax: ${REUSABLE_DOCS})`
 			: null;
 	}
-	const timeout = jobDef['timeout-minutes'];
-	if (timeout === null || timeout === undefined) {
-		return `${file}: job '${jobId}' missing required integer 'timeout-minutes' (${MIN_TIMEOUT_MINUTES}..${MAX_TIMEOUT_MINUTES})`;
-	}
-	if (typeof timeout !== 'number' || !Number.isInteger(timeout)) {
-		const repr = typeof timeout === 'string' ? JSON.stringify(timeout) : String(timeout);
-		return `${file}: job '${jobId}' timeout-minutes must be an integer, got ${repr}`;
-	}
-	if (timeout < MIN_TIMEOUT_MINUTES || timeout > MAX_TIMEOUT_MINUTES) {
-		return `${file}: job '${jobId}' timeout-minutes must be between ${MIN_TIMEOUT_MINUTES} and ${MAX_TIMEOUT_MINUTES}, got ${timeout}`;
-	}
-	return null;
+	return standardTimeoutMessage(file, jobId, jobDef['timeout-minutes']);
 }
 
 /**

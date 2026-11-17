@@ -172,4 +172,60 @@ describe('check-declared-imports', () => {
 			]);
 		});
 	});
+
+	describe('internalRangeViolations branches', () => {
+		it('returns empty array for empty manifests list (boundary)', () => {
+			assert.deepEqual(internalRangeViolations([]), []);
+		});
+
+		it('returns empty array when all four dependency fields admit workspace versions', () => {
+			const manifests = [
+				{ name: '@sveltesentio/a', version: '1.2.0' },
+				{
+					name: '@sveltesentio/b',
+					version: '1.0.0',
+					dependencies: { '@sveltesentio/a': 'workspace:*' },
+					devDependencies: { '@sveltesentio/a': 'workspace:^' },
+					peerDependencies: { '@sveltesentio/a': '^1.0.0' },
+					optionalDependencies: { '@sveltesentio/a': '~1.2.0' },
+				},
+			];
+			assert.deepEqual(internalRangeViolations(manifests), []);
+		});
+
+		it('checks all four dependency fields in manifest order', () => {
+			const manifests = [
+				{ name: '@sveltesentio/a', version: '2.0.0' },
+				{
+					name: '@sveltesentio/b',
+					version: '1.0.0',
+					dependencies: { '@sveltesentio/a': '^1.0.0' },
+					devDependencies: { '@sveltesentio/a': 'workspace:latest' },
+					peerDependencies: { '@sveltesentio/missing': '*' },
+					optionalDependencies: { '@sveltesentio/a': '~1.5.0' },
+				},
+			];
+			assert.deepEqual(internalRangeViolations(manifests), [
+				'@sveltesentio/b dependencies @sveltesentio/a: "^1.0.0" excludes workspace version 2.0.0',
+				'@sveltesentio/b devDependencies @sveltesentio/a: "workspace:latest" is not a semver range',
+				'@sveltesentio/b peerDependencies @sveltesentio/missing: names no workspace package',
+				'@sveltesentio/b optionalDependencies @sveltesentio/a: "~1.5.0" excludes workspace version 2.0.0',
+			]);
+		});
+
+		it('ignores package names without the @sveltesentio/ prefix (boundary)', () => {
+			const manifests = [
+				{
+					name: '@sveltesentio/a',
+					version: '1.0.0',
+					dependencies: {
+						'@sveltesentio': 'not-a-range',
+						'@sveltesentio-extra/pkg': 'not-a-range',
+						semver: '^7.0.0',
+					},
+				},
+			];
+			assert.deepEqual(internalRangeViolations(manifests), []);
+		});
+	});
 });

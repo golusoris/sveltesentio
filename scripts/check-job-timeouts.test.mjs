@@ -225,4 +225,51 @@ describe('check-job-timeouts', () => {
 			);
 		});
 	});
+
+	describe('jobTimeoutMessage', () => {
+		it('refuses non-mapping job definitions (null, list, scalar)', () => {
+			for (const body of ['null', '[step]', 'scalar']) {
+				const findings = findJobTimeoutViolations(`jobs:\n  bad: ${body}\n`, 'ci.yml');
+				assert.equal(findings.length, 1);
+				assert.equal(findings[0].job, 'bad');
+				assert.match(findings[0].message, /job 'bad' must be a YAML mapping/);
+			}
+		});
+
+		it('treats blank or non-string uses as a standard job requiring timeout-minutes', () => {
+			const blankUses = makeJob('runs-on: ubuntu-26.04\n    uses: "   "');
+			const missing = findJobTimeoutViolations(blankUses, 'ci.yml');
+			assert.equal(missing.length, 1);
+			assert.match(missing[0].message, /missing required integer 'timeout-minutes'/);
+
+			const numericUses = makeJob('uses: 123\n    timeout-minutes: 5');
+			assert.deepEqual(findJobTimeoutViolations(numericUses, 'ci.yml'), []);
+		});
+
+		it('refuses reusable workflow call when timeout-minutes key is present with null', () => {
+			const source = [
+				'jobs:',
+				'  reusable:',
+				'    uses: ./.github/workflows/reusable.yml',
+				'    timeout-minutes: null',
+			].join('\n');
+			const findings = findJobTimeoutViolations(source, 'caller.yml');
+			assert.equal(findings.length, 1);
+			assert.match(findings[0].message, /calls a reusable workflow and cannot declare/);
+		});
+
+		it('refuses null timeout-minutes on a standard job as missing', () => {
+			const source = makeJob('runs-on: ubuntu-26.04\n    timeout-minutes: null');
+			const findings = findJobTimeoutViolations(source, 'test.yml');
+			assert.equal(findings.length, 1);
+			assert.match(findings[0].message, /missing required integer 'timeout-minutes'/);
+		});
+
+		it('formats non-string non-integer timeout-minutes via String()', () => {
+			const source = makeJob('runs-on: ubuntu-26.04\n    timeout-minutes: true');
+			const findings = findJobTimeoutViolations(source, 'test.yml');
+			assert.equal(findings.length, 1);
+			assert.match(findings[0].message, /must be an integer, got true$/);
+		});
+	});
 });
