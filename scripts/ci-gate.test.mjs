@@ -223,3 +223,89 @@ describe('ci.yml matches the lists', () => {
 		for (const job of MUST_SUCCEED) assert.equal(jobIf(job), undefined, job);
 	});
 });
+
+describe('main: branches', () => {
+	/** Runs `main` while capturing stdout and stderr lines. */
+	function runMain(env) {
+		const stdout = [];
+		const stderr = [];
+		const { log, error } = console;
+		console.log = (line) => stdout.push(String(line));
+		console.error = (line) => stderr.push(String(line));
+		try {
+			const code = env === undefined ? main() : main(env);
+			return { code, stdout, stderr };
+		} finally {
+			console.log = log;
+			console.error = error;
+		}
+	}
+
+	it('positive: zero failures branch prints passed lines and returns 0', () => {
+		const res = runMain({
+			NEEDS: JSON.stringify(allSucceeded()),
+			EVENT_NAME: 'pull_request',
+		});
+		assert.equal(res.code, 0);
+		assert.deepEqual(res.stderr, []);
+		assert.equal(res.stdout.length, KNOWN_NEEDS.length);
+		assert.ok(res.stdout.includes('lint: success'));
+	});
+
+	it('negative: non-empty failures branch logs ::error:: lines and returns 1', () => {
+		const needs = allSucceeded();
+		needs.e2e = { result: 'failure', outputs: {} };
+		const res = runMain({
+			NEEDS: JSON.stringify(needs),
+			EVENT_NAME: 'pull_request',
+		});
+		assert.equal(res.code, 1);
+		assert.ok(res.stdout.includes('lint: success'));
+		assert.deepEqual(res.stderr, ['::error::e2e: failure']);
+	});
+
+	it('negative and boundary: missing or invalid NEEDS JSON logs parse error', () => {
+		for (const env of [
+			{ NEEDS: '{bad', EVENT_NAME: 'pull_request' },
+			{ NEEDS: '', EVENT_NAME: 'pull_request' },
+			{ EVENT_NAME: 'pull_request' },
+		]) {
+			const res = runMain(env);
+			assert.equal(res.code, 1);
+			assert.equal(res.stderr.length, 1);
+			assert.match(res.stderr[0], /^::error::NEEDS is not JSON: /);
+		}
+	});
+
+	it('negative and boundary: empty EVENT_NAME or non-plain-object NEEDS returns 1', () => {
+		const expected = ['::error::NEEDS must be a JSON object and EVENT_NAME must be set.'];
+		for (const env of [
+			{ NEEDS: '{}', EVENT_NAME: '' },
+			{ NEEDS: '{}' },
+			{ NEEDS: 'null', EVENT_NAME: 'pull_request' },
+			{ NEEDS: '42', EVENT_NAME: 'pull_request' },
+			{ NEEDS: '[]', EVENT_NAME: 'pull_request' },
+		]) {
+			const res = runMain(env);
+			assert.equal(res.code, 1);
+			assert.deepEqual(res.stderr, expected);
+		}
+	});
+
+	it('positive: omitted env parameter reads NEEDS and EVENT_NAME from process.env', () => {
+		const savedNeeds = process.env.NEEDS;
+		const savedEvent = process.env.EVENT_NAME;
+		process.env.NEEDS = JSON.stringify(allSucceeded());
+		process.env.EVENT_NAME = 'pull_request';
+		try {
+			const res = runMain(undefined);
+			assert.equal(res.code, 0);
+			assert.deepEqual(res.stderr, []);
+		} finally {
+			if (savedNeeds === undefined) delete process.env.NEEDS;
+			else process.env.NEEDS = savedNeeds;
+			if (savedEvent === undefined) delete process.env.EVENT_NAME;
+			else process.env.EVENT_NAME = savedEvent;
+		}
+	});
+});

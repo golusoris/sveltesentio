@@ -308,6 +308,58 @@ export function loadStoryPackages(rootDir = REPO_ROOT) {
 }
 
 /**
+ * Returns the getFileInfo function from a Prettier module namespace.
+ * @param {{
+ *   getFileInfo?: (filePath: string, options?: Record<string, unknown>) => Promise<{ ignored: boolean, inferredParser: string | null }>,
+ *   default?: { getFileInfo?: (filePath: string, options?: Record<string, unknown>) => Promise<{ ignored: boolean, inferredParser: string | null }> },
+ * }} prettierModule
+ */
+export function pickPrettierGetFileInfo(prettierModule) {
+	return prettierModule.getFileInfo ?? prettierModule.default?.getFileInfo;
+}
+
+/**
+ * Returns the path to .prettierignore in rootDir when present, or undefined.
+ * @param {string} rootDir
+ * @returns {string | undefined}
+ */
+function findPrettierIgnore(rootDir) {
+	const ignorePath = join(rootDir, '.prettierignore');
+	return existsSync(ignorePath) ? ignorePath : undefined;
+}
+
+/**
+ * Returns true when an error has code ENOENT or ENOTDIR.
+ * @param {any} error
+ * @returns {boolean}
+ */
+function isMissingPathError(error) {
+	const code = error?.code;
+	return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
+/**
+ * Returns true when Prettier formats the existing file at fullPath without ignoring it.
+ * @param {(filePath: string, options: { ignorePath: string | undefined, resolveConfig: boolean }) => Promise<{ ignored: boolean, inferredParser: string | null }>} getFileInfo
+ * @param {string} fullPath
+ * @param {string} relPath
+ * @param {string | undefined} ignorePath
+ * @returns {Promise<boolean>}
+ */
+export async function isPrettierHandled(getFileInfo, fullPath, relPath, ignorePath) {
+	try {
+		const info = await getFileInfo(fullPath, { ignorePath, resolveConfig: true });
+		return !info.ignored && info.inferredParser !== null;
+	} catch (error) {
+		if (isMissingPathError(error)) return false;
+		const detail = error?.message ?? error;
+		throw new Error(`ci-affected: prettier getFileInfo failed for ${relPath}: ${detail}`, {
+			cause: error,
+		});
+	}
+}
+
+/**
  * Resolves space-separated files Prettier handles (not deleted, not ignored, supported parser).
  * @param {string[]} files
  * @param {string} [rootDir]
@@ -315,35 +367,16 @@ export function loadStoryPackages(rootDir = REPO_ROOT) {
  */
 export async function resolvePrettierFiles(files, rootDir = REPO_ROOT) {
 	if (!files || files.length === 0) return '';
-	const prettier = await import('prettier');
-	const getFileInfo = prettier.getFileInfo ?? prettier.default?.getFileInfo;
-	const ignorePath = join(rootDir, '.prettierignore');
-	const hasIgnore = existsSync(ignorePath);
+	const getFileInfo = pickPrettierGetFileInfo(await import('prettier'));
+	const ignorePath = findPrettierIgnore(rootDir);
 	const handled = [];
 
 	for (let i = 0; i < files.length; i += 1) {
 		const rel = files[i].replace(/\\/g, '/').replace(/^\.\//, '');
 		const full = join(rootDir, rel);
 		if (!existsSync(full)) continue;
-
-		try {
-			const info = await getFileInfo(full, {
-				ignorePath: hasIgnore ? ignorePath : undefined,
-				resolveConfig: true,
-			});
-			if (!info.ignored && info.inferredParser !== null) {
-				handled.push(rel);
-			}
-		} catch (error) {
-			if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-				continue;
-			}
-			throw new Error(
-				`ci-affected: prettier getFileInfo failed for ${rel}: ${error?.message ?? error}`,
-				{
-					cause: error,
-				},
-			);
+		if (await isPrettierHandled(getFileInfo, full, rel, ignorePath)) {
+			handled.push(rel);
 		}
 	}
 
@@ -437,6 +470,64 @@ async function writeGithubOutput(githubOutput, result) {
 }
 
 /**
+ * Returns the explicit option value, the environment variable value, or the fallback.
+ * @template T
+ * @param {T | undefined} value
+ * @param {string} envKey
+ * @param {T} fallback
+ * @returns {T}
+ */
+function resolveEnvOption(value, envKey, fallback) {
+	return value ?? process.env[envKey] ?? fallback;
+}
+
+/**
+ * Returns the effective CI options with environment and repository defaults applied.
+ * @param {{
+ *   ciEvent?: string | null,
+ *   baseRef?: string,
+ *   headRef?: string,
+ *   githubOutput?: string | null,
+ *   rootDir?: string,
+ * }} options
+ */
+function resolveCiOptions(options) {
+	return {
+		rootDir: options.rootDir ?? REPO_ROOT,
+		ciEvent: resolveEnvOption(options.ciEvent, 'CI_EVENT', null),
+		githubOutput: resolveEnvOption(options.githubOutput, 'GITHUB_OUTPUT', null),
+		baseRef: resolveEnvOption(options.baseRef, 'BASE_REF', 'origin/main'),
+		headRef: resolveEnvOption(options.headRef, 'HEAD_REF', 'HEAD'),
+	};
+}
+
+/**
+ * Returns explicitFiles when provided, or the git diff file list between baseRef and headRef.
+ * @param {string[] | null | undefined} explicitFiles
+ * @param {string} baseRef
+ * @param {string} headRef
+ * @returns {string[]}
+ */
+function resolveChangedFiles(explicitFiles, baseRef, headRef) {
+	if (explicitFiles !== undefined && explicitFiles !== null) {
+		return explicitFiles;
+	}
+	return getGitDiffFiles(baseRef, headRef);
+}
+
+/**
+ * Returns true when all packages are affected or an affected package has stories.
+ * @param {{ allAffected: boolean, affectedPackages: string[] }} analysis
+ * @param {string} [rootDir]
+ * @returns {boolean}
+ */
+export function hasAffectedStories(analysis, rootDir = REPO_ROOT) {
+	const storyPackages = loadStoryPackages(rootDir);
+	if (analysis.allAffected) return true;
+	return analysis.affectedPackages.some((pkg) => storyPackages.includes(pkg));
+}
+
+/**
  * Runs the complete change impact and scope analysis.
  * @param {{
  *   ciEvent?: string | null,
@@ -459,11 +550,7 @@ async function writeGithubOutput(githubOutput, result) {
  * }>}
  */
 export async function runCiAffected(options = {}) {
-	const rootDir = options.rootDir ?? REPO_ROOT;
-	const ciEvent = options.ciEvent ?? process.env.CI_EVENT ?? null;
-	const githubOutput = options.githubOutput ?? process.env.GITHUB_OUTPUT ?? null;
-	const baseRef = options.baseRef ?? process.env.BASE_REF ?? 'origin/main';
-	const headRef = options.headRef ?? process.env.HEAD_REF ?? 'HEAD';
+	const { rootDir, ciEvent, githubOutput, baseRef, headRef } = resolveCiOptions(options);
 
 	if (isFullEvent(ciEvent)) {
 		const result = createFullResult();
@@ -472,17 +559,10 @@ export async function runCiAffected(options = {}) {
 		return result;
 	}
 
-	const files =
-		options.explicitFiles !== undefined && options.explicitFiles !== null
-			? options.explicitFiles
-			: getGitDiffFiles(baseRef, headRef);
-
+	const files = resolveChangedFiles(options.explicitFiles, baseRef, headRef);
 	const analysis = analyzeChanges(files, options.readers);
 	const prettierFiles = analysis.allAffected ? '' : await resolvePrettierFiles(files, rootDir);
-
-	const storyPackages = loadStoryPackages(rootDir);
-	const hasStories =
-		analysis.allAffected || analysis.affectedPackages.some((pkg) => storyPackages.includes(pkg));
+	const hasStories = hasAffectedStories(analysis, rootDir);
 
 	const result = {
 		...analysis,

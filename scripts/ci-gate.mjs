@@ -102,20 +102,38 @@ export function evaluateGate(needs, event) {
 	return { passed, failures };
 }
 
-/** Returns the exit code: 0 when every need succeeded or was skipped for a stated reason. */
-export function main(env = process.env) {
+/** Returns true when `value` is a non-null, non-array object. */
+function isPlainObject(value) {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Returns the validated `needs` map and `event` name from `env`, or null after logging an error.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @returns {{ needs: Record<string, { result?: string, outputs?: Record<string, string> }>, event: string } | null}
+ */
+function parseGateInputs(env) {
 	const event = env.EVENT_NAME ?? '';
 	let needs;
 	try {
 		needs = JSON.parse(env.NEEDS ?? '');
 	} catch (error) {
 		console.error(`::error::NEEDS is not JSON: ${error.message}`);
-		return 1;
+		return null;
 	}
-	if (event === '' || needs === null || typeof needs !== 'object' || Array.isArray(needs)) {
+	if (event === '' || !isPlainObject(needs)) {
 		console.error('::error::NEEDS must be a JSON object and EVENT_NAME must be set.');
-		return 1;
+		return null;
 	}
+	return { needs, event };
+}
+
+/** Returns the exit code: 0 when every need succeeded or was skipped for a stated reason. */
+export function main(env = process.env) {
+	const inputs = parseGateInputs(env);
+	if (inputs === null) return 1;
+	const { needs, event } = inputs;
 	const { passed, failures } = evaluateGate(needs, event);
 	for (const line of passed) console.log(line);
 	for (const line of failures) console.error(`::error::${line}`);
