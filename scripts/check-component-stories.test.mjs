@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -8,6 +8,7 @@ import {
 	findComponentsWithoutStory,
 	hasComponentImport,
 	hasStoryCovers,
+	readPackageExportTargets,
 	walk,
 } from './check-component-stories.mjs';
 
@@ -244,6 +245,187 @@ describe('check-component-stories', () => {
 		it('repository self-test returns []', async () => {
 			const missing = await findComponentsWithoutStory(join(root, 'packages'));
 			assert.deepEqual(missing, []);
+		});
+	});
+
+	describe('walk branches', () => {
+		it('returns empty array when directory is missing (ENOENT)', async () => {
+			const found = await walk(join(tempRoot, 'walk-missing-dir'));
+			assert.deepEqual(found, []);
+		});
+
+		it('returns empty array when a regular file is passed as dir (ENOTDIR)', async () => {
+			const file = join(tempRoot, 'walk-regular.svelte');
+			await writeFile(file, '<div></div>');
+			const found = await walk(file);
+			assert.deepEqual(found, []);
+		});
+
+		it('rethrows non-ENOENT and non-ENOTDIR readdir errors', async () => {
+			const badPath = join(tempRoot, 'ccs-invalid\0dir');
+			await assert.rejects(
+				() => walk(badPath),
+				(err) => err !== null && err.code !== 'ENOENT' && err.code !== 'ENOTDIR',
+			);
+		});
+
+		it('drops non-.svelte files while keeping .svelte files', async () => {
+			const dir = join(tempRoot, 'walk-filter-drop');
+			await writeTree(dir, {
+				'Keep.svelte': '<div></div>',
+				'drop.ts': 'export const x = 1;',
+				'drop.js': 'export const y = 2;',
+				'readme.md': '# doc',
+			});
+			assert.deepEqual(await walk(dir), [join(dir, 'Keep.svelte')]);
+		});
+
+		it('preserves depth-first readdir entry order via reverse stack push', async () => {
+			const dir = join(tempRoot, 'walk-order');
+			await writeTree(dir, {
+				'dirA/One.svelte': '',
+				'dirB/Two.svelte': '',
+				'Root.svelte': '',
+			});
+			const byEntry = {
+				dirA: join(dir, 'dirA', 'One.svelte'),
+				dirB: join(dir, 'dirB', 'Two.svelte'),
+				'Root.svelte': join(dir, 'Root.svelte'),
+			};
+			const entries = await readdir(dir);
+			const expected = entries.map((name) => byEntry[name]);
+			assert.deepEqual(await walk(dir), expected);
+		});
+	});
+
+	describe('readPackageExportTargets', () => {
+		it('returns empty Set when package.json is missing (ENOENT)', async () => {
+			const pkgPath = join(tempRoot, 'rpet-missing');
+			await mkdir(pkgPath, { recursive: true });
+			const targets = await readPackageExportTargets(pkgPath);
+			assert.deepEqual([...targets], []);
+		});
+
+		it('rejects with path and cause on non-ENOENT package.json read error', async () => {
+			const pkgPath = join(tempRoot, 'rpet-eisdir');
+			const pkgJsonDir = join(pkgPath, 'package.json');
+			await mkdir(pkgJsonDir, { recursive: true });
+			await assert.rejects(
+				() => readPackageExportTargets(pkgPath),
+				(err) => {
+					assert.ok(err instanceof Error);
+					assert.ok(err.message.includes(pkgJsonDir));
+					assert.ok(err.cause);
+					return true;
+				},
+			);
+		});
+
+		it('rejects with path and cause when package.json contains invalid JSON', async () => {
+			const pkgPath = join(tempRoot, 'rpet-bad-json');
+			const pkgJsonPath = join(pkgPath, 'package.json');
+			await writeTree(pkgPath, { 'package.json': '{ malformed' });
+			await assert.rejects(
+				() => readPackageExportTargets(pkgPath),
+				(err) => {
+					assert.ok(err instanceof Error);
+					assert.ok(err.message.includes(pkgJsonPath));
+					assert.ok(err.cause);
+					return true;
+				},
+			);
+		});
+
+		it('returns empty Set when package.json has no exports field (boundary)', async () => {
+			const pkgPath = join(tempRoot, 'rpet-no-exports');
+			await writeTree(pkgPath, {
+				'package.json': JSON.stringify({ name: '@fixture/no-exports' }),
+			});
+			const targets = await readPackageExportTargets(pkgPath);
+			assert.deepEqual([...targets], []);
+		});
+
+		it('collects relative ./ export targets and skips non-relative entries', async () => {
+			const pkgPath = join(tempRoot, 'rpet-targets');
+			await writeTree(pkgPath, {
+				'package.json': JSON.stringify({
+					name: '@fixture/targets',
+					exports: {
+						'.': { svelte: './src/index.svelte', types: 'dist/index.d.ts' },
+						'./sub': './src/Sub.svelte',
+					},
+				}),
+			});
+			const targets = await readPackageExportTargets(pkgPath);
+			assert.deepEqual([...targets].sort(), ['./src/Sub.svelte', './src/index.svelte']);
+		});
+	});
+
+	describe('findComponentsWithoutStory branches', () => {
+		it('returns empty array when packages directory is missing (ENOENT)', async () => {
+			const missing = await findComponentsWithoutStory(join(tempRoot, 'no-such-packages'));
+			assert.deepEqual(missing, []);
+		});
+
+		it('rethrows non-ENOENT error when packages path is a regular file', async () => {
+			const file = join(tempRoot, 'packages-is-file.txt');
+			await writeFile(file, 'not a dir');
+			await assert.rejects(
+				() => findComponentsWithoutStory(file),
+				(err) => err !== null && err.code === 'ENOTDIR',
+			);
+		});
+
+		it('skips non-directory entries in packages directory', async () => {
+			const packages = join(tempRoot, 'fixture-non-dir-entry');
+			await writeTree(packages, {
+				'README.md': '# notes',
+				'demo/package.json': JSON.stringify({ name: '@fixture/demo' }),
+				'demo/src/Button.svelte': '<button></button>',
+				'demo/src/Button.stories.svelte': '<script module></script>',
+			});
+			assert.deepEqual(await findComponentsWithoutStory(packages), []);
+		});
+
+		it('skips package when src directory is missing (ENOENT)', async () => {
+			const packages = join(tempRoot, 'fixture-no-src');
+			await writeTree(packages, {
+				'demo/package.json': JSON.stringify({ name: '@fixture/demo' }),
+			});
+			assert.deepEqual(await findComponentsWithoutStory(packages), []);
+		});
+
+		it('skips package when src path is a regular file rather than a directory', async () => {
+			const packages = join(tempRoot, 'fixture-src-is-file');
+			await writeTree(packages, {
+				'demo/package.json': JSON.stringify({ name: '@fixture/demo' }),
+				'demo/src': 'not a directory',
+			});
+			assert.deepEqual(await findComponentsWithoutStory(packages), []);
+		});
+
+		it('rejects with path and cause on unexpected stat error for src', async (t) => {
+			const packages = join(tempRoot, 'fixture-src-stat-err');
+			const srcPath = join(packages, 'demo', 'src');
+			await mkdir(join(packages, 'demo'), { recursive: true });
+			try {
+				await symlink(srcPath, srcPath);
+			} catch (err) {
+				if (process.platform === 'win32' && err?.code === 'EPERM') {
+					t.skip('Windows symlink creation requires Developer Mode or elevation');
+					return;
+				}
+				throw err;
+			}
+			await assert.rejects(
+				() => findComponentsWithoutStory(packages),
+				(err) => {
+					assert.ok(err instanceof Error);
+					assert.ok(err.message.includes(srcPath));
+					assert.ok(err.cause);
+					return true;
+				},
+			);
 		});
 	});
 });

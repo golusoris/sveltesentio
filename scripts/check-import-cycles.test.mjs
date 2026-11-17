@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -288,6 +288,73 @@ describe('check-import-cycles', () => {
 				},
 				(err) => err && /failing closed/i.test(err.message),
 			);
+		});
+	});
+
+	describe('walk branches', () => {
+		it('returns empty array when a regular file is passed as dir (ENOTDIR)', async () => {
+			const file = join(tempRoot, 'regular-file.ts');
+			await writeFile(file, 'export const x = 1;\n');
+			const found = await walk(file);
+			assert.deepEqual(found, []);
+		});
+
+		it('rethrows non-ENOENT and non-ENOTDIR readdir errors', async () => {
+			const badPath = join(tempRoot, 'invalid\0dir');
+			await assert.rejects(
+				() => walk(badPath),
+				(err) => err !== null && err.code !== 'ENOENT' && err.code !== 'ENOTDIR',
+			);
+		});
+
+		it('applies custom keepFile and enterDir predicates and skips rejected dirs', async () => {
+			const base = join(tempRoot, 'custom-predicates');
+			await mkdir(join(base, 'keep'), { recursive: true });
+			await mkdir(join(base, 'skip.custom'), { recursive: true });
+			const kept = join(base, 'keep', 'match.custom');
+			const skippedNested = join(base, 'skip.custom', 'inside.custom');
+			const droppedTs = join(base, 'keep', 'drop.ts');
+			await writeFile(kept, '');
+			await writeFile(skippedNested, '');
+			await writeFile(droppedTs, '');
+
+			const filter = {
+				keepFile: (e) => e.name.endsWith('.custom'),
+				enterDir: (e) => !e.name.startsWith('skip'),
+			};
+			assert.deepEqual(await walk(base, [], filter), [kept]);
+			const onlyKeep = await walk(base, [], { keepFile: filter.keepFile });
+			assert.deepEqual(onlyKeep.sort(), [kept, skippedNested].sort());
+			assert.deepEqual(await walk(base, [], { enterDir: filter.enterDir }), [droppedTs]);
+		});
+
+		it('appends matching paths to a caller-supplied out array', async () => {
+			const base = join(tempRoot, 'caller-out');
+			await mkdir(base, { recursive: true });
+			const file = join(base, 'item.ts');
+			await writeFile(file, '');
+			const out = ['existing.ts'];
+			const returned = await walk(base, out);
+			assert.equal(returned, out);
+			assert.deepEqual(out, ['existing.ts', file]);
+		});
+
+		it('preserves depth-first readdir entry order via reverse stack push', async () => {
+			const base = join(tempRoot, 'walk-order');
+			await mkdir(join(base, 'dirA'), { recursive: true });
+			await mkdir(join(base, 'dirB'), { recursive: true });
+			await writeFile(join(base, 'dirA', 'a.ts'), '');
+			await writeFile(join(base, 'dirB', 'b.ts'), '');
+			await writeFile(join(base, 'root.ts'), '');
+
+			const byEntry = {
+				dirA: join(base, 'dirA', 'a.ts'),
+				dirB: join(base, 'dirB', 'b.ts'),
+				'root.ts': join(base, 'root.ts'),
+			};
+			const entries = await readdir(base);
+			const expected = entries.map((name) => byEntry[name]);
+			assert.deepEqual(await walk(base), expected);
 		});
 	});
 });
