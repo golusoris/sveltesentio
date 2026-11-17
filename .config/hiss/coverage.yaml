@@ -108,10 +108,13 @@ rules:
           `make verify-all` and in the ci.yml `lint` job. It fails when a
           workflow job that runs steps has no integer `timeout-minutes` from 1
           to 120, and when a job calling a reusable workflow declares the key,
-          which GitHub Actions refuses there. Fixtures:
+          which GitHub Actions refuses there. Standard jobs whose run steps
+          match pnpm install or pnpm i require at least 10 minutes, including
+          YAML step aliases; STEP_LIMIT bounds the step scan. Fixtures:
           testdata/HISS-02/internal/positive/job-without-timeout.yml is refused
           (exit 1) and negative/job-with-timeout.yml passes (exit 0);
-          scripts/check-job-timeouts.test.mjs replays both fixtures in
+          positive/install-job-short-timeout.yml is refused (exit 1).
+          scripts/check-job-timeouts.test.mjs replays these fixtures in
           `pnpm test:scripts`, beside the unit cases for each shape.
         rationale: >-
           A job without a timeout runs for the six-hour default when it hangs;
@@ -396,6 +399,17 @@ rules:
           `pnpm lint:scripts`, and turbo.json names the root configs as
           globalDependencies so a cached result cannot outlive the config that
           produced it.
+          scripts/check-workflow-concurrency.mjs (`pnpm check:workflow-concurrency`)
+          runs after check:job-timeouts in `make verify-all` and the ci.yml
+          lint job. For workflows with any non-pull_request trigger, workflow
+          and job concurrency groups must contain github.run_id or github.sha
+          in an expression; cancel-in-progress must be absent, false, or the
+          exact pull_request event condition. The only exception is
+          release-please.yml#format-release-pr, where a newer release-branch
+          push supersedes older formatting; missing or compliant exceptions
+          fail the check. scripts/check-workflow-concurrency.test.mjs replays
+          testdata/HISS-18/internal/positive/push-group-cancels-tip.yml (exit 1)
+          and negative/push-group-per-run.yml (exit 0) in pnpm test:scripts.
         rationale: >-
           Measured on a config-only pull request in this adoption: Build, Lint,
           Test, Type check and Security audit all reported "skipping" while CI

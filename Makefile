@@ -76,6 +76,7 @@ verify-all:
 	@pnpm check:publint
 	@pnpm check:svelte
 	@pnpm check:job-timeouts
+	@pnpm check:workflow-concurrency
 	@pnpm check:platform-legs
 	@pnpm check:ruleset
 	@pnpm check:playwright-image

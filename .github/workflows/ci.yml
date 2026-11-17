@@ -14,8 +14,8 @@ env:
   PRAETOR_REF: 8684218e78b89d81585d2a482eebb48da18180f0
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   pr-title:
@@ -118,6 +118,7 @@ jobs:
       - run: pnpm check:cycles
       - run: pnpm check:declared-imports
       - run: pnpm check:job-timeouts
+      - run: pnpm check:workflow-concurrency
       - run: pnpm check:platform-legs
       - run: pnpm check:ruleset
       - run: pnpm check:playwright-image
@@ -508,7 +509,7 @@ jobs:
     name: Template labels
     # Linux only (HISS-21, #328): compares issue form text with the label list of the repository.
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
       issues: read

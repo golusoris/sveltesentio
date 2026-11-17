@@ -29,11 +29,12 @@ const workflowsDir = join(root, '.github', 'workflows');
 
 export const MIN_TIMEOUT_MINUTES = 1;
 export const MAX_TIMEOUT_MINUTES = 120;
+export const INSTALL_MIN_TIMEOUT_MINUTES = 10;
 
-// Upper bounds (HISS-02): directory entries one scan reads, jobs per workflow,
-// and I/O deadline.
+// Scalar limits keep malformed workflows from monopolizing the scan (HISS-02).
 export const ENTRY_LIMIT = 1_000;
 export const JOB_LIMIT = 100;
+export const STEP_LIMIT = 1_000;
 export const IO_TIMEOUT_MS = 10_000;
 
 /** GitHub reads workflow files with either extension. */
@@ -121,6 +122,26 @@ function standardTimeoutMessage(file, jobId, timeout) {
 	return null;
 }
 
+function installTimeoutMessage(file, jobId, jobDef) {
+	const steps = jobDef.steps ?? [];
+	if (!Array.isArray(steps)) {
+		return `${file}: job '${jobId}' steps must be a YAML sequence`;
+	}
+	if (steps.length > STEP_LIMIT) {
+		throw new Error(`${file}: job '${jobId}' exceeds limit of ${STEP_LIMIT} steps`);
+	}
+	for (const step of steps) {
+		if (
+			typeof step?.run === 'string' &&
+			/\bpnpm\s+(install|i)\b/.test(step.run) &&
+			jobDef['timeout-minutes'] < INSTALL_MIN_TIMEOUT_MINUTES
+		) {
+			return `${file}: job '${jobId}' running pnpm install requires timeout-minutes >= ${INSTALL_MIN_TIMEOUT_MINUTES}, got ${jobDef['timeout-minutes']}`;
+		}
+	}
+	return null;
+}
+
 /**
  * Returns the finding message for one job, or null when the job is valid.
  * A job calling a reusable workflow (`uses:`) cannot take timeout-minutes
@@ -136,7 +157,10 @@ function jobTimeoutMessage(file, jobId, jobDef) {
 			? `${file}: job '${jobId}' calls a reusable workflow and cannot declare timeout-minutes (unsupported key per GitHub Actions syntax: ${REUSABLE_DOCS})`
 			: null;
 	}
-	return standardTimeoutMessage(file, jobId, jobDef['timeout-minutes']);
+	return (
+		standardTimeoutMessage(file, jobId, jobDef['timeout-minutes']) ??
+		installTimeoutMessage(file, jobId, jobDef)
+	);
 }
 
 /**
@@ -160,7 +184,7 @@ export function findJobTimeoutViolations(source, file = 'workflow') {
 }
 
 /** Reads every workflow file in `dir` and returns what was read and what was found. */
-export async function scanWorkflows(dir) {
+export async function scanWorkflows(dir, rule = findJobTimeoutViolations) {
 	const entries = await withTimeout(
 		readdir(dir, { withFileTypes: true }),
 		IO_TIMEOUT_MS,
@@ -180,9 +204,11 @@ export async function scanWorkflows(dir) {
 			encoding: 'utf8',
 			signal: AbortSignal.timeout(IO_TIMEOUT_MS),
 		});
-		for (const finding of findJobTimeoutViolations(source, file)) {
-			findings.push(finding);
+		const violations = rule(source, file);
+		if (violations.length > JOB_LIMIT + 2) {
+			throw new Error(`${file}: rule returned more than ${JOB_LIMIT + 2} findings`);
 		}
+		findings.push(...violations);
 	}
 	return { files, findings };
 }
@@ -206,6 +232,9 @@ export async function main(dir = workflowsDir) {
 		);
 		console.error(
 			'Reusable workflow calls (jobs with uses:) must not declare timeout-minutes (unsupported by GitHub Actions).',
+		);
+		console.error(
+			`Jobs with a pnpm install step must declare at least ${INSTALL_MIN_TIMEOUT_MINUTES} (cold installs measured up to 308 s).`,
 		);
 		return 1;
 	}

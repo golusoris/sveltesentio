@@ -27,6 +27,7 @@
 		"check:cycles": "node scripts/check-import-cycles.mjs",
 		"check:declared-imports": "node scripts/check-declared-imports.mjs",
 		"check:job-timeouts": "node scripts/check-job-timeouts.mjs",
+		"check:workflow-concurrency": "node scripts/check-workflow-concurrency.mjs",
 		"check:platform-legs": "node scripts/check-platform-legs.mjs",
 		"check:ruleset": "node scripts/check-ruleset.mjs",
 		"check:playwright-image": "node scripts/check-playwright-image.mjs",

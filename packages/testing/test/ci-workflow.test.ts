@@ -199,17 +199,24 @@ describe('CI Workflows Configuration (.github/workflows/)', () => {
 	const ciWorkflowPath = resolve(rootDir, '.github/workflows/ci.yml');
 	const codeqlWorkflowPath = resolve(rootDir, '.github/workflows/codeql.yml');
 
-	it('enforces concurrency cancel-in-progress on CI workflow', () => {
-		const content = readFileSync(ciWorkflowPath, 'utf8');
-		expect(content).toContain('concurrency:');
-		expect(content).toContain('cancel-in-progress: true');
-	});
-
-	it('enforces concurrency cancel-in-progress on CodeQL workflow', () => {
-		const content = readFileSync(codeqlWorkflowPath, 'utf8');
-		expect(content).toContain('concurrency:');
-		expect(content).toContain('cancel-in-progress: true');
-	});
+	// A pull request run cancels the superseded run of the same pull request; a push run gets a group of its
+	// own, because a ref-keyed group lets a newer pending run replace the queued tip run whatever
+	// cancel-in-progress says. scripts/check-workflow-concurrency.mjs enforces this for every workflow.
+	it.each([
+		['CI', ciWorkflowPath],
+		['CodeQL', codeqlWorkflowPath],
+	])(
+		'cancels superseded pull request runs only, per run on push, in the %s workflow',
+		(_name, path) => {
+			const content = readFileSync(path, 'utf8');
+			expect(content).toContain('concurrency:');
+			expect(content).toContain(
+				'group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}',
+			);
+			expect(content).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
+			expect(content).not.toContain('cancel-in-progress: true');
+		},
+	);
 });
 
 describe('scripts/ci-affected.mjs runs its CLI only as the entry point', () => {

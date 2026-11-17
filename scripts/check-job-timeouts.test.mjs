@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { findJobTimeoutViolations, main, scanWorkflows } from './check-job-timeouts.mjs';
+import {
+	findJobTimeoutViolations,
+	INSTALL_MIN_TIMEOUT_MINUTES,
+	main,
+	scanWorkflows,
+	STEP_LIMIT,
+} from './check-job-timeouts.mjs';
 
 const ownWorkflows = join(
 	fileURLToPath(new URL('.', import.meta.url)),
@@ -24,6 +30,76 @@ const hissFixtures = join(
 );
 
 const makeJob = (body) => `jobs:\n  test:\n    ${body}\n    steps:\n      - run: true\n`;
+const installJob = (timeout, run = 'pnpm install --frozen-lockfile') =>
+	`jobs:\n  install:\n    timeout-minutes: ${timeout}\n    steps:\n      - run: ${run}\n`;
+
+describe('install timeout floor', () => {
+	it('refuses an install at nine minutes with file, job, value and bound', () => {
+		const findings = findJobTimeoutViolations(installJob(9), 'short.yml');
+		assert.equal(findings.length, 1);
+		assert.equal(findings[0].file, 'short.yml');
+		assert.equal(findings[0].job, 'install');
+		assert.match(findings[0].message, /short.yml: job 'install'.*10.*9/);
+	});
+
+	it('accepts an install at ten minutes', () => {
+		assert.equal(INSTALL_MIN_TIMEOUT_MINUTES, 10);
+		assert.deepEqual(findJobTimeoutViolations(installJob(10)), []);
+	});
+
+	it('accepts five minutes without a pnpm install', () => {
+		for (const run of ['true', 'pnpm add yaml', 'npm install']) {
+			assert.deepEqual(findJobTimeoutViolations(installJob(5, run)), []);
+		}
+	});
+
+	it('recognizes the pnpm i shorthand and multiline commands', () => {
+		assert.equal(findJobTimeoutViolations(installJob(9, 'pnpm i')).length, 1);
+		assert.equal(
+			findJobTimeoutViolations(
+				installJob(9, '|\n          corepack enable\n          pnpm install'),
+			).length,
+			1,
+		);
+	});
+});
+
+describe('install timeout aliases and step bounds', () => {
+	it('resolves an install anchor reused by a short job', () => {
+		const source = [
+			'jobs:',
+			'  first:',
+			'    timeout-minutes: 10',
+			'    steps:',
+			'      - &pnpm_install',
+			'        run: corepack enable && pnpm install --frozen-lockfile',
+			'  short:',
+			'    timeout-minutes: 5',
+			'    steps:',
+			'      - *pnpm_install',
+		].join('\n');
+		const findings = findJobTimeoutViolations(source, 'anchor.yml');
+		assert.equal(findings.length, 1);
+		assert.equal(findings[0].job, 'short');
+	});
+
+	it('bounds the step sequence at STEP_LIMIT', () => {
+		const steps = '      - run: true\n'.repeat(STEP_LIMIT);
+		const source = `jobs:\n  test:\n    timeout-minutes: 10\n    steps:\n${steps}`;
+		assert.deepEqual(findJobTimeoutViolations(source), []);
+		assert.throws(
+			() => findJobTimeoutViolations(`${source}      - run: true\n`, 'large.yml'),
+			/large.yml: job 'test' exceeds limit of 1000 steps/,
+		);
+	});
+
+	it('refuses a malformed step sequence', () => {
+		const findings = findJobTimeoutViolations(
+			'jobs:\n  test:\n    timeout-minutes: 10\n    steps: {}\n',
+		);
+		assert.match(findings[0].message, /steps must be a YAML sequence/);
+	});
+});
 
 describe('check-job-timeouts', () => {
 	let tempRoot;
@@ -41,6 +117,7 @@ describe('check-job-timeouts', () => {
 	const workflowDir = async (name, files) => {
 		const dir = join(tempRoot, name);
 		await mkdir(dir, { recursive: true });
+		assert.ok(Object.keys(files).length <= 3);
 		for (const [file, source] of Object.entries(files)) {
 			await writeFile(join(dir, file), source);
 		}
@@ -185,6 +262,45 @@ describe('check-job-timeouts', () => {
 	});
 
 	describe('scanWorkflows', () => {
+		it('uses the supplied rule for each workflow', async () => {
+			const source = makeJob('timeout-minutes: 5');
+			const dir = await workflowDir('custom-rule', { 'one.yml': source });
+			const finding = { file: 'one.yml', job: null, message: 'planted finding' };
+			const result = await scanWorkflows(dir, (text, file) => {
+				assert.equal(text, source);
+				assert.equal(file, 'one.yml');
+				return [finding];
+			});
+			assert.deepEqual(result, { files: ['one.yml'], findings: [finding] });
+		});
+
+		it('accepts an empty result from a supplied rule', async () => {
+			const dir = await workflowDir('custom-clean', { 'one.yml': makeJob('timeout-minutes: 5') });
+			assert.deepEqual(await scanWorkflows(dir, () => []), { files: ['one.yml'], findings: [] });
+		});
+
+		it('refuses a rule result above its per-workflow bound', async () => {
+			const dir = await workflowDir('custom-overflow', {
+				'one.yml': makeJob('timeout-minutes: 5'),
+			});
+			await assert.rejects(
+				scanWorkflows(dir, () => Array.from({ length: 103 }, () => ({}))),
+				/one.yml: rule returned more than 102 findings/,
+			);
+		});
+
+		it('accepts a rule result exactly at its per-workflow bound', async () => {
+			const dir = await workflowDir('custom-boundary', {
+				'one.yml': makeJob('timeout-minutes: 5'),
+			});
+			const findings = Array.from({ length: 102 }, () => ({
+				file: 'one.yml',
+				job: null,
+				message: 'planted',
+			}));
+			assert.deepEqual((await scanWorkflows(dir, () => findings)).findings, findings);
+		});
+
 		it('reads directory and reports file and job of each finding', async () => {
 			const dir = await workflowDir('scan-test', {
 				'clean.yml': makeJob('runs-on: ubuntu-26.04\n    timeout-minutes: 15'),
@@ -205,6 +321,14 @@ describe('check-job-timeouts', () => {
 	});
 
 	describe('HISS-02 coverage fixtures', () => {
+		it('refuses the install fixture itself, even if another fixture already fails', async () => {
+			const file = 'install-job-short-timeout.yml';
+			const source = await readFile(join(hissFixtures, 'positive', file), 'utf8');
+			const findings = findJobTimeoutViolations(source, file);
+			assert.equal(findings.length, 1);
+			assert.match(findings[0].message, /pnpm install.*10.*9/);
+		});
+
 		it('refuses the positive fixture (job without timeout-minutes)', async () => {
 			assert.equal(await main(join(hissFixtures, 'positive')), 1);
 		});
