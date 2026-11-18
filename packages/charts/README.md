@@ -78,9 +78,10 @@ screen-reader fallback can never drift from the visual.
 pnpm add @sveltesentio/charts layerchart
 ```
 
-`layerchart` is an optional peer — `@sveltesentio/charts` does not import it, so you
-can render any chart library inside the `chart` snippet. Install it when you use the
-documented LayerChart presets.
+`layerchart` is an optional peer, version 2.0.0 or later. The root export and
+`<ChartFigure>` do not import it, so you can render any chart library inside the `chart`
+snippet. Install it when you use the LayerChart-backed sub-exports (`./line`, `./area`,
+`./bar`, `./pie`, `./scatter`) or the documented LayerChart presets.
 
 See the [monorepo README](../../README.md) and [`docs/`](../../docs/) for design principles and usage.
 
