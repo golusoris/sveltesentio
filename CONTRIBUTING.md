@@ -145,17 +145,18 @@ written down somewhere".
 
 ## New dependency checklist
 
-Before adding a runtime dependency:
+A pull request that adds a runtime dependency shows that the dependency meets
+each of these requirements:
 
-- [ ] Evidence it beats the alternatives (awesome-harvest entry + D-row with
-      at least 2 alternatives considered).
-- [ ] Actively maintained (commit within 90 days, or justify).
-- [ ] License compatible with EUPL-1.2 (MIT / Apache-2.0 / ISC / BSD-2 / BSD-3).
-- [ ] ESM-only or ships dual ESM + types.
-- [ ] No React / Vue / Solid / Angular / Qwik peer dependency.
-- [ ] Bundle size measured and within the package budget.
-- [ ] Supply-chain signals checked: download count, publisher, provenance,
-      Sigstore/npm attestations, Scorecard score.
+- Evidence it beats the alternatives (awesome-harvest entry + D-row with at
+  least 2 alternatives considered).
+- Actively maintained (commit within 90 days, or justify).
+- License compatible with EUPL-1.2 (MIT / Apache-2.0 / ISC / BSD-2 / BSD-3).
+- ESM-only or ships dual ESM + types.
+- No React / Vue / Solid / Angular / Qwik peer dependency.
+- Bundle size measured and within the package budget.
+- Supply-chain signals checked: download count, publisher, provenance,
+  Sigstore/npm attestations, Scorecard score.
 
 Dev dependencies have a lighter bar but still require the license check and
 an ESLint/TypeScript/Prettier/Vite plugin ecosystem fit.
