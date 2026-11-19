@@ -7,6 +7,7 @@ import { parse } from 'yaml';
 import {
 	ACCEPTED_MESSAGE,
 	CONFIG_FILE,
+	CONTAINER_PROBE_TIMEOUT_MS,
 	EXCERPT_LINES,
 	PLANTED_FILE,
 	PLANTED_MESSAGE,
@@ -54,7 +55,7 @@ function stubRunner(answers) {
 	const runner = (file, args, options) => {
 		calls.push({ file, args, options });
 		const answer = answers[`${file} ${args[0]}`] ?? FAILED;
-		return typeof answer === 'function' ? answer(args) : answer;
+		return typeof answer === 'function' ? answer(args, options) : answer;
 	};
 	return { calls, runner };
 }
@@ -67,6 +68,17 @@ const probeThen = (validate, probe = OK) => {
 };
 
 const byFile = probeThen((args) => (args.at(-1) === CONFIG_FILE ? ACCEPTED : PLANTED_REFUSED));
+
+/** Models container start time without sleeping or starting a real runtime. */
+function slowRuns(durationMs, answer = byFile) {
+	return stubRunner({
+		'docker version': OK,
+		'docker image': OK,
+		// Equality passes: only a duration strictly greater than the deadline times out.
+		'docker run': (args, options) => (durationMs > options.timeout ? TIMED_OUT : answer(args)),
+		'docker rm': OK,
+	});
+}
 
 describe('run', () => {
 	it('bounds a child that ignores SIGTERM with SIGKILL', () => {
@@ -144,12 +156,14 @@ describe('CI timeout', () => {
 		assert.ok(WORST_CASE_MS + 120_000 <= minutes * 60_000);
 	});
 
-	it('adds exactly one probe deadline to the former bound', () => {
-		const old =
+	it('bounds the read probe followed by the longest validation path at 1040 seconds', () => {
+		const expected =
 			(RUNTIMES.length + 1) * PROBE_TIMEOUT_MS +
 			PULL_TIMEOUT_MS +
+			CONTAINER_PROBE_TIMEOUT_MS +
 			2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS);
-		assert.equal(WORST_CASE_MS, old + PROBE_TIMEOUT_MS);
+		assert.equal(WORST_CASE_MS, expected);
+		assert.equal(WORST_CASE_MS, 1_040_000);
 	});
 });
 
@@ -165,6 +179,34 @@ describe('stopProblem', () => {
 		);
 		assert.match(stopProblem('x', { status: null, signal: 'SIGTERM' }), /stopped by SIGTERM/);
 	});
+
+	it('names a supplied deadline only for ETIMEDOUT', () => {
+		assert.equal(
+			stopProblem('x', TIMED_OUT, CONTAINER_PROBE_TIMEOUT_MS),
+			'x did not finish within its 100000 ms deadline: spawnSync docker ETIMEDOUT',
+		);
+	});
+
+	it('keeps the timeout text when no deadline is supplied', () => {
+		assert.equal(stopProblem('x', TIMED_OUT), 'x did not run: spawnSync docker ETIMEDOUT');
+	});
+
+	it('keeps the signal text with a supplied deadline', () => {
+		assert.equal(
+			stopProblem('x', { status: null, signal: 'SIGTERM' }, CONTAINER_PROBE_TIMEOUT_MS),
+			'x was stopped by SIGTERM before it finished',
+		);
+	});
+
+	it('keeps the spawn error text with a supplied deadline', () => {
+		const result = {
+			error: Object.assign(new Error('spawn docker ENOENT'), { code: 'ENOENT' }),
+		};
+		assert.equal(
+			stopProblem('x', result, CONTAINER_PROBE_TIMEOUT_MS),
+			'x did not run: spawn docker ENOENT',
+		);
+	});
 });
 
 describe('findRuntime', () => {
@@ -173,7 +215,7 @@ describe('findRuntime', () => {
 		assert.equal(findRuntime(runner), 'docker');
 		assert.equal(calls.length, 1);
 		assert.deepEqual(calls[0].args, ['version', '--format', '{{.Server.Version}}']);
-		assert.ok(calls[0].options.timeout > 0);
+		assert.equal(calls[0].options.timeout, PROBE_TIMEOUT_MS);
 	});
 
 	it('falls through to Podman when Docker does not answer', () => {
@@ -184,6 +226,7 @@ describe('findRuntime', () => {
 		assert.equal(findRuntime(runner), 'podman');
 		assert.deepEqual(calls[0].args, ['version', '--format', '{{.Server.Version}}']);
 		assert.deepEqual(calls[1].args, ['version', '--format', '{{.Server.Version}}']);
+		for (const call of calls) assert.equal(call.options.timeout, PROBE_TIMEOUT_MS);
 	});
 
 	it('is null when neither answers', () => {
@@ -231,12 +274,14 @@ describe('ensureImage', () => {
 		assert.deepEqual(ensureImage('docker', runner), []);
 		assert.equal(calls.length, 1);
 		assert.deepEqual(calls[0].args, ['image', 'inspect', '--format', '{{.Id}}', RENOVATE_IMAGE]);
+		assert.deepEqual(calls[0].options, { timeout: PROBE_TIMEOUT_MS });
 	});
 
 	it('pulls an absent image', () => {
 		const { calls, runner } = stubRunner({ 'docker pull': OK });
 		assert.deepEqual(ensureImage('docker', runner), []);
 		assert.deepEqual(calls[1].args, ['pull', '--quiet', RENOVATE_IMAGE]);
+		assert.deepEqual(calls[1].options, { timeout: PULL_TIMEOUT_MS });
 	});
 
 	it('reports a failed pull', () => {
@@ -380,6 +425,77 @@ describe('main relative repository paths', () => {
 	});
 });
 
+describe('container probe deadlines', () => {
+	for (const durationMs of [30_000, 46_882, CONTAINER_PROBE_TIMEOUT_MS]) {
+		it(`accepts a read probe and validations modelled at ${durationMs} ms`, () => {
+			assert.ok(durationMs > PROBE_TIMEOUT_MS);
+			const { calls, runner } = slowRuns(durationMs);
+			assert.equal(main('/src/repo', runner, {}, null), 0);
+			const runs = calls.filter(({ args }) => args[0] === 'run');
+			assert.deepEqual(
+				runs.map(({ options }) => options.timeout),
+				[CONTAINER_PROBE_TIMEOUT_MS, VALIDATE_TIMEOUT_MS, VALIDATE_TIMEOUT_MS],
+			);
+		});
+	}
+
+	for (const durationMs of [Infinity, CONTAINER_PROBE_TIMEOUT_MS + 1]) {
+		it(`stops a read probe modelled at ${durationMs} ms and removes its container once`, (t) => {
+			const errors = [];
+			t.mock.method(console, 'error', (message) => errors.push(message));
+			const { calls, runner } = slowRuns(durationMs);
+			assert.equal(main('/src/repo', runner, {}, null), 1);
+			assert.equal(errors.length, 1);
+			assert.match(
+				errors[0],
+				/read probe did not finish within its 100000 ms deadline: spawnSync docker ETIMEDOUT/,
+			);
+			const runs = calls.filter(({ args }) => args[0] === 'run');
+			assert.equal(runs.length, 1);
+			assert.equal(entrypoint(runs[0].args), '/usr/bin/test');
+			assert.deepEqual(runs[0].options, { timeout: CONTAINER_PROBE_TIMEOUT_MS });
+			const name = runs[0].args[runs[0].args.indexOf('--name') + 1];
+			assert.deepEqual(
+				calls.filter(({ args }) => args[0] === 'rm'),
+				[{ file: 'docker', args: ['rm', '--force', name], options: { timeout: PROBE_TIMEOUT_MS } }],
+			);
+			for (const call of calls.filter(({ args }) => args[0] !== 'run')) {
+				assert.deepEqual(call.options, { timeout: PROBE_TIMEOUT_MS });
+			}
+		});
+	}
+
+	it('reports uid 12021 when an unreadable mount needs a 30000 ms uid run', (t) => {
+		const errors = [];
+		t.mock.method(console, 'error', (message) => errors.push(message));
+		const { calls, runner } = slowRuns(30_000, (args) =>
+			entrypoint(args) === '/usr/bin/id' ? { ...OK, output: '12021\n' } : FAILED,
+		);
+		assert.equal(
+			main('/src/repo', runner, {}, null, () => ({ mode: 0o40700 })),
+			1,
+		);
+		assert.equal(errors.length, 1);
+		assert.match(errors[0], /\/src\/repo.*mode 700.*uid 12021.*docker/);
+		const runs = calls.filter(({ args }) => args[0] === 'run');
+		assert.deepEqual(
+			runs.map(({ args }) => entrypoint(args)),
+			['/usr/bin/test', '/usr/bin/id'],
+		);
+		for (const call of runs) {
+			assert.deepEqual(call.options, { timeout: CONTAINER_PROBE_TIMEOUT_MS });
+		}
+	});
+
+	it('keeps client, container probe and validation deadlines ordered with cold start margin', () => {
+		assert.equal(PROBE_TIMEOUT_MS, 20_000);
+		assert.equal(CONTAINER_PROBE_TIMEOUT_MS, 100_000);
+		assert.ok(PROBE_TIMEOUT_MS < CONTAINER_PROBE_TIMEOUT_MS);
+		assert.ok(CONTAINER_PROBE_TIMEOUT_MS <= VALIDATE_TIMEOUT_MS);
+		assert.ok(CONTAINER_PROBE_TIMEOUT_MS >= 2 * 46_882);
+	});
+});
+
 describe('mount readability', () => {
 	for (const [runtime, ids, expected] of [
 		['docker', { uid: 1000, gid: 100 }, ['--user', '1000:100']],
@@ -449,7 +565,10 @@ describe('mount readability', () => {
 			'docker rm': OK,
 		});
 		assert.equal(main('/src/repo', runner, {}, null), 1);
-		assert.match(errors[0], /ETIMEDOUT/);
+		assert.match(
+			errors[0],
+			/read probe did not finish within its 100000 ms deadline: spawnSync docker ETIMEDOUT/,
+		);
 		const runs = calls.filter(({ args }) => args[0] === 'run');
 		assert.equal(runs.length, 1);
 		const name = runs[0].args[runs[0].args.indexOf('--name') + 1];
