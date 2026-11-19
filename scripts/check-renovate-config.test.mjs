@@ -11,8 +11,11 @@ import {
 	PLANTED_FILE,
 	PLANTED_MESSAGE,
 	PROBE_TIMEOUT_MS,
+	PULL_TIMEOUT_MS,
 	RE2_FALLBACK_MESSAGE,
 	RENOVATE_IMAGE,
+	RUNTIMES,
+	VALIDATE_TIMEOUT_MS,
 	WORST_CASE_MS,
 	ensureImage,
 	excerpt,
@@ -20,6 +23,8 @@ import {
 	judgeValidation,
 	main,
 	mountArgument,
+	mountProblem,
+	probeArgs,
 	removeStopped,
 	run,
 	stopProblem,
@@ -54,7 +59,14 @@ function stubRunner(answers) {
 	return { calls, runner };
 }
 
-const byFile = (args) => (args.at(-1) === CONFIG_FILE ? ACCEPTED : PLANTED_REFUSED);
+const entrypoint = (args) => args[args.indexOf('--entrypoint') + 1];
+
+/** Answers the read probe with `probe` and each validation with `validate(args)`. */
+const probeThen = (validate, probe = OK) => {
+	return (args) => (entrypoint(args) === '/usr/bin/test' ? probe : validate(args));
+};
+
+const byFile = probeThen((args) => (args.at(-1) === CONFIG_FILE ? ACCEPTED : PLANTED_REFUSED));
 
 describe('run', () => {
 	it('bounds a child that ignores SIGTERM with SIGKILL', () => {
@@ -130,6 +142,14 @@ describe('CI timeout', () => {
 		const workflow = parse(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8'));
 		const minutes = workflow.jobs['renovate-config']['timeout-minutes'];
 		assert.ok(WORST_CASE_MS + 120_000 <= minutes * 60_000);
+	});
+
+	it('adds exactly one probe deadline to the former bound', () => {
+		const old =
+			(RUNTIMES.length + 1) * PROBE_TIMEOUT_MS +
+			PULL_TIMEOUT_MS +
+			2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS);
+		assert.equal(WORST_CASE_MS, old + PROBE_TIMEOUT_MS);
 	});
 });
 
@@ -299,12 +319,16 @@ describe('main', () => {
 		});
 		assert.equal(main('/src/repo', runner, {}), 0);
 		const validated = calls
-			.filter((call) => call.args[0] === 'run')
+			.filter(
+				(call) => call.args[0] === 'run' && entrypoint(call.args) === 'renovate-config-validator',
+			)
 			.map((call) => call.args.at(-1));
 		assert.deepEqual(validated, [CONFIG_FILE, PLANTED_FILE]);
 		assert.equal(calls.filter((call) => call.args[0] === 'rm').length, 0);
 		const names = calls
-			.filter((call) => call.args[0] === 'run')
+			.filter(
+				(call) => call.args[0] === 'run' && entrypoint(call.args) === 'renovate-config-validator',
+			)
 			.map((call) => call.args[call.args.indexOf('--name') + 1]);
 		assert.equal(new Set(names).size, 2);
 		const prefix = `renovate-config-check-${process.pid}-`;
@@ -318,7 +342,7 @@ describe('main', () => {
 		const { runner } = stubRunner({
 			'docker version': OK,
 			'docker image': OK,
-			'docker run': ACCEPTED,
+			'docker run': probeThen(() => ACCEPTED),
 		});
 		assert.equal(main('/src/repo', runner, {}), 1);
 	});
@@ -327,7 +351,7 @@ describe('main', () => {
 		const { runner } = stubRunner({
 			'docker version': OK,
 			'docker image': OK,
-			'docker run': PLANTED_REFUSED,
+			'docker run': probeThen(() => PLANTED_REFUSED),
 		});
 		assert.equal(main('/src/repo', runner, {}), 1);
 	});
@@ -352,7 +376,155 @@ describe('main relative repository paths', () => {
 		const mounts = calls
 			.filter((call) => call.args[0] === 'run')
 			.map((call) => call.args[call.args.indexOf('--mount') + 1]);
-		assert.deepEqual(mounts, [mountArgument(resolve('.')), mountArgument(resolve('.'))]);
+		assert.deepEqual(mounts, Array(3).fill(mountArgument(resolve('.'))));
+	});
+});
+
+describe('mount readability', () => {
+	for (const [runtime, ids, expected] of [
+		['docker', { uid: 1000, gid: 100 }, ['--user', '1000:100']],
+		['podman', { uid: 1000, gid: 100 }, ['--userns=keep-id']],
+		['docker', null, []],
+	]) {
+		it(`passes user arguments to ${runtime} probe and validators: ${JSON.stringify(ids)}`, () => {
+			const { calls, runner } = stubRunner({
+				[`${runtime} version`]: OK,
+				[`${runtime} image`]: OK,
+				[`${runtime} run`]: byFile,
+			});
+			assert.equal(main('/src/repo', runner, {}, ids), 0);
+			const runs = calls.filter((call) => call.args[0] === 'run');
+			assert.equal(runs.length, 3);
+			for (const { args } of runs) {
+				for (const arg of expected) assert.ok(args.includes(arg));
+				if (ids === null) assert.ok(!args.includes('--user') && !args.includes('--userns=keep-id'));
+				if (expected.length) assert.ok(args.indexOf(expected[0]) < args.indexOf('--mount'));
+			}
+			assert.equal(entrypoint(runs[0].args), '/usr/bin/test');
+			assert.deepEqual(runs[0].args.slice(-5), [
+				'-r',
+				`/repo/${CONFIG_FILE}`,
+				'-a',
+				'-r',
+				`/repo/${PLANTED_FILE}`,
+			]);
+		});
+	}
+
+	for (const [label, ids, user] of [
+		['without the caller mapping', null, []],
+		['with the caller mapping', { uid: 1000, gid: 100 }, ['--user', '1000:100']],
+	]) {
+		it(`reports an unreadable mode 700 checkout without validating: ${label}`, (t) => {
+			const errors = [];
+			t.mock.method(console, 'error', (message) => errors.push(message));
+			const { calls, runner } = stubRunner({
+				'docker version': OK,
+				'docker image': OK,
+				'docker run': (args) =>
+					entrypoint(args) === '/usr/bin/id' ? { ...OK, output: '12021\n' } : FAILED,
+			});
+			assert.equal(
+				main('/src/repo', runner, {}, ids, () => ({ mode: 0o40700 })),
+				1,
+			);
+			assert.equal(errors.length, 1);
+			assert.match(errors[0], /\/src\/repo.*mode 700.*uid 12021.*docker.*File does not exist/);
+			assert.doesNotMatch(errors[0], /Renovate refuses/);
+			assert.ok(!calls.some(({ args }) => entrypoint(args) === 'renovate-config-validator'));
+			const idRun = calls.find(({ args }) => entrypoint(args) === '/usr/bin/id');
+			const userAt = idRun.args.indexOf(user[0]);
+			if (user.length > 0) assert.deepEqual(idRun.args.slice(userAt, userAt + user.length), user);
+			else assert.ok(!idRun.args.includes('--user') && !idRun.args.includes('--userns=keep-id'));
+		});
+	}
+
+	it('stops after a killed probe and removes its container', (t) => {
+		const errors = [];
+		t.mock.method(console, 'error', (message) => errors.push(message));
+		const { calls, runner } = stubRunner({
+			'docker version': OK,
+			'docker image': OK,
+			'docker run': TIMED_OUT,
+			'docker rm': OK,
+		});
+		assert.equal(main('/src/repo', runner, {}, null), 1);
+		assert.match(errors[0], /ETIMEDOUT/);
+		const runs = calls.filter(({ args }) => args[0] === 'run');
+		assert.equal(runs.length, 1);
+		const name = runs[0].args[runs[0].args.indexOf('--name') + 1];
+		assert.match(name, /^renovate-config-probe-\d+-[0-9a-f]{8}$/);
+		assert.deepEqual(
+			calls.filter(({ args }) => args[0] === 'rm').map(({ args }) => args),
+			[['rm', '--force', name]],
+		);
+	});
+
+	it('reports unknown uid and mode when id and stat fail', (t) => {
+		const errors = [];
+		t.mock.method(console, 'error', (message) => errors.push(message));
+		const { runner } = stubRunner({
+			'docker version': OK,
+			'docker image': OK,
+			'docker run': FAILED,
+		});
+		assert.equal(
+			main('/src/repo', runner, {}, null, () => {
+				throw new Error('stat failed');
+			}),
+			1,
+		);
+		assert.match(errors[0], /mode unknown \(stat failed\).*uid unknown/);
+	});
+});
+
+describe('probeArgs', () => {
+	it('tests both files under the validator mount, offline and read-only', () => {
+		const args = probeArgs('/src/repo', 'probe-test');
+		assert.equal(args[0], 'run');
+		assert.equal(args[args.indexOf('--name') + 1], 'probe-test');
+		assert.equal(args[args.indexOf('--network') + 1], 'none');
+		assert.ok(args.includes('--read-only'));
+		assert.equal(args[args.indexOf('--mount') + 1], mountArgument('/src/repo'));
+		assert.equal(entrypoint(args), '/usr/bin/test');
+		assert.deepEqual(args.slice(-6), [
+			RENOVATE_IMAGE,
+			'-r',
+			`/repo/${CONFIG_FILE}`,
+			'-a',
+			'-r',
+			`/repo/${PLANTED_FILE}`,
+		]);
+	});
+
+	it('puts user arguments before the mount, and none by default', () => {
+		const mapped = probeArgs('/src/repo', 'probe-test', ['--userns=keep-id']);
+		assert.ok(mapped.indexOf('--userns=keep-id') < mapped.indexOf('--mount'));
+		assert.equal(probeArgs('/src/repo', 'probe-test').length, mapped.length - 1);
+	});
+});
+
+describe('mountProblem', () => {
+	it('names the checkout, its octal mode, the runtime and the uid', () => {
+		const problem = mountProblem('/src/repo', 'podman', '12021', () => ({ mode: 0o40750 }));
+		assert.match(problem, /\/src\/repo has mode 750 /);
+		assert.match(problem, /runs as uid 12021 under podman/);
+		assert.doesNotMatch(problem, /Renovate refuses/);
+	});
+
+	it('keeps only the permission bits of the mode', () => {
+		const problem = mountProblem('/r', 'docker', '1000', () => ({ mode: 0o104700 }));
+		assert.match(problem, /has mode 700 /);
+	});
+
+	it('says unknown when the checkout cannot be read with stat', () => {
+		const problem = mountProblem('/gone', 'docker', 'unknown', () => {
+			throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+		});
+		assert.match(
+			problem,
+			/\/gone has mode unknown \(ENOENT\) and the validator runs as uid unknown/,
+		);
 	});
 });
 
@@ -426,11 +598,15 @@ describe('main stopped validator cleanup', () => {
 			const { calls, runner } = stubRunner({
 				'docker version': OK,
 				'docker image': OK,
-				'docker run': (args) => (args.at(-1) === CONFIG_FILE ? TIMED_OUT : PLANTED_REFUSED),
+				'docker run': probeThen((args) =>
+					args.at(-1) === CONFIG_FILE ? TIMED_OUT : PLANTED_REFUSED,
+				),
 				'docker rm': removal,
 			});
 			assert.equal(main('/src/repo', runner, {}), 1);
-			const index = calls.findIndex((call) => call.args[0] === 'run');
+			const index = calls.findIndex(
+				(call) => call.args[0] === 'run' && entrypoint(call.args) === 'renovate-config-validator',
+			);
 			const name = calls[index].args[calls[index].args.indexOf('--name') + 1];
 			const prefix = `renovate-config-check-${process.pid}-`;
 			assert.ok(name.startsWith(prefix));

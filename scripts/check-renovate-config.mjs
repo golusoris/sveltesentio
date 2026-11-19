@@ -22,6 +22,16 @@
 // network and a read-only mount, and Renovate updates the pin through the
 // customManagers entry in renovate.json that matches this file.
 //
+// The image runs as uid 12021, which cannot read the bind mount of an
+// owner-only (mode 700) checkout; the validator then reports `File does not
+// exist` and exits 1, which reads as a refused configuration. Every container
+// of this check therefore runs as the caller through `userArgs` from
+// container-check.mjs (`--user uid:gid` for Docker, `--userns=keep-id` for
+// Podman), as the workflow check does. A read probe before the validations is
+// the second barrier: when the validator still cannot read both files, the
+// check fails naming the checkout, its mode, the runtime and the validator uid,
+// and runs no validation.
+//
 // Docker is tried first, then Podman. Without either, the check fails in CI
 // (`CI=true`) and is skipped with a stated reason elsewhere; the CI job
 // `Renovate configuration` runs it on every pull request.
@@ -29,12 +39,14 @@
 // `pnpm test:scripts` runs the unit tests; `pnpm check:renovate-config` runs
 // this check.
 import { randomUUID } from 'node:crypto';
+import { statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
 	RUNTIMES,
 	PROBE_TIMEOUT_MS,
 	PULL_TIMEOUT_MS,
+	currentIds,
 	ensureImage as ensureContainerImage,
 	excerpt,
 	findRuntime,
@@ -42,6 +54,7 @@ import {
 	removeStopped,
 	run,
 	stopProblem,
+	userArgs,
 } from './container-check.mjs';
 
 // Every name this module exported before the helpers moved stays exported.
@@ -73,16 +86,20 @@ export const CONFIG_FILE = 'renovate.json',
 export const VALIDATE_TIMEOUT_MS = 120_000;
 
 /**
- * Every child deadline one run can reach: a probe per runtime, the image inspect, the pull, and
- * two validations with their cleanup. The CI job's timeout-minutes must cover it.
+ * Every child deadline one run can reach: a probe per runtime, the image inspect, the pull, the
+ * read probe, and two validations with their cleanup. The read probe's cleanup runs only when
+ * the probe was stopped, and then nothing follows it; an unreadable mount replaces the two
+ * validations with one ID run and its cleanup, which is shorter. The CI job's timeout-minutes
+ * must cover it.
  */
 export const WORST_CASE_MS =
 	(RUNTIMES.length + 1) * PROBE_TIMEOUT_MS +
 	PULL_TIMEOUT_MS +
-	2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS);
+	2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS) +
+	PROBE_TIMEOUT_MS;
 
 /** The runtime arguments that validate one repository-relative file. */
-export function validatorArgs(rootDir, file, name) {
+export function validatorArgs(rootDir, file, name, user = []) {
 	return [
 		'run',
 		'--rm',
@@ -99,6 +116,7 @@ export function validatorArgs(rootDir, file, name) {
 		'LOG_LEVEL=info',
 		'--env',
 		'NO_COLOR=1',
+		...user,
 		'--mount',
 		mountArgument(rootDir),
 		'--workdir',
@@ -110,6 +128,83 @@ export function validatorArgs(rootDir, file, name) {
 		'--no-global',
 		file,
 	];
+}
+
+/** Tests readability under the same mount and user as the validator. */
+export function probeArgs(rootDir, name, user = []) {
+	return [
+		'run',
+		'--rm',
+		'--name',
+		name,
+		'--network',
+		'none',
+		'--read-only',
+		'--security-opt',
+		'label=disable',
+		...user,
+		'--mount',
+		mountArgument(rootDir),
+		'--workdir',
+		'/repo',
+		'--entrypoint',
+		'/usr/bin/test',
+		RENOVATE_IMAGE,
+		'-r',
+		`/repo/${CONFIG_FILE}`,
+		'-a',
+		'-r',
+		`/repo/${PLANTED_FILE}`,
+	];
+}
+
+/** Explains a mount that the image user cannot read. */
+export function mountProblem(rootDir, runtime, uid, stat = statSync) {
+	let mode;
+	try {
+		mode = (stat(rootDir).mode & 0o777).toString(8);
+	} catch (error) {
+		// The diagnostic stays useful without the mode; it names why stat failed instead.
+		mode = `unknown (${error?.code ?? error?.message ?? String(error)})`;
+	}
+	return `renovate-config-validator cannot read the repository mounted at /repo: ${rootDir} has mode ${mode} and the validator runs as uid ${uid} under ${runtime}, so it would report "File does not exist" rather than validate; give that uid read access to the checkout, e.g. mode 755, or run where the runtime maps the caller's IDs`;
+}
+
+function validatorUid(runtime, user, runner) {
+	const name = `renovate-config-id-${process.pid}-${randomUUID().slice(0, 8)}`;
+	const args = [
+		'run',
+		'--rm',
+		'--name',
+		name,
+		'--network',
+		'none',
+		'--read-only',
+		'--entrypoint',
+		'/usr/bin/id',
+		...user,
+		RENOVATE_IMAGE,
+		'-u',
+	];
+	const result = runner(runtime, args, { timeout: PROBE_TIMEOUT_MS });
+	const cleanup = removeStopped(runtime, name, 'validator uid', result, runner);
+	const output = result.output.trim();
+	const uid =
+		!stopProblem('validator uid', result) && result.status === 0 && /^\d+$/.test(output)
+			? output
+			: 'unknown';
+	return { uid, cleanup };
+}
+
+function checkMount(rootDir, runtime, user, runner, stat) {
+	const name = `renovate-config-probe-${process.pid}-${randomUUID().slice(0, 8)}`;
+	const result = runner(runtime, probeArgs(rootDir, name, user), { timeout: PROBE_TIMEOUT_MS });
+	const stopped = stopProblem('renovate-config read probe', result);
+	const cleanup = removeStopped(runtime, name, 'renovate-config read probe', result, runner);
+	if (stopped) return [stopped, ...cleanup];
+	if (result.status === 0) return cleanup;
+	const { uid, cleanup: idCleanup } = validatorUid(runtime, user, runner);
+	return [mountProblem(rootDir, runtime, uid, stat), ...cleanup, ...idCleanup];
 }
 
 /** Pulls the pinned image unless the runtime already holds it. */
@@ -150,7 +245,7 @@ export function judgeValidation(file, expectAccepted, result) {
 	return problems;
 }
 
-function checkRepository(rootDir, runner, env) {
+function checkRepository(rootDir, runner, env, ids, stat) {
 	const runtime = findRuntime(runner);
 	if (runtime === null) {
 		const reason = `neither ${RUNTIMES.join(' nor ')} answers, so the pinned Renovate image cannot run`;
@@ -158,12 +253,15 @@ function checkRepository(rootDir, runner, env) {
 	}
 	const problems = ensureImage(runtime, runner);
 	if (problems.length > 0) return { problems };
+	const user = userArgs(runtime, ids);
+	problems.push(...checkMount(rootDir, runtime, user, runner, stat));
+	if (problems.length > 0) return { problems };
 	for (const [file, expectAccepted] of [
 		[CONFIG_FILE, true],
 		[PLANTED_FILE, false],
 	]) {
 		const name = `renovate-config-check-${process.pid}-${randomUUID().slice(0, 8)}`;
-		const result = runner(runtime, validatorArgs(rootDir, file, name), {
+		const result = runner(runtime, validatorArgs(rootDir, file, name, user), {
 			timeout: VALIDATE_TIMEOUT_MS,
 		});
 		problems.push(...judgeValidation(file, expectAccepted, result));
@@ -173,8 +271,14 @@ function checkRepository(rootDir, runner, env) {
 }
 
 /** Returns the exit code: 0 when renovate.json validates and the planted rule is refused. */
-export function main(rootDir = root, runner = run, env = process.env) {
-	const outcome = checkRepository(resolve(rootDir), runner, env);
+export function main(
+	rootDir = root,
+	runner = run,
+	env = process.env,
+	ids = currentIds(),
+	stat = statSync,
+) {
+	const outcome = checkRepository(resolve(rootDir), runner, env, ids, stat);
 	for (const problem of outcome.problems) console.error(`FAIL: ${problem}`);
 	if (outcome.problems.length > 0) return 1;
 	if (outcome.skipped) {

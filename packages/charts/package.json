@@ -1,14 +1,14 @@
 {
 	"description": "Thin LayerChart wrappers with a WCAG 2.2 AA accessibility envelope (ChartFigure) and dashboard presets",
 	"devDependencies": {
-		"@storybook/addon-svelte-csf": "5.1.5",
+		"@storybook/addon-svelte-csf": "5.1.6",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/testing": "workspace:*",
 		"@testing-library/jest-dom": "^7.0.0",
 		"@testing-library/svelte": "^5.4.2",
 		"axe-core": "^4.13.0",
 		"jsdom": "^30.0.0",
-		"layerchart": "2.8.1",
+		"layerchart": "2.10.1",
 		"svelte": "^5.57.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.2.2",
@@ -88,7 +88,7 @@
 	},
 	"name": "@sveltesentio/charts",
 	"peerDependencies": {
-		"layerchart": ">=2.0.0-next.43",
+		"layerchart": ">=2.0.0",
 		"svelte": ">=5.56.4",
 		"typescript": ">=5.5 <7",
 		"uplot": ">=1.6.0"

@@ -4,7 +4,7 @@
 	},
 	"description": "@xyflow/svelte wrappers — node editors, DAG helpers, canvas utilities",
 	"devDependencies": {
-		"@storybook/addon-svelte-csf": "5.1.5",
+		"@storybook/addon-svelte-csf": "5.1.6",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/testing": "workspace:*",
 		"@testing-library/jest-dom": "^7.0.0",
