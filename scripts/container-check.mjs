@@ -35,7 +35,10 @@ export function excerpt(output) {
 }
 
 /** Why a child process did not finish on its own, or null when it did. */
-export function stopProblem(label, result) {
+export function stopProblem(label, result, deadlineMs) {
+	if (result.error?.code === 'ETIMEDOUT' && deadlineMs !== undefined) {
+		return `${label} did not finish within its ${deadlineMs} ms deadline: ${result.error.message}`;
+	}
 	if (result.error) return `${label} did not run: ${result.error.message}`;
 	if (result.signal) return `${label} was stopped by ${result.signal} before it finished`;
 	return null;

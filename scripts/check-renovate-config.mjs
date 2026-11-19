@@ -85,18 +85,24 @@ export const CONFIG_FILE = 'renovate.json',
 
 export const VALIDATE_TIMEOUT_MS = 120_000;
 
+// These container runs do trivial work (read probe, uid run), so cold start dominates.
+// Measured 46 882 ms at load 43 on 32 cores (2026-11-19); allow about twice that.
+// PROBE_TIMEOUT_MS stays for runtime client calls; every child keeps a deadline (HISS-02).
+export const CONTAINER_PROBE_TIMEOUT_MS = 100_000;
+
 /**
- * Every child deadline one run can reach: a probe per runtime, the image inspect, the pull, the
- * read probe, and two validations with their cleanup. The read probe's cleanup runs only when
- * the probe was stopped, and then nothing follows it; an unreadable mount replaces the two
- * validations with one ID run and its cleanup, which is shorter. The CI job's timeout-minutes
- * must cover it.
+ * Every child deadline one run can reach: a probe per runtime, the image inspect, the pull,
+ * and the read probe. After the read probe, success runs two validations with cleanup
+ * (2 x (VALIDATE + PROBE) = 280 s); a stopped probe runs only its cleanup (PROBE = 20 s);
+ * a nonzero exit runs the uid check and its cleanup (CONTAINER_PROBE + PROBE = 120 s).
+ * The validations are longest, so the bound is (RUNTIMES.length + 1) x PROBE + PULL +
+ * CONTAINER_PROBE + 2 x (VALIDATE + PROBE). The CI job's timeout-minutes must cover it.
  */
 export const WORST_CASE_MS =
 	(RUNTIMES.length + 1) * PROBE_TIMEOUT_MS +
 	PULL_TIMEOUT_MS +
 	2 * (VALIDATE_TIMEOUT_MS + PROBE_TIMEOUT_MS) +
-	PROBE_TIMEOUT_MS;
+	CONTAINER_PROBE_TIMEOUT_MS;
 
 /** The runtime arguments that validate one repository-relative file. */
 export function validatorArgs(rootDir, file, name, user = []) {
@@ -186,7 +192,7 @@ function validatorUid(runtime, user, runner) {
 		RENOVATE_IMAGE,
 		'-u',
 	];
-	const result = runner(runtime, args, { timeout: PROBE_TIMEOUT_MS });
+	const result = runner(runtime, args, { timeout: CONTAINER_PROBE_TIMEOUT_MS });
 	const cleanup = removeStopped(runtime, name, 'validator uid', result, runner);
 	const output = result.output.trim();
 	const uid =
@@ -198,8 +204,10 @@ function validatorUid(runtime, user, runner) {
 
 function checkMount(rootDir, runtime, user, runner, stat) {
 	const name = `renovate-config-probe-${process.pid}-${randomUUID().slice(0, 8)}`;
-	const result = runner(runtime, probeArgs(rootDir, name, user), { timeout: PROBE_TIMEOUT_MS });
-	const stopped = stopProblem('renovate-config read probe', result);
+	const result = runner(runtime, probeArgs(rootDir, name, user), {
+		timeout: CONTAINER_PROBE_TIMEOUT_MS,
+	});
+	const stopped = stopProblem('renovate-config read probe', result, CONTAINER_PROBE_TIMEOUT_MS);
 	const cleanup = removeStopped(runtime, name, 'renovate-config read probe', result, runner);
 	if (stopped) return [stopped, ...cleanup];
 	if (result.status === 0) return cleanup;
