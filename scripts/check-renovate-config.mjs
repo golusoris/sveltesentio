@@ -75,7 +75,7 @@ export {
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 
 export const RENOVATE_IMAGE =
-	'ghcr.io/renovatebot/renovate:44.227.4@sha256:fe058db9710840a4821f20190b3769e3ce709a049b8640aa2bf5f044969fe702';
+	'ghcr.io/renovatebot/renovate:44.252.7@sha256:da2082c34a7e8aee0fbf50122d71a052ba32ea5f51aeded502b742ad7bc9d5a2';
 
 export const CONFIG_FILE = 'renovate.json',
 	PLANTED_FILE = 'scripts/check-renovate-config.planted.json',
