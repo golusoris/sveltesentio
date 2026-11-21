@@ -29,6 +29,15 @@ overrides:
   # svelte-toolbelt and layerchart depend on runed >=0.38.0, whose peer is
   # ^3.0.0. Review by 2027-01-09.
   'runed>@sveltejs/kit': '^3.0.0'
+  # minimatch GHSA-g3hv-75wg-m249 (vulnerable >=7.0.0 <11.0.1) reaches the
+  # lockfile through eslint-plugin-sonarjs and @typescript-eslint (^10), and
+  # glob GHSA-3g3m-2fjr-6pw4 (vulnerable >=9.0.0 <=14.0.1) through
+  # workbox-build under vite-plugin-pwa (^11). Neither has a fixed release on
+  # those majors, so both selectors match the advisory range only and leave
+  # older majors such as minimatch 5 alone. Ends when those parents accept
+  # minimatch >=11.0.1 and glob >=14.0.2. Review by 2027-02-21.
+  'minimatch@>=7.0.0 <11.0.1': '^11.0.1'
+  'glob@>=9.0.0 <14.0.2': '^14.0.2'
 allowBuilds:
   esbuild: set this to true or false
   onnxruntime-node: set this to true or false
