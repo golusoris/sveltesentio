@@ -3,7 +3,7 @@
 // target-size floor to a real mounted `svelte-sonner` `<Toaster>` (ADR-0016, #643).
 import { render } from '@testing-library/svelte';
 import { Toaster, toast } from 'svelte-sonner';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toastPreset } from '../src/toast/index.js';
 
 /** Poll boundedly (<= 20 ticks, 10 ms each) for a mounted `[data-sonner-toast]`. */
@@ -19,33 +19,22 @@ async function waitForToast(container: HTMLElement): Promise<HTMLElement | null>
 }
 
 describe('<Toaster {...toastPreset().toaster}>', () => {
-	let originalMatchMedia: typeof window.matchMedia;
-
 	beforeEach(() => {
-		originalMatchMedia = window.matchMedia;
-		Object.defineProperty(window, 'matchMedia', {
-			configurable: true,
-			writable: true,
-			value: (query: string): MediaQueryList => ({
-				matches: false,
-				media: query,
-				onchange: null,
-				addListener: () => undefined,
-				removeListener: () => undefined,
-				addEventListener: () => undefined,
-				removeEventListener: () => undefined,
-				dispatchEvent: () => false,
-			}),
-		});
+		vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: () => undefined,
+			removeListener: () => undefined,
+			addEventListener: () => undefined,
+			removeEventListener: () => undefined,
+			dispatchEvent: () => false,
+		}));
 	});
 
 	afterEach(() => {
 		toast.dismiss();
-		Object.defineProperty(window, 'matchMedia', {
-			configurable: true,
-			writable: true,
-			value: originalMatchMedia,
-		});
+		vi.unstubAllGlobals();
 	});
 
 	it('applies 10foot width, padding, font-size, centring, gap, offset and button target floor on a mounted toast', async () => {
@@ -64,12 +53,14 @@ describe('<Toaster {...toastPreset().toaster}>', () => {
 		expect(liStyle).toContain('--width: 40rem');
 		expect(liStyle).toContain('padding: 1.125rem 1.5rem');
 		expect(liStyle).toContain('font-size: 20px');
-		expect(liStyle).toContain('translate: -50% 0');
+		expect(liStyle).toContain('inset-inline-end: calc((100% - var(--width)) / 2)');
 		expect(liStyle).not.toContain(' undefined');
 
 		const button = container.querySelector<HTMLElement>('[data-button]');
 		expect(button).not.toBeNull();
-		expect(button?.getAttribute('style') ?? '').toContain('min-height: 44px');
+		// Read longhands: jsdom 31 serialises min-width + min-height as `min-size`.
+		expect(button?.style.minHeight).toBe('44px');
+		expect(button?.style.minWidth).toBe('44px');
 
 		const ol = container.querySelector<HTMLElement>('[data-sonner-toaster]');
 		expect(ol).not.toBeNull();

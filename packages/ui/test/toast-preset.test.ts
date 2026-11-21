@@ -61,7 +61,7 @@ describe('toastPreset', () => {
 			gap: 18,
 			toastOptions: {
 				style:
-					'--width: 40rem; --border-radius: 0.75rem; padding: 1.125rem 1.5rem; font-size: 20px; left: 50%; translate: -50% 0;',
+					'--width: 40rem; --border-radius: 0.75rem; padding: 1.125rem 1.5rem; font-size: 20px; inset-inline-end: calc((100% - var(--width)) / 2);',
 				actionButtonStyle: 'min-height: 44px; min-width: 44px;',
 				cancelButtonStyle: 'min-height: 44px; min-width: 44px;',
 			},
@@ -71,8 +71,11 @@ describe('toastPreset', () => {
 		expect(desktop.toaster.toastOptions.style).toBe(
 			'--width: 356px; --border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 16px;',
 		);
-		expect(desktop.toaster.toastOptions.style).not.toContain('left:');
-		expect(desktop.toaster.toastOptions.style).not.toContain('translate:');
+		expect(desktop.toaster.toastOptions.style).not.toContain('inset-inline-end');
+		expect(toastPreset('dashboard').toaster.toastOptions.style).not.toContain('inset-inline-end');
+		expect(toastPreset('handheld').toaster.toastOptions.style).toContain(
+			'inset-inline-end: calc((100% - var(--width)) / 2);',
+		);
 	});
 
 	it('keeps toaster fields consistent and semicolon-terminated across every preset', () => {

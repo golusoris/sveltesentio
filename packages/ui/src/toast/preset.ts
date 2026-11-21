@@ -30,8 +30,10 @@ export interface ToasterPreset {
 	readonly gap: number;
 	/**
 	 * Per-toast inline styles forwarded by `<Toaster toastOptions>`: toast box
-	 * sizing/centring (`style`) and WCAG 2.2 SC 2.5.8 target-size floor on
-	 * action/cancel buttons (`actionButtonStyle`, `cancelButtonStyle`).
+	 * sizing and centring for `*-center` positions via `inset-inline-end`
+	 * (`style`, leaving `svelte-sonner`'s mobile layout unchanged) and WCAG 2.2
+	 * SC 2.5.8 target-size floor on action/cancel buttons (`actionButtonStyle`,
+	 * `cancelButtonStyle`).
 	 */
 	readonly toastOptions: {
 		readonly style: string;
@@ -81,24 +83,23 @@ const WIDTH: Record<InterfaceType, string> = {
 	handheld: '92vw',
 };
 
-/** Parse a `<number><rem|px|em>` CSS length and scale its numeric value. */
-function scaleParsedLength(
-	length: string,
-	factor: number,
-	pxPerRem = 1,
-): { readonly value: number; readonly unit: string } | undefined {
-	const match = /^(-?\d*\.?\d+)(rem|px|em)$/.exec(length.trim());
-	if (!match) return undefined;
-	const unitScale = match[2] === 'px' ? 1 : pxPerRem;
-	const value = Number(match[1]) * factor * unitScale;
-	// Trim trailing zeros so `0.750rem` -> `0.75rem`.
-	return { value: Number(value.toFixed(4)), unit: match[2] };
+/** Base stacking gap between toasts in `rem` before `spacingScale`. */
+const GAP_REM = 0.75;
+
+/** CSS initial root font size (`1rem = 16px`). */
+const REM_PX = 16;
+
+/** Round a scaled length to 4 decimals, trimming trailing zeros (`0.750` -> `0.75`). */
+function roundLength(value: number): number {
+	return Number(value.toFixed(4));
 }
 
 /** Multiply a `rem`/`px` length by a scalar, preserving the unit. */
 function scaleLength(length: string, factor: number): string {
-	const scaled = scaleParsedLength(length, factor);
-	return scaled ? `${scaled.value}${scaled.unit}` : length;
+	const match = /^(-?\d*\.?\d+)(rem|px|em)$/.exec(length.trim());
+	if (!match) return length;
+	const value = Number(match[1]) * factor;
+	return `${roundLength(value)}${match[2]}`;
 }
 
 /** Format `[property, value]` pairs as a semicolon-terminated inline style string. */
@@ -121,8 +122,7 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 	const paddingY = scaleLength('0.75rem', preset.spacingScale);
 	const paddingX = scaleLength('1rem', preset.spacingScale);
 	const padding = `${paddingY} ${paddingX}`;
-	const gap = scaleLength('0.75rem', preset.spacingScale);
-	const gapPx = scaleParsedLength('0.75rem', preset.spacingScale, 16)?.value ?? 0;
+	const gap = scaleLength(`${GAP_REM}rem`, preset.spacingScale);
 	const offset = scaleLength('1rem', preset.spacingScale);
 	const buttonStyle = declarations([
 		['min-height', preset.minTargetSize],
@@ -134,10 +134,7 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 		['padding', padding],
 		['font-size', preset.baseFontSize],
 		...(position.endsWith('-center')
-			? ([
-					['left', '50%'],
-					['translate', '-50% 0'],
-				] as const)
+			? ([['inset-inline-end', 'calc((100% - var(--width)) / 2)']] as const)
 			: []),
 	]);
 
@@ -158,7 +155,7 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 		toaster: {
 			position,
 			offset,
-			gap: gapPx,
+			gap: roundLength(GAP_REM * preset.spacingScale * REM_PX),
 			toastOptions: {
 				style: toastStyle,
 				actionButtonStyle: buttonStyle,
