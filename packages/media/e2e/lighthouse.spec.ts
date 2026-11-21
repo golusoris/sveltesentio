@@ -53,10 +53,8 @@ test('the production harness meets the Lighthouse budgets', async ({ baseURL }) 
 			}),
 		]);
 		const elapsed = Math.round(performance.now() - started);
-		test.info().annotations.push({
-			type: 'lighthouse-duration',
-			description: `lighthouse: ${url} took ${elapsed} ms`,
-		});
+		// The list and github reporters print test stdout but not annotations.
+		process.stdout.write(`lighthouse: ${url} took ${elapsed} ms\n`);
 		const lhr = result?.lhr;
 		expect(lhr, 'Lighthouse returned no result').toBeDefined();
 		if (lhr === undefined) return;
