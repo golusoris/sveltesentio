@@ -16,7 +16,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-- every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
+- every @sveltesentio/\* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
 
 ### Bug Fixes
 
