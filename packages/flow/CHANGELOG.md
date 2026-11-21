@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/plurano/sveltesentio/compare/flow-v0.7.2...flow-v0.7.3) (2026-11-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
+
 ## [0.7.2](https://github.com/golusoris/sveltesentio/compare/flow-v0.7.1...flow-v0.7.2) (2026-10-25)
 
 ### Bug Fixes
