@@ -61,7 +61,7 @@ import { Toaster, toast } from 'svelte-sonner';
 import { toastPreset } from '@sveltesentio/ui/toast';
 
 const p = toastPreset('10foot'); // top-center, 40rem, scaled padding
-// <Toaster position={p.position} toastOptions={{ style: p.style }} />
+// <Toaster {...p.toaster} />
 ```
 
 ### Colour palettes and contrast checking

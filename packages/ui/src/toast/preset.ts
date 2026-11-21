@@ -1,9 +1,11 @@
 /**
  * Preset-aware toast sizing (ADR-0016). `svelte-sonner` does not expose
  * interface-type sizing as a first-class API, so this thin helper maps an
- * {@link InterfaceType} to the `<Toaster>` overrides (position + CSS custom
- * properties) that scale toast padding / font-size / width with the active
- * interface preset. Pure — no runtime dependency on `svelte-sonner`.
+ * {@link InterfaceType} to the `<Toaster>` overrides (`position`, `offset`,
+ * stacking `gap` in px, and `toastOptions` inline styles for `--width`,
+ * `--border-radius`, `padding`, `font-size`, and action/cancel button minimum
+ * target size) that reach a mounted toast. Pure — no runtime dependency on
+ * `svelte-sonner`.
  */
 
 import { presets, type InterfacePreset, type InterfaceType } from '../presets/index.js';
@@ -13,9 +15,36 @@ export type ToastPosition =
 	'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 /**
- * Sizing + placement contract a `<Toaster>` consumes. `style` is a map of CSS
- * custom properties svelte-sonner reads (`--width`, `--toast-padding`, …) plus
- * the preset font-size; spread onto the Toaster's `toastOptions.style`.
+ * `<Toaster>` props shaped for direct spread onto `svelte-sonner`'s
+ * `<Toaster {...p.toaster} />` (ADR-0016, #643).
+ */
+export interface ToasterPreset {
+	/** Recommended `<Toaster position>`. */
+	readonly position: ToastPosition;
+	/** Distance from the viewport edge (CSS length, matching {@link ToastPreset.offset}). */
+	readonly offset: string;
+	/**
+	 * Gap between stacked toasts in CSS px (`ToastPreset.gap` converted at
+	 * `1rem = 16px`, the CSS initial root font size).
+	 */
+	readonly gap: number;
+	/**
+	 * Per-toast inline styles forwarded by `<Toaster toastOptions>`: toast box
+	 * sizing/centring (`style`) and WCAG 2.2 SC 2.5.8 target-size floor on
+	 * action/cancel buttons (`actionButtonStyle`, `cancelButtonStyle`).
+	 */
+	readonly toastOptions: {
+		readonly style: string;
+		readonly actionButtonStyle: string;
+		readonly cancelButtonStyle: string;
+	};
+}
+
+/**
+ * Sizing + placement contract for an interface preset. Spread {@link toaster}
+ * onto `svelte-sonner`'s `<Toaster {...p.toaster} />`; {@link style} is retained
+ * as an object map of the raw preset values for inspection (not read by
+ * `svelte-sonner`, which expects a semicolon-terminated inline style string).
  */
 export interface ToastPreset {
 	readonly interface: InterfaceType;
@@ -27,8 +56,13 @@ export interface ToastPreset {
 	readonly gap: string;
 	/** Distance from the viewport edge (CSS length). */
 	readonly offset: string;
-	/** CSS custom properties for `toastOptions.style`. */
+	/**
+	 * Object map of preset sizing values. Retained for append-only compatibility;
+	 * not read by `svelte-sonner` — pass {@link toaster} to `<Toaster>` instead.
+	 */
 	readonly style: Readonly<Record<string, string>>;
+	/** Ready-to-spread `<Toaster {...p.toaster} />` props for `svelte-sonner`. */
+	readonly toaster: ToasterPreset;
 }
 
 /** Per-interface placement; 10-foot/handheld center for thumb/D-pad reach. */
@@ -47,13 +81,29 @@ const WIDTH: Record<InterfaceType, string> = {
 	handheld: '92vw',
 };
 
+/** Parse a `<number><rem|px|em>` CSS length and scale its numeric value. */
+function scaleParsedLength(
+	length: string,
+	factor: number,
+	pxPerRem = 1,
+): { readonly value: number; readonly unit: string } | undefined {
+	const match = /^(-?\d*\.?\d+)(rem|px|em)$/.exec(length.trim());
+	if (!match) return undefined;
+	const unitScale = match[2] === 'px' ? 1 : pxPerRem;
+	const value = Number(match[1]) * factor * unitScale;
+	// Trim trailing zeros so `0.750rem` -> `0.75rem`.
+	return { value: Number(value.toFixed(4)), unit: match[2] };
+}
+
 /** Multiply a `rem`/`px` length by a scalar, preserving the unit. */
 function scaleLength(length: string, factor: number): string {
-	const match = /^(-?\d*\.?\d+)(rem|px|em)$/.exec(length.trim());
-	if (!match) return length;
-	const value = Number(match[1]) * factor;
-	// Trim trailing zeros so `0.750rem` -> `0.75rem`.
-	return `${Number(value.toFixed(4))}${match[2]}`;
+	const scaled = scaleParsedLength(length, factor);
+	return scaled ? `${scaled.value}${scaled.unit}` : length;
+}
+
+/** Format `[property, value]` pairs as a semicolon-terminated inline style string. */
+function declarations(entries: ReadonlyArray<readonly [string, string]>): string {
+	return entries.map(([prop, val]) => `${prop}: ${val};`).join(' ');
 }
 
 /**
@@ -66,24 +116,54 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 	const preset: InterfacePreset =
 		typeof interfaceType === 'string' ? presets[interfaceType] : interfaceType;
 	const name = preset.name;
+	const position = POSITION[name];
+	const width = WIDTH[name];
 	const paddingY = scaleLength('0.75rem', preset.spacingScale);
 	const paddingX = scaleLength('1rem', preset.spacingScale);
+	const padding = `${paddingY} ${paddingX}`;
 	const gap = scaleLength('0.75rem', preset.spacingScale);
+	const gapPx = scaleParsedLength('0.75rem', preset.spacingScale, 16)?.value ?? 0;
 	const offset = scaleLength('1rem', preset.spacingScale);
+	const buttonStyle = declarations([
+		['min-height', preset.minTargetSize],
+		['min-width', preset.minTargetSize],
+	]);
+	const toastStyle = declarations([
+		['--width', width],
+		['--border-radius', preset.radius],
+		['padding', padding],
+		['font-size', preset.baseFontSize],
+		...(position.endsWith('-center')
+			? ([
+					['left', '50%'],
+					['translate', '-50% 0'],
+				] as const)
+			: []),
+	]);
 
 	return {
 		interface: name,
-		position: POSITION[name],
-		width: WIDTH[name],
+		position,
+		width,
 		gap,
 		offset,
 		style: {
-			'--width': WIDTH[name],
-			'--toast-padding': `${paddingY} ${paddingX}`,
+			'--width': width,
+			'--toast-padding': padding,
 			'--toast-gap': gap,
 			'--font-size': preset.baseFontSize,
 			'--border-radius': preset.radius,
 			'--toast-min-target-size': preset.minTargetSize,
+		},
+		toaster: {
+			position,
+			offset,
+			gap: gapPx,
+			toastOptions: {
+				style: toastStyle,
+				actionButtonStyle: buttonStyle,
+				cancelButtonStyle: buttonStyle,
+			},
 		},
 	};
 }

@@ -5,6 +5,9 @@ import { svelteVitestConfig } from '../../vitest.shared.ts';
 export default svelteVitestConfig({
 	svelte,
 	svelteTesting,
+	component: {
+		inlineDeps: ['svelte-sonner', 'runed'],
+	},
 	coverage: {
 		exclude: ['src/**/index.ts', 'src/**/*.svelte', 'src/**/*.svelte.ts'],
 	},

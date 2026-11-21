@@ -11,9 +11,9 @@
  * import { toastPreset } from '@sveltesentio/ui/toast';
  *
  * const p = toastPreset('handheld');
- * // <Toaster position={p.position} toastOptions={{ style: p.style }} />
+ * // <Toaster {...p.toaster} />
  * ```
  */
 
 export { toastPreset } from './preset.js';
-export type { ToastPreset, ToastPosition } from './preset.js';
+export type { ToastPreset, ToastPosition, ToasterPreset } from './preset.js';
