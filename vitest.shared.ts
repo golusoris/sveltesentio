@@ -67,6 +67,12 @@ interface ComponentProjectOptions {
 	autoCleanup?: boolean;
 	/** Per-test timeout for the component lane only; the unit lane keeps Vitest's default. */
 	testTimeout?: number;
+	/**
+	 * Dependencies Vite must transform in the component lane (e.g. `svelte-sonner`
+	 * and `runed`, else `runed` loads a second Svelte runtime and throws
+	 * `lifecycle_outside_component`).
+	 */
+	inlineDeps?: string[];
 }
 
 /**
@@ -95,6 +101,9 @@ function componentProject(opts: SvelteVitestOptions): UserWorkspaceConfig {
 			...(opts.component?.testTimeout === undefined
 				? {}
 				: { testTimeout: opts.component.testTimeout }),
+			...(opts.component?.inlineDeps === undefined
+				? {}
+				: { server: { deps: { inline: opts.component.inlineDeps } } }),
 		},
 	};
 }

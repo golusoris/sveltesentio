@@ -61,8 +61,10 @@ import { Toaster, toast } from 'svelte-sonner';
 import { toastPreset } from '@sveltesentio/ui/toast';
 
 const p = toastPreset('10foot'); // top-center, 40rem, scaled padding
-// <Toaster position={p.position} toastOptions={{ style: p.style }} />
+// <Toaster {...p.toaster} />
 ```
+
+Expanded-stack spacing follows the preset `gap` from `svelte-sonner` 1.2.0; on `1.0.x`/`1.1.x`, the expanded offset stays at `svelte-sonner`'s fixed `14px` (#648).
 
 ### Colour palettes and contrast checking
 
