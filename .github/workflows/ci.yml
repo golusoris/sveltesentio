@@ -57,7 +57,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       # ci-affected.mjs imports prettier to list the files the format check covers.
       - &cache_pnpm
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -88,7 +88,7 @@ jobs:
       - &setup_node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       - *cache_pnpm
       - *pnpm_install
       - name: Lint affected packages
@@ -433,7 +433,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       - name: Replay the rule fixtures
         run: bash scripts/semgrep-scan.sh --test
       - name: Scan every tracked JavaScript and TypeScript file
@@ -455,7 +455,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       # Runs renovate-config-validator from the Renovate image the script pins by
       # digest, offline, and requires it to accept renovate.json and refuse the
       # planted rule. CI=true makes a missing container runtime fail, not skip.
@@ -477,7 +477,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       # CI=true makes a missing container runtime fail, not skip.
       - run: node scripts/check-workflows.mjs
 
@@ -495,7 +495,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       # No install step: the check uses only node builtins and git.
       - name: Check that a changed surface ships its documentation
         env:
@@ -518,7 +518,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       - *cache_pnpm
       - *pnpm_install
       - name: Check that every label an issue form names exists
@@ -558,7 +558,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24'
+          node-version: '26'
       # Every need must succeed; scripts/ci-gate.mjs lists the jobs that may skip and when.
       - name: Verify every required job succeeded or was skipped for a stated reason
         env:

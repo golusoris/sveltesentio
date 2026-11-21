@@ -2,7 +2,7 @@
 	"description": "Vite plugin, env schema, error types, id/clock utils — sveltesentio core",
 	"devDependencies": {
 		"@sveltejs/kit": "^3.0.0",
-		"@types/node": "^24.13.4",
+		"@types/node": "^26.0.0",
 		"eslint": "^10.10.0",
 		"esm-env": "^1.2.2",
 		"fast-check": "^4.10.2",

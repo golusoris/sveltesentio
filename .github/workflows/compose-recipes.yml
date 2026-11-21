@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: github.event.pull_request.draft != true
         with:
-          node-version: '24'
+          node-version: '26'
       - name: Check the import forms of every recipe
         if: github.event.pull_request.draft != true
         run: node scripts/check-compose-imports.mjs
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: github.event.pull_request.draft != true
         with:
-          node-version: '24'
+          node-version: '26'
       - name: Build and type-check every #lib import form
         if: github.event.pull_request.draft != true
         run: node tools/compose-lib-fixture/run.mjs "$KIT"
