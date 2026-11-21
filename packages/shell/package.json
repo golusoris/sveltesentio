@@ -81,7 +81,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"lint": "eslint src/ test/",
+		"lint": "eslint src/ test/ e2e/",
 		"test": "vitest run --coverage",
 		"test:e2e": "playwright test --config e2e/playwright.config.ts",
 		"typecheck": "tsc --noEmit -p tsconfig.test.json"

@@ -26,7 +26,7 @@
 		"build": "storybook build",
 		"build-storybook": "storybook build",
 		"storybook": "storybook dev -p 6006 --no-open",
-		"lint": "eslint .storybook/ vitest.config.ts",
+		"lint": "eslint .storybook/ vitest.config.ts visual/",
 		"test:stories": "vitest run --project=storybook",
 		"test:visual": "playwright test --config playwright.config.ts",
 		"test:visual:update": "playwright test --config playwright.config.ts --update-snapshots",
