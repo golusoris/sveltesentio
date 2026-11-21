@@ -5,7 +5,7 @@
 	},
 	"description": "Media player (headless HLS model + a11y <Player> shell), responsive blur-up <Image>, and a preset-aware embla <Carousel> — Svelte 5",
 	"devDependencies": {
-		"@playwright/test": "1.64.1",
+		"@playwright/test": "1.65.1",
 		"@storybook/addon-svelte-csf": "5.1.6",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@sveltesentio/core": "workspace:*",

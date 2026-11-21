@@ -2,7 +2,7 @@
 	"description": "Device-class layout + input primitives — classifyDevice, D-pad/Gamepad focus graph, Tailwind 4 safe-area, optional @vite-pwa/sveltekit registration",
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
-		"@playwright/test": "1.64.1",
+		"@playwright/test": "1.65.1",
 		"@sveltesentio/testing": "workspace:*",
 		"@types/node": "^24.13.4",
 		"svelte": "^5.57.0",
