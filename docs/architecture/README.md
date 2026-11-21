@@ -27,7 +27,7 @@ L4 is intentionally omitted. Code is the source of truth for code-level structur
 # Local render (requires plantuml installed):
 plantuml docs/architecture/*.puml
 
-# CI: TODO — `.github/workflows/render-diagrams.yml` will publish SVG to gh-pages.
+# No CI job renders these diagrams; run plantuml locally (see above).
 ```
 
 ## Examples + reference

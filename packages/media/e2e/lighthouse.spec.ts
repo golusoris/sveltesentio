@@ -53,7 +53,10 @@ test('the production harness meets the Lighthouse budgets', async ({ baseURL }) 
 			}),
 		]);
 		const elapsed = Math.round(performance.now() - started);
-		console.log(`lighthouse: ${url} took ${elapsed} ms`);
+		test.info().annotations.push({
+			type: 'lighthouse-duration',
+			description: `lighthouse: ${url} took ${elapsed} ms`,
+		});
 		const lhr = result?.lhr;
 		expect(lhr, 'Lighthouse returned no result').toBeDefined();
 		if (lhr === undefined) return;

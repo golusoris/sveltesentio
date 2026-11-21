@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
 interface StoryIndex {
 	v: number;
@@ -8,15 +8,47 @@ interface StoryIndex {
 const ANIMATION_SETTLE_MS = 500;
 const MAX_STORIES = 500;
 
-test('every story matches its baseline screenshot', async ({ page, request }) => {
-	test.setTimeout(300_000);
+function isStoryIndex(body: unknown): body is StoryIndex {
+	return (
+		typeof body === 'object' &&
+		body !== null &&
+		'entries' in body &&
+		typeof body.entries === 'object' &&
+		body.entries !== null
+	);
+}
+
+/** Sorted ids of every story in Storybook's index.json. */
+async function listStoryIds(request: APIRequestContext): Promise<string[]> {
 	const res = await request.get('/index.json', { timeout: 10_000 });
 	expect(res.ok()).toBe(true);
-	const index: StoryIndex = await res.json();
-	const storyIds = Object.values(index.entries ?? {})
+	const body: unknown = await res.json();
+	expect(isStoryIndex(body), 'index.json is not a Storybook story index').toBe(true);
+	if (!isStoryIndex(body)) return [];
+	return Object.values(body.entries)
 		.filter((entry) => entry.type === 'story')
 		.map((entry) => entry.id)
 		.sort();
+}
+
+/** Opens one story; returns why it failed to load, or undefined when it loaded. */
+async function openStory(page: Page, storyId: string): Promise<string | undefined> {
+	try {
+		const response = await page.goto(`/iframe.html?id=${storyId}&viewMode=story`, {
+			waitUntil: 'networkidle',
+			timeout: 30_000,
+		});
+		if (!response?.ok()) return `${storyId}: HTTP ${response?.status() ?? 'no response'}`;
+		return undefined;
+	} catch (err: unknown) {
+		const msg = err instanceof Error ? err.message : String(err);
+		return `${storyId}: navigation failed (${msg})`;
+	}
+}
+
+test('every story matches its baseline screenshot', async ({ page, request }) => {
+	test.setTimeout(300_000);
+	const storyIds = await listStoryIds(request);
 	expect(storyIds.length).toBeGreaterThan(0);
 	expect(storyIds.length).toBeLessThanOrEqual(MAX_STORIES);
 
@@ -24,18 +56,9 @@ test('every story matches its baseline screenshot', async ({ page, request }) =>
 	const skipped: string[] = [];
 
 	for (const storyId of storyIds) {
-		try {
-			const response = await page.goto(`/iframe.html?id=${storyId}&viewMode=story`, {
-				waitUntil: 'networkidle',
-				timeout: 30_000,
-			});
-			if (!response?.ok()) {
-				errors.push(`${storyId}: HTTP ${response?.status() ?? 'no response'}`);
-				continue;
-			}
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			errors.push(`${storyId}: navigation failed (${msg})`);
+		const loadError = await openStory(page, storyId);
+		if (loadError !== undefined) {
+			errors.push(loadError);
 			continue;
 		}
 		await page.waitForTimeout(ANIMATION_SETTLE_MS);
