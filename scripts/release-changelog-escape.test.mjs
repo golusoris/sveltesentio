@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -134,6 +134,84 @@ describe('release-changelog-escape CLI', () => {
 describe('constants', () => {
 	it('exports MAX_TOKENS', () => {
 		assert.equal(MAX_TOKENS, 1_000_000);
+	});
+});
+
+/**
+ * A tool directory with lock files and, optionally, node_modules written by `modules`.
+ *
+ * @param {(dir: string) => void} [modules]
+ */
+function toolFixture(modules) {
+	const dir = mkdtempSync(join(tmpdir(), 'changelog-escape-tool-'));
+	writeFileSync(join(dir, 'package.json'), '{}\n');
+	writeFileSync(join(dir, 'package-lock.json'), '{}\n');
+	modules?.(dir);
+	return dir;
+}
+
+/**
+ * Stand-in for `npm ci`: writes CommonJS stubs of the three modules the loader requires.
+ *
+ * @param {string} dir
+ */
+function stubModules(dir) {
+	const files = {
+		'markdownlint/package.json': '{"name":"markdownlint","main":"index.js"}',
+		'markdownlint/index.js': 'module.exports = { applyFixes: () => "stub" };',
+		'markdownlint/sync.js': 'module.exports = { lint: () => ({}) };',
+		'js-yaml/package.json': '{"name":"js-yaml","main":"index.js"}',
+		'js-yaml/index.js': 'module.exports = { load: () => null };',
+	};
+	for (const [path, text] of Object.entries(files)) {
+		const file = join(dir, 'node_modules', path);
+		mkdirSync(dirname(file), { recursive: true });
+		writeFileSync(file, text);
+	}
+}
+
+// node --test runs each file in its own process, and npm ci deletes node_modules first,
+// so an install into the shared tool directory races between workers.
+describe('loadMarkdownlint without a tool install', () => {
+	it('installs once into a private directory and never writes the tool directory', () => {
+		const toolDir = toolFixture();
+		const installs = [];
+		const install = (dir) => {
+			installs.push(dir);
+			stubModules(dir);
+		};
+		try {
+			const first = loadMarkdownlint({ toolDir, install });
+			const second = loadMarkdownlint({ toolDir, install });
+			assert.equal(first.applyFixes(), 'stub');
+			assert.equal(second.applyFixes(), 'stub');
+			assert.equal(installs.length, 1);
+			assert.notEqual(installs[0], toolDir);
+			assert.ok(existsSync(join(installs[0], 'package-lock.json')));
+			assert.equal(existsSync(join(toolDir, 'node_modules')), false);
+		} finally {
+			rmSync(toolDir, { recursive: true, force: true });
+		}
+	});
+
+	it('negative: a broken tool install fails without installing', () => {
+		const toolDir = toolFixture((dir) => {
+			stubModules(dir);
+			writeFileSync(
+				join(dir, 'node_modules', 'markdownlint', 'index.js'),
+				'throw new SyntaxError("broken");',
+			);
+		});
+		const installs = [];
+		try {
+			assert.throws(
+				() => loadMarkdownlint({ toolDir, install: (dir) => installs.push(dir) }),
+				SyntaxError,
+			);
+			assert.deepEqual(installs, []);
+		} finally {
+			rmSync(toolDir, { recursive: true, force: true });
+		}
 	});
 });
 

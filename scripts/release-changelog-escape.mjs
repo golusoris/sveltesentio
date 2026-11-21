@@ -5,8 +5,9 @@
 // whitespace sits inside the emphasis span. Backslash escapes render the same character in
 // CommonMark, so `\_` and `\*` silence MD037 without changing displayed text.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -19,33 +20,59 @@ const MARKER = /^[*_]{1,3}$/u;
 
 /** @typedef {{ lint: Function, applyFixes: Function, yaml: { load: (s: string) => unknown } }} MarkdownlintBundle */
 
+const LOCK_FILES = ['package.json', 'package-lock.json'];
+const NPM_CI_TIMEOUT_MS = 120_000;
+
+/** Private installs this process made, keyed by tool directory. */
+const privateInstalls = new Map();
+
 /**
- * Loads markdownlint from the locked tools/markdownlint install (installs on MODULE_NOT_FOUND).
+ * Loads markdownlint from the tools/markdownlint install. When that install is absent, the
+ * same lockfile is installed once per process into a private temporary directory, as
+ * tools/markdownlint/verify.mjs does. `node --test` runs each test file in its own process,
+ * and `npm ci` deletes node_modules before it installs, so a shared install directory would
+ * let one worker remove the modules another worker is loading.
  *
+ * @param {{ toolDir?: string, install?: (dir: string) => void }} [options]
  * @returns {MarkdownlintBundle}
  */
-export function loadMarkdownlint() {
-	const toolPkg = join(repoRoot, 'tools', 'markdownlint', 'package.json');
+export function loadMarkdownlint(options = {}) {
+	const toolDir = options.toolDir ?? join(repoRoot, 'tools', 'markdownlint');
 	try {
-		return loadMarkdownlintFrom(toolPkg);
+		return loadMarkdownlintFrom(join(toolDir, 'package.json'));
 	} catch (error) {
-		// Only a missing install falls through to the locked install; verify.mjs installs the
-		// same lockfile the same way. Any other load error fails the caller.
+		// Only a missing install falls through to the private install; any other load error
+		// fails the caller.
 		if (error?.code !== 'MODULE_NOT_FOUND') throw error;
-		execFileSync(
-			'npm',
-			[
-				'--prefix',
-				join(repoRoot, 'tools', 'markdownlint'),
-				'ci',
-				'--ignore-scripts',
-				'--no-audit',
-				'--no-fund',
-			],
-			{ stdio: 'pipe', timeout: 120000 },
-		);
-		return loadMarkdownlintFrom(toolPkg);
 	}
+	let dir = privateInstalls.get(toolDir);
+	if (dir === undefined) {
+		dir = privateInstall(toolDir, options.install ?? npmCi);
+		privateInstalls.set(toolDir, dir);
+	}
+	return loadMarkdownlintFrom(join(dir, 'package.json'));
+}
+
+/**
+ * @param {string} toolDir
+ * @param {(dir: string) => void} install
+ * @returns {string}
+ */
+function privateInstall(toolDir, install) {
+	const dir = mkdtempSync(join(tmpdir(), 'release-changelog-markdownlint-'));
+	process.once('exit', () => rmSync(dir, { recursive: true, force: true }));
+	for (const name of LOCK_FILES) copyFileSync(join(toolDir, name), join(dir, name));
+	install(dir);
+	return dir;
+}
+
+/** @param {string} dir */
+function npmCi(dir) {
+	execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], {
+		cwd: dir,
+		stdio: 'pipe',
+		timeout: NPM_CI_TIMEOUT_MS,
+	});
 }
 
 /**
