@@ -64,6 +64,8 @@ const p = toastPreset('10foot'); // top-center, 40rem, scaled padding
 // <Toaster {...p.toaster} />
 ```
 
+Expanded-stack spacing follows the preset `gap` from `svelte-sonner` 1.2.0; on `1.0.x`/`1.1.x`, the expanded offset stays at `svelte-sonner`'s fixed `14px` (#648).
+
 ### Colour palettes and contrast checking
 
 `@sveltesentio/ui/presets` provides colour-palette presets alongside interface-type sizing presets. `presetSnatchArr` is the first colour-palette preset (SnatchArr Violet Amber: a violet brand with deep chroma and an amber accent, with WCAG 2.2 AA compliance across all 20 required text and non-text pairs).

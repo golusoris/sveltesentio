@@ -2,10 +2,10 @@
  * Preset-aware toast sizing (ADR-0016). `svelte-sonner` does not expose
  * interface-type sizing as a first-class API, so this thin helper maps an
  * {@link InterfaceType} to the `<Toaster>` overrides (`position`, `offset`,
- * stacking `gap` in px, and `toastOptions` inline styles for `--width`,
- * `--border-radius`, `padding`, `font-size`, and action/cancel button minimum
- * target size) that reach a mounted toast. Pure — no runtime dependency on
- * `svelte-sonner`.
+ * stacking `gap` in px, toaster `<ol>` `style` `min-width`, and `toastOptions`
+ * inline styles for `--width`, `--border-radius`, `padding`, `font-size`, and
+ * action/cancel button minimum target size) that reach a mounted toast. Pure —
+ * no runtime dependency on `svelte-sonner`.
  */
 
 import { presets, type InterfacePreset, type InterfaceType } from '../presets/index.js';
@@ -29,11 +29,18 @@ export interface ToasterPreset {
 	 */
 	readonly gap: number;
 	/**
+	 * Inline style for every toaster `<ol>` (`<Toaster style>`):
+	 * `min-width: min(<width>, 100% - 2 * <offset>)` widens each position-group
+	 * list to the preset width capped at the viewport minus both offsets, so
+	 * per-toast `position` overrides keep their alignment; `svelte-sonner`'s
+	 * mobile `width: 100%` is unaffected.
+	 */
+	readonly style: string;
+	/**
 	 * Per-toast inline styles forwarded by `<Toaster toastOptions>`: toast box
-	 * sizing and centring for `*-center` positions via `inset-inline-end`
-	 * (`style`, leaving `svelte-sonner`'s mobile layout unchanged) and WCAG 2.2
-	 * SC 2.5.8 target-size floor on action/cancel buttons (`actionButtonStyle`,
-	 * `cancelButtonStyle`).
+	 * sizing with `--width: min(<width>, 100%)` so a toast never exceeds its
+	 * toaster list (`style`) and WCAG 2.2 SC 2.5.8 target-size floor on
+	 * action/cancel buttons (`actionButtonStyle`, `cancelButtonStyle`).
 	 */
 	readonly toastOptions: {
 		readonly style: string;
@@ -128,14 +135,12 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 		['min-height', preset.minTargetSize],
 		['min-width', preset.minTargetSize],
 	]);
+	const toasterStyle = declarations([['min-width', `min(${width}, 100% - 2 * ${offset})`]]);
 	const toastStyle = declarations([
-		['--width', width],
+		['--width', `min(${width}, 100%)`],
 		['--border-radius', preset.radius],
 		['padding', padding],
 		['font-size', preset.baseFontSize],
-		...(position.endsWith('-center')
-			? ([['inset-inline-end', 'calc((100% - var(--width)) / 2)']] as const)
-			: []),
 	]);
 
 	return {
@@ -156,6 +161,7 @@ export function toastPreset(interfaceType: InterfaceType | InterfacePreset): Toa
 			position,
 			offset,
 			gap: roundLength(GAP_REM * preset.spacingScale * REM_PX),
+			style: toasterStyle,
 			toastOptions: {
 				style: toastStyle,
 				actionButtonStyle: buttonStyle,
