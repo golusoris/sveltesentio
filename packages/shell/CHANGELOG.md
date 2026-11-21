@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1](https://github.com/plurano/sveltesentio/compare/shell-v0.5.0...shell-v0.5.1) (2026-11-21)
+
+### Bug Fixes
+
+- **deps:** pin Playwright to the CI image version ([#596](https://github.com/plurano/sveltesentio/issues/596)) ([4f9c97a](https://github.com/plurano/sveltesentio/commit/4f9c97a0767dad1bd179567336b9c6ef70f2c41f))
+
 ## [0.5.0](https://github.com/golusoris/sveltesentio/compare/shell-v0.4.1...shell-v0.5.0) (2026-10-25)
 
 ### ⚠ BREAKING CHANGES
