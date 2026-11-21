@@ -2,15 +2,14 @@
 
 ## [0.8.0](https://github.com/plurano/sveltesentio/compare/charts-v0.7.2...charts-v0.8.0) (2026-11-21)
 
-
 ### ⚠ BREAKING CHANGES
 
-* **charts:** @sveltesentio/charts declares the optional peer layerchart ">=2.0.0". Applications on a 2.0.0-next prerelease of layerchart get a peer warning or refusal from package managers that enforce peers.
+- **charts:** @sveltesentio/charts declares the optional peer layerchart ">=2.0.0". Applications on a 2.0.0-next prerelease of layerchart get a peer warning or refusal from package managers that enforce peers.
 
 ### Bug Fixes
 
-* **charts:** floor the layerchart peer at 2.0.0 and test it there ([#624](https://github.com/plurano/sveltesentio/issues/624)) ([0f30e3e](https://github.com/plurano/sveltesentio/commit/0f30e3e6a3464e3b676284ce4fb9efeaced52b9c))
-* **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
+- **charts:** floor the layerchart peer at 2.0.0 and test it there ([#624](https://github.com/plurano/sveltesentio/issues/624)) ([0f30e3e](https://github.com/plurano/sveltesentio/commit/0f30e3e6a3464e3b676284ce4fb9efeaced52b9c))
+- **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
 
 ## [0.7.2](https://github.com/golusoris/sveltesentio/compare/charts-v0.7.1...charts-v0.7.2) (2026-10-25)
 

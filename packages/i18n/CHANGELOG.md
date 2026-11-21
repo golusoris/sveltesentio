@@ -2,10 +2,9 @@
 
 ## [0.6.1](https://github.com/plurano/sveltesentio/compare/i18n-v0.6.0...i18n-v0.6.1) (2026-11-21)
 
-
 ### Bug Fixes
 
-* **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
+- **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
 
 ## [0.6.0](https://github.com/golusoris/sveltesentio/compare/i18n-v0.5.1...i18n-v0.6.0) (2026-10-25)
 

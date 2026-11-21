@@ -2,11 +2,10 @@
 
 ## [0.6.3](https://github.com/plurano/sveltesentio/compare/media-v0.6.2...media-v0.6.3) (2026-11-21)
 
-
 ### Bug Fixes
 
-* **deps:** pin Playwright to the CI image version ([#596](https://github.com/plurano/sveltesentio/issues/596)) ([4f9c97a](https://github.com/plurano/sveltesentio/commit/4f9c97a0767dad1bd179567336b9c6ef70f2c41f))
-* **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
+- **deps:** pin Playwright to the CI image version ([#596](https://github.com/plurano/sveltesentio/issues/596)) ([4f9c97a](https://github.com/plurano/sveltesentio/commit/4f9c97a0767dad1bd179567336b9c6ef70f2c41f))
+- **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
 
 ## [0.6.2](https://github.com/golusoris/sveltesentio/compare/media-v0.6.1...media-v0.6.2) (2026-10-25)
 

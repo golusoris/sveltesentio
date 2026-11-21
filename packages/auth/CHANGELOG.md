@@ -2,11 +2,10 @@
 
 ## [0.10.1](https://github.com/plurano/sveltesentio/compare/auth-v0.10.0...auth-v0.10.1) (2026-11-21)
 
-
 ### Bug Fixes
 
-* **auth:** set the login nonce cookie path to / so browsers accept it ([#506](https://github.com/plurano/sveltesentio/issues/506)) ([fd3bcc1](https://github.com/plurano/sveltesentio/commit/fd3bcc10afe71b040d4a44dd013602f1eab0a36e))
-* **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
+- **auth:** set the login nonce cookie path to / so browsers accept it ([#506](https://github.com/plurano/sveltesentio/issues/506)) ([fd3bcc1](https://github.com/plurano/sveltesentio/commit/fd3bcc10afe71b040d4a44dd013602f1eab0a36e))
+- **deps:** update dependency jsdom to v31 ([#611](https://github.com/plurano/sveltesentio/issues/611)) ([13dcbcb](https://github.com/plurano/sveltesentio/commit/13dcbcb6f72f51bb25f5d3ca3305282a6829146d))
 
 ## [0.10.0](https://github.com/golusoris/sveltesentio/compare/auth-v0.9.1...auth-v0.10.0) (2026-10-25)
 
