@@ -1,7 +1,7 @@
 {
 	"description": "Paraglide-js v2 wrappers — locale detection, Intl formatters, a11y announcer, RTL direction",
 	"devDependencies": {
-		"@inlang/paraglide-js": "^2.25.1",
+		"@inlang/paraglide-js": "^3.0.0",
 		"@storybook/addon-svelte-csf": "5.1.6",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
