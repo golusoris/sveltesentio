@@ -11,11 +11,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+
+import { escapeBareEmphasis, loadMarkdownlint } from './release-changelog-escape.mjs';
 
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const workflow = join(repoRoot, '.github', 'workflows', 'release-please.yml');
@@ -142,6 +143,13 @@ export function formatFindings(source) {
 	if (!hasApiCommit || !hasHeadGuard) {
 		findings.push('commit without createCommitOnBranch and expectedHeadOid');
 	}
+	const prettierIdx = formatStep.findIndex((line) => /\bprettier\b.*--write\b/.test(line));
+	const escapeIdx = formatStep.findIndex((line) =>
+		/\bscripts\/release-changelog-escape\.mjs\b/.test(line),
+	);
+	if (escapeIdx < 0 || (prettierIdx >= 0 && escapeIdx < prettierIdx)) {
+		findings.push('bare emphasis escape missing');
+	}
 	return findings;
 }
 
@@ -181,6 +189,11 @@ const defaultJobGate = "    if: ${{ github.ref == 'refs/heads/release-please--br
 const formatStepFixture = (extra = {}) => {
 	const prettierCmd =
 		extra.prettierCmd ?? "pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'";
+	const escapeCmd =
+		extra.escapeCmd ??
+		'node scripts/release-changelog-escape.mjs CHANGELOG.md packages/*/CHANGELOG.md';
+	const escapeBeforePrettier = extra.escapeBeforePrettier === true;
+	const includeEscape = extra.includeEscape !== false;
 	const commitLines = extra.commitLines ?? [
 		'  base=$(git rev-parse HEAD)',
 		`  git diff --name-only -z | while IFS= read -r -d '' path; do`,
@@ -190,6 +203,11 @@ const formatStepFixture = (extra = {}) => {
 		'  if ! gh api graphql --input "$RUNNER_TEMP/format-commit.json"; then',
 	];
 	const envEntry = extra.envEntry ?? '  BRANCH: ${{ github.ref_name }}';
+	const runAfterInstall = includeEscape
+		? escapeBeforePrettier
+			? [`  ${escapeCmd}`, `  ${prettierCmd}`]
+			: [`  ${prettierCmd}`, `  ${escapeCmd}`]
+		: [`  ${prettierCmd}`];
 	return (
 		`${STEP_START}name: Format the release change logs\n` +
 		`${step(
@@ -198,7 +216,7 @@ const formatStepFixture = (extra = {}) => {
 			'run: |',
 			'  corepack enable',
 			'  pnpm install --frozen-lockfile',
-			`  ${prettierCmd}`,
+			...runAfterInstall,
 			'  # Loop safety: format commit re-triggers push; prettier diff quiet -> exit 0.',
 			'  if git diff --quiet; then',
 			'    exit 0',
@@ -230,44 +248,20 @@ const RAW_FIRST_ENTRY = `## [0.4.1](https://github.com/golusoris/sveltesentio/co
 * **deps:** update test tooling (major) ([#263](https://github.com/golusoris/sveltesentio/issues/263)) ([9b9faaa](https://github.com/golusoris/sveltesentio/commit/9b9faaae1e94a3fb2e0d1bb4e53a34edea926847))
 `;
 
+const RAW_BREAKING_ENTRY = `## [0.7.0](https://example.test/compare/collab-v0.6.2...collab-v0.7.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **collab:** the y-websocket peer floor rises to 2.0.4, the first release that passes the caller subprotocols to _WS. AuthBindableProvider now requires _WS, the socket constructor y-websocket sets on every provider. connectProvider throws a ProblemError of type COLLAB_AUTH_NOT_BOUND_TYPE when the binding cannot hold. Migration: give a hand-written stand-in the socket constructor its dials use, as _WS. before: { params, protocols, on, off } after: { params, protocols, on, off, _WS: WebSocket }
+`;
+
 const EXISTING_ENTRY = `## [0.4.0](https://github.com/golusoris/sveltesentio/compare/core-v0.3.0...core-v0.4.0) (2026-10-12)
 
 ### ⚠ BREAKING CHANGES
 
 - **licence:** licence MIT -> EUPL-1.2.
 `;
-
-function loadMarkdownlint() {
-	const toolPkg = join(repoRoot, 'tools', 'markdownlint', 'package.json');
-	try {
-		const req = createRequire(toolPkg);
-		return {
-			lint: req('markdownlint/sync').lint,
-			yaml: req('js-yaml'),
-		};
-	} catch (error) {
-		// Only a missing install falls through to the locked install; verify.mjs installs the
-		// same lockfile the same way. Any other load error fails the test.
-		if (error?.code !== 'MODULE_NOT_FOUND') throw error;
-		execFileSync(
-			'npm',
-			[
-				'--prefix',
-				join(repoRoot, 'tools', 'markdownlint'),
-				'ci',
-				'--ignore-scripts',
-				'--no-audit',
-				'--no-fund',
-			],
-			{ stdio: 'pipe', timeout: 120000 },
-		);
-		const req = createRequire(toolPkg);
-		return {
-			lint: req('markdownlint/sync').lint,
-			yaml: req('js-yaml'),
-		};
-	}
-}
 
 describe('release-please.yml changelog format step', () => {
 	it('holds for the workflow in this repository', () => {
@@ -337,6 +331,18 @@ describe('release-please.yml changelog format step', () => {
 			),
 			[],
 		);
+	});
+
+	it('detects bare emphasis escape missing', () => {
+		assert.deepEqual(formatFindings(workflowFixture({ includeEscape: false })), [
+			'bare emphasis escape missing',
+		]);
+	});
+
+	it('boundary: bare emphasis escape before prettier is refused', () => {
+		assert.deepEqual(formatFindings(workflowFixture({ escapeBeforePrettier: true })), [
+			'bare emphasis escape missing',
+		]);
 	});
 
 	it('detects prettier invoked with --check instead of --write', () => {
@@ -433,6 +439,43 @@ describe('raw upstream changelog formatting both directions', () => {
 			});
 			const afterRuleNames = (resultsAfter[clPath] ?? []).map((r) => r.ruleNames[0]);
 			assert.deepEqual(afterRuleNames, []);
+		} finally {
+			rmSync(tmpDir, { recursive: true, force: true });
+		}
+	});
+
+	it('breaking footer: prettier alone leaves MD037; escape clears it', () => {
+		const prettierBin = join(repoRoot, 'node_modules', '.bin', 'prettier');
+		const prettierConfig = join(repoRoot, 'prettier.config.js');
+		const md = loadMarkdownlint();
+		const lintConfigFile = join(repoRoot, 'tools', 'markdownlint', 'markdownlint-cli2.yaml');
+		const lintConfig = md.yaml.load(readFileSync(lintConfigFile, 'utf8')).config;
+
+		const tmpDir = mkdtempSync(join(tmpdir(), 'changelog-escape-format-'));
+		const clPath = join(tmpDir, 'CHANGELOG.md');
+
+		try {
+			writeFileSync(clPath, `# Changelog\n\n${RAW_BREAKING_ENTRY}`, 'utf8');
+			execFileSync(prettierBin, ['--write', '--config', prettierConfig, clPath], {
+				stdio: 'pipe',
+				timeout: 30000,
+			});
+			const prettierOnly = readFileSync(clPath, 'utf8');
+			const md037Only = md.lint({ strings: { [clPath]: prettierOnly }, config: lintConfig });
+			const rulesOnly = (md037Only[clPath] ?? []).map((r) => r.ruleNames[0]);
+			assert.ok(rulesOnly.includes('MD037'));
+
+			const escaped = escapeBareEmphasis(prettierOnly, md);
+			writeFileSync(clPath, escaped, 'utf8');
+			execFileSync(prettierBin, ['--check', '--config', prettierConfig, clPath], {
+				stdio: 'pipe',
+				timeout: 30000,
+			});
+			const afterRules = md.lint({ strings: { [clPath]: escaped }, config: lintConfig });
+			assert.deepEqual(
+				(afterRules[clPath] ?? []).map((r) => r.ruleNames[0]),
+				[],
+			);
 		} finally {
 			rmSync(tmpDir, { recursive: true, force: true });
 		}

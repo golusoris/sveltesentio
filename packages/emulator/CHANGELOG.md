@@ -23,9 +23,9 @@
 
 ### ⚠ BREAKING CHANGES
 
-- every @sveltesentio/* package that declares a svelte peer requires svelte 5.56.4 or later, and every package that declares a kit peer requires @sveltejs/kit 2.53.0 or later. Package managers that enforce peers refuse or warn on installs below these versions.
-- every @sveltesentio/* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
-- every @sveltesentio/* package declares engines.node >=24. Package managers that enforce engines refuse installs on Node 22.
+- every @sveltesentio/\* package that declares a svelte peer requires svelte 5.56.4 or later, and every package that declares a kit peer requires @sveltejs/kit 2.53.0 or later. Package managers that enforce peers refuse or warn on installs below these versions.
+- every @sveltesentio/\* package declares the peer dependency typescript ">=5.5 <7". Package managers that enforce peers refuse or warn on installs with TypeScript below 5.5 or at 7 and above.
+- every @sveltesentio/\* package declares engines.node >=24. Package managers that enforce engines refuse installs on Node 22.
 
 ### Bug Fixes
 

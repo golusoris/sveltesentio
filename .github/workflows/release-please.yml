@@ -47,6 +47,7 @@ jobs:
 
       # Format release change logs: release-please generates `*` bullets and
       # double blank lines (gap C14-13) which fail prettier and markdownlint.
+      # Bare `*` or `_` next to whitespace fail MD037; backslash escapes render the same.
       # The commit goes through the GraphQL createCommitOnBranch mutation, which
       # GitHub signs for the App token: main requires signed commits, and an
       # unsigned commit on the release branch blocks its squash merge (#336).
@@ -60,6 +61,7 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
           pnpm exec prettier --write CHANGELOG.md 'packages/*/CHANGELOG.md'
+          node scripts/release-changelog-escape.mjs CHANGELOG.md packages/*/CHANGELOG.md
           # The format commit triggers this job again, which then finds nothing to change.
           if git diff --quiet; then
             exit 0
